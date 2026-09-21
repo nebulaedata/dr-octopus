@@ -9,7 +9,7 @@
   "manifest": {
     "name": "dr-octopus",
     "license": "MIT",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "description": "基于 Pi，本地优先、以 Workspace 为边界的通用智能体系统",
     "keywords": ["pi", "agent", "octopus", "dr.octopus"],
     "engines": {
