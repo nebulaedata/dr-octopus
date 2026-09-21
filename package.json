@@ -1,0 +1,47 @@
+{
+  "name": "octopus",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "description": "基于 Pi，本地优先、以 Workspace 为边界的通用智能体系统",
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=22.19.0",
+    "pnpm": ">=11.0.0"
+  },
+  "keywords": [
+    "pi",
+    "agent",
+    "octopus",
+    "dr.octopus"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "release": "release-it --only-version",
+    "release:dry": "release-it --only-version --dry-run",
+    "release:build": "pnpm --filter @octopus/cli release",
+    "release:publish": "node --import tsx scripts/publish-release.mjs",
+    "release:link": "cd release && npm install && npm link",
+    "dev": "turbo run dev --filter=!@octopus/cli --filter=!@octopus/agent",
+    "dev:cli": "pnpm --filter @octopus/cli dev",
+    "dev:agent": "turbo run dev --filter=@octopus/agent --ui=tui",
+    "dev:scheduler": "turbo run dev --filter=@octopus/agent -- scheduler service start",
+    "dev:scheduler:stop": "turbo run dev --filter=@octopus/agent -- scheduler service stop",
+    "install:extensions": "pnpm --filter @octopus/agent install:extensions",
+    "install:infra": "pnpm --filter @octopus/agent install:infra",
+    "skills:link": "node scripts/link-agent-skills.mjs",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+  },
+  "devDependencies": {
+    "@release-it/bumper": "8.0.0",
+    "prettier": "^3.9.6",
+    "release-it": "21.0.2",
+    "tsx": "^4.23.5",
+    "turbo": "^2.10.13",
+    "typescript": "^6.0.3"
+  }
+}

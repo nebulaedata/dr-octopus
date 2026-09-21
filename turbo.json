@@ -1,0 +1,48 @@
+{
+  "$schema": "https://v2-10-13.turborepo.dev/schema.json",
+  "globalEnv": ["DR_OCTOPUS_CODING_AGENT_DIR", "PI_OFFLINE", "NPM_CONFIG_REGISTRY", "SERVER_*"],
+  "envMode": "loose",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "@octopus/agent#dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
+      "interactive": true
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
+    },
+    "@octopus/cli#test": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/.release-it.json",
+        "$TURBO_ROOT$/release.config.json",
+        "$TURBO_ROOT$/.prettierrc",
+        "$TURBO_ROOT$/.editorconfig"
+      ]
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

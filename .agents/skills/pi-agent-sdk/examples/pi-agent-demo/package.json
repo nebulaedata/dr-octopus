@@ -1,0 +1,24 @@
+{
+  "name": "@octopus/pi-agent-demo",
+  "version": "0.0.1",
+  "description": "Minimal runnable demos for Pi Agent SDK secondary development",
+  "type": "module",
+  "scripts": {
+    "demo:ai:faux": "tsx src/pi-ai-faux-demo.ts",
+    "demo:ai:deepseek": "tsx src/pi-ai-deepseek-demo.ts",
+    "demo:session": "tsx src/session-demo.ts",
+    "demo:session:faux": "tsx src/session-faux-demo.ts",
+    "demo:extension": "tsx src/extension-demo.ts",
+    "demo:rpc": "tsx src/rpc-client-demo.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-ai": "0.84.3",
+    "@earendil-works/pi-agent-core": "0.84.3",
+    "@earendil-works/pi-coding-agent": "0.84.3"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "^6.0.3"
+  }
+}

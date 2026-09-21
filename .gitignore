@@ -1,0 +1,37 @@
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+node_modules
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS generated files
+.DS_Store
+
+# Log files
+*.log
+
+# Output of build
+dist/
+build/
+.turbo/
+/release/
+/.release-*/
+
+# Temporary files
+*.tmp
+.tmp*/
+.cache
+
+# Agent files
+/.claude/skills
+.playwright*

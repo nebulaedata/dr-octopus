@@ -1,0 +1,9 @@
+diff --git a/package.json b/package.json
+--- a/package.json
++++ b/package.json
+@@ -6,3 +6,4 @@
+ 	"piConfig": {
+-		"configDir": ".pi"
++		"name": "Dr_Octopus",
++		"configDir": ".dr-octopus"
+ 	},

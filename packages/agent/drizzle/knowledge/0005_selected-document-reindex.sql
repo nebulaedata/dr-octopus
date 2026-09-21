@@ -1,0 +1,1 @@
+ALTER TABLE `knowledge_jobs` ADD `documentIds` text;

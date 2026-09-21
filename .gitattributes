@@ -1,0 +1,21 @@
+# Normalize text to LF in Git and let core.autocrlf choose the Windows working-tree format.
+* text=auto
+
+# Shell scripts must remain LF so Unix interpreters can execute them.
+*.sh text eol=lf
+
+# Windows-native scripts use CRLF in the working tree.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files must never receive line-ending conversion.
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

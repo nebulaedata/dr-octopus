@@ -1,0 +1,23 @@
+{
+  "skill_name": "zustand-workflow",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a Zustand store for a todo list using create + combine. It should track todos (id, text, completed) and provide actions to add, toggle, and remove todos. Also write a small React component that uses the store with fine-grained selectors.",
+      "expected_output": "A TypeScript file defining useTodoStore with create(combine(...)) containing state and actions, plus a React component that selects only needed slices.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Refactor this React component that uses local useState for a counter into Zustand create + combine: export default function Counter() { const [count, setCount] = useState(0); return (<div><p>{count}</p><button onClick={() => setCount(c => c + 1)}>+</button></div>); }. Provide the store file and the updated component.",
+      "expected_output": "A Zustand store file and a Counter component that reads count and increment from the store with selectors.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Build a Zustand store for a tic-tac-toe game using create + combine. It should store the board history, current move, and provide actions to play a square and jump to a previous move. Write the store and a Game component that renders the board and move list.",
+      "expected_output": "A store matching the official Zustand tic-tac-toe tutorial pattern with history, currentMove, handlePlay, jumpTo, and a Game component using fine-grained selectors.",
+      "files": []
+    }
+  ]
+}

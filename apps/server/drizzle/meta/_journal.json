@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788324105292,
+      "tag": "0000_baseline",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788324114600,
+      "tag": "0001_attachment-search",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788707046447,
+      "tag": "0002_session_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789025520940,
+      "tag": "0003_knowledge-qa-columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789025523811,
+      "tag": "0004_knowledge-qa-kind-constraint",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789029542437,
+      "tag": "0005_knowledge-uploads-and-qa-attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789031444230,
+      "tag": "0006_knowledge-qa-creation-idempotency",
+      "breakpoints": true
+    }
+  ]
+}

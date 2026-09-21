@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pi Packages"
+  short_description: "Build standard, portable Pi extension packages"
+  default_prompt: "Use $pi-packages to design, implement, and validate a portable Pi extension or distributable Pi package from the official public contracts."

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN" class="light" data-color-theme="default">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="%BASE_URL%favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      主题启动脚本必须在 React 挂载和浏览器首次绘制前同步执行。
+      它会提前恢复持久化的配色与明暗模式，避免页面先显示默认主题、随后再切换造成首屏闪烁。
+      请勿直接移入 ThemeProvider；修改主题选项或存储键时，需与 @octopus/ui/lib/theme 保持同步。
+    -->
+    <script>
+      (() => {
+        try {
+          const stored = JSON.parse(localStorage.getItem('octopus-ui-theme-v1') ?? 'null');
+          const mode = ['system', 'light', 'dark'].includes(stored?.mode) ? stored.mode : 'system';
+          const colorTheme = ['default', 'electric', 'shadcn'].includes(stored?.colorTheme)
+            ? stored.colorTheme
+            : 'default';
+          const resolvedMode =
+            mode === 'system'
+              ? matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+              : mode;
+
+          document.documentElement.classList.remove('light', 'dark');
+          document.documentElement.classList.add(resolvedMode);
+          document.documentElement.dataset.colorTheme = colorTheme;
+          document.documentElement.style.colorScheme = resolvedMode;
+        } catch {
+          // Static HTML defaults keep the initial render usable when storage is unavailable.
+        }
+      })();
+    </script>
+    <title>Dr.Octopus 智能体</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://v2-10-13.turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", ".env", ".env.*"],
+      "env": ["VITE_*"]
+    }
+  }
+}

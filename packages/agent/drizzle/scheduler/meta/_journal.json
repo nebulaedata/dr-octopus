@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788613645733,
+      "tag": "0000_cold_retro_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788678102713,
+      "tag": "0001_task-authorization",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/server-typecheck.tsbuildinfo"
+  },
+  "include": ["src"]
+}

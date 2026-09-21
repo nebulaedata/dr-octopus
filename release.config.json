@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "outputDirectory": "release",
+  "readme": "RELEASE.README.md",
+  "readmeTranslations": {
+    "README.zh-CN.md": "RELEASE.README.zh-CN.md"
+  },
+  "buildArgs": ["build"],
+  "manifest": {
+    "name": "dr-octopus",
+    "license": "MIT",
+    "version": "0.0.7",
+    "description": "基于 Pi，本地优先、以 Workspace 为边界的通用智能体系统",
+    "keywords": ["pi", "agent", "octopus", "dr.octopus"],
+    "engines": {
+      "node": ">=22.19.0"
+    }
+  },
+  "pnpmVersion": "11.18.0",
+  "runtimeDirectory": ".dr-octopus/runtimes",
+  "command": "dr-octopus",
+  "bootstrap": {
+    "package": "@octopus/cli",
+    "path": "dist/cli.mjs",
+    "destination": "bin/dr-octopus.mjs"
+  },
+  "archive": "payload/runtime.tar.gz",
+  "installFilter": "@octopus/cli...",
+  "artifacts": {
+    "*": ["dist"]
+  },
+  "paths": {
+    "cli": {
+      "package": "@octopus/cli",
+      "path": "."
+    },
+    "server": {
+      "package": "@octopus/server",
+      "path": "."
+    },
+    "serverEntry": {
+      "package": "@octopus/server",
+      "path": "dist/runtime.js"
+    },
+    "gatewayEntry": {
+      "package": "@octopus/cli",
+      "path": "dist/gateway.mjs"
+    },
+    "webClient": {
+      "package": "@octopus/web",
+      "path": "dist/client"
+    }
+  }
+}

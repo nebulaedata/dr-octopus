@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1789021185868,
+      "tag": "0000_knowledge-core",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789026055148,
+      "tag": "0001_knowledge-mcp",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789028311844,
+      "tag": "0002_knowledge-import-version-fence",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789029298541,
+      "tag": "0003_knowledge-retention",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789094181773,
+      "tag": "0004_knowledge-source-md5",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789721435942,
+      "tag": "0005_selected-document-reindex",
+      "breakpoints": true
+    }
+  ]
+}

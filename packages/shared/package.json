@@ -1,0 +1,49 @@
+{
+  "name": "@octopus/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./protocol/knowledge": {
+      "types": "./dist/protocol/knowledge/index.d.ts",
+      "import": "./dist/protocol/knowledge/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol/index.d.ts",
+      "import": "./dist/protocol/index.js"
+    },
+    "./protocol/attachments": {
+      "types": "./dist/protocol/attachments/index.d.ts",
+      "import": "./dist/protocol/attachments/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    },
+    "./protocol/scheduled-tasks": {
+      "types": "./dist/protocol/scheduled-tasks/index.d.ts",
+      "import": "./dist/protocol/scheduled-tasks/index.js"
+    },
+    "./protocol/memory": {
+      "types": "./dist/protocol/memory.d.ts",
+      "import": "./dist/protocol/memory.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "globals": "^17.7.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

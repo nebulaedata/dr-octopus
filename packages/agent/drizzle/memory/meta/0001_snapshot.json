@@ -1,0 +1,390 @@
+{
+  "id": "d363bd42-5b8d-48b9-a96f-3564e3a2a35e",
+  "prevId": "5ceafc2b-a410-4b3b-8f52-3da8387336c1",
+  "version": "6",
+  "dialect": "sqlite",
+  "tables": {
+    "memory_forget_barriers": {
+      "name": "memory_forget_barriers",
+      "columns": {
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "memory_indexes": {
+      "name": "memory_indexes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "canonicalKey": {
+          "name": "canonicalKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "topic": {
+          "name": "topic",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "indexText": {
+          "name": "indexText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sectionId": {
+          "name": "sectionId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "supersededBy": {
+          "name": "supersededBy",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "activationSeq": {
+          "name": "activationSeq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "memory_indexes_sectionId_unique": {
+          "name": "memory_indexes_sectionId_unique",
+          "columns": [
+            "sectionId"
+          ],
+          "isUnique": true
+        },
+        "memory_indexes_activationSeq_unique": {
+          "name": "memory_indexes_activationSeq_unique",
+          "columns": [
+            "activationSeq"
+          ],
+          "isUnique": true
+        },
+        "memory_active_sequence": {
+          "name": "memory_active_sequence",
+          "columns": [
+            "status",
+            "activationSeq"
+          ],
+          "isUnique": false
+        },
+        "memory_active_canonical": {
+          "name": "memory_active_canonical",
+          "columns": [
+            "canonicalKey"
+          ],
+          "where": "\"memory_indexes\".\"status\" = 'active'",
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "memory_indexes_sectionId_memory_wiki_sections_id_fk": {
+          "name": "memory_indexes_sectionId_memory_wiki_sections_id_fk",
+          "tableFrom": "memory_indexes",
+          "columnsFrom": [
+            "sectionId"
+          ],
+          "tableTo": "memory_wiki_sections",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "memory_meta": {
+      "name": "memory_meta",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "storeId": {
+          "name": "storeId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mode": {
+          "name": "mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "activationCounter": {
+          "name": "activationCounter",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "writeEpoch": {
+          "name": "writeEpoch",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "memory_singleton": {
+          "name": "memory_singleton",
+          "value": "\"memory_meta\".\"id\" = 1"
+        }
+      }
+    },
+    "memory_mutations": {
+      "name": "memory_mutations",
+      "columns": {
+        "requestId": {
+          "name": "requestId",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hash": {
+          "name": "hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receipt": {
+          "name": "receipt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "memory_sources": {
+      "name": "memory_sources",
+      "columns": {
+        "indexId": {
+          "name": "indexId",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "values": {
+          "name": "values",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "memory_sources_indexId_memory_indexes_id_fk": {
+          "name": "memory_sources_indexId_memory_indexes_id_fk",
+          "tableFrom": "memory_sources",
+          "columnsFrom": [
+            "indexId"
+          ],
+          "tableTo": "memory_indexes",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "memory_wiki_pages": {
+      "name": "memory_wiki_pages",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "memory_wiki_pages_slug_unique": {
+          "name": "memory_wiki_pages_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "memory_wiki_sections": {
+      "name": "memory_wiki_sections",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "pageId": {
+          "name": "pageId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "bodyMd": {
+          "name": "bodyMd",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "memory_wiki_sections_pageId_memory_wiki_pages_id_fk": {
+          "name": "memory_wiki_sections_pageId_memory_wiki_pages_id_fk",
+          "tableFrom": "memory_wiki_sections",
+          "columnsFrom": [
+            "pageId"
+          ],
+          "tableTo": "memory_wiki_pages",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

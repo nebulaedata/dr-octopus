@@ -1,0 +1,1 @@
+ALTER TABLE `knowledge_qa_sessions` ADD `creation_hash` text;

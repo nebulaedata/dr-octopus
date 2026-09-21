@@ -1,0 +1,2342 @@
+{
+  "api": {
+    "knowledgeUpload": {
+      "invalidAddress": "The upload returned an invalid address",
+      "missingFileId": "The upload did not return a file identity"
+    },
+    "memory": {
+      "contentIncomplete": "The content was not fully read; reopen the memory.",
+      "deletedOrSuperseded": "The memory was deleted or superseded; refresh the directory."
+    },
+    "sessionStats": {
+      "unavailable": "Unable to read session statistics"
+    }
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "copyFailedDescription": "Select the text and copy it manually",
+    "copyFailedTitle": "Copy failed",
+    "edit": "Edit",
+    "export": "Export",
+    "loading": "Loading…",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "save": "Save",
+    "submit": "Submit"
+  },
+  "components": {
+    "codeEditor": {
+      "ariaEdit": "Code editor",
+      "ariaPreview": "Code preview",
+      "loading": "Loading editor…"
+    },
+    "htmlRenderer": {
+      "title": "HTML preview"
+    },
+    "listPagination": {
+      "next": "Next",
+      "previous": "Previous"
+    },
+    "markdownRenderer": {
+      "mermaidFailed": "Mermaid rendering failed."
+    },
+    "searchInput": {
+      "resultCount_one": "{{count}} results",
+      "resultCount_other": "{{count}} results"
+    }
+  },
+  "home": {
+    "composerPlaceholder": "Type a task while you wait…",
+    "loadingTitle": "I'm Dr.Octopus, getting your agent ready!",
+    "loadingWorkspaces": "Loading workspaces…",
+    "readyTitle": "I'm Dr.Octopus — what would you like to do today?"
+  },
+  "knowledge": {
+    "batchActions": {
+      "confirmDelete": "Delete documents",
+      "deleteFailureDescription": "{{titles}}: {{message}}",
+      "deletePartial": "Deleted {{removed}}; {{failed}} failed to delete",
+      "deleteSuccess_one": "{{count}} documents deleted",
+      "deleteSuccess_other": "{{count}} documents deleted",
+      "deleteTooltip": "Delete the selected documents",
+      "dialogDescription": "This cannot be undone; existing references will stop working.",
+      "dialogTitle_one": "Delete the selected {{count}} documents?",
+      "dialogTitle_other": "Delete the selected {{count}} documents?",
+      "indexFailed": "Batch indexing failed",
+      "indexTooltip": "Index selected: rebuild only the selected documents with the collection's current indexing configuration",
+      "retryFallback": "Refresh and try again",
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
+      "titleSeparator": ", "
+    },
+    "collectionActions": {
+      "delete": "Delete collection",
+      "deleteFailed": "Failed to delete collection",
+      "deleteTitle": "Delete knowledge collection?",
+      "deleteWarning": "This deletes the collection and all of its documents; existing references will stop working.",
+      "editDescription": "Update the name and description.",
+      "editName": "Edit name",
+      "editTitle": "Edit knowledge collection",
+      "nameLabel": "Name",
+      "reindex": "Reindex",
+      "reindexFailed": "Reindex failed",
+      "saveFailed": "Failed to save collection"
+    },
+    "collectionItem": {
+      "countFailed": "Failed to load count",
+      "countUnavailable": "Document count unavailable",
+      "createdTitle": "Created {{date}}",
+      "dateUnavailable": "Date unavailable",
+      "documentCount_one": "{{count}} documents",
+      "documentCount_other": "{{count}} documents",
+      "loading": "Loading…",
+      "remoteBadge": "Remote"
+    },
+    "common": {
+      "descriptionLabel": "Description",
+      "irreversible": "This action cannot be undone.",
+      "listSeparator": "; "
+    },
+    "createDialog": {
+      "description": "Organize materials by topic for the agent to retrieve and cite.",
+      "descriptionPlaceholder": "Briefly describe the content and purpose of this knowledge",
+      "failed": "Failed to create collection",
+      "nameLabel": "Collection name",
+      "namePlaceholder": "e.g. Product docs, team handbook",
+      "nameRule": "Enter a name of 1–120 characters",
+      "submit": "Create collection",
+      "title": "New knowledge collection"
+    },
+    "directory": {
+      "collections": "Collections",
+      "create": "Create knowledge collection",
+      "emptyDescription": "Product docs, project materials, and team experience can all become knowledge sources for the agent.",
+      "emptyTitle": "Start with your first knowledge collection",
+      "loadFailed": "Failed to load knowledge collections",
+      "loading": "Loading knowledge base…",
+      "remoteDescription": "A shared knowledge collection managed by a remote Dr.Octopus instance.",
+      "remotePending": "Remote · pending recovery",
+      "remoteReady": "Remote · read-only",
+      "remoteSource": "Source: {{ref}} · Documents and indexing are managed by the peer"
+    },
+    "documentActions": {
+      "delete": "Delete document",
+      "deleteFailed": "Failed to delete document",
+      "deleteTitle": "Delete document?",
+      "deleteWarning": "This document will no longer be retrievable, and existing references will also stop working.",
+      "rename": "Rename",
+      "renameDescription": "Change the display name; document content and references are kept.",
+      "renameFailed": "Failed to rename document",
+      "renameTitle": "Rename knowledge document",
+      "replace": "Replace document",
+      "replaceFailed": "Failed to replace document",
+      "saveName": "Save name",
+      "titleLabel": "Document title"
+    },
+    "documents": {
+      "add": "Add",
+      "descriptionFallback": "Upload materials so the agent can find answers here.",
+      "emptyDescription": "Upload documents or add text to start building this knowledge.",
+      "emptyTitle": "No documents in this collection yet",
+      "importFailed": "Failed to import document",
+      "jobLoadFailed": "Failed to load job status",
+      "loadFailed": "Failed to load documents",
+      "newText": "New text",
+      "totalCount_one": "{{count}} documents in total",
+      "totalCount_other": "{{count}} documents in total",
+      "upload": "Upload document",
+      "uploading": "Uploading…"
+    },
+    "documentStatus": {
+      "deleted": "Deleted",
+      "failed": "Failed",
+      "indexing": "Indexing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "jobFeedback": {
+      "actionFailed": "Task action failed",
+      "cancelTask": "Cancel task",
+      "failureFallback": "The task could not complete. Check the model service and retry.",
+      "failureOperationReindex": "Reindexing",
+      "failureTitle": "{{operation}} failed",
+      "failureTitleModelNeeded": "{{operation}} requires model configuration",
+      "failureTitlePartial": "{{operation}} partially failed",
+      "operationImport": "Document import",
+      "operationReindex": "Index rebuild",
+      "progressTitle": "{{operation}}: {{status}}",
+      "reason": {
+        "documentDuplicateConflict": "This document already exists or is being imported; do not upload it again.",
+        "modelNotConfigured": "Configure an Embedding model in Settings - Knowledge.",
+        "ocrIncomplete": "OCR output did not finish completely; the output limit may have been reached or content was generated repeatedly. Check the model output and retry.",
+        "ocrNotConfigured": "Configure an OCR model in Settings - Knowledge.",
+        "officeContentRejected": "The Office document contains unsupported active content, embedded objects, or external references, or its structure is invalid; remove them and upload again."
+      },
+      "statusCancelled": "Cancelled",
+      "statusQueued": "Queued",
+      "statusRunning": "Processing",
+      "statusSucceeded": "Completed"
+    },
+    "page": {
+      "description": "Add materials to the knowledge base to make the agent more knowledgeable.",
+      "modelSettings": "Model service configuration",
+      "newCollection": "New collection",
+      "scopeGlobal": "Global",
+      "scopeWorkspace": "Workspace",
+      "title": "Knowledge base"
+    },
+    "searchAction": {
+      "tooltip": "Search knowledge in this collection and view the source text"
+    },
+    "searchDialog": {
+      "alertFallback": "Check the model service and source connection, then retry.",
+      "collapse": "Collapse text",
+      "commandLabel": "Collection knowledge search",
+      "errorTitle": "Search temporarily failed",
+      "expand": "Expand text",
+      "hintExpand": "Expand",
+      "hintSelect": "Select",
+      "locatorBody": "Main text",
+      "locatorPage": "Page {{page}}",
+      "locatorSlide": "Slide {{slide}}",
+      "noResults": "No related knowledge found",
+      "noResultsDescription": "Try a more specific question or different keywords.",
+      "partialUnavailable": "Some search capabilities temporarily unavailable",
+      "placeholder": "Type a question to find related knowledge…",
+      "resultsHeading_one": "{{count}} related results",
+      "resultsHeading_other": "{{count}} related results",
+      "scopeNote": "Only the current collection is searched",
+      "searching": "Searching for related knowledge…",
+      "searchingDescription": "Matching documents in the collection; please wait.",
+      "sortedNote": "Sorted by relevance · only the current collection is searched",
+      "startDescription": "Enter keywords or a full question to see the relevant source text directly.",
+      "startTitle": "Start with a question",
+      "title": "Search knowledge",
+      "unavailable": "Search sources temporarily unavailable",
+      "unavailableDescription": "Modify your question to search again once the search service recovers.",
+      "unavailableTitle": "Search temporarily unavailable"
+    },
+    "table": {
+      "columnActions": "Actions",
+      "columnDocument": "Document",
+      "columnFormat": "Format",
+      "columnStatus": "Status"
+    },
+    "textDialog": {
+      "bodyLabel": "Body",
+      "description": "Use Markdown to format the content.",
+      "submit": "Save and index",
+      "textRequired": "Enter the body text",
+      "title": "New knowledge text",
+      "titleLabel": "Title",
+      "titleRequired": "Enter a title"
+    }
+  },
+  "layout": {
+    "connection": {
+      "failedHint": "Refresh to try again",
+      "failedTitle": "Realtime reconnect failed after {{attempts}} attempts",
+      "lostHint": "Waiting to reconnect",
+      "lostTitle": "Realtime connection lost",
+      "reconnecting": "Realtime reconnecting"
+    },
+    "header": {
+      "createdOn": "Created on {{date}}",
+      "defaultTitle": "Agent",
+      "memoryDescription": "Long-term memory shared across workspaces",
+      "memoryTitle": "Memory",
+      "nav": {
+        "chat": "Chat",
+        "files": "Files",
+        "knowledge": "Knowledge",
+        "memory": "Memory",
+        "schedules": "Scheduled tasks",
+        "skills": "Skills"
+      },
+      "schedulesDescription": "Manage scheduled tasks across workspaces",
+      "schedulesTitle": "Scheduled tasks",
+      "settingsDescription": "Global agent configuration",
+      "settingsTitle": "Settings",
+      "theme": "Theme",
+      "themeMenu": {
+        "colorThemeDefault": "Default",
+        "colorThemeElectric": "Electric indigo",
+        "colorThemeGroupLabel": "Color theme",
+        "colorThemeShadcn": "shadcn classic",
+        "modeDark": "Dark",
+        "modeGroupLabel": "Theme mode",
+        "modeLight": "Light",
+        "modeSystem": "System"
+      }
+    },
+    "notifications": {
+      "dateFormat": "MMM D, HH:mm",
+      "description": "Task results and pending items",
+      "emptyDescription": "You will be notified here when tasks complete or need attention.",
+      "emptyTitle": "No notifications",
+      "loading": "Loading notifications…",
+      "markAllRead": "Mark all read",
+      "status": {
+        "cancelled": "Cancelled",
+        "failed": "Failed",
+        "interrupted": "Interrupted",
+        "needsAttention": "Needs attention",
+        "skipped": "Skipped",
+        "succeeded": "Completed",
+        "timedOut": "Timed out"
+      },
+      "title": "Notifications",
+      "unreadBadge": "{{unread}} unread"
+    },
+    "routeLoading": {
+      "defaultModel": "Loading default model…",
+      "environment": "Loading environment settings…",
+      "extensions": "Loading extensions…",
+      "knowledge": "Loading knowledge base…",
+      "knowledgeSettings": "Loading knowledge settings…",
+      "languageSettings": "Loading language settings…",
+      "mcpServers": "Loading MCP servers…",
+      "memory": "Loading memory…",
+      "memorySettings": "Loading memory settings…",
+      "modelProviders": "Loading model providers…",
+      "schedulerSettings": "Loading scheduler settings…",
+      "schedules": "Loading scheduled tasks…",
+      "serverSettings": "Loading server settings…",
+      "session": "Loading session module…",
+      "settings": "Loading settings…",
+      "settingsPage": "Loading settings page…",
+      "shortcutsSettings": "Loading keyboard shortcuts…",
+      "skills": "Loading skills module…"
+    },
+    "session": {
+      "delete": "Delete",
+      "deleteDescription": "Are you sure you want to delete \"{{title}}\"? This action cannot be undone.",
+      "deleteFailed": "Failed to delete session.",
+      "deleteFilesLabel": "Also delete the underlying session file (JSONL)",
+      "deleteTitle": "Delete session",
+      "deleting": "Deleting…",
+      "more": "More",
+      "pin": "Pin session",
+      "propertiesPanel": "Properties Panel",
+      "rename": "Rename",
+      "restart": "Restart session",
+      "restarting": "Restarting…",
+      "runtimeStatus": {
+        "dormant": "Dormant",
+        "failed": "Failed",
+        "idle": "Idle",
+        "recovering": "Recovering",
+        "running": "Running",
+        "starting": "Starting",
+        "stopping": "Stopping"
+      },
+      "taskResult": "Task result",
+      "unpin": "Unpin session"
+    },
+    "sidebar": {
+      "createWorkspaceTooltip": "Create new workspace",
+      "hideProperties": "Hide properties panel",
+      "newSession": "New session",
+      "pinFailedDescription": "Please try again later.",
+      "pinFailedTitle": "Failed to update pin",
+      "pinLimitDescription": "Unpin a session first, then try again.",
+      "pinLimitTitle": "Pin up to {{max}} sessions",
+      "requestFailed": "Request failed",
+      "sessions": "Sessions",
+      "settings": "Settings",
+      "showProperties": "Show properties panel",
+      "workspace": "Workspace"
+    },
+    "workspace": {
+      "create": "Create",
+      "createDescription": "Give the new workspace a name and an optional slug.",
+      "createFailed": "Failed to create workspace.",
+      "createTitle": "Create workspace",
+      "nameLabel": "Name",
+      "nameRequired": "Name is required.",
+      "nameTooLong": "Name must be 100 characters or less.",
+      "slugInvalid": "Slug must be lowercase letters, digits, and single hyphens.",
+      "slugLabel": "Slug (optional)",
+      "slugPlaceholder": "auto-generated from name"
+    }
+  },
+  "memory": {
+    "assistant": {
+      "auto": "Auto memory",
+      "dismissTitle": "Dismiss the memory assistant (reappears after a refresh)",
+      "manual": "Manual memory",
+      "off": "Memory off",
+      "organizeFailed": "Memory organization incomplete",
+      "organizing": "Organizing memories",
+      "standby": "Memory assistant",
+      "statusLinkTitle": "Latest memory status observed by the session; open global memory management",
+      "unavailable": "Memory unavailable"
+    },
+    "detail": {
+      "confirmDescription": "This fact and its history will be deleted, effective immediately in all workspaces. Original session records are kept.",
+      "confirmForget": "Confirm forget",
+      "confirmTitle": "Forget this memory?",
+      "directSave": "Saved directly by the user",
+      "forget": "Forget",
+      "forgotten": "Memory forgotten",
+      "loading": "Loading content and sources",
+      "sourcesVersion": "Sources & version · v{{revision}}",
+      "viewTitle": "View memory"
+    },
+    "editor": {
+      "bodyLabel": "Memory content (Markdown)",
+      "description": "After saving, every workspace and session can consult this memory.",
+      "editTitle": "Edit memory",
+      "indexLabel": "Short index",
+      "save": "Save memory",
+      "saved": "Memory saved",
+      "saving": "Saving…",
+      "topicLabel": "Topic"
+    },
+    "page": {
+      "count_one": "{{count}} entry",
+      "count_other": "{{count}} entries",
+      "description": "Long-term memory shared across workspaces. Keeps your preferences, decisions, and conventions for the agent to consult when needed.",
+      "emptyDescription": "Click \"Remember something\" to save preferences and conventions.",
+      "emptySearchDescription": "Try another keyword, or clear the search to keep browsing.",
+      "emptySearchTitle": "No matching indexes",
+      "emptyTitle": "No long-term memories yet",
+      "global": "Global memory",
+      "loading": "Loading",
+      "modeAuto": "Auto mode",
+      "modeManual": "Manual mode",
+      "modeOff": "Memory off",
+      "refreshHome": "Refresh and go home",
+      "revision": "v{{revision}}",
+      "searchHint": "Search shows candidate indexes. Clear the keyword to browse all memories.",
+      "searchPlaceholder": "Search memory indexes or topics…",
+      "searchUnavailable": "Full-text search is unavailable. Clear the search term to browse the directory.",
+      "settingsTooltip": "Memory settings",
+      "title": "Memory",
+      "view": "View memory"
+    },
+    "remember": "Remember something",
+    "service": {
+      "checking": "Checking",
+      "description": "One background service is shared across all workspaces. Once stopped, start it manually; existing memories are kept.",
+      "restart": "Restart",
+      "restarting": "Restarting",
+      "start": "Start",
+      "startingProgress": "Starting…",
+      "state": {
+        "absent": "Not started",
+        "running": "Running",
+        "starting": "Starting",
+        "stopped": "Stopped",
+        "stopping": "Stopping",
+        "unavailable": "Unavailable"
+      },
+      "stop": "Stop",
+      "stoppingProgress": "Stopping…",
+      "title": "Memory service",
+      "unknown": "Status unknown"
+    },
+    "settings": {
+      "description": "Sessions in every workspace share this setting; changes save automatically.",
+      "mode": {
+        "auto": "Auto",
+        "manual": "Manual",
+        "off": "Off"
+      },
+      "modeDescription": {
+        "auto": "The agent can review existing memories and automatically curate long-term insights after tasks complete.",
+        "manual": "The agent can review existing memories, and only curates new ones when you explicitly ask it to remember.",
+        "off": "Long-term memory is no longer provided to the agent, and no new memories are curated from conversations."
+      },
+      "modeLabel": "Memory mode",
+      "readError": "The memory mode could not be read. Please try again.",
+      "reading": "Reading memory mode…",
+      "refresh": "Refresh settings",
+      "saving": "Saving memory mode…",
+      "startHint": "Start the memory service to view and configure the memory mode.",
+      "title": "Memory"
+    }
+  },
+  "schedules": {
+    "archive": {
+      "activeRunNote": "Available to restore or delete once the active run finishes",
+      "confirmPurge": "Confirm permanent deletion",
+      "confirmRestore": "Confirm restore",
+      "processing": "Processing…",
+      "purge": "Delete permanently",
+      "purgeDescription": "This permanently deletes the task, its run history, and its isolated run session files; it cannot be undone. Messages already echoed into the source session, files the task generated in the workspace, and the necessary authorization audit are kept.",
+      "purgeTitle": "Permanently delete the task?",
+      "restore": "Restore task",
+      "restoreDescription": "Run history is kept, and the task returns paused pending re-authorization; resume it manually after authorizing.",
+      "restoreTitle": "Restore the archived task?"
+    },
+    "authorization": {
+      "authorizing": "Authorizing…",
+      "checkingTools": "Checking workspace tools…",
+      "confirmNoTools": "Confirm persistent authorization (no tools allowed)",
+      "confirmWithTools_one": "Confirm persistent authorization ({{count}} tools)",
+      "confirmWithTools_other": "Confirm persistent authorization ({{count}} tools)",
+      "dialogDescription": "Authorization applies only to this task and stays valid until revoked or the run content changes; authorizing does not re-run past runs.",
+      "dialogTitle": "Authorize task: {{name}}",
+      "reviewButton": "Review & authorize",
+      "revisionChanged": "The task has changed. Close and review it again before confirming authorization.",
+      "revoke": "Revoke authorization for this task",
+      "revoking": "Revoking…",
+      "viewRunContent": "View run content",
+      "workingDirectory": "Working directory: {{cwd}}"
+    },
+    "authorizationRequest": {
+      "description": "Reading the latest state of the target scheduled task.",
+      "loading": "Loading task…",
+      "openFailed": "Unable to open the task; it may have been deleted or is currently unavailable: {{message}}",
+      "title": "Review & authorize"
+    },
+    "dateRange": {
+      "incomplete": "Select a complete date range.",
+      "invalid": "The date range is invalid."
+    },
+    "dateRangePicker": {
+      "pickEndDate": "Pick an end date",
+      "pickRange": "Pick a date range"
+    },
+    "form": {
+      "cronExample": "For example, 0 9 * * * means every day at 09:00.",
+      "cronExpression": "Cron (minute hour day month weekday)",
+      "everyMinutes": "Every how many minutes",
+      "intervalAnchor": "Interval anchor",
+      "misfireCoalesce": "Coalesce into one catch-up run",
+      "misfirePolicy": "Missed run time",
+      "name": "Task name",
+      "overlapPolicy": "Session already running",
+      "overlapQueueOne": "Keep one queued run",
+      "policySkip": "Skip",
+      "prompt": "Run prompt",
+      "runAt": "Run at",
+      "saveFailed": "Save failed. Please try again.",
+      "saveTask": "Save task",
+      "saving": "Saving…",
+      "timeoutMinutes": "Run timeout (minutes)",
+      "timezone": "IANA timezone",
+      "triggerType": "Trigger type",
+      "typeInterval": "Fixed interval",
+      "typeOnce": "One-time",
+      "validationFailed": "Check the name, prompt, time, and interval; the interval is at least 1 minute and the timeout at most 24 hours."
+    },
+    "history": {
+      "archivedSuffix": " (archived)",
+      "empty": "No matching run records.",
+      "loading": "Loading history…",
+      "triggerManual": "Manual run",
+      "triggerScheduled": "Scheduled trigger",
+      "workspacePrefix": "Workspace: {{name}}"
+    },
+    "page": {
+      "allWorkspaces": "All workspaces",
+      "archiveNote": "Archiving stops future runs and requests cancellation of the active run; run history and the authorization audit are kept.",
+      "description": "Manage scheduled tasks across all workspaces. Each task runs in an isolated session, and the completion summary is echoed back to the source session.",
+      "editDescription": "Set the run time, session, and prompt. A saved task runs only after explicit authorization. Changing the run content requires re-authorization; archiving keeps the history and requests cancellation of the active run.",
+      "editTitle": "Edit scheduled task",
+      "historyDateRange": "Run date range",
+      "historyResult": "Run result",
+      "invalidRange": "Select an end date to complete the date range.",
+      "loadingWorkspaces": "Loading workspaces…",
+      "noWorkspace": "Create a workspace and a session first.",
+      "searchHistoryPlaceholder": "Search all run records",
+      "searchTasks": "Search tasks",
+      "searchTasksPlaceholder": "Search task names",
+      "serviceStopped": "The scheduler service is stopped. Start it in Settings under \"Scheduler\".",
+      "statusAll": "All unarchived tasks",
+      "statusArchived": "Archived",
+      "statusAttention": "Needs attention",
+      "statusCompleted": "Completed",
+      "statusPaused": "Paused",
+      "statusPending": "Pending",
+      "tabHistory": "Run history",
+      "tabTasks": "Task management",
+      "taskStatus": "Task status",
+      "title": "Scheduled tasks",
+      "workspace": "Workspace"
+    },
+    "runDetails": {
+      "cancelRun": "Cancel this run",
+      "summary": "Result summary",
+      "transcript": "Run details"
+    },
+    "runHistory": {
+      "descriptionDetail": "Shows the selected run record; expand the summary or run details to see results.",
+      "descriptionRecent": "Shows only the 20 most recent runs, newest first. Expand the summary or run details to see results.",
+      "empty": "No run records yet.",
+      "loading": "Loading records…",
+      "titleDetail": "Run details",
+      "titleRecent": "Recent run records"
+    },
+    "runResult": {
+      "opening": "Opening…",
+      "openSession": "Open session"
+    },
+    "runStatus": {
+      "all": "All results",
+      "cancelled": "Cancelled",
+      "claimed": "Claimed",
+      "dispatching": "Dispatching",
+      "failed": "Failed",
+      "interrupted": "Interrupted",
+      "needsAttention": "Needs attention",
+      "queued": "Queued",
+      "running": "Running",
+      "skipped": "Skipped",
+      "succeeded": "Succeeded",
+      "timedOut": "Timed out"
+    },
+    "select": {
+      "placeholder": "Select"
+    },
+    "taskList": {
+      "archive": "Archive",
+      "cronSchedule": "Cron schedule",
+      "empty": "No matching tasks. Create a scheduled task in a session.",
+      "intervalSchedule": "Interval schedule",
+      "loading": "Loading tasks…",
+      "nextRun": "Next run",
+      "onceSchedule": "One-time task",
+      "openSourceSession": "Open source session",
+      "pauseSchedule": "Pause schedule",
+      "pauseTitle": "Pausing the schedule only stops future runs; it does not stop the current run",
+      "permissionDenied": "Execution was blocked by permission rules. Check the run records for the specific tools and reasons; re-authorization may not lift the restriction.",
+      "resumeSchedule": "Resume schedule",
+      "running": "Running…",
+      "runNow": "Run now",
+      "runRecords": "Run records",
+      "scheduleInterval": "Every {{minutes}} minutes · anchor {{anchor}}",
+      "scheduleOnce": "One-time · {{at}}",
+      "sourceSessionMissing": "The source session is no longer in the current directory."
+    },
+    "taskStatus": {
+      "archived": "Archived",
+      "blocked": "Pending authorization / needs attention",
+      "completed": "Completed",
+      "enabled": "Enabled",
+      "paused": "Schedule paused",
+      "restricted": "Execution restricted",
+      "running": "Running"
+    },
+    "toolPicker": {
+      "emptyMatches": "No matching tools. Adjust the search criteria.",
+      "footerNote": "This list shows tools registered in the latest preflight, excluding unsupported interaction and control tools; richer tool authorization improves Agent capability.",
+      "searchPlaceholder": "Search name, description, or source",
+      "selectAllMatches": "Select all search results",
+      "selectAllSelectable": "Select all authorizable tools",
+      "sourceMissing": "No source provided",
+      "sourcePrefix": "Source: {{source}}",
+      "summary": "{{total}} tools total, {{matched}} matched, {{selectable}} selectable; {{selected}} selected in total",
+      "unauthorizedBadge": "Not authorizable"
+    },
+    "transcript": {
+      "empty": "This run has not produced any records yet.",
+      "loading": "Loading…",
+      "readonlyNote": "Read-only record. Viewing details does not re-run the task.",
+      "truncated": "Only the most recent records are shown."
+    }
+  },
+  "session": {
+    "attachmentDiagnostics": {
+      "title": "Text extraction coverage",
+      "trigger": "Extraction details"
+    },
+    "attachments": {
+      "codecUnsupported": "This browser cannot play the verified media codec",
+      "deleted": "Deleted attachment",
+      "downloadTitle": "Download",
+      "previewTitle": "Preview",
+      "unavailable": "Temporarily unavailable",
+      "untitled": "Untitled attachment"
+    },
+    "backgroundTasks": {
+      "actionFailed": "Action did not complete. Please try again.",
+      "alert": {
+        "actionIncomplete": "Action incomplete",
+        "confirming": "Confirming process exit; new tasks cannot start until this completes.",
+        "incomplete": "Background task operation did not complete; check task status and retry.",
+        "stopping": "Stopping tasks",
+        "stopUnconfirmed": "Stop not yet confirmed",
+        "unreadable": "Unable to read task status right now. Retry stopping to confirm all tasks have exited."
+      },
+      "allFinished": "All background tasks have finished",
+      "control": {
+        "logsStale": "The latest logs have not arrived yet; try again.",
+        "sessionChanged": "The session state changed; reopen the task list and try again.",
+        "stopUnconfirmed": "The stop is not confirmed yet; try again later.",
+        "taskMissing": "The task was not found; reopen the task list."
+      },
+      "description": "View this session's running processes and recent output.",
+      "empty": "No background tasks right now",
+      "groupRecent": "Recently finished",
+      "groupRunning": "Running",
+      "logs": {
+        "copied": "Copied",
+        "copy": "Copy logs",
+        "copyFailed": "Unable to copy; select the log text and copy it manually.",
+        "empty": "No output from this task yet",
+        "loading": "Reading logs…",
+        "notLoaded": "Logs not loaded; click refresh to retry",
+        "recentOutput": "Recent output",
+        "refresh": "Refresh logs",
+        "truncatedSuffix": " · truncated"
+      },
+      "retryStop": "Retry stop",
+      "row": {
+        "exitCode": "Exit code {{code}}",
+        "logs": "Logs",
+        "started": "Started {{time}}",
+        "stopAriaLabel": "Stop {{label}}"
+      },
+      "status": {
+        "exited": "Completed",
+        "exitedFailed": "Execution failed",
+        "failed": "Launch failed",
+        "running": "Running",
+        "starting": "Starting",
+        "stopped": "Stopped",
+        "stopping": "Stopping",
+        "unknown": "Unknown state"
+      },
+      "stopAll": "Stop all",
+      "stopAllNote": "Stopping all also aborts the current Agent run; generated content is kept.",
+      "stoppingButton": "Stopping…",
+      "summary": {
+        "active_one": "{{count}} running",
+        "active_other": "{{count}} running",
+        "failed_one": "{{count}} tasks failed",
+        "failed_other": "{{count}} tasks failed",
+        "pending": "Status pending confirmation",
+        "recent_one": "{{count}} finished",
+        "recent_other": "{{count}} finished",
+        "stopping": "Stop pending confirmation"
+      },
+      "title": "Background tasks"
+    },
+    "builtinTool": {
+      "changes": "Changes",
+      "command": "Command",
+      "content": "Content",
+      "results": "Results",
+      "truncationGeneric": "Output limited.",
+      "truncationLimited_one": "Limited to {{count}} results.",
+      "truncationLimited_other": "Limited to {{count}} results.",
+      "truncationLines": "Showing {{outputLines}} of {{totalLines}} lines.",
+      "wroteCharacters_one": "Wrote {{count}} characters.",
+      "wroteCharacters_other": "Wrote {{count}} characters."
+    },
+    "composer": {
+      "attachFiles": "Attach files",
+      "attachments": {
+        "statusFailed": "Failed",
+        "statusProcessing": "Verifying and processing",
+        "statusRejected": "Rejected",
+        "statusRemoving": "Removing",
+        "unavailable": "Attachment unavailable",
+        "verifiedFile": "Verified file"
+      },
+      "attachmentsPending": "Wait for every attachment to finish processing before sending.",
+      "attachmentUploadFailed": "Attachment upload failed.",
+      "commandFailed": "Could not execute command.",
+      "commandsTooltip": "Commands",
+      "goalTooltip": "Goal",
+      "mentionTooltip": "Mention file or folder",
+      "newlineHint": "{{newline}} for a new line",
+      "placeholderDefault": "Ask Dr.Octopus anything…",
+      "placeholderFollowUp": "Add a follow-up for when this run finishes…",
+      "placeholderGuide": "Guide the current run…",
+      "placeholderHome": "Tell Dr.Octopus what you want to accomplish…",
+      "placeholderKnowledge": "Ask the knowledge base; answers will include sources…",
+      "placeholderLoading": "Loading Session resources…",
+      "placeholderPlan": "Describe what you want to plan…",
+      "sendFailed": "Could not send message.",
+      "slashComingSoon": "Coming soon",
+      "slashNoMatch": "No matching commands.",
+      "slashSearchPlaceholder": "Search command names and descriptions…",
+      "stopFailed": "Could not stop the session.",
+      "submitAndNewlineHint": "{{send}} to submit, {{newline}} for a new line",
+      "submitHint": "{{send}} to submit",
+      "tooManyReferences": "A message can reference at most {{max}} Workspace entries.",
+      "unavailableWhileRunning": "Unavailable while the Agent is running.",
+      "workModeFailed": "Could not change Agent mode."
+    },
+    "configAlert": {
+      "descriptionDefault": "Takes effect after restarting the session; chat history is kept.",
+      "descriptionRestarting": "Reloading the configuration; one moment please.",
+      "restartButton": "Restart session",
+      "titleChanged": "Model service configuration changed",
+      "titleFailed": "Session restart failed",
+      "titleRestarting": "Restarting session"
+    },
+    "connectingAlert": {
+      "label": "Connecting to Agent…"
+    },
+    "contextUsage": {
+      "autoCompactionDisabled": "Auto-Compaction is disabled for this session.",
+      "autoCompactionEnabled": "Auto-Compaction is enabled.",
+      "title": "Context window",
+      "tokensSummary": "{{used}} / {{total}} tokens",
+      "waiting": "Waiting for usage"
+    },
+    "conversation": {
+      "emptyDescription": "Ask about this workspace, attach an image, or run a discovered command.",
+      "emptyTitle": "Ready when you are",
+      "emptyTitleLoading": "No earlier messages yet"
+    },
+    "coverage": {
+      "assessment": {
+        "partial": "Content feature checks are still incomplete; the entries below may not cover everything.",
+        "unknown": "Content feature check results are unknown."
+      },
+      "conclusion": {
+        "partial": "Text extraction did not cover everything; the current text cannot represent the full document.",
+        "textLayerOnly": "Only the text layer was extracted; this does not represent the full visual content.",
+        "unknown": "Document coverage is unknown; cannot confirm which content the current text covers."
+      },
+      "content": {
+        "chart": "Charts",
+        "diagram": "Diagrams",
+        "embedded": "Embedded objects",
+        "formulaValues": "Formula values",
+        "hiddenSheet": "Hidden sheets",
+        "image": "Images",
+        "layout": "Visual layout",
+        "media": "Media",
+        "revisions": "Revision data",
+        "scanLikely": "Suspected scanned content",
+        "textRegion": "Text regions",
+        "unknown": "Unknown content"
+      },
+      "detailsOmitted": "Some coverage details were omitted; the current list is not complete.",
+      "evidence": {
+        "heuristic": "heuristic guess",
+        "structural": "structural evidence"
+      },
+      "extraction": {
+        "extracted": "Text extraction completed for this pass",
+        "failed": "Text extraction failed",
+        "truncated": "Text extraction was truncated",
+        "unknown": "Text extraction status is unknown"
+      },
+      "extractionStatusLine": "[Extraction status]:\n{{status}}.",
+      "findingLine": "{{label}} ({{countWithUnit}}, {{evidence}}): {{status}}.",
+      "findingsLine": "[Content findings and coverage]:\n{{findings}}",
+      "findingStatus": {
+        "extracted": "Included in text extraction",
+        "failed": "Extraction failed for this content",
+        "notProcessed": "Not yet covered by text extraction",
+        "truncated": "Only partially included in text extraction; truncated",
+        "unknown": "Coverage or result reliability could not be verified",
+        "unsupported": "Not supported by current text extraction"
+      },
+      "limit": {
+        "diagnostics": "coverage record limit reached; some details not listed",
+        "text": "text extraction limit reached",
+        "units": "content unit count limit reached"
+      },
+      "limitsLine": "Extraction limits: {{limits}}.",
+      "limitsSeparator": "; ",
+      "locationsLine": "Locations: {{locations}}.",
+      "locationsOmitted": "Some locations were omitted; the locations shown are not the complete list.",
+      "noFindings": "No specific content findings or locator entries were provided.",
+      "unit": {
+        "occurrences_one": "{{count}} occurrences",
+        "occurrences_other": "{{count}} occurrences",
+        "pages_one": "{{count}} pages",
+        "pages_other": "{{count}} pages",
+        "parts_one": "{{count}} package parts",
+        "parts_other": "{{count}} package parts"
+      }
+    },
+    "coverageLocations": {
+      "itemSeparator": ", ",
+      "listSeparator": "; ",
+      "none": "No specific locations provided",
+      "pageLabel": "Page {{page}}",
+      "pagesOnly": "Pages {{ranges}}",
+      "partLabel": "Part {{part}}",
+      "rangeSeparator": ", ",
+      "regionLabel": "Region {{region}}",
+      "sheetLabel": "Sheet \"{{sheet}}\"",
+      "slideLabel": "Slide {{slide}}",
+      "slidesOnly": "Slides {{ranges}}"
+    },
+    "execution": {
+      "attentionTitle": "This run needs attention",
+      "history": "Run history",
+      "loadFailedTitle": "Failed to load execution record",
+      "newerRecords": "Newer records",
+      "olderRecords": "Older records",
+      "promptMissing": "No task instructions were kept",
+      "promptTitle": "Task instructions",
+      "readonlyNote": "Read-only record · viewing does not re-run the task",
+      "startedAt": "Started at",
+      "status": {
+        "cancelled": "Cancelled",
+        "failed": "Failed",
+        "fallback": "Execution result",
+        "interrupted": "Interrupted",
+        "needsAttention": "Needs attention",
+        "queued": "Queued",
+        "running": "Running",
+        "skipped": "Skipped",
+        "succeeded": "Succeeded",
+        "timedOut": "Timed out"
+      },
+      "summaryTitle": "Run summary",
+      "timelineTitle": "Execution timeline"
+    },
+    "executionTimeline": {
+      "assistant": "Assistant reply",
+      "emptyDescription": "No execution messages to display on this page; check the run status or switch records.",
+      "emptyTitle": "No execution content yet",
+      "fallback": "Run note",
+      "toolCall": "Tool call",
+      "toolResult": "Tool result",
+      "user": "Additional instructions"
+    },
+    "explorer": {
+      "collapseAll": "Collapse All",
+      "createFailed": "Failed to create entry.",
+      "delete": "Delete",
+      "deleteDescriptionMany_one": "Are you sure you want to delete these {{count}} items? Folders are removed along with all of their contents. This action cannot be undone.",
+      "deleteDescriptionMany_other": "Are you sure you want to delete these {{count}} items? Folders are removed along with all of their contents. This action cannot be undone.",
+      "deleteDescriptionOne": "Are you sure you want to delete this item? Folders are removed along with all of their contents. This action cannot be undone.",
+      "deleteFailed": "Failed to delete.",
+      "deleteFile": "Delete File",
+      "deleteTitleMany_one": "Delete {{count}} items",
+      "deleteTitleMany_other": "Delete {{count}} items",
+      "deleteTitleOne": "Delete item",
+      "deleting": "Deleting…",
+      "dirLoadFailedDescription": "Unable to read this directory. Please try again.",
+      "dirLoadFailedTitle": "Failed to load directory",
+      "downloadFile": "Download File",
+      "editFile": "Edit File",
+      "emptyDirectory": "This directory is empty",
+      "invalidName": "Enter a valid name.",
+      "loadFailedDescription": "Unable to fetch workspace files. Please try again.",
+      "loadFailedTitle": "Failed to load files",
+      "loadingFiles": "Loading files…",
+      "loadTimeout": "Loading timed out. Please try again later.",
+      "newFile": "New File",
+      "newFolder": "New Folder",
+      "noFilesDescription": "You haven't created any files yet.",
+      "noFilesTitle": "No files yet",
+      "noWorkspaceDescription": "This workspace has not been set up yet.",
+      "noWorkspaceTitle": "No workspace yet",
+      "refreshFile": "Refresh File",
+      "retrying": "Retrying…",
+      "uploadFile": "Upload File"
+    },
+    "extensionDialog": {
+      "customAnswerPlaceholder": "Type another answer (optional)…",
+      "submitContinue": "Continue",
+      "submitRespond": "Respond"
+    },
+    "fileEditor": {
+      "enterFullscreen": "Enter full screen",
+      "exitFullscreen": "Exit full screen",
+      "loading": "Loading file…",
+      "openFailed": "Unable to open file",
+      "saveFailed": "Unable to save file",
+      "saving": "Saving…",
+      "viewEditor": "Editor",
+      "viewPreview": "Preview"
+    },
+    "filesPanel": {
+      "copyPathTitle": "Copy path",
+      "title": "File Explorer"
+    },
+    "fleetPanel": {
+      "badgeActive_one": "{{count}} active",
+      "badgeActive_other": "{{count}} active",
+      "badgeRecent": "Recent",
+      "omittedCount_one": "{{count}} additional items omitted.",
+      "omittedCount_other": "{{count}} additional items omitted.",
+      "omittedTruncated": "Additional agent state was truncated to the transport limit.",
+      "title": "Subagents background"
+    },
+    "goal": {
+      "activeTime": "{{duration}} active",
+      "automaticResponses_one": "{{count}} automatic responses",
+      "automaticResponses_other": "{{count}} automatic responses",
+      "clearFailed": "Could not clear the Goal.",
+      "clearStopped": "Clear stopped goal",
+      "continuationLimit": "Automatic response limit reached. Use /goal to review and continue.",
+      "noProgressGuard": "No-progress guard paused this Goal. Use /goal to review it.",
+      "safetyResume": "Safety resume: {{date}}",
+      "status": {
+        "active": "active",
+        "blocked": "blocked",
+        "budgetLimited": "budget limited",
+        "paused": "paused",
+        "usageLimited": "usage limited",
+        "waiting": "waiting"
+      },
+      "tokenBudget": "Token budget",
+      "updatedAt": "Updated {{date}}"
+    },
+    "goalTool": {
+      "afterDelay": "after {{delay}}",
+      "blocker": "Blocker",
+      "clampedNote": "Requested {{delay}}; clamped by pi-goal.",
+      "completionEvidence": "Completion evidence",
+      "evidence": "Evidence",
+      "goal": "Goal",
+      "repeatedTurns_one": "{{count}} repeated turns",
+      "repeatedTurns_other": "{{count}} repeated turns",
+      "resume": "Resume",
+      "waiting": "Waiting"
+    },
+    "imageAttachment": {
+      "alt": "Image attachment",
+      "unsupported": "Unsupported attachment"
+    },
+    "knowledgeEvidence": {
+      "citationLabel": "Citation ID",
+      "citationMissing": "This result did not provide a citation ID",
+      "emptyText": "This quote has no displayable text.",
+      "evidenceNumber": "Evidence {{number}}",
+      "fragment": "Material fragment",
+      "ocrBadge": "OCR recognized",
+      "quoteOriginal": "Original quote",
+      "readingPrefix": "Reading · ",
+      "readQuote": "Read quote",
+      "snapshotNote": "Material snapshot returned by this tool call",
+      "snapshotRetention": "Content preserved from retrieval time; the source material may have been updated since.",
+      "truncatedNote": "Fragment too long; showing the first 24,000 characters."
+    },
+    "knowledgeMode": {
+      "apply": "Apply source settings",
+      "auto": "Auto-match",
+      "autoBadge": "Auto-match sources",
+      "autoDescription": "The Agent picks relevant materials from the current workspace and global knowledge bases, and confirms with you first when the topic is unclear.",
+      "clearSelection": "Clear selection",
+      "dialogDescription": "By default the Agent matches collections; once sources are specified, retrieval stays within the selected scope.",
+      "dialogTitle": "Source answers from the right materials",
+      "emptyPage": "No matching collections on this page",
+      "filterPlaceholder": "Filter collections on this page…",
+      "localFallback": "Local knowledge collection",
+      "remoteFallback": "Remote shared materials",
+      "scopeGlobal": "Global",
+      "scopeWorkspace": "Workspace",
+      "selected": "Selected collections",
+      "selectedBadge_one": "Selected collections ({{count}})",
+      "selectedBadge_other": "Selected collections ({{count}})",
+      "selectedCount_one": "Selected {{count}} / 20",
+      "selectedCount_other": "Selected {{count}} / 20",
+      "settingsTitle": "Source settings",
+      "subtitle": "Search sources · answers with citations",
+      "title": "Knowledge Q&A"
+    },
+    "knowledgeProjection": {
+      "collectionsSummary": "Browse accessible knowledge collections",
+      "errorSummary": "Knowledge request incomplete · expand for details",
+      "fragmentFallback": "Document fragment",
+      "locator": {
+        "archivePath": "Archive path",
+        "page": "Page",
+        "paragraph": "Paragraph",
+        "row": "Row",
+        "sheet": "Sheet",
+        "slide": "Slide"
+      },
+      "readSummary": "Read the source excerpt and its location",
+      "searchFallback": "Find knowledge relevant to the question",
+      "searchWithQuery": "Search · {{query}}",
+      "titleFallback": "Source excerpt"
+    },
+    "knowledgeTool": {
+      "catalogDescription": "Knowledge collections accessible this time",
+      "catalogEmptyDescription": "Add materials or adjust the source scope, then continue asking.",
+      "catalogEmptyTitle": "No knowledge collections available",
+      "catalogSummary": "Showing {{shown}} of {{total}} collections.",
+      "catalogTitle": "Knowledge catalog",
+      "collectionCount_one": "{{count}} collections",
+      "collectionCount_other": "{{count}} collections",
+      "coveragePartialDescription": "Showing results from available sources; current evidence may be incomplete.",
+      "coveragePartialTitle": "Some sources temporarily unavailable",
+      "coverageUnavailableDescription": "Knowledge sources are temporarily inaccessible. Please try again later.",
+      "coverageUnavailableTitle": "Unable to search materials right now",
+      "evidenceCount_one": "{{count}} pieces of evidence",
+      "evidenceCount_other": "{{count}} pieces of evidence",
+      "evidenceTruncated": "Showing only the first 20 pieces of evidence.",
+      "loading": "Searching knowledge materials",
+      "noDescription": "This collection has no description yet.",
+      "remoteBadge": "Remote mount",
+      "searchDescription": "Material fragments related to this question",
+      "searchEmptyDescription": "Try rephrasing the question or adjusting the knowledge source scope.",
+      "searchEmptyTitle": "No related materials found yet",
+      "searchTitle": "Knowledge search",
+      "unavailableBadge": "Temporarily unavailable"
+    },
+    "loading": "Loading session…",
+    "loadingDescription": "Synchronizing the selected workspace.",
+    "memoryProjection": {
+      "errorSummary": "Request incomplete · expand for details",
+      "fallbackSummary": "Expand to view memory results",
+      "noticeMorePages": "The directory has more entries to review.",
+      "noticePartialBody": "Only part of the body was returned; later reads can complete it.",
+      "noticePartialLeads": "This search returned only some relevant leads.",
+      "noticeSearchSubset": "Results reflect this keyword search and do not represent all memories.",
+      "noticeSearchUnavailable": "Search is temporarily unavailable; these results do not represent all memories.",
+      "runningRead": "Reading memory body…",
+      "runningRecall": "Searching memories…",
+      "summaryLeads_one": "{{count}} memory leads",
+      "summaryLeads_other": "{{count}} memory leads",
+      "summaryLeadsPartial_one": "Showing {{count}} memory leads",
+      "summaryLeadsPartial_other": "Showing {{count}} memory leads",
+      "summaryReadable_one": "{{count}} memories readable",
+      "summaryReadable_other": "{{count}} memories readable",
+      "summaryReadablePartial_one": "Showing {{count}} memories readable",
+      "summaryReadablePartial_other": "Showing {{count}} memories readable",
+      "topicFallback": "Long-term memory",
+      "type": {
+        "architecture": "Architecture",
+        "constraint": "Constraint",
+        "correction": "Correction",
+        "decision": "Decision",
+        "environment": "Environment",
+        "instruction": "Instruction",
+        "other": "Other",
+        "preference": "Preference",
+        "workflow": "Workflow"
+      },
+      "typeFallback": "Memory",
+      "unavailableSummary": "This memory was unavailable during this read; it may have been deleted or superseded.",
+      "unavailableTopic": "Memory #{{id}}",
+      "unavailableType": "Unavailable"
+    },
+    "memorySave": {
+      "description": "Available for reference in later conversations.",
+      "globalMemory": "Global memory",
+      "title_one": "Saved {{count}} long-term memories",
+      "title_other": "Saved {{count}} long-term memories"
+    },
+    "memoryTool": {
+      "emptyDescription": "Try different keywords, or browse the memory library.",
+      "entry": {
+        "noSources": "This result has no source excerpts.",
+        "sourceEmpty": "This source has no text excerpt.",
+        "sources": "Memory sources",
+        "superseded": "Historical version",
+        "truncated": "Content shortened; see the raw result for full output."
+      },
+      "manageMemory": "Manage memory",
+      "rawResult": "Raw result",
+      "readEmptyTitle": "No readable memories this time",
+      "recallEmptyTitle": "No memory clues found this time",
+      "showingFirst_one": "Showing the first {{count}} entries; see the raw result for full output.",
+      "showingFirst_other": "Showing the first {{count}} entries; see the raw result for full output."
+    },
+    "messageFailure": {
+      "title": "Model request failed"
+    },
+    "messageFile": {
+      "loadingPreview": "Loading preview…",
+      "preview": "Preview",
+      "previewFailed": "Unable to open preview"
+    },
+    "messageRow": {
+      "interrupted": "Interrupted",
+      "you": "You"
+    },
+    "messageToolbar": {
+      "badResponse": "Bad response",
+      "copied": "Copied",
+      "copyMessage": "Copy message",
+      "fork": "Fork session from this message",
+      "goodResponse": "Good response"
+    },
+    "miniMap": {
+      "copyTitle": "Copy title",
+      "questionNumber": "Question {{number}}"
+    },
+    "modelThinking": {
+      "chooseModel": "Choose model",
+      "model": "Model",
+      "notSelected": "Not selected",
+      "thinkingLevel": "Thinking level"
+    },
+    "notFound": "Session not found",
+    "notFoundDescription": "Choose another session from the sidebar.",
+    "permission": {
+      "ask": "Ask",
+      "askDescription": "Always ask when editing files and using the Internet.",
+      "auto": "Auto",
+      "autoDescription": "Request approval only for detected risky operations.",
+      "fallback": "Permission",
+      "full": "Full-access",
+      "fullDescription": "Unrestricted access to local files and the Internet.",
+      "label": "Permission Mode"
+    },
+    "planExit": {
+      "description": "Returning to Agent mode runs the Plan extension's exit workflow and discards the proposed plan.",
+      "discard": "Discard and exit",
+      "keep": "Keep planning",
+      "title": "Discard the ready plan?"
+    },
+    "planTool": {
+      "answerPrefix": "Answer: {{answer}}",
+      "cancelled": "Question cancelled.",
+      "cancelledWithReason": "Question cancelled: {{reason}}",
+      "custom": "Custom",
+      "proposedPlan": "Proposed plan",
+      "waitingResponse": "Waiting for response"
+    },
+    "properties": {
+      "agentFile": "Agent file",
+      "autoCompaction": "Auto compaction",
+      "autoRetry": "Auto retry",
+      "behaviorTitle": "Behavior",
+      "clone": "Clone",
+      "compact": "Compact",
+      "connection": "Connection",
+      "copyPathTitle": "Copy path",
+      "detailsTitle": "Session details",
+      "exportHtml": "Export HTML",
+      "model": "Model",
+      "noPending": "No pending messages",
+      "queue": "Queue",
+      "queueSummary": "{{steering}} steering · {{followUp}} follow-up",
+      "runtimeDefault": "Runtime default",
+      "sessionId": "Session ID",
+      "stopRetry": "Stop retry",
+      "thinking": "Thinking",
+      "workspace": "Workspace"
+    },
+    "rename": {
+      "description": "Enter a new title for this session.",
+      "failed": "Failed to rename session.",
+      "fieldLabel": "Title",
+      "title": "Rename session",
+      "titleRequired": "Title is required.",
+      "titleTooLong": "Title must be 160 characters or less."
+    },
+    "restartDialog": {
+      "confirm": "Interrupt and restart",
+      "confirmTitle": "Restart session: {{title}}",
+      "description": "The current task will be interrupted; saved chat history and file changes are kept. Restart this session?",
+      "errorTitle": "Restart failed",
+      "pending": "Restarting…"
+    },
+    "runningControls": {
+      "guideDescription": "Influence the next Agent turn. Press Enter.",
+      "guideNow": "Guide now",
+      "guideTitle": "Guide the current run",
+      "guideTooltip": "Guide current run · Enter",
+      "menuLabel": "Send while Dr.Octopus is working",
+      "queueDescription": "Wait until the current task finishes. Press Alt+Enter.",
+      "queuedSuffix_one": " {{count}} already queued.",
+      "queuedSuffix_other": " {{count}} already queued.",
+      "queueNext": "Queue next",
+      "queueTitle": "Send after this run",
+      "queueTooltip": "Queue after run · Enter",
+      "stoppingTooltip": "Stopping current run…",
+      "stopTooltip": "Stop current run"
+    },
+    "schedulerAlert": {
+      "title_one": "Scheduled task results (latest {{count}})",
+      "title_other": "Scheduled task results (latest {{count}})",
+      "viewResult": "View result"
+    },
+    "schedulerAuth": {
+      "open": "Open scheduled tasks",
+      "review": "Review and authorize"
+    },
+    "schedulerProjection": {
+      "intervalAnchor": "From {{at}}",
+      "intervalDays_one": "{{count}} days",
+      "intervalDays_other": "{{count}} days",
+      "intervalEvery": "Every {{interval}}",
+      "intervalHours_one": "{{count}} hours",
+      "intervalHours_other": "{{count}} hours",
+      "intervalMinutes_one": "{{count}} minutes",
+      "intervalMinutes_other": "{{count}} minutes",
+      "intervalMs_one": "{{count}} ms",
+      "intervalMs_other": "{{count}} ms",
+      "onceTask": "One-time task",
+      "runsCount_one": "{{count}} runs",
+      "runsCount_other": "{{count}} runs",
+      "tasksCount_one": "{{count}} tasks",
+      "tasksCount_other": "{{count}} tasks"
+    },
+    "schedulerTool": {
+      "effect": {
+        "cancellationRequested": "Cancelling",
+        "cancelled": "Cancelled",
+        "deleted": "Deleted",
+        "queued": "Queued",
+        "saved": "Saved"
+      },
+      "moreTasks_one": "{{count}} more tasks not expanded",
+      "moreTasks_other": "{{count}} more tasks not expanded",
+      "nextRun": "Next run",
+      "nextRunShort": "Next: {{date}}",
+      "runCount_one": "{{count}} run records",
+      "runCount_other": "{{count}} run records",
+      "runStatus": {
+        "cancelled": "Cancelled",
+        "claimed": "Claimed",
+        "dispatching": "Dispatching",
+        "failed": "Failed",
+        "fallback": "Run",
+        "interrupted": "Interrupted",
+        "needsAttention": "Needs attention",
+        "queued": "Queued",
+        "running": "Running",
+        "skipped": "Skipped",
+        "succeeded": "Succeeded",
+        "timedOut": "Timed out"
+      },
+      "state": {
+        "completed": "Completed",
+        "enabled": "Enabled",
+        "paused": "Paused",
+        "task": "Task"
+      },
+      "statusTitle": {
+        "error": "Error",
+        "output": "Output",
+        "running": "Processing"
+      },
+      "subtitle": "Runs in an independent session · persisted by Scheduler",
+      "taskCount_one": "{{count}} tasks",
+      "taskCount_other": "{{count}} tasks",
+      "thisRun": "This run",
+      "title": {
+        "cancel": "Cancel task run",
+        "create": "Create scheduled task",
+        "delete": "Delete scheduled task",
+        "fallback": "Scheduled task",
+        "get": "Scheduled task details",
+        "history": "Task run history",
+        "list": "Scheduled task list",
+        "runNow": "Run task now",
+        "update": "Update scheduled task"
+      },
+      "triggerManual": "Manual trigger",
+      "triggerScheduled": "Scheduled trigger",
+      "unnamedTask": "Unnamed task",
+      "warnings": "Reminders"
+    },
+    "stats": {
+      "cacheRead": "Cache read",
+      "cacheWrite": "Cache write",
+      "description": "Cumulative Session statistics, including compacted history.",
+      "estimatedCost": "Estimated cost",
+      "inputTokens": "Input tokens",
+      "loadFailedPrefix": "Failed to load statistics: ",
+      "loading": "Loading statistics…",
+      "outputTokens": "Output tokens",
+      "title": "Session usage",
+      "toolCallsResults": "Tool calls / results",
+      "totalMessages": "Total messages",
+      "totalTokens": "Total tokens",
+      "userAssistantMessages": "User / assistant messages"
+    },
+    "subagentTool": {
+      "agents": "Agents",
+      "currentTool": "Current: {{tool}}",
+      "run": "Run",
+      "status": {
+        "completed": "completed",
+        "detached": "detached",
+        "failed": "failed",
+        "paused": "paused",
+        "pending": "pending",
+        "running": "running",
+        "stopped": "stopped"
+      },
+      "tokens_one": "{{count}} tokens",
+      "tokens_other": "{{count}} tokens"
+    },
+    "thoughtDisclosure": {
+      "thinking": "Thinking…",
+      "thought": "Thought",
+      "thoughtFor": "Thought for {{duration}}",
+      "waiting": "Waiting for reasoning…"
+    },
+    "toolCard": {
+      "labels": {
+        "memoryRead": "Read memory",
+        "memoryRecall": "Recall memory"
+      },
+      "patternInPath": "{{pattern}} in {{path}}",
+      "status": {
+        "error": "Error",
+        "running": "Running",
+        "success": "Success"
+      }
+    },
+    "toolParts": {
+      "arguments": "Arguments",
+      "details": "Details",
+      "noOutput": "No output returned.",
+      "toolOutputAlt": "Tool output"
+    },
+    "turnDuration": {
+      "processed": "Processed",
+      "processing": "Processing",
+      "tokens": "tokens",
+      "usageTitle": "Prompt: {{input}} tokens; Completion: {{output}} tokens"
+    },
+    "workMode": {
+      "agent": "Agent",
+      "agentDescription": "Normal tool-enabled work",
+      "fallbackTitle": "Agent mode",
+      "knowledgeDescription": "Search knowledge materials; answers include citations",
+      "label": "Agent Modes",
+      "plan": "Plan",
+      "planDescription": "Present a plan before executing",
+      "unknown": "Unknown"
+    }
+  },
+  "settings": {
+    "defaultModel": {
+      "currentTitle": "Current default model",
+      "fieldLabel": "Provider / Model",
+      "loadFailed": "Failed to load the default model",
+      "notConfigured": "Not configured",
+      "save": "Save default model",
+      "saveFailed": "Save failed",
+      "selectPlaceholder": "Select a default model",
+      "selectRequired": "Select an available model.",
+      "selectTitle": "Choose a default model",
+      "unavailable": "Unavailable",
+      "updated": "Default model updated",
+      "updatedDescription": "New sessions will use this model."
+    },
+    "environment": {
+      "addTitle": "Add environment variable",
+      "addVariable": "Add variable",
+      "alertAgentTitle": "Newly started Agent processes read the new configuration",
+      "alertServerTitle": "Takes effect after restarting the Server",
+      "columnActions": "Actions",
+      "columnKey": "Name",
+      "columnSource": "Source",
+      "columnValue": "Next load value",
+      "configFile": "Configuration file: {{path}}",
+      "confirmExposureSave": "Confirm and save",
+      "deleteEntry": "Delete entry",
+      "dialogDescription": "Saved to the {{scope}} configuration. Deleting the entry falls back to other sources.",
+      "editTitle": "Edit environment variable",
+      "emptyString": "(empty string)",
+      "error": {
+        "busy": "Another process is modifying the configuration; try again later.",
+        "conflict": "The configuration was modified in another window. Close the editor, refresh the list, and try again.",
+        "fallback": "Unable to read or save the configuration; check the service connection and configuration file permissions, then try again.",
+        "invalid": "Invalid configuration; check variable names, ports, log levels, and numeric ranges. The launch directory and internal process variables cannot be changed here."
+      },
+      "exposureAlert": "Other devices that can reach this service can access the workspace, files, Agent tools, and service settings. Only use this on trusted networks.",
+      "keyExistsError": "This variable already exists; edit the existing entry.",
+      "keyFormatError": "Use uppercase letters, digits, or underscores; cannot start with a digit.",
+      "keyLabel": "Variable name",
+      "keyPlaceholder": "e.g. OPENAI_API_KEY",
+      "loadFailed": "Failed to load",
+      "loading": "Loading environment variables…",
+      "noMatch": "No matching environment variables",
+      "notSet": "Not set",
+      "overriddenAlert": "This variable is overridden by launch arguments or the process environment. The new value is saved but only used after the upper-level override is removed.",
+      "priorityDescription": "Priority: launch arguments → process environment / dev .env → file configuration → defaults. The table shows the values used at the next load; running processes keep their current configuration.",
+      "replaceValueLabel": "Replace with new value",
+      "replaceValuePlaceholder": "The existing value is hidden; enter a new value",
+      "saved": "Environment variable saved",
+      "savedAgentDescription": "Newly started Agent processes will read the new configuration; running processes need a restart.",
+      "savedServerDescription": "Takes effect after restarting the Server.",
+      "searchPlaceholder": "Search variable names…",
+      "sensitiveDescription": "Custom variables are treated as sensitive and are not echoed after saving.",
+      "source": {
+        "default": "Default",
+        "dotenv": ".env",
+        "file": "File configuration",
+        "override": "Launch arguments",
+        "process": "Process env / .env"
+      },
+      "storedOverridden": "Saved value is overridden",
+      "valueDescription": "Leave empty to save an empty string; delete the entry to restore other sources.",
+      "valueInvalidError": "Value cannot contain NUL and must be at most 8192 characters.",
+      "valueLabel": "Value",
+      "valuePlaceholder": "Enter a value"
+    },
+    "extensions": {
+      "description": "The page shell is ready; Extension entrypoint queries and enable/disable actions will be connected in the next vertical slice.",
+      "title": "Extension resources are being wired up"
+    },
+    "frame": {
+      "descriptionFallback": "Manage application settings.",
+      "dialogDescription": "Configure global agent behavior and Pi resources.",
+      "navigationDescription": "Navigate between global Settings modules.",
+      "navigationTitle": "Settings navigation",
+      "titleFallback": "Settings"
+    },
+    "knowledge": {
+      "model": {
+        "apiKeyEmptyPlaceholder": "Leave empty for local services",
+        "apiKeyLabel": "API Key",
+        "apiKeySavedPlaceholder": "Saved; leave empty to keep unchanged",
+        "dimensionsInvalid": "Dimensions must be between 1 and 8192",
+        "dimensionsLabel": "Vector dimensions",
+        "embeddingDescription": "Converts documents into searchable vectors. Existing collections must be rebuilt after changing the model.",
+        "embeddingTitle": "Embedding · Semantic retrieval",
+        "enabledLabel": "Enable result reranking",
+        "endpointInvalid": "Enter an HTTP or HTTPS address",
+        "endpointLabel": "Endpoint",
+        "modeAuto": "Auto-detect scanned pages",
+        "modeForce": "Use OCR on all pages",
+        "modeLabel": "Recognition mode",
+        "modelLabel": "Model name",
+        "modelRequired": "Enter a model name",
+        "modeOff": "Disable OCR",
+        "ocrDescription": "Recognizes text on scanned PDF pages. Plain text is extracted directly first.",
+        "ocrTitle": "OCR · Scan recognition",
+        "optional": "Optional",
+        "probeResult": "{{summary}} · {{elapsed}} ms",
+        "rerankerDescription": "Reorders retrieval results. Basic retrieval results are kept when the service is unavailable.",
+        "rerankerTitle": "Reranker · Result ranking",
+        "save": "Save configuration",
+        "saved": "Configuration saved",
+        "saving": "Saving…",
+        "test": "Test model",
+        "testing": "Testing…"
+      },
+      "models": {
+        "loading": "Loading model configuration…",
+        "startHint": "Start the knowledge service to configure models. Intranet models need no API Key."
+      },
+      "mounts": {
+        "bearerSuffix": " · HTTP Bearer required",
+        "connectionLabel": "Global MCP connection",
+        "connectionPlaceholder": "Select a configured connection",
+        "description": "Connect other Dr.Octopus instances; shared collections appear in the global list.",
+        "introLink": "MCP Servers",
+        "introPrefix": "Save the HTTP connection and Bearer credentials in",
+        "introSuffix": "first, then select a connection to verify and mount.",
+        "mounted": "Mounted",
+        "pending": "Pending recovery",
+        "sharedCollections_one": "{{count}} shared collection",
+        "sharedCollections_other": "{{count}} shared collections",
+        "synced": "Catalog synced",
+        "title": "Mount remote knowledge bases",
+        "unavailable": "Connection unavailable; check the remote service or token",
+        "verify": "Verify and mount",
+        "verifying": "Verifying…"
+      },
+      "service": {
+        "description": "All workspaces share one background service; once stopped it must be started manually.",
+        "restart": "Restart",
+        "start": "Start",
+        "starting": "Starting…",
+        "state": {
+          "notStarted": "Not started",
+          "running": "Running",
+          "stopped": "Stopped"
+        },
+        "stop": "Stop",
+        "stopping": "Stopping…",
+        "title": "Knowledge service"
+      },
+      "sharing": {
+        "collectionsLabel": "Shared collections",
+        "copyToken": "Copy token",
+        "description": "Share selected global collections read-only with other agents. The service must stay running.",
+        "enableLabel": "Enable knowledge MCP",
+        "hostsLabel": "Allowed hostnames",
+        "networkHint": "Loopback-only by default. Other devices must connect through the HTTPS entry; the proxy trust scope follows the server configuration.",
+        "noCollections": "Create a local global collection first.",
+        "originsLabel": "Allowed browser origins (optional)",
+        "rotateLabel": "Generate a new token and revoke the old one",
+        "save": "Save sharing settings",
+        "selectedCount_one": "{{count}} collection selected",
+        "selectedCount_other": "{{count}} collections selected",
+        "title": "External knowledge MCP",
+        "tlsLabel": "Allow other devices to access via HTTPS",
+        "tokenNotice": "The new token is shown only once; save it to the connecting party's MCP configuration. The old token is revoked."
+      }
+    },
+    "language": {
+      "description": "Choose the display language. Changes apply immediately and are remembered on this device.",
+      "label": "Display language",
+      "title": "Language"
+    },
+    "mcp": {
+      "addServer": "MCP Server",
+      "addTitle": "Add MCP server",
+      "argsLabel": "Arguments",
+      "argsPlaceholder": "One argument per line",
+      "backToList": "Back to list",
+      "badgeDisabled": "Disabled",
+      "confirmRemove": "Confirm removal",
+      "connectionCreateDescription": "Add a local process, HTTP, or Socket MCP server.",
+      "connectionEditDescription": "Local process, HTTP, or Socket MCP server configuration.",
+      "connectionTitle": "Connection",
+      "connectivity": {
+        "checking": "Checking connectivity",
+        "connected": "Connected",
+        "disabled": "Disabled; connectivity not checked",
+        "failed": "Connectivity check failed",
+        "needsAuth": "Connection failed: authentication required"
+      },
+      "created": "MCP server created",
+      "createServer": "Create server",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Briefly describe what this MCP server does",
+      "directToolsDescription": "Registers each of this server's MCP tools directly into the Agent tool list without retrieval through the mcp proxy first. More tools consume more context.",
+      "directToolsLabel": "Register tools",
+      "directToolsSearchHint": "Currently registers tools on demand after search. Saving other settings keeps this mode; turning off the switch disables direct registration.",
+      "empty": "No MCP servers",
+      "emptyDescription": "Use the button below to add the first configuration.",
+      "enableDescription": "Does not start or stop the current Agent Runtime; restart the Agent after saving.",
+      "enableTitle": "Enable server",
+      "excludeToolsLabel": "Exclude tools",
+      "exposeResourcesDescription": "Maps MCP Resources provided by the server to callable read_<resource> tools. When off, these resource tools are no longer exposed.",
+      "exposeResourcesLabel": "Expose MCP resources as tools",
+      "includeToolsLabel": "Include tools",
+      "loadFailed": "Failed to load MCP configuration",
+      "managementTitle": "Management permission",
+      "nameLabel": "Name",
+      "nameRequired": "Enter a name.",
+      "noMatch": "No matching results",
+      "noMatchDescription": "Try searching by name, transport, or source.",
+      "operationFailed": "MCP operation failed",
+      "readOnlyDescription": "This definition comes from {{source}}; only the allowed global enable/disable override can be created.",
+      "readOnlyTitle": "Source is read-only",
+      "removed": "MCP configuration removed",
+      "removeDescription": "After removing the global definition or override, a lower-level configuration with the same name may reappear.",
+      "removeDialogDescription": "This only removes the Host-level global definition or override.",
+      "removeDialogTitle": "Remove {{name}}?",
+      "removeHostButton": "Remove Host configuration",
+      "removeTitle": "Remove configuration",
+      "restartDescription": "Takes effect after restarting the Agent.",
+      "saveChanges": "Save changes",
+      "saved": "MCP configuration saved",
+      "saveFailed": "Failed to save MCP configuration",
+      "searchPlaceholder": "Search MCP servers…",
+      "secretsDescription": "Bound environment variables, HTTP headers, or OAuth client secrets.",
+      "secretsTitle": "Secret bindings",
+      "selectDescription": "Pick one from the catalog to view its source, connection, and tool exposure.",
+      "selectTitle": "Select an MCP server",
+      "source": {
+        "agentsGlobal": "Agents (global)",
+        "agentsNestedGlobal": "Agents (nested global)",
+        "hostImport": "Host import",
+        "packageOrPlugin": "Extension package",
+        "piGlobal": "Dr.Octopus",
+        "sharedGlobal": "Shared configuration"
+      },
+      "sourceTitle": "Configuration source",
+      "stateDisabled": "Disabled",
+      "stateEnabled": "Enabled",
+      "targetDescription": "stdio takes a command, HTTP a URL, and Socket a socket address.",
+      "targetLabel": "Command or address",
+      "targetRequired": "Enter a connection target.",
+      "toolsPlaceholder": "One tool pattern per line",
+      "transportLabel": "Transport",
+      "transportStdio": "stdio (local process)"
+    },
+    "nav": {
+      "company": {
+        "description": "The company page is not available yet.",
+        "label": "Company"
+      },
+      "defaultModel": {
+        "description": "Choose the default model for new sessions; running sessions are unaffected.",
+        "label": "Default model"
+      },
+      "environment": {
+        "description": "Manage Server and Agent launch configuration separately; stored locally.",
+        "label": "Environment variables"
+      },
+      "extensions": {
+        "description": "Extension queries and enable/disable are not available yet.",
+        "label": "Extensions"
+      },
+      "group": {
+        "about": "About",
+        "advanced": "Advanced",
+        "appearance": "Appearance",
+        "basics": "Basics",
+        "extensions": "Extensions"
+      },
+      "knowledge": {
+        "description": "Manage the knowledge service, model configuration, sharing, and remote mounts.",
+        "label": "Knowledge"
+      },
+      "language": {
+        "description": "Choose the interface language; changes apply immediately.",
+        "label": "Language"
+      },
+      "licenses": {
+        "description": "The open-source licenses page is not available yet.",
+        "label": "Licenses"
+      },
+      "mcp": {
+        "description": "Add and manage MCP server connections and available tools.",
+        "label": "MCP Servers"
+      },
+      "memory": {
+        "description": "Configure the long-term memory mode shared across workspaces.",
+        "label": "Memory"
+      },
+      "modelProviders": {
+        "description": "Manage model providers, endpoints, and authentication.",
+        "label": "Model providers"
+      },
+      "permissions": {
+        "description": "Manage tool permissions, run modes, and audit records; configurable per workspace.",
+        "label": "Permissions"
+      },
+      "schedules": {
+        "description": "Manage the scheduler service, default timezone, and concurrency.",
+        "label": "Scheduled tasks"
+      },
+      "server": {
+        "description": "Manage listening, session capacity, and file logging; restart the app manually after saving.",
+        "label": "Server"
+      },
+      "shortcuts": {
+        "description": "View and customize keyboard shortcuts for sessions, layout, and composer.",
+        "label": "Keyboard shortcuts"
+      },
+      "snippets": {
+        "description": "Snippet configuration is not available yet.",
+        "label": "Snippets"
+      },
+      "theme": {
+        "description": "Theme mode configuration is not available yet.",
+        "label": "Theme mode"
+      },
+      "version": {
+        "description": "The version page is not available yet.",
+        "label": "Version"
+      }
+    },
+    "permissions": {
+      "action": {
+        "allow": "Allow",
+        "ask": "Ask",
+        "deny": "Deny",
+        "inherit": "Default",
+        "perMode": "Per mode"
+      },
+      "addRule": "Add tool rule",
+      "audit": {
+        "lengthDescription": "Maximum characters kept per text field; the excess is truncated",
+        "lengthLabel": "Log text retention length",
+        "toggleDescription": "When enabled, records tool permission requests and approval results for queries and troubleshooting",
+        "toggleLabel": "Record permission audit log"
+      },
+      "configEditor": {
+        "generalTitle": "Run modes",
+        "globalDescription": "Configure default permissions for all workspaces; choose \"Default\" to use system presets.",
+        "jsonInvalid": "Configuration fields or values are invalid; check tool rules, modes and audit options.",
+        "jsonSyntaxError": "JSON syntax error",
+        "jsonTitle": "JSON permission configuration",
+        "modeKindAriaLabel": "{{mode}} {{kind}}",
+        "rawDescriptionPrefix": "Supports toolRules, requestDefaults, policy, modes and audit fields. Saving an empty object ",
+        "rawDescriptionSuffix": " restores all defaults for this scope; setting null in toolRules removes the default kind.",
+        "rawLabel": "Scope-level configuration",
+        "save": "Save configuration",
+        "workspaceDescription": "Configure permissions for the current workspace; choose \"Default\" to use global configuration."
+      },
+      "configHelp": {
+        "auditMiddle": " or ",
+        "auditPrefix": "The former toggles the audit log; enter ",
+        "auditSuffix": "; the latter is the number of characters kept per log text field, an integer from 1 to 100000.",
+        "closingMiddle": ", ",
+        "closingPrefix": "All top-level fields are optional. Use standard JSON double quotes; comments, trailing commas and unknown fields are not supported. Except for tool descriptors inside ",
+        "closingSuffix": " cannot be used to mean default. Action maps merge key by key; an empty object does not clear inherited actions.",
+        "exampleTitle": "Complete structure example (merge into your existing configuration as needed)",
+        "inheritanceBody": "Configuration inherits in order: system presets → global → workspace. Workspace configuration participates only while the workspace is trusted.",
+        "inheritanceSave": " Saving replaces the entire configuration of the current scope; keep the local fields still in use, and delete fields to restore inheritance. Saving ",
+        "inheritanceSuffix": " restores every default in this scope, including audit options; the field cannot be left empty.",
+        "modesExternal": " (actions for paths outside the workspace). Values are likewise ",
+        "modesKindsMiddle": " (default actions for ",
+        "modesKindsSuffix": ") and ",
+        "modesPrefix": "Each mode can configure ",
+        "modesSuffix": ". Saving these rules does not switch the current session's run mode.",
+        "modesTools": " (tool actions), ",
+        "policyAllow": " (allow), ",
+        "policyAsk": " (ask), ",
+        "policyBody": ". Tool names match exactly; wildcards are not supported. Actions are limited to ",
+        "policyDeny": " (deny); to inherit, delete the key instead of entering ",
+        "policyPrefix": "Fixed tool actions, e.g. ",
+        "policySuffix": ".",
+        "precedenceBody": " in the fixed policy or the current mode's tool rules denies. Otherwise the rule is chosen in the order \"fixed tool action → mode tool action → kind default action\"; paths outside the workspace must also satisfy ",
+        "precedencePrefix": "Any ",
+        "precedenceSuffix": ". Valid session approvals reuse confirmation results but cannot bypass denial or hard security checks.",
+        "requestDefaultsMiddle": " and ",
+        "requestDefaultsPrefix": "Specifies default argument field lists via ",
+        "requestDefaultsSuffix": ". Used when a tool descriptor does not declare the corresponding list; arrays replace wholesale, and ",
+        "requestDefaultsSuffix2": " clears that list.",
+        "title": "Only fill in the configuration this scope needs to override",
+        "toolRulesBody": ". A single descriptor replaces its inherited value wholesale; setting it to ",
+        "toolRulesMiddle": " and ",
+        "toolRulesPrefix": "Map of tool names to descriptors containing ",
+        "toolRulesSuffix": " removes the kind and treats the tool as ",
+        "toolRulesSuffix2": ", which does not mean denied. See \"Edit tool rule → Advanced configuration\" for detailed field usage.",
+        "trigger": "JSON field reference and examples",
+        "versionDescription": "Version number; only the number ",
+        "versionSuffix": " is supported; may be omitted and is written automatically on save."
+      },
+      "footerNote": "Unconfigured tools are treated as \"other tools\". Fixed policy takes precedence over mode rules, denial over session approval; outside-workspace operations are judged separately.",
+      "invalidDescription": "{{message}}. Fix via JSON configuration: {{path}}",
+      "invalidTitle": "Invalid configuration",
+      "jsonConfig": "JSON configuration",
+      "kind": {
+        "custom": "Other tools",
+        "external": "Outside workspace",
+        "read": "Read",
+        "shell": "Shell",
+        "write": "Write"
+      },
+      "loadFailed": "Failed to load",
+      "loading": "Loading permission configuration…",
+      "mode": {
+        "ask": "Ask for approval",
+        "auto": "Auto-approve",
+        "full": "Full access"
+      },
+      "modesDescription": "Configure default permissions by tool kind for Ask, Auto-approve and Full access modes.",
+      "modesTitle": "Permission run modes",
+      "noMatch": "No matching tool rules",
+      "noWorkspace": "No workspaces yet; create one first.",
+      "reset": {
+        "globalTitle": "Restore all global settings to system presets",
+        "workspaceTitle": "Restore all defaults for the current workspace, using global configuration"
+      },
+      "restoreDefaults": "Restore defaults",
+      "scopeGlobal": "Global",
+      "scopeWorkspace": "Workspace",
+      "searchPlaceholder": "Search tool names…",
+      "selectWorkspace": "Select workspace",
+      "sourceCustom": "Custom",
+      "sourceDefault": "Default",
+      "table": {
+        "actions": "Actions",
+        "kind": "Kind",
+        "policy": "Fixed policy",
+        "source": "Source",
+        "tool": "Tool"
+      },
+      "toolEditor": {
+        "addTitle": "Add tool rule",
+        "advanced": "Advanced configuration",
+        "defaultPrefix": "Default: ",
+        "description": "Exact tool-name match. Fixed policy takes precedence over mode configuration, and any deny rule over approvals.",
+        "descriptorDescription": "If you are unsure, leave empty to use the default configuration; field reference and examples below:",
+        "descriptorInvalid": "Enter a valid tool descriptor JSON, or leave empty to use the default configuration",
+        "descriptorLabel": "Tool kind and approval scope (JSON)",
+        "editTitle": "Edit tool rule",
+        "nameExists": "This tool already exists; edit the existing rule",
+        "nameInvalid": "Enter a valid tool name; whitespace and reserved field names are not supported",
+        "nameLabel": "Tool name",
+        "namePlaceholder": "e.g. knowledge_search",
+        "policyLabel": "Fixed policy",
+        "save": "Save rule"
+      },
+      "toolHelp": {
+        "blankKind": " lacks the required ",
+        "blankKindSuffix": " and is not a valid tool descriptor.",
+        "blankMiddle": " removes the inherited descriptor: the tool falls under ",
+        "blankPrefix": "Leaving the field empty restores the inherited descriptor; entering ",
+        "blankSuffix": " with default argument fields, and is not disabled. An object replaces the descriptor wholesale rather than merging field by field.",
+        "exampleMiddle": " and ",
+        "examplePrefix": "Assuming the tool arguments include ",
+        "exampleSuffix1": ". Adjust the field names to your tool's real arguments; command tools extracting only the ",
+        "exampleSuffix2": " argument can use ",
+        "exampleSuffix3": ".",
+        "exampleTitle": "Example: import tool scoped by collection and source directory",
+        "fieldDefaultsExample": ", e.g. ",
+        "fieldDefaultsMiddle": " or valued ",
+        "fieldDefaultsPrefix": "Provides default strings for arguments missing from ",
+        "fieldDefaultsSuffix": "; each default is at most 200 characters. This only affects the approval scope: it neither fills tool arguments nor replaces empty strings.",
+        "fieldPathBody": "; wildcards, brackets and array indices are not supported.",
+        "fieldPathNaming": " Each segment must start with a letter or underscore and may then contain digits; ",
+        "fieldPathPrefix": "Argument fields support dot-separated nested paths such as ",
+        "fieldPathSep1": ", ",
+        "fieldPathSep2": " and ",
+        "fieldPathSuffix": " are not allowed. Each field list holds at most 16 entries.",
+        "fieldsEmpty": " An empty array adds no field restriction; with no path or command scope either, it becomes a workspace-wide session approval for that tool.",
+        "fieldsMatch": ". After choosing \"allow for this session\", approvals are reused only within the same workspace, the same tool, and identical scope-field values; extracted path parents and full commands also participate in matching.",
+        "fieldsNonEmpty": " Scope fields must resolve to non-empty strings, otherwise only a one-time approval is granted.",
+        "fieldsPrefix": "This array is required when configuring ",
+        "fieldsRequired": ", e.g. ",
+        "fieldsScope": "approval scope",
+        "introMiddle": ". The minimal form is ",
+        "introPrefix": "Describe only this tool's descriptor here; do not wrap it in a tool name or ",
+        "introSuffix": "; whether execution is allowed is decided by the policy option above.",
+        "jsonNote": "Use standard JSON: field names and strings use double quotes; comments, trailing commas and unlisted fields are not supported.",
+        "kindDescriptionPrefix": "Tool category: ",
+        "kindGloss": {
+          "custom": " (other). Used to match the run mode's per-kind default action.",
+          "read": " (read), ",
+          "shell": " (command), ",
+          "write": " (write), "
+        },
+        "kindRequired": "required",
+        "optional": "optional",
+        "pathFieldsMiddle": ", ",
+        "pathFieldsPrefix": "String arrays specifying which tool argument fields provide file paths or commands, e.g. ",
+        "pathFieldsSuffix1": ". Fill in argument field names, not actual file paths or commands; values may be strings or string arrays. When omitted, ",
+        "pathFieldsSuffix2": " is used; providing ",
+        "pathFieldsSuffix3": " means no values are extracted from that list.",
+        "pathParentsBody": ". Adds the parent directories of these paths to the approval scope; relative paths resolve against the workspace, and the corresponding arguments must be non-empty strings.",
+        "pathParentsMissing": " If a specified argument is missing, only a one-time approval is granted. This does not replace the path extraction of ",
+        "pathParentsPrefix": "Array of argument field names, e.g. ",
+        "pathParentsSuffix": ".",
+        "title": "How to fill this in"
+      },
+      "workspacesFailed": "Failed to load workspaces."
+    },
+    "placeholder": {
+      "defaultModule": "Settings module",
+      "description": "This entry is part of the Settings information architecture; real configuration arrives once the backend contract is finalized.",
+      "title": "{{module}} is not available yet"
+    },
+    "providers": {
+      "addProvider": "Model provider",
+      "apiAddress": "API address",
+      "auth": {
+        "answerDescription": "Wait for the provider to return the next step after submitting.",
+        "answerRequired": "Fill in the authentication information.",
+        "apiKeyConfiguredPlaceholder": "sk-*************** (configured)",
+        "apiKeyDescription": "For security, a saved API Key is never refilled; entering a new value replaces the existing credential.",
+        "apiKeyLabel": "API Key",
+        "apiKeyPlaceholder": "Enter an API Key",
+        "apiKeyRequired": "Enter an API Key.",
+        "browserTitle": "Finish authorization in the browser",
+        "cancelNow": "Cancel now",
+        "clearedDescription": "Provider status is not synced yet; refresh to confirm.",
+        "clearedTitle": "Credentials cleared",
+        "completedDescription": "Provider credentials saved; model availability refreshed.",
+        "completedTitle": "Authentication complete",
+        "confirmReset": "Confirm reset",
+        "copyCode": "Copy code",
+        "deviceCodeTitle": "Device code: {{code}}",
+        "failed": "Provider authentication could not be completed.",
+        "loadFailedTitle": "Failed to load authentication status",
+        "methodLabel": "Authentication method",
+        "noApiKeyPrompt": "The provider did not request an API Key.",
+        "noMethods": "No authentication methods available",
+        "oauthActiveDescription": "Provider {{name}} is authenticated via OAuth.",
+        "oauthActiveTitle": "OAuth signed in",
+        "oauthButton": "Authenticate with OAuth",
+        "oauthDescription": "After submitting, follow the provider instructions to open the authorization page and sign in.",
+        "oauthTitle": "OAuth authentication",
+        "openAuthPage": "Open authorization page",
+        "openProviderLink": "Open provider link",
+        "openVerification": "Open verification page",
+        "progressTitle": "Authentication progress",
+        "promptTitle": "Provider message",
+        "reset": "Reset authentication",
+        "resetConfirmDescription": "This clears the locally stored {{method}} credentials; you will need to authenticate again.",
+        "resetConfirmTitle": "Reset authentication for {{name}}?",
+        "resetDescription": "Local credentials for {{name}} were cleared.",
+        "resetFailed": "Failed to reset authentication; try again later.",
+        "resetImmediateDescription": "If the runtime environment provides its own credential, the provider may still show as authenticated after a refresh.",
+        "resetImmediateTitle": "This deletes the credential immediately",
+        "resetTitle": "Authentication reset",
+        "retryHint": "Start authentication again.",
+        "saveApiKey": "Save API Key",
+        "secretDescription": "This value is only used for the current request and is cleared from form state right after submission.",
+        "selectPlaceholder": "Select",
+        "starting": "Starting authentication…",
+        "status": {
+          "awaitingInput": "Waiting for input",
+          "cancelled": "Cancelled",
+          "completed": "Authenticated",
+          "expired": "Expired",
+          "failed": "Authentication failed",
+          "running": "Authenticating…",
+          "unsynced": "Waiting to sync"
+        },
+        "submissionFailed": "Authentication failed",
+        "submitFailed": "Submission failed",
+        "successDescription": "Credentials for {{name}} were saved securely.",
+        "successTitle": "Authentication successful",
+        "unsupportedUrl": "The provider returned an unsupported authorization URL.",
+        "unsyncedDescription": "Refresh the provider; restart the service if it does not recover.",
+        "unsyncedTitle": "Credentials saved, but status not synced yet",
+        "waiting": "Waiting for the provider to return the next step…"
+      },
+      "authDescription": "Choose the provider authentication method",
+      "authenticated": "Authenticated",
+      "authEnvManagedDescription": "This provider has no authentication method editable on this page.",
+      "authEnvManagedTitle": "Authentication managed by the runtime environment",
+      "authTitle": "Authentication",
+      "avatarAlt": "{{name}} avatar",
+      "backToList": "Back to list",
+      "capabilityHelp": "Declare capabilities supported by this model. Available thinking levels are determined by Pi. Existing sessions may need to restart to use the updated configuration.",
+      "configured": "Configured",
+      "defaultBadge": "Default",
+      "detailsLoadFailed": "Failed to load provider details",
+      "editCapabilities": "Edit capabilities",
+      "empty": "No model providers",
+      "emptyDescription": "Use the button below to add a local model provider.",
+      "endpointDescription": "API access address of the model provider",
+      "endpointTitle": "Endpoint",
+      "imageInput": "Supports image input",
+      "loadFailed": "Failed to load model providers",
+      "local": {
+        "addDescription": "Add a local model service, then configure its endpoint and models.",
+        "adding": "Adding…",
+        "addTitle": "Add provider",
+        "detect": "Detect models",
+        "detecting": "Detecting…",
+        "endpointHelpOllama": "Models are discovered via /api/tags; inference uses /v1.",
+        "endpointHelpOpenAI": "Loaded models are discovered via the OpenAI-compatible /v1/models.",
+        "endpointLabel": "Endpoint",
+        "footerHint": "After saving, select this model in the default model settings; new sessions use the latest configuration.",
+        "helpSuffix": "The local address refers to the machine running Dr.Octopus Server. Currently only local services without API Key are supported.",
+        "modelLabel": "Model",
+        "modelPlaceholder": "Select a model",
+        "nameLabel": "Provider name",
+        "namePlaceholder": "e.g. My Ollama",
+        "noModels": "Connected, but no models available. Download or load a model, then detect again.",
+        "runtimeHelp": {
+          "lmstudio": "Load a model in LM Studio and start the Local Server. Default address: http://127.0.0.1:1234/v1.",
+          "ollama": "Start Ollama (ollama serve) and download models with ollama pull. Default address: http://127.0.0.1:11434.",
+          "vllm": "Start vLLM's OpenAI-compatible server (vllm serve <model>). Default address: http://127.0.0.1:8000/v1."
+        },
+        "runtimeLabel": "Provider type",
+        "runtimesFailed": "Failed to load provider types.",
+        "save": "Save configuration",
+        "saved": "Configuration saved.",
+        "saving": "Saving…",
+        "title": "Local model configuration",
+        "unreachable": "Cannot connect to the service. Check that it is started and the address is correct, then detect again."
+      },
+      "modelCapabilities": "Model capabilities",
+      "modelsAvailable": "{{available}} of {{total}} models currently available",
+      "modelsAvailableShort": "{{available}}/{{total}} models available",
+      "modelsTitle": "Models",
+      "noMatch": "No matching results",
+      "noMatchDescription": "Try another name or Provider ID.",
+      "pendingConfiguration": "Pending configuration",
+      "readonlySuffix": " (readonly)",
+      "reasoning": "Supports reasoning",
+      "searchPlaceholder": "Search model providers…",
+      "selectDescription": "Pick one from the catalog to view authentication status, endpoint, and model capabilities.",
+      "selectTitle": "Select a model provider",
+      "unauthenticated": "Not authenticated",
+      "unavailable": "Model unavailable"
+    },
+    "scheduler": {
+      "concurrencyDescription": "Lowering the limit does not interrupt running tasks; it only restricts new tasks from starting.",
+      "concurrencyInvalid": "Concurrency must be an integer between 1 and 32.",
+      "concurrencyLabel": "Concurrent task limit",
+      "cronDescription": "Settings are stored in the Scheduler's cron.json; task and run data stay in SQLite.",
+      "cronTitle": "Cron configuration",
+      "save": "Save settings",
+      "saved": "Scheduler settings saved",
+      "savedDescription": "New cron tasks will use the default timezone; the concurrency limit takes effect immediately.",
+      "saveFailed": "Failed to save settings",
+      "service": {
+        "description": "The global singleton service runs independently of session runtimes. Once explicitly stopped, the agent will not restart it automatically.",
+        "executionStatus": "Execution status",
+        "lastScan": "Last scan",
+        "nextRun": "Next run",
+        "notReady": "Not ready",
+        "operationFailed": "Service operation failed",
+        "ready": "Ready",
+        "restart": "Restart service",
+        "runningQueued": "Running / Queued",
+        "started": "Scheduler service started",
+        "startedDescription": "The service runs independently in the background.",
+        "stateAbsent": "Not started",
+        "stateDegraded": "Degraded",
+        "stateRunning": "Running",
+        "stateStopped": "Stopped",
+        "stateUnreachable": "Unreachable",
+        "stopped": "Scheduler service stopped",
+        "stoppedDescription": "Task data is preserved; running tasks will be interrupted.",
+        "title": "Scheduler service"
+      },
+      "timezoneDescription": "Only used as the default for new cron tasks; existing tasks are not modified.",
+      "timezoneInvalid": "Enter a valid IANA timezone.",
+      "timezoneLabel": "Default cron timezone"
+    },
+    "server": {
+      "access": {
+        "originRemovedHint": "After a restart, the current extra origin will no longer have access; use a same-origin entry on the service or adjust the launch configuration.",
+        "remoteClosesHint": "After a restart, remote pages will disconnect. Use a local address on the service host to access it."
+      },
+      "addOrigin": "Add origin",
+      "advancedSettings": "Advanced settings",
+      "conflictMessage": "The configuration was modified in another window. Your draft is preserved; review the latest configuration before deciding whether to discard and edit again.",
+      "customSuffix": " (custom)",
+      "dangerousBadge": "Danger",
+      "discardRefresh": "Discard changes / Refresh",
+      "exposure": {
+        "confirm": "Confirm and save",
+        "description": "Other devices that can reach this service can access the workspace, files, Agent tools, and service settings. Only use this on trusted networks. A manual restart is required after saving.",
+        "title": "Allow access from other devices?"
+      },
+      "hostExposureHint": "When enabled, the service is exposed to the network and others can control your computer resources through the agent (dangerous) - Current: {{value}}",
+      "hostManagedAlert": "This service is managed by an embedding host and the next load values cannot be predicted. Contact the host application configuration after saving.",
+      "hostManagedValue": "Managed by host",
+      "inheritedSourceSummary": "Inherited · Source and runtime values",
+      "inheritLogLevel": "Inherit LOG_LEVEL",
+      "labels": {
+        "corsOrigin": "Allowed extra origins",
+        "fileLogEnabled": "Enable file logging",
+        "fileLogLevel": "Log level",
+        "fileLogMaxFiles": "Max file count",
+        "fileLogMaxSizeMb": "Max size per file (MB)",
+        "fileLogMaxTotalSizeMb": "Total log capacity (MB)",
+        "fileLogRequired": "Block startup when logging fails",
+        "fileLogRetentionDays": "Retention days",
+        "host": "Allow access from other devices",
+        "maxActiveRuntimes": "Global max active instances",
+        "maxActiveRuntimesPerWorkspace": "Max active instances per workspace",
+        "port": "Service port"
+      },
+      "loadFailed": "Unable to load server settings.",
+      "nextValueLine": "Next load value of the stored configuration: {{next}} · Source: {{source}}",
+      "notConfigured": "Not configured",
+      "originListHint": "Same-origin access from localhost or an IP address needs no configuration; add trusted origins when using a custom domain, a standalone frontend, or cross-port access.",
+      "overrideSourceSummary": "File override · Source and runtime values",
+      "refreshFailed": "Unable to refresh the configuration; your draft is preserved.",
+      "reloaded": "Latest configuration loaded.",
+      "responseLostConnection": "Submission result unknown; your draft is preserved. Check the service connection.",
+      "responseLostMatched": "The stored values already match the submission; the response was lost, so nothing was resubmitted.",
+      "responseLostUnknown": "Submission result unknown; your draft is preserved. Refresh to verify.",
+      "restart": {
+        "accessLocalOnly": "Remote access is off; open {{url}} on the service host. Do not access your own localhost from a remote device.",
+        "accessPortChanged": "Target port: {{port}}.",
+        "accessProxyHint": "Reverse proxies should keep using the current public entry. The Vite dev environment needs the root .env SERVER_PORT synced and Vite restarted.",
+        "actualAddress": "Actual listen address: {{address}}",
+        "confirmButton": "Confirm restart",
+        "confirmDescription_one": "There are {{count}} resident session instances. Restarting disconnects them and interrupts running sessions; chat history is preserved but tasks do not resume automatically. Next listen: {{host}}:{{port}}.",
+        "confirmDescription_other": "There are {{count}} resident session instances. Restarting disconnects them and interrupts running sessions; chat history is preserved but tasks do not resume automatically. Next listen: {{host}}:{{port}}.",
+        "confirmTitle": "Restart the service?",
+        "openDirectLink": "Open direct entry",
+        "pollHint": "The service is temporarily unreachable or the operation result is unknown; automatic polling lasts at most 60 seconds, and stopping polling does not cancel the restart.",
+        "repoll": "Poll the result again",
+        "resultUnknown": "Restart submission result unknown. Check the current service status and do not resubmit.",
+        "state": {
+          "accepted": "Restart accepted",
+          "cancelled": "Restart was cancelled by a stop operation.",
+          "draining": "Shutting down the old service…",
+          "failed": "Restart failed; recover via the host stop/start.",
+          "restored": "Apply failed; restored the previous runtime configuration. The newly saved configuration is still pending.",
+          "restoring": "Restoring the previous configuration…",
+          "starting": "Starting the service…",
+          "succeeded": "Service restarted"
+        }
+      },
+      "restoreInherit": "Restore inheritance",
+      "restoreInheritHint": "Inheritance resumes after saving; the inherited value will be shown then.",
+      "saveBeforeRestart": "Save or discard changes before restarting.",
+      "savedNoRestart": "Settings saved. Saving does not restart the service.",
+      "savedWithOverrideWarning": "Settings saved, but some values are still overridden by the launch configuration.",
+      "saveSettings": "Save settings",
+      "sectionFileLog": "File logging",
+      "sectionFileLogDescription": "Actual state: {{state}} · Log directory: {{directory}}",
+      "sectionNetwork": "Network access",
+      "sectionNetworkDescription": "Save the listen scope and port; takes effect after a restart.",
+      "sectionSessions": "Session instances",
+      "sectionSessionsDescription": "Limit resident session processes, including idle instances. The workspace cap is still bounded by the global cap.",
+      "service": {
+        "description": "The agent service process; restarting briefly disconnects the current service, so proceed with care.",
+        "pendingRestart": "Restart pending",
+        "residentInstances_one": "{{count}} resident instance",
+        "residentInstances_other": "{{count}} resident instances",
+        "restart": "Restart",
+        "state": {
+          "failed": "Unavailable",
+          "restarting": "Restarting",
+          "running": "Running",
+          "stopping": "Stopping"
+        },
+        "title": "Service runtime"
+      },
+      "stillOverridden": "The stored configuration is still overridden by the launch configuration.",
+      "storedCurrentLine": "Stored: {{stored}} · Current: {{current}}",
+      "undoRestoreInherit": "Undo restore inheritance",
+      "unsavedConfirm": "You have unsaved server settings. Leave and discard your changes?",
+      "validation": {
+        "integerRange": "Enter an integer between {{min}} and {{max}}.",
+        "invalidOrigin": "Enter one HTTP(S) origin per line, without paths, credentials, query parameters, or wildcards.",
+        "tooLong": "Value is too long or contains illegal characters."
+      }
+    },
+    "shortcuts": {
+      "chromeShortcutsHint": "In Chrome, paste this address into the address bar to check extension shortcuts:",
+      "clear": "Clear shortcut",
+      "columnActions": "Actions",
+      "columnBinding": "Key binding",
+      "columnCommand": "Command",
+      "comingSoon": "Coming soon",
+      "commands": {
+        "focusComposer": "Focus composer",
+        "insertNewline": "Insert newline while typing",
+        "newSession": "New session",
+        "nextSession": "Next session",
+        "previousSession": "Previous session",
+        "sendMessage": "Send message",
+        "stopGeneration": "Stop generation",
+        "toggleLeftSidebar": "Toggle left sidebar",
+        "toggleRightPanel": "Toggle right file panel",
+        "voiceToggle": "Voice input toggle"
+      },
+      "conflict": "Conflicts with “{{command}}”",
+      "description": "View and customize keyboard shortcuts. Changes apply immediately and are stored on this device.",
+      "edit": "Edit shortcut",
+      "empty": "No shortcuts match your search.",
+      "externalConflictHint": "Shortcut not responding? Your browser, extensions, or operating system may use the same keys. Try a different combination.",
+      "notSet": "Not set",
+      "recordHint": "Esc to cancel · Backspace to clear",
+      "recordPrompt": "Press a new shortcut…",
+      "replace": "Replace",
+      "reset": "Reset to default",
+      "resetAll": "Reset all to defaults",
+      "resetAllDescription": "All custom bindings will be removed and every command returns to its default shortcut.",
+      "resetAllTitle": "Reset all shortcuts?",
+      "searchPlaceholder": "Search shortcuts",
+      "title": "Keyboard shortcuts"
+    }
+  },
+  "skills": {
+    "card": {
+      "viewDetails": "View details"
+    },
+    "common": {
+      "delete": "Delete",
+      "effectiveNote": "Skill {{name}} will take effect in new sessions.",
+      "footerMeta_one": "{{count}} files · {{size}} · updated {{updated}}",
+      "footerMeta_other": "{{count}} files · {{size}} · updated {{updated}}",
+      "manualInvocation": "Manual invocation",
+      "needsFixing": "Needs fixing",
+      "noMatch": "No matching skills",
+      "reload": "Reload",
+      "scope": "Scope",
+      "scopeGlobalItem": "Global skill (all workspaces)",
+      "scopeWorkspaceItem": "Workspace skill",
+      "scopeWorkspaceItemNamed": "Workspace skill ({{name}})",
+      "uploadSkill": "Upload skill"
+    },
+    "deleteDialog": {
+      "deletedDescription": "Skill {{name}} has been removed from this machine.",
+      "deletedTitle": "Skill deleted",
+      "failedFallback": "Deletion failed; please try again later.",
+      "irreversible": "This action cannot be undone.",
+      "scopeGlobal": "the user directory on this machine",
+      "scopeWorkspace": "the current workspace",
+      "title": "Delete skill {{name}}",
+      "warning_one": "This deletes the skill and all {{count}} of its files from {{scope}}; ongoing sessions are unaffected, but new sessions will no longer be able to use it.",
+      "warning_other": "This deletes the skill and all {{count}} of its files from {{scope}}; ongoing sessions are unaffected, but new sessions will no longer be able to use it."
+    },
+    "detailDialog": {
+      "filesTitle": "Resource files",
+      "loadFailed": "Failed to load",
+      "loadFailedFallback": "Unable to read the skill details.",
+      "noBody": "(No instructions yet)",
+      "noDescription": "(No description yet — edit to add one)",
+      "warningsTitle": "Loader warnings"
+    },
+    "editDialog": {
+      "bodyLabel": "Instructions (Markdown)",
+      "bodyPlaceholder": "# Usage\n\nWrite the steps, constraints, and examples the Agent should follow when executing this skill.",
+      "createdTitle": "Skill created",
+      "createSubmit": "Create",
+      "descriptionGlobal": "The skill is saved as SKILL.md in the user directory on this machine and takes effect for new sessions in all workspaces.",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe in a sentence or two what this skill is good at and when to use it.",
+      "descriptionRequired": "Enter a skill description.",
+      "descriptionTooLong": "The description must be at most 1024 characters.",
+      "descriptionWorkspace": "The skill is saved as SKILL.md in the current workspace's .dr-octopus/skills directory and takes effect only for new sessions in that workspace.",
+      "descriptionWorkspaceNamed": "The skill is saved as SKILL.md in the current workspace's .dr-octopus/skills directory and takes effect only for new sessions in workspace \"{{name}}\".",
+      "loadFailedFallback": "Failed to load the skill details.",
+      "manualOnlyHint": "When enabled, the skill is not included in model prompts and can only be invoked explicitly via /skill:{{name}}.",
+      "manualOnlyLabel": "Manual invocation only",
+      "nameHint": "Lowercase letters, digits, and single hyphens; cannot be changed after creation.",
+      "nameLabel": "Name",
+      "namePattern": "The name may only contain lowercase letters, digits, and single hyphens.",
+      "namePlaceholder": "e.g. deep-research",
+      "nameRequired": "Enter a skill name.",
+      "nameTooLong": "The name must be at most 64 characters.",
+      "savedTitle": "Skill saved",
+      "saveFailedFallback": "Failed to save the skill; please try again later.",
+      "scopeNote": "The effective result of same-named resources is resolved uniformly by Pi; confirm it under \"System skills\".",
+      "titleEdit": "Edit skill {{name}}"
+    },
+    "effectiveCard": {
+      "managed": {
+        "global": "Managed globally",
+        "workspace": "Managed by workspace"
+      },
+      "originPackage": "Provided by extension package",
+      "scope": {
+        "project": "Project-level",
+        "temporary": "Temporary",
+        "user": "User-level"
+      },
+      "source": {
+        "auto": "Discovered automatically",
+        "cli": "Specified via CLI",
+        "local": "Local configuration"
+      }
+    },
+    "effectiveSection": {
+      "description": "Read-only skills actually loaded in the current context; switch to a management tab to add or maintain them.",
+      "diagnosticPrefix": "{{name}}: ",
+      "diagnosticsTitle": "Some skills failed to load",
+      "emptyDescription": "No effective skills have been resolved in the current context yet.",
+      "emptyTitle": "No skills available in the current context",
+      "loadFailed": "Failed to load system skills",
+      "loadFailedFallback": "Unable to read the Pi skill list; please try again later.",
+      "noMatchDescription": "No matches among the system skills.",
+      "snapshotPreview": "Agent-resolved preview",
+      "snapshotRuntime": "Current session snapshot",
+      "title": "System skills"
+    },
+    "page": {
+      "add": "Add",
+      "description": "View loaded skills and manage workspace and global skills.",
+      "globalDescription": "Reused by new sessions across all workspaces.",
+      "globalEmptyDescription": "Create general-purpose capabilities reusable across projects.",
+      "globalEmptyTitle": "No global skills yet",
+      "globalSectionTitle": "Global skills",
+      "newSkill": "New skill",
+      "searchPlaceholder": "Search all skills by name or description…",
+      "tabGlobal": "Global",
+      "tabSystem": "System",
+      "tabWorkspace": "Workspace",
+      "title": "Skills",
+      "workspaceDescription": "Only used by new sessions in the current workspace.",
+      "workspaceDescriptionNamed": "Only used by new sessions in workspace \"{{name}}\".",
+      "workspaceEmptyDescription": "Create project-specific conventions, workflows, or domain knowledge.",
+      "workspaceEmptyTitle": "No skills in the current workspace yet",
+      "workspaceSectionTitle": "Workspace skills"
+    },
+    "section": {
+      "createManually": "Create manually",
+      "loadFailed": "Failed to load {{title}}",
+      "loadFailedFallback": "Unable to read the skill list; please try again later.",
+      "noMatchDescription": "No skills match in this section."
+    },
+    "uploadDialog": {
+      "conflictSuffix": "Confirming will completely replace the original skill files.",
+      "conflictTitle": "A skill with the same name already exists",
+      "descriptionGlobal": "Supports a single SKILL.md file or a .zip skill package containing SKILL.md; it takes effect for new sessions in all workspaces after upload.",
+      "descriptionWorkspace": "Supports a single SKILL.md file or a .zip skill package containing SKILL.md; it takes effect only for new sessions in the current workspace after upload.",
+      "dropFormats": ".md single skill file · .zip skill package (with resource files)",
+      "dropHint": "Click to choose a file, or drag it here",
+      "submit": "Upload",
+      "submitOverwrite": "Overwrite and upload",
+      "typeError": "Only .md or .zip files are supported.",
+      "uploadedTitle": "Skill uploaded",
+      "uploadFailedFallback": "Upload failed; please try again later."
+    }
+  },
+  "workspaces": {
+    "generalName": "General"
+  }
+}

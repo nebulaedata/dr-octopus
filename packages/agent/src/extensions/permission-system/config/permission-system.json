@@ -1,0 +1,282 @@
+{
+  "version": 2,
+  "toolRules": {
+    "background_task": {
+      "kind": "read"
+    },
+    "read": {
+      "kind": "read"
+    },
+    "grep": {
+      "kind": "read"
+    },
+    "find": {
+      "kind": "read"
+    },
+    "ls": {
+      "kind": "read"
+    },
+    "knowledge_list_collections": {
+      "kind": "read"
+    },
+    "knowledge_search": {
+      "kind": "read"
+    },
+    "knowledge_read": {
+      "kind": "read"
+    },
+    "knowledge_job_status": {
+      "kind": "read"
+    },
+    "write": {
+      "kind": "write"
+    },
+    "edit": {
+      "kind": "write"
+    },
+    "bash": {
+      "kind": "shell"
+    },
+    "powershell": {
+      "kind": "shell"
+    },
+    "user_bash": {
+      "kind": "shell"
+    },
+    "knowledge_add_text": {
+      "kind": "write",
+      "sessionApproval": {
+        "fields": ["collectionId"]
+      }
+    },
+    "knowledge_import": {
+      "kind": "write",
+      "sessionApproval": {
+        "fields": ["collectionId"],
+        "pathParents": ["path"]
+      }
+    },
+    "knowledge_import_attachment": {
+      "kind": "write",
+      "sessionApproval": {
+        "fields": ["collectionId"]
+      }
+    },
+    "knowledge_create_collection": {
+      "kind": "write",
+      "sessionApproval": {
+        "fields": ["scope"],
+        "fieldDefaults": {
+          "scope": "workspace"
+        }
+      }
+    },
+    "memory_recall": {
+      "kind": "read"
+    },
+    "memory_read": {
+      "kind": "read"
+    },
+    "workspace_current": {
+      "kind": "read"
+    },
+    "octopus_model_status": {
+      "kind": "read"
+    },
+    "octopus_check_local_runtime": {
+      "kind": "read"
+    },
+    "web_search": {
+      "kind": "read"
+    },
+    "source_check": {
+      "kind": "read"
+    },
+    "get_search_content": {
+      "kind": "read"
+    },
+    "scheduler_list": {
+      "kind": "read"
+    },
+    "scheduler_get": {
+      "kind": "read"
+    },
+    "scheduler_history": {
+      "kind": "read"
+    },
+    "permission_audit_query": {
+      "kind": "read"
+    },
+    "scheduler_create": {
+      "kind": "write"
+    },
+    "scheduler_update": {
+      "kind": "write"
+    },
+    "scheduler_delete": {
+      "kind": "write"
+    },
+    "scheduler_run_now": {
+      "kind": "write"
+    },
+    "scheduler_cancel": {
+      "kind": "write"
+    },
+    "fetch_content": {
+      "kind": "read"
+    },
+    "goal_complete": {
+      "kind": "custom"
+    },
+    "goal_blocked": {
+      "kind": "custom"
+    },
+    "goal_wait": {
+      "kind": "custom"
+    },
+    "subagent_supervisor": {
+      "kind": "custom"
+    },
+    "contact_supervisor": {
+      "kind": "custom"
+    },
+    "ask_user_question": {
+      "kind": "custom"
+    },
+    "ctx_batch_execute": {
+      "kind": "shell"
+    },
+    "ctx_execute": {
+      "kind": "shell"
+    },
+    "ctx_execute_file": {
+      "kind": "shell"
+    },
+    "ctx_doctor": {
+      "kind": "read"
+    },
+    "ctx_fetch_and_index": {
+      "kind": "write"
+    },
+    "ctx_index": {
+      "kind": "write"
+    },
+    "ctx_insight": {
+      "kind": "custom"
+    },
+    "ctx_purge": {
+      "kind": "write"
+    },
+    "ctx_search": {
+      "kind": "read"
+    },
+    "ctx_stats": {
+      "kind": "read"
+    },
+    "ctx_upgrade": {
+      "kind": "custom"
+    },
+    "plan_mode_complete": {
+      "kind": "custom"
+    },
+    "plan_mode_question": {
+      "kind": "custom"
+    },
+    "subagent": {
+      "kind": "custom"
+    },
+    "bg_wait": {
+      "kind": "custom"
+    },
+    "mcp": {
+      "kind": "custom"
+    },
+    "mcpScript": {
+      "kind": "custom"
+    }
+  },
+  "requestDefaults": {
+    "pathFields": ["path", "filePath", "cwd", "arguments.path", "arguments.filePath", "arguments.cwd"],
+    "commandFields": ["command"]
+  },
+  "policy": {
+    "tools": {
+      "permission_audit_query": "allow"
+    }
+  },
+  "modes": {
+    "ask": {
+      "tools": {},
+      "kinds": {
+        "read": "allow",
+        "write": "ask",
+        "shell": "ask",
+        "custom": "ask"
+      },
+      "external": "ask"
+    },
+    "auto": {
+      "tools": {
+        "ask_user_question": "allow",
+        "ctx_batch_execute": "allow",
+        "ctx_execute": "allow",
+        "ctx_execute_file": "allow",
+        "ctx_doctor": "allow",
+        "ctx_fetch_and_index": "allow",
+        "ctx_index": "allow",
+        "ctx_insight": "allow",
+        "ctx_purge": "allow",
+        "ctx_search": "allow",
+        "ctx_stats": "allow",
+        "ctx_upgrade": "allow",
+        "plan_mode_complete": "allow",
+        "plan_mode_question": "allow",
+        "subagent": "allow",
+        "bg_wait": "allow",
+        "memory_recall": "allow",
+        "memory_read": "allow",
+        "workspace_current": "allow",
+        "octopus_model_status": "allow",
+        "octopus_check_local_runtime": "allow",
+        "web_search": "allow",
+        "source_check": "allow",
+        "get_search_content": "allow",
+        "scheduler_list": "allow",
+        "scheduler_get": "allow",
+        "scheduler_history": "allow",
+        "scheduler_create": "allow",
+        "scheduler_update": "allow",
+        "scheduler_delete": "allow",
+        "scheduler_run_now": "allow",
+        "scheduler_cancel": "allow",
+        "fetch_content": "allow",
+        "goal_complete": "allow",
+        "goal_blocked": "allow",
+        "goal_wait": "allow",
+        "subagent_supervisor": "allow",
+        "contact_supervisor": "allow",
+        "mcp": "ask",
+        "mcpScript": "ask"
+      },
+      "kinds": {
+        "read": "allow",
+        "write": "allow",
+        "shell": "allow",
+        "custom": "ask"
+      },
+      "external": "ask"
+    },
+    "full": {
+      "tools": {},
+      "kinds": {
+        "read": "allow",
+        "write": "allow",
+        "shell": "allow",
+        "custom": "allow"
+      },
+      "external": "allow"
+    }
+  },
+  "permissionReviewLog": true,
+  "reviewLogFieldMaxWidth": 1000
+}

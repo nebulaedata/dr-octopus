@@ -1,0 +1,37 @@
+# Ignore artifacts:
+build
+coverage
+.next
+dist
+
+# Ignore IDE and editor folders:
+.cache
+.idea
+.vscode
+
+# Ignore OS generated files:
+.DS_Store
+
+# Ignore log files and temp files:
+*.log
+*.tmp
+.turbo
+
+# Ignore node_modules:
+node_modules
+
+# Ignore patch files:
+patches
+
+# Ignore shadcn/ui component source installed by the CLI:
+packages/ui
+
+# Ignore package-lock.json and yarn.lock files:
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Ignore agents 
+.agents
+.claude
+

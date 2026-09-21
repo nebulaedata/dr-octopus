@@ -1,0 +1,18 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+allowBuilds:
+  '@google/genai': true
+  '@swc/core': true
+  better-sqlite3: true
+  esbuild: true
+  koffi: true
+  protobufjs: true
+  sharp: true
+ignoredOptionalDependencies:
+  - '@huggingface/transformers'
+# 临时允许安装刚发布的此版本；满足 pnpm 最小发布时间限制后可删除此配置。
+minimumReleaseAgeExclude:
+  - pi-mcp-adapter@2.34.0
+patchedDependencies:
+  '@earendil-works/pi-coding-agent@0.85.1': patches/@earendil-works__pi-coding-agent@0.85.1.patch

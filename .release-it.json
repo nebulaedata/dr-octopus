@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/release-it@21/schema/release-it.json",
+  "hooks": {
+    "after:bump": "prettier --write release.config.json"
+  },
+  "git": {
+    "requireCleanWorkingDir": true,
+    "requireUpstream": true,
+    "commit": true,
+    "commitMessage": "chore(release): v${version}",
+    "tag": true,
+    "tagName": "v${version}",
+    "tagMatch": "v[0-9]*",
+    "tagAnnotation": "Release v${version}",
+    "push": true
+  },
+  "npm": false,
+  "github": {
+    "release": false
+  },
+  "gitlab": {
+    "release": false
+  },
+  "plugins": {
+    "@release-it/bumper": {
+      "in": {
+        "file": "release.config.json",
+        "path": "manifest.version"
+      },
+      "out": {
+        "file": "release.config.json",
+        "path": "manifest.version"
+      }
+    }
+  }
+}

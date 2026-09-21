@@ -1,0 +1,43 @@
+{
+  "name": "@octopus/document-processing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./office-policy": {
+      "types": "./dist/office-part-policy.d.ts",
+      "import": "./dist/office-part-policy.js"
+    },
+    "./docx": {
+      "types": "./dist/docx-stream-extractor.d.ts",
+      "import": "./dist/docx-stream-extractor.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "lint": "eslint .",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.8",
+    "@octopus/shared": "workspace:*",
+    "csv-parse": "^7.0.2",
+    "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
+    "pdfjs-dist": "^6.3.289",
+    "saxes": "^6.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.1.2",
+    "eslint": "^10.8.0",
+    "globals": "^17.7.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0"
+  }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE `knowledge_import_items` ADD `documentVersionId` text;

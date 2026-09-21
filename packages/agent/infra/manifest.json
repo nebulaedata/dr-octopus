@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "infraVersion": "1",
+  "resources": [
+    {
+      "id": "fd",
+      "version": "10.4.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "source": "https://github.com/sharkdp/fd/releases/download/v10.4.2/fd-v10.4.2-aarch64-apple-darwin.tar.gz",
+      "file": "resources/darwin-arm64/bin/fd",
+      "target": "bin/fd",
+      "sha256": "bbd98b652be41796406f9d793a2909a717fd871d0e0b824f72fb85c645ad5366",
+      "executable": true
+    },
+    {
+      "id": "ripgrep",
+      "version": "15.2.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "source": "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-aarch64-apple-darwin.tar.gz",
+      "file": "resources/darwin-arm64/bin/rg",
+      "target": "bin/rg",
+      "sha256": "a326a1fb48074202e9ad41e4cd1e389eeea372c8c6f7d7e80da81176d5d9430e",
+      "executable": true
+    },
+    {
+      "id": "fd",
+      "version": "10.3.0",
+      "platform": "darwin",
+      "arch": "x64",
+      "source": "https://github.com/sharkdp/fd/releases/download/v10.3.0/fd-v10.3.0-x86_64-apple-darwin.tar.gz",
+      "file": "resources/darwin-x64/bin/fd",
+      "target": "bin/fd",
+      "sha256": "e3936d70c47bf8439797aa2c6c1ddff868424ff6bc418fc8501e819a2d58ccad",
+      "executable": true
+    },
+    {
+      "id": "ripgrep",
+      "version": "15.2.0",
+      "platform": "darwin",
+      "arch": "x64",
+      "source": "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-apple-darwin.tar.gz",
+      "file": "resources/darwin-x64/bin/rg",
+      "target": "bin/rg",
+      "sha256": "0c9a0066db0d26b640777db88045b0ccdd58509a746700e43e1c4ff8707a5ed0",
+      "executable": true
+    },
+    {
+      "id": "fd",
+      "version": "10.4.2",
+      "platform": "linux",
+      "arch": "arm64",
+      "source": "https://github.com/sharkdp/fd/releases/download/v10.4.2/fd-v10.4.2-aarch64-unknown-linux-gnu.tar.gz",
+      "file": "resources/linux-arm64/bin/fd",
+      "target": "bin/fd",
+      "sha256": "b96a9c5eb1f619efe836e7d5176a9aa15d6643f11c46cda6709ff8abb43eeed4",
+      "executable": true
+    },
+    {
+      "id": "ripgrep",
+      "version": "15.2.0",
+      "platform": "linux",
+      "arch": "arm64",
+      "source": "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-aarch64-unknown-linux-gnu.tar.gz",
+      "file": "resources/linux-arm64/bin/rg",
+      "target": "bin/rg",
+      "sha256": "e36d0eb52e70696bdf1781392722e05a21bb91d3b7b762ef5ec20e5df2ec687b",
+      "executable": true
+    },
+    {
+      "id": "fd",
+      "version": "10.4.2",
+      "platform": "linux",
+      "arch": "x64",
+      "source": "https://github.com/sharkdp/fd/releases/download/v10.4.2/fd-v10.4.2-x86_64-unknown-linux-gnu.tar.gz",
+      "file": "resources/linux-x64/bin/fd",
+      "target": "bin/fd",
+      "sha256": "0dff4a420feb3e57fd1d4402d3e29f46115aa38d962467d2f3b72e7439d3ada8",
+      "executable": true
+    },
+    {
+      "id": "ripgrep",
+      "version": "15.2.0",
+      "platform": "linux",
+      "arch": "x64",
+      "source": "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-unknown-linux-musl.tar.gz",
+      "file": "resources/linux-x64/bin/rg",
+      "target": "bin/rg",
+      "sha256": "e62198eb19b136b88c330af83647b5a962cb99b6b1f066758568f12de1974849",
+      "executable": true
+    },
+    {
+      "id": "fd",
+      "version": "10.4.2",
+      "platform": "win32",
+      "arch": "arm64",
+      "source": "https://github.com/sharkdp/fd/releases/download/v10.4.2/fd-v10.4.2-aarch64-pc-windows-msvc.zip",
+      "file": "resources/win32-arm64/bin/fd.exe",
+      "target": "bin/fd.exe",
+      "sha256": "e5f456004d0f550b5a67a0e33415e6d40520c57d1d3860dafca9bd0e24a8f977",
+      "executable": true
+    },
+    {
+      "id": "ripgrep",
+      "version": "15.2.0",
+      "platform": "win32",
+      "arch": "arm64",
+      "source": "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-aarch64-pc-windows-msvc.zip",
+      "file": "resources/win32-arm64/bin/rg.exe",
+      "target": "bin/rg.exe",
+      "sha256": "d33a29a9ef03c9f4c03be9e8d88498e6e2d2e566d64cdbdef97f9afc8f13120c",
+      "executable": true
+    },
+    {
+      "id": "fd",
+      "version": "10.4.2",
+      "platform": "win32",
+      "arch": "x64",
+      "source": "https://github.com/sharkdp/fd/releases/download/v10.4.2/fd-v10.4.2-x86_64-pc-windows-msvc.zip",
+      "file": "resources/win32-x64/bin/fd.exe",
+      "target": "bin/fd.exe",
+      "sha256": "4c9d082ee20f0d9e44881ac4e92adf765efc314d82103c53d7f576bd78dc5761",
+      "executable": true
+    },
+    {
+      "id": "ripgrep",
+      "version": "15.2.0",
+      "platform": "win32",
+      "arch": "x64",
+      "source": "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-x86_64-pc-windows-msvc.zip",
+      "file": "resources/win32-x64/bin/rg.exe",
+      "target": "bin/rg.exe",
+      "sha256": "14231169855ec5205cf5a1b6f1db358ff4aed4247c86b69ce8aae647c77f6680",
+      "executable": true
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+/**
+ * @author Codex
+ * @description Loads the shared Tailwind theme and applies browser-level application defaults.
+ */
+
+@import '@octopus/ui/globals.css';
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply min-h-full;
+  }
+
+  body {
+    @apply min-w-80 overflow-auto antialiased md:overflow-hidden;
+  }
+}
+
+/*
+ * github-markdown-css 未使用 @layer，属于未分层样式，优先级高于 Tailwind 的 @layer 规则。
+ * 因此覆盖规则同样写在未分层作用域，并用 `.markdown-body.markdown-body` 提升选择器优先级以取胜。
+ */
+[data-scope='github-markdown'].markdown-body {
+  @apply text-foreground bg-transparent text-sm font-sans;
+}
+
+/*
+ * github-markdown-css 未对 ul/ol 显式声明 list-style，Tailwind Preflight 的 `list-style: none`
+ * 因此没有对手直接生效，需要在此显式还原为浏览器默认样式。
+ */
+[data-scope='github-markdown'].markdown-body :where(ul, ol) {
+  list-style: revert;
+}
+
+[data-scope='github-markdown'].markdown-body :where(hr) {
+  height: 1px;
+  border: none;
+}

@@ -1,0 +1,26 @@
+{
+  "skill_name": "lexical-agent-composer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我正在用 @lexical/react 做一个智能体 Composer，需要支持 @ 引用项目里的文件和 / 调起命令面板。请帮我设计整体架构，并说明是否需要用 lexical-beautiful-mentions。",
+      "expected_output": "输出应包含：1）核心 LexicalTypeaheadMenuPlugin 与 lexical-beautiful-mentions 的选型建议；2）FileMentionNode 与命令注册表的设计思路；3）Composer 组件与插件挂载顺序；4）触发器互斥与提交策略；5）常见陷阱与可执行清单。",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 2,
+      "prompt": "已经有一个 Lexical Composer 了，现在想加 / 斜杠命令，要求能插入代码块、清空编辑器，还要支持动态命令比如 3x4 插入表格。怎么实现？",
+      "expected_output": "输出应包含：1）基于 LexicalTypeaheadMenuPlugin 的 slash command 插件结构；2）静态 CommandOption 与动态命令合成的示例；3）命令执行时如何清理 query 文本节点；4）键盘交互与命令优先级注意事项；5）可直接落地的代码片段。",
+      "files": [],
+      "expectations": []
+    },
+    {
+      "id": 3,
+      "prompt": "在 Lexical 里实现 @ 文件选择时，触发菜单、搜索文件、插入 mention、提交时把 mention 转成文件 ID，这一系列流程有哪些常见坑？",
+      "expected_output": "输出应包含：1）触发匹配、去抖搜索、缓存的最佳实践；2）自定义 Mention Node 的必须实现项（clone/import/export/entity boundary）；3）选中插入时如何替换 query 节点；4）序列化与 buildPayload 的策略；5）至少列出 5 个常见陷阱及规避方法。",
+      "files": [],
+      "expectations": []
+    }
+  ]
+}

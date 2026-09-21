@@ -1,0 +1,75 @@
+{
+  "name": "@octopus/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "octopus": "./dist/bin/octopus.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./rpc": {
+      "types": "./dist/rpc/index.d.ts",
+      "import": "./dist/rpc/index.js"
+    },
+    "./environment": {
+      "types": "./dist/utils/environment.d.ts",
+      "import": "./dist/utils/environment.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/infra-copy.mjs && node scripts/scheduler-db-migrations-copy.mjs && node scripts/knowledge-db-migrations-copy.mjs && node scripts/permission-db-migrations-copy.mjs && node scripts/memory-db-migrations-copy.mjs && node scripts/chmod-bin.mjs",
+    "db:knowledge:generate": "drizzle-kit generate --config=drizzle.knowledge.config.ts",
+    "db:knowledge:check": "drizzle-kit check --config=drizzle.knowledge.config.ts",
+    "db:scheduler:generate": "drizzle-kit generate --config=drizzle.scheduler.config.ts",
+    "db:scheduler:check": "drizzle-kit check --config=drizzle.scheduler.config.ts",
+    "dev": "tsx --env-file-if-exists=../../.env src/bin/octopus.ts",
+    "dev:scheduler": "pnpm run dev:scheduler:start",
+    "dev:scheduler:start": "tsx --env-file-if-exists=../../.env src/bin/octopus.ts scheduler service start",
+    "dev:scheduler:stop": "tsx --env-file-if-exists=../../.env src/bin/octopus.ts scheduler service stop",
+    "install:extensions": "node scripts/extensions-install.mjs",
+    "install:infra": "node scripts/infra-install.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "test": "node --test test/*.test.mjs",
+    "clean": "rm -rf dist",
+    "db:memory:generate": "drizzle-kit generate --config=drizzle.memory.config.ts",
+    "db:memory:check": "drizzle-kit check --config=drizzle.memory.config.ts"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "@earendil-works/pi-ai": "0.85.1",
+    "@earendil-works/pi-coding-agent": "0.85.1",
+    "@earendil-works/pi-tui": "0.85.1",
+    "@lancedb/lancedb": "0.38.0",
+    "@langchain/core": "1.2.10",
+    "@langchain/textsplitters": "1.0.1",
+    "@modelcontextprotocol/client": "2.0.0",
+    "@octopus/document-processing": "workspace:*",
+    "@octopus/env-loader": "workspace:*",
+    "@octopus/shared": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "croner": "10.0.1",
+    "drizzle-orm": "^0.45.2",
+    "jiti": "2.7.0",
+    "koffi": "2.15.2",
+    "oh-my-logo": "0.5.0",
+    "pi-mcp-adapter": "2.34.0",
+    "sharp": "^0.35.4",
+    "typebox": "1.3.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.1.2",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^10.8.0",
+    "globals": "^17.7.0",
+    "tsx": "^4.23.5",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0"
+  }
+}

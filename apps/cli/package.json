@@ -1,0 +1,39 @@
+{
+  "name": "@octopus/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --env-file-if-exists=../../.env src/index.ts",
+    "build": "tsdown --config tsdown.config.ts && tsdown --config tsdown.gateway.config.ts",
+    "release": "node --import tsx scripts/release.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "pnpm run build && node --import tsx --test test/*.test.mjs",
+    "test:release": "node --import tsx scripts/test-release.mjs"
+  },
+  "dependencies": {
+    "@octopus/agent": "workspace:*",
+    "@octopus/server": "workspace:*",
+    "@octopus/shared": "workspace:*",
+    "commander": "15.0.0",
+    "koffi": "2.15.2",
+    "tar": "^7.5.22",
+    "yaml": "^2.9.0",
+    "@octopus/env-loader": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.1.2",
+    "eslint": "^10.8.0",
+    "globals": "^17.7.0",
+    "tsdown": "0.23.0",
+    "tsx": "^4.23.5",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0"
+  },
+  "engines": {
+    "node": ">=22.19.0",
+    "pnpm": ">=11.0.0"
+  }
+}

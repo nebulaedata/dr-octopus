@@ -1,0 +1,2291 @@
+{
+  "api": {
+    "knowledgeUpload": {
+      "invalidAddress": "上传返回了无效地址",
+      "missingFileId": "上传未返回文件标识"
+    },
+    "memory": {
+      "contentIncomplete": "正文尚未读取完整，请重新打开。",
+      "deletedOrSuperseded": "记忆已被删除或替代，请刷新目录。"
+    },
+    "sessionStats": {
+      "unavailable": "无法读取会话统计"
+    }
+  },
+  "common": {
+    "back": "返回",
+    "cancel": "取消",
+    "close": "关闭",
+    "confirm": "确定",
+    "copyFailedDescription": "请手动选择文本并复制",
+    "copyFailedTitle": "复制失败",
+    "edit": "编辑",
+    "export": "导出",
+    "loading": "正在加载…",
+    "refresh": "刷新",
+    "retry": "重试",
+    "save": "保存",
+    "submit": "提交"
+  },
+  "components": {
+    "codeEditor": {
+      "ariaEdit": "代码编辑器",
+      "ariaPreview": "代码预览",
+      "loading": "正在加载编辑器…"
+    },
+    "htmlRenderer": {
+      "title": "HTML 预览"
+    },
+    "listPagination": {
+      "next": "下一页",
+      "previous": "上一页"
+    },
+    "markdownRenderer": {
+      "mermaidFailed": "Mermaid 渲染失败。"
+    },
+    "searchInput": {
+      "resultCount_other": "{{count}} 条结果"
+    }
+  },
+  "home": {
+    "composerPlaceholder": "等待的时候先输入任务试试吧…",
+    "loadingTitle": "我是 Dr.Octopus，正在为您准备智能体！",
+    "loadingWorkspaces": "正在加载工作空间…",
+    "readyTitle": "我是 Dr.Octopus，今天想做点什么呢？"
+  },
+  "knowledge": {
+    "batchActions": {
+      "confirmDelete": "删除文档",
+      "deleteFailureDescription": "{{titles}}：{{message}}",
+      "deletePartial": "已删除 {{removed}} 份，{{failed}} 份删除失败",
+      "deleteSuccess_other": "已删除 {{count}} 份文档",
+      "deleteTooltip": "批量删除选中文档",
+      "dialogDescription": "此操作不可撤销，已有引用将不可用。",
+      "dialogTitle_other": "删除选中的 {{count}} 份文档？",
+      "indexFailed": "批量索引失败",
+      "indexTooltip": "批量索引：只重建选中文档，沿用集合当前索引配置",
+      "retryFallback": "请刷新后重试",
+      "selectedCount_other": "已选 {{count}} 份",
+      "titleSeparator": "、"
+    },
+    "collectionActions": {
+      "delete": "删除集合",
+      "deleteFailed": "集合删除失败",
+      "deleteTitle": "删除知识集合？",
+      "deleteWarning": "将删除该集合及其全部文档，已有引用将不可用。",
+      "editDescription": "更新名称和说明。",
+      "editName": "编辑名称",
+      "editTitle": "编辑知识集合",
+      "nameLabel": "名称",
+      "reindex": "重新索引",
+      "reindexFailed": "重新索引失败",
+      "saveFailed": "集合保存失败"
+    },
+    "collectionItem": {
+      "countFailed": "数量加载失败",
+      "countUnavailable": "文档数未提供",
+      "createdTitle": "创建于 {{date}}",
+      "dateUnavailable": "日期未提供",
+      "documentCount_other": "{{count}} 份文档",
+      "loading": "加载中…",
+      "remoteBadge": "远程"
+    },
+    "common": {
+      "descriptionLabel": "说明",
+      "irreversible": "此操作不可撤销。",
+      "listSeparator": "；"
+    },
+    "createDialog": {
+      "description": "按主题整理资料，供智能体检索与引用。",
+      "descriptionPlaceholder": "简单描述这份知识的内容与用途",
+      "failed": "集合创建失败",
+      "nameLabel": "集合名称",
+      "namePlaceholder": "例如：产品文档、团队手册",
+      "nameRule": "请输入 1–120 字的名称",
+      "submit": "创建集合",
+      "title": "新建知识集合"
+    },
+    "directory": {
+      "collections": "知识集合",
+      "create": "创建知识集合",
+      "emptyDescription": "产品文档、项目资料、团队经验，都可以成为智能体的知识来源。",
+      "emptyTitle": "从第一个知识集合开始",
+      "loadFailed": "知识集合加载失败",
+      "loading": "正在加载知识库…",
+      "remoteDescription": "由远程 Dr.Octopus 实例管理的共享知识集合。",
+      "remotePending": "远程 · 待恢复",
+      "remoteReady": "远程 · 只读",
+      "remoteSource": "来源：{{ref}} · 文档与索引由对端管理"
+    },
+    "documentActions": {
+      "delete": "删除文档",
+      "deleteFailed": "文档删除失败",
+      "deleteTitle": "删除文档？",
+      "deleteWarning": "将停止检索该文档，已有引用也将不可用。",
+      "rename": "重命名",
+      "renameDescription": "修改显示名称，保留文档内容和引用。",
+      "renameFailed": "文档重命名失败",
+      "renameTitle": "重命名知识文档",
+      "replace": "替换文档",
+      "replaceFailed": "文档替换失败",
+      "saveName": "保存名称",
+      "titleLabel": "文档名称"
+    },
+    "documents": {
+      "add": "添加",
+      "descriptionFallback": "上传资料，让智能体从这里寻找答案。",
+      "emptyDescription": "上传文档或新增文本，开始构建这份知识。",
+      "emptyTitle": "集合还没有文档",
+      "importFailed": "文档导入失败",
+      "jobLoadFailed": "任务状态加载失败",
+      "loadFailed": "文档加载失败",
+      "newText": "新增文本",
+      "totalCount_other": "共 {{count}} 份文档",
+      "upload": "上传文档",
+      "uploading": "上传中…"
+    },
+    "documentStatus": {
+      "deleted": "已删除",
+      "failed": "失败",
+      "indexing": "索引中",
+      "queued": "待处理",
+      "ready": "可检索"
+    },
+    "jobFeedback": {
+      "actionFailed": "任务操作失败",
+      "cancelTask": "取消任务",
+      "failureFallback": "任务未能完成，请检查模型服务后重试。",
+      "failureOperationReindex": "重新索引",
+      "failureTitle": "{{operation}}失败",
+      "failureTitleModelNeeded": "{{operation}}需要配置模型",
+      "failureTitlePartial": "{{operation}}部分失败",
+      "operationImport": "文档导入",
+      "operationReindex": "索引重建",
+      "progressTitle": "{{operation}}{{status}}",
+      "reason": {
+        "documentDuplicateConflict": "该文档已存在或正在导入，请勿重复上传",
+        "modelNotConfigured": "请在 Settings - 知识库配置 Embedding 模型",
+        "ocrIncomplete": "OCR 识别输出未完整结束，可能达到输出上限或出现重复生成，请检查模型识别结果后重试",
+        "ocrNotConfigured": "请在 Settings - 知识库配置 OCR 模型",
+        "officeContentRejected": "Office 文档包含暂不支持的活动内容、嵌入对象或外部引用，或文件结构无效；请移除这些内容后重新上传"
+      },
+      "statusCancelled": "已取消",
+      "statusQueued": "等待处理",
+      "statusRunning": "处理中",
+      "statusSucceeded": "已完成"
+    },
+    "page": {
+      "description": "把资料放入知识库，让智能体更博学。",
+      "modelSettings": "模型服务配置",
+      "newCollection": "新建集合",
+      "scopeGlobal": "全局",
+      "scopeWorkspace": "工作区",
+      "title": "知识库"
+    },
+    "searchAction": {
+      "tooltip": "搜索集合中的知识，查看相关原文"
+    },
+    "searchDialog": {
+      "alertFallback": "请检查模型服务和来源连接后重试。",
+      "collapse": "收起原文",
+      "commandLabel": "集合知识搜索",
+      "errorTitle": "搜索暂时失败",
+      "expand": "展开原文",
+      "hintExpand": "展开",
+      "hintSelect": "选择",
+      "locatorBody": "正文",
+      "locatorPage": "第 {{page}} 页",
+      "locatorSlide": "幻灯片 {{slide}}",
+      "noResults": "没有找到相关知识",
+      "noResultsDescription": "试试更具体的问题，或换一组关键词。",
+      "partialUnavailable": "部分检索能力暂不可用",
+      "placeholder": "输入问题，自动查找相关知识…",
+      "resultsHeading_other": "{{count}} 条相关结果",
+      "scopeNote": "仅搜索当前集合",
+      "searching": "正在查找相关知识…",
+      "searchingDescription": "正在匹配集合中的文档，请稍候。",
+      "sortedNote": "按相关度排序 · 仅搜索当前集合",
+      "startDescription": "输入关键词或完整问题，直接查看文档中的相关原文。",
+      "startTitle": "从一个问题开始",
+      "title": "搜索知识",
+      "unavailable": "检索来源暂不可用",
+      "unavailableDescription": "恢复检索服务后，修改问题即可重新搜索。",
+      "unavailableTitle": "暂时无法搜索"
+    },
+    "table": {
+      "columnActions": "操作",
+      "columnDocument": "文档",
+      "columnFormat": "格式",
+      "columnStatus": "状态"
+    },
+    "textDialog": {
+      "bodyLabel": "正文",
+      "description": "可使用 Markdown 整理内容。",
+      "submit": "保存并索引",
+      "textRequired": "请填写正文",
+      "title": "新增知识文本",
+      "titleLabel": "标题",
+      "titleRequired": "请填写标题"
+    }
+  },
+  "layout": {
+    "connection": {
+      "failedHint": "刷新页面重试",
+      "failedTitle": "实时重连 {{attempts}} 次后失败",
+      "lostHint": "等待重新连接",
+      "lostTitle": "实时连接已断开",
+      "reconnecting": "正在重新连接"
+    },
+    "header": {
+      "createdOn": "创建于 {{date}}",
+      "defaultTitle": "智能体",
+      "memoryDescription": "所有工作区共享的长期记忆",
+      "memoryTitle": "记忆",
+      "nav": {
+        "chat": "聊天",
+        "files": "文件",
+        "knowledge": "知识库",
+        "memory": "记忆",
+        "schedules": "定时任务",
+        "skills": "技能"
+      },
+      "schedulesDescription": "管理所有工作区的定时任务",
+      "schedulesTitle": "定时任务",
+      "settingsDescription": "全局智能体配置",
+      "settingsTitle": "设置",
+      "theme": "主题",
+      "themeMenu": {
+        "colorThemeDefault": "默认主题",
+        "colorThemeElectric": "电力蓝紫",
+        "colorThemeGroupLabel": "配色主题",
+        "colorThemeShadcn": "shadcn 经典",
+        "modeDark": "深色",
+        "modeGroupLabel": "主题模式",
+        "modeLight": "浅色",
+        "modeSystem": "系统跟随"
+      }
+    },
+    "notifications": {
+      "dateFormat": "M月D日 HH:mm",
+      "description": "任务结果与待处理事项",
+      "emptyDescription": "任务完成或需要处理时，会在这里通知你。",
+      "emptyTitle": "暂无通知",
+      "loading": "正在加载通知…",
+      "markAllRead": "全部已读",
+      "status": {
+        "cancelled": "已取消",
+        "failed": "失败",
+        "interrupted": "已中断",
+        "needsAttention": "待人工处理",
+        "skipped": "已跳过",
+        "succeeded": "已完成",
+        "timedOut": "超时"
+      },
+      "title": "通知",
+      "unreadBadge": "{{unread}} 条未读"
+    },
+    "routeLoading": {
+      "defaultModel": "正在加载默认模型…",
+      "environment": "正在加载环境设置…",
+      "extensions": "正在加载扩展…",
+      "knowledge": "正在加载知识库…",
+      "knowledgeSettings": "正在加载知识库设置…",
+      "languageSettings": "正在加载语言设置…",
+      "mcpServers": "正在加载 MCP 服务…",
+      "memory": "正在加载记忆…",
+      "memorySettings": "正在加载记忆设置…",
+      "modelProviders": "正在加载模型服务商…",
+      "schedulerSettings": "正在加载调度器设置…",
+      "schedules": "正在加载定时任务…",
+      "serverSettings": "正在加载服务设置…",
+      "session": "正在加载会话模块…",
+      "settings": "正在加载设置…",
+      "settingsPage": "正在加载设置页…",
+      "shortcutsSettings": "正在加载快捷键设置…",
+      "skills": "正在加载技能模块…"
+    },
+    "session": {
+      "delete": "删除",
+      "deleteDescription": "确定要删除“{{title}}”吗？此操作无法撤销。",
+      "deleteFailed": "删除会话失败。",
+      "deleteFilesLabel": "同时删除底层会话文件（JSONL）",
+      "deleteTitle": "删除会话",
+      "deleting": "删除中…",
+      "more": "更多",
+      "pin": "置顶会话",
+      "propertiesPanel": "属性面板",
+      "rename": "重命名",
+      "restart": "重启会话",
+      "restarting": "正在重启…",
+      "runtimeStatus": {
+        "dormant": "休眠",
+        "failed": "已失败",
+        "idle": "空闲",
+        "recovering": "恢复中",
+        "running": "运行中",
+        "starting": "启动中",
+        "stopping": "停止中"
+      },
+      "taskResult": "任务结果",
+      "unpin": "取消置顶"
+    },
+    "sidebar": {
+      "createWorkspaceTooltip": "新建工作区",
+      "hideProperties": "隐藏属性面板",
+      "newSession": "新建会话",
+      "pinFailedDescription": "请稍后重试。",
+      "pinFailedTitle": "置顶操作失败",
+      "pinLimitDescription": "请先取消一条已置顶会话，再尝试置顶。",
+      "pinLimitTitle": "最多置顶 {{max}} 条会话",
+      "requestFailed": "请求失败",
+      "sessions": "会话",
+      "settings": "系统设置",
+      "showProperties": "显示属性面板",
+      "workspace": "工作区"
+    },
+    "workspace": {
+      "create": "创建",
+      "createDescription": "为新工作区命名，可选填 Slug。",
+      "createFailed": "创建工作区失败。",
+      "createTitle": "新建工作区",
+      "nameLabel": "名称",
+      "nameRequired": "请输入名称。",
+      "nameTooLong": "名称不能超过 100 个字符。",
+      "slugInvalid": "Slug 只能包含小写字母、数字和单个连字符。",
+      "slugLabel": "Slug（可选）",
+      "slugPlaceholder": "留空则根据名称自动生成"
+    }
+  },
+  "memory": {
+    "assistant": {
+      "auto": "自动记忆",
+      "dismissTitle": "关闭记忆小助手（刷新页面后恢复显示）",
+      "manual": "手动记忆",
+      "off": "记忆已关闭",
+      "organizeFailed": "记忆整理未完成",
+      "organizing": "正在整理记忆",
+      "standby": "记忆小助手",
+      "statusLinkTitle": "会话最近观察到的记忆状态；点击管理全局记忆",
+      "unavailable": "记忆暂不可用"
+    },
+    "detail": {
+      "confirmDescription": "将删除这条事实及其旧版本，所有工作区立即生效。原会话记录仍会保留。",
+      "confirmForget": "确认忘记",
+      "confirmTitle": "忘记这条记忆？",
+      "directSave": "用户直接保存",
+      "forget": "忘记",
+      "forgotten": "已忘记这条记忆",
+      "loading": "正在读取正文与来源",
+      "sourcesVersion": "来源与版本 · v{{revision}}",
+      "viewTitle": "查看记忆"
+    },
+    "editor": {
+      "bodyLabel": "记忆正文（Markdown）",
+      "description": "保存后，所有工作区与会话都可以查阅这条记忆。",
+      "editTitle": "编辑记忆",
+      "indexLabel": "简短索引",
+      "save": "保存记忆",
+      "saved": "记忆已保存",
+      "saving": "正在保存…",
+      "topicLabel": "主题"
+    },
+    "page": {
+      "count_other": "{{count}} 条",
+      "description": "跨工作区共享的长期记忆。保留你的偏好、决策和约定，在需要时供智能体查阅。",
+      "emptyDescription": "点击“记住一件事”，保存偏好与约定。",
+      "emptySearchDescription": "可以换个关键词，或清空搜索词继续浏览。",
+      "emptySearchTitle": "未找到相关索引",
+      "emptyTitle": "还没有长期记忆",
+      "global": "全局记忆",
+      "loading": "加载中",
+      "modeAuto": "自动模式",
+      "modeManual": "手动模式",
+      "modeOff": "记忆已关闭",
+      "refreshHome": "刷新并返回首页",
+      "revision": "v{{revision}}",
+      "searchHint": "搜索展示候选索引；清空关键词可继续翻阅全部记忆。",
+      "searchPlaceholder": "搜索记忆索引或主题…",
+      "searchUnavailable": "全文检索暂不可用，请清空搜索词后浏览目录。",
+      "settingsTooltip": "记忆配置",
+      "title": "记忆",
+      "view": "查看记忆"
+    },
+    "remember": "记住一件事",
+    "service": {
+      "checking": "查询中",
+      "description": "所有工作区共享一个后台服务，停止后需手动启动，已有记忆不会删除。",
+      "restart": "重启",
+      "restarting": "重启中",
+      "start": "启动",
+      "startingProgress": "启动中…",
+      "state": {
+        "absent": "未启动",
+        "running": "运行中",
+        "starting": "启动中",
+        "stopped": "已停止",
+        "stopping": "停止中",
+        "unavailable": "不可用"
+      },
+      "stop": "停止",
+      "stoppingProgress": "停止中…",
+      "title": "记忆服务",
+      "unknown": "状态未知"
+    },
+    "settings": {
+      "description": "所有工作区的会话共用此设置，切换后自动保存。",
+      "mode": {
+        "auto": "自动",
+        "manual": "手动",
+        "off": "关闭"
+      },
+      "modeDescription": {
+        "auto": "智能体可以查阅已有记忆，并在任务完成后自动整理有长期价值的信息。",
+        "manual": "智能体可以查阅已有记忆，仅在你明确要求“记住”等保存意图时整理新记忆。",
+        "off": "停止向智能体提供长期记忆，也不再从对话中整理和保存新记忆。"
+      },
+      "modeLabel": "记忆模式",
+      "readError": "暂时无法读取记忆模式，请重试。",
+      "reading": "正在读取记忆模式…",
+      "refresh": "刷新设置",
+      "saving": "正在保存记忆模式…",
+      "startHint": "启动记忆服务后，即可查看和配置记忆模式。",
+      "title": "记忆"
+    }
+  },
+  "schedules": {
+    "archive": {
+      "activeRunNote": "等待活动运行结束后可恢复或删除",
+      "confirmPurge": "确认彻底删除",
+      "confirmRestore": "确认恢复",
+      "processing": "处理中…",
+      "purge": "彻底删除",
+      "purgeDescription": "将永久删除任务、执行历史和独立运行会话文件，无法恢复。来源会话中已回显的消息、任务在工作区生成的文件和必要授权审计不会删除。",
+      "purgeTitle": "彻底删除任务？",
+      "restore": "恢复任务",
+      "restoreDescription": "保留执行历史，恢复为暂停且待重新授权；授权后需手动恢复执行。",
+      "restoreTitle": "恢复归档任务？"
+    },
+    "authorization": {
+      "authorizing": "正在授权…",
+      "checkingTools": "正在检查工作区工具…",
+      "confirmNoTools": "确认持续授权（不允许工具）",
+      "confirmWithTools_other": "确认持续授权（{{count}} 个工具）",
+      "dialogDescription": "授权仅用于此任务，持续有效直到撤销或执行内容变更，授权后不会重跑历史任务。",
+      "dialogTitle": "授权任务：{{name}}",
+      "reviewButton": "查看与授权",
+      "revisionChanged": "任务已变更，请关闭后重新查看并确认授权。",
+      "revoke": "撤销此任务授权",
+      "revoking": "正在撤销…",
+      "viewRunContent": "查看执行内容",
+      "workingDirectory": "工作目录：{{cwd}}"
+    },
+    "authorizationRequest": {
+      "description": "正在读取目标定时任务的最新状态。",
+      "loading": "正在加载任务…",
+      "openFailed": "无法打开任务，任务可能已删除或当前不可用：{{message}}",
+      "title": "查看与授权"
+    },
+    "dateRange": {
+      "incomplete": "请选择完整的日期范围。",
+      "invalid": "日期范围无效。"
+    },
+    "dateRangePicker": {
+      "pickEndDate": "选择结束日期",
+      "pickRange": "选择日期范围"
+    },
+    "form": {
+      "cronExample": "例如 0 9 * * * 表示每天 09:00。",
+      "cronExpression": "Cron（分 时 日 月 周）",
+      "everyMinutes": "每隔多少分钟",
+      "intervalAnchor": "周期起点",
+      "misfireCoalesce": "合并补跑一次",
+      "misfirePolicy": "错过执行时间",
+      "name": "任务名称",
+      "overlapPolicy": "会话正在运行",
+      "overlapQueueOne": "保留一个待执行任务",
+      "policySkip": "跳过",
+      "prompt": "执行提示词",
+      "runAt": "执行时间",
+      "saveFailed": "保存失败，请重试。",
+      "saveTask": "保存任务",
+      "saving": "保存中…",
+      "timeoutMinutes": "运行超时（分钟）",
+      "timezone": "IANA 时区",
+      "triggerType": "触发方式",
+      "typeInterval": "固定周期",
+      "typeOnce": "一次性",
+      "validationFailed": "请检查名称、提示词、时间和周期；周期至少 1 分钟，超时不超过 24 小时。"
+    },
+    "history": {
+      "archivedSuffix": "（已归档）",
+      "empty": "没有匹配的执行记录。",
+      "loading": "正在加载历史…",
+      "triggerManual": "手动运行",
+      "triggerScheduled": "定时触发",
+      "workspacePrefix": "工作区：{{name}}"
+    },
+    "page": {
+      "allWorkspaces": "全部工作区",
+      "archiveNote": "归档将停止后续执行并请求取消活动运行，保留执行历史和授权审计。",
+      "description": "管理所有工作区定时任务，每次任务使用隔离会话执行，完成摘要会回显到来源会话。",
+      "editDescription": "明确执行时间、会话和提示词。保存后需明确授权才能执行。修改执行内容需重新授权；归档保留历史并请求取消正在运行的任务。",
+      "editTitle": "编辑定时任务",
+      "historyDateRange": "执行日期范围",
+      "historyResult": "执行结果",
+      "invalidRange": "请选择结束日期以完成日期范围。",
+      "loadingWorkspaces": "正在加载工作区…",
+      "noWorkspace": "请先创建工作区和会话。",
+      "searchHistoryPlaceholder": "搜索全部历史记录",
+      "searchTasks": "搜索任务",
+      "searchTasksPlaceholder": "搜索任务名称",
+      "serviceStopped": "定时任务服务已停止。请在 Settings 的“定时任务”中启动服务。",
+      "statusAll": "全部未归档任务",
+      "statusArchived": "已归档",
+      "statusAttention": "需处理",
+      "statusCompleted": "已完成",
+      "statusPaused": "已暂停",
+      "statusPending": "待执行",
+      "tabHistory": "执行历史",
+      "tabTasks": "任务管理",
+      "taskStatus": "任务状态",
+      "title": "定时任务",
+      "workspace": "工作区"
+    },
+    "runDetails": {
+      "cancelRun": "取消本次执行",
+      "summary": "结果摘要",
+      "transcript": "执行详情"
+    },
+    "runHistory": {
+      "descriptionDetail": "展示所选执行记录，展开摘要或执行详情查看结果。",
+      "descriptionRecent": "仅展示最近 20 次执行，按时间从新到旧排列。展开摘要或执行详情查看结果。",
+      "empty": "暂无执行记录。",
+      "loading": "正在加载记录…",
+      "titleDetail": "执行详情",
+      "titleRecent": "最近执行记录"
+    },
+    "runResult": {
+      "opening": "正在打开…",
+      "openSession": "打开会话"
+    },
+    "runStatus": {
+      "all": "全部结果",
+      "cancelled": "已取消",
+      "claimed": "已领取",
+      "dispatching": "正在提交",
+      "failed": "失败",
+      "interrupted": "已中断",
+      "needsAttention": "待人工处理",
+      "queued": "排队中",
+      "running": "运行中",
+      "skipped": "已跳过",
+      "succeeded": "成功",
+      "timedOut": "已超时"
+    },
+    "select": {
+      "placeholder": "请选择"
+    },
+    "taskList": {
+      "archive": "归档",
+      "cronSchedule": "Cron 调度",
+      "empty": "没有匹配的任务。请在会话中创建定时任务。",
+      "intervalSchedule": "间隔调度",
+      "loading": "正在加载任务…",
+      "nextRun": "下次执行",
+      "onceSchedule": "一次性任务",
+      "openSourceSession": "打开来源会话",
+      "pauseSchedule": "暂停调度",
+      "pauseTitle": "暂停调度只停止后续运行，不会停止本次执行",
+      "permissionDenied": "执行被权限规则阻止，请查看运行记录中的具体工具与原因；重新授权不一定能解除限制。",
+      "resumeSchedule": "恢复调度",
+      "running": "执行中…",
+      "runNow": "立即运行",
+      "runRecords": "执行记录",
+      "scheduleInterval": "每 {{minutes}} 分钟 · 起点 {{anchor}}",
+      "scheduleOnce": "一次性 · {{at}}",
+      "sourceSessionMissing": "来源会话已不在当前目录中。"
+    },
+    "taskStatus": {
+      "archived": "已归档",
+      "blocked": "待授权 / 需处理",
+      "completed": "已完成",
+      "enabled": "已启用",
+      "paused": "调度已暂停",
+      "restricted": "执行受限",
+      "running": "执行中"
+    },
+    "toolPicker": {
+      "emptyMatches": "没有匹配的工具，请调整搜索条件。",
+      "footerNote": "列表为本次预检已注册的工具，已排除不支持的交互与控制工具，丰富的工具授权可提高智能体执行能力。",
+      "searchPlaceholder": "搜索名称、描述或来源",
+      "selectAllMatches": "全选搜索结果",
+      "selectAllSelectable": "全选可授权工具",
+      "sourceMissing": "未提供来源",
+      "sourcePrefix": "来源：{{source}}",
+      "summary": "共 {{total}} 个工具，匹配 {{matched}} 个，可选 {{selectable}} 个；已选总数 {{selected}}",
+      "unauthorizedBadge": "不可授权"
+    },
+    "transcript": {
+      "empty": "本次运行尚未产生执行记录。",
+      "loading": "正在加载…",
+      "readonlyNote": "只读记录。查看详情不会重新运行任务。",
+      "truncated": "仅展示最近的部分记录。"
+    }
+  },
+  "session": {
+    "attachmentDiagnostics": {
+      "title": "文本提取覆盖情况",
+      "trigger": "提取情况"
+    },
+    "attachments": {
+      "codecUnsupported": "当前浏览器无法播放已验证的媒体编码",
+      "deleted": "附件已删除",
+      "downloadTitle": "下载",
+      "previewTitle": "预览",
+      "unavailable": "暂时不可用",
+      "untitled": "未命名附件"
+    },
+    "backgroundTasks": {
+      "actionFailed": "操作未完成，请重试。",
+      "alert": {
+        "actionIncomplete": "操作未完成",
+        "confirming": "正在确认进程退出，完成前无法启动新任务。",
+        "incomplete": "后台任务操作未完成，请检查任务状态后重试。",
+        "stopping": "正在停止任务",
+        "stopUnconfirmed": "停止尚未确认",
+        "unreadable": "暂时无法读取任务状态。请重试停止，以确认所有任务已退出。"
+      },
+      "allFinished": "所有后台任务均已结束",
+      "control": {
+        "logsStale": "暂未收到最新日志，请重试。",
+        "sessionChanged": "会话状态已变化，请重新打开任务列表后重试。",
+        "stopUnconfirmed": "停止尚未确认，请稍后重试。",
+        "taskMissing": "未找到该任务，请重新打开任务列表。"
+      },
+      "description": "查看此会话正在运行的进程和最近输出。",
+      "empty": "当前没有后台任务",
+      "groupRecent": "最近结束",
+      "groupRunning": "正在运行",
+      "logs": {
+        "copied": "已复制",
+        "copy": "复制日志",
+        "copyFailed": "无法复制，请选中日志后手动复制。",
+        "empty": "任务暂时没有输出",
+        "loading": "正在读取日志…",
+        "notLoaded": "日志未加载，点击刷新重试",
+        "recentOutput": "最近输出",
+        "refresh": "刷新日志",
+        "truncatedSuffix": " · 已截断"
+      },
+      "retryStop": "重试停止",
+      "row": {
+        "exitCode": "退出码 {{code}}",
+        "logs": "日志",
+        "started": "{{time}} 启动",
+        "stopAriaLabel": "停止 {{label}}"
+      },
+      "status": {
+        "exited": "已完成",
+        "exitedFailed": "执行失败",
+        "failed": "启动失败",
+        "running": "运行中",
+        "starting": "启动中",
+        "stopped": "已停止",
+        "stopping": "停止中",
+        "unknown": "状态未知"
+      },
+      "stopAll": "停止全部",
+      "stopAllNote": "停止全部会同时中止当前智能体运行，已生成的内容会保留。",
+      "stoppingButton": "正在停止…",
+      "summary": {
+        "active_other": "{{count}} 个运行中",
+        "failed_other": "{{count}} 个任务异常",
+        "pending": "状态待确认",
+        "recent_other": "{{count}} 个已结束",
+        "stopping": "停止待确认"
+      },
+      "title": "后台任务"
+    },
+    "builtinTool": {
+      "changes": "变更",
+      "command": "命令",
+      "content": "内容",
+      "results": "结果",
+      "truncationGeneric": "输出已受限。",
+      "truncationLimited_other": "仅展示前 {{count}} 条结果。",
+      "truncationLines": "已展示 {{totalLines}} 行中的 {{outputLines}} 行。",
+      "wroteCharacters_other": "已写入 {{count}} 个字符。"
+    },
+    "composer": {
+      "attachFiles": "附加文件",
+      "attachments": {
+        "statusFailed": "失败",
+        "statusProcessing": "校验与处理中",
+        "statusRejected": "已拒绝",
+        "statusRemoving": "正在移除",
+        "unavailable": "附件不可用",
+        "verifiedFile": "已验证文件"
+      },
+      "attachmentsPending": "请等待所有附件处理完成后再发送。",
+      "attachmentUploadFailed": "附件上传失败。",
+      "commandFailed": "命令执行失败。",
+      "commandsTooltip": "命令",
+      "goalTooltip": "目标",
+      "mentionTooltip": "提及文件或文件夹",
+      "newlineHint": "{{newline}} 换行",
+      "placeholderDefault": "向 Dr.Octopus 随便问…",
+      "placeholderFollowUp": "添加一条在本次运行结束后发送的跟进…",
+      "placeholderGuide": "引导当前运行…",
+      "placeholderHome": "告诉 Dr.Octopus 你想完成什么…",
+      "placeholderKnowledge": "向知识库提问，答案将附上资料来源…",
+      "placeholderLoading": "正在加载 Session 资源…",
+      "placeholderPlan": "描述你想规划的内容…",
+      "sendFailed": "无法发送消息。",
+      "slashComingSoon": "即将推出",
+      "slashNoMatch": "没有匹配的命令。",
+      "slashSearchPlaceholder": "搜索命令名称和描述…",
+      "stopFailed": "无法停止会话。",
+      "submitAndNewlineHint": "{{send}} 键提交，{{newline}} 换行",
+      "submitHint": "{{send}} 键提交",
+      "tooManyReferences": "一条消息最多可引用 {{max}} 个工作区条目。",
+      "unavailableWhileRunning": "智能体运行时不可用。",
+      "workModeFailed": "无法切换智能体模式。"
+    },
+    "configAlert": {
+      "descriptionDefault": "重启会话后生效，聊天记录会保留。",
+      "descriptionRestarting": "正在重新加载配置，请稍候。",
+      "restartButton": "重启会话",
+      "titleChanged": "模型服务配置已变更",
+      "titleFailed": "会话重启失败",
+      "titleRestarting": "正在重启会话"
+    },
+    "connectingAlert": {
+      "label": "正在连接 Agent..."
+    },
+    "contextUsage": {
+      "autoCompactionDisabled": "此会话已禁用自动压缩。",
+      "autoCompactionEnabled": "已启用自动压缩。",
+      "title": "上下文窗口",
+      "tokensSummary": "{{used}} / {{total}} tokens",
+      "waiting": "等待用量数据"
+    },
+    "conversation": {
+      "emptyDescription": "可以询问这个工作区、附加图片，或运行发现的命令。",
+      "emptyTitle": "随时等你开始",
+      "emptyTitleLoading": "暂无历史消息"
+    },
+    "coverage": {
+      "assessment": {
+        "partial": "内容特征检查尚不完整，下列条目可能未覆盖全部内容。",
+        "unknown": "内容特征检查结果未知。"
+      },
+      "conclusion": {
+        "partial": "文本提取未覆盖全部内容；当前文本不能代表完整文档。",
+        "textLayerOnly": "仅提取了文本层，不能代表完整视觉内容。",
+        "unknown": "文档内容覆盖未知，无法确认当前文本覆盖了哪些内容。"
+      },
+      "content": {
+        "chart": "图表",
+        "diagram": "示意图",
+        "embedded": "嵌入对象",
+        "formulaValues": "公式值",
+        "hiddenSheet": "隐藏工作表",
+        "image": "图片",
+        "layout": "视觉版式",
+        "media": "媒体",
+        "revisions": "修订数据",
+        "scanLikely": "疑似扫描内容",
+        "textRegion": "文字区域",
+        "unknown": "未知内容"
+      },
+      "detailsOmitted": "部分覆盖详情已省略，当前列表并非全部详情。",
+      "evidence": {
+        "heuristic": "启发式推测",
+        "structural": "结构证据"
+      },
+      "extraction": {
+        "extracted": "本次文字提取已完成",
+        "failed": "文字提取失败",
+        "truncated": "文字提取已截断",
+        "unknown": "文字提取状态未知"
+      },
+      "extractionStatusLine": "【提取状态】：\n{{status}}。",
+      "findingLine": "{{label}}（{{countWithUnit}}，{{evidence}}）：{{status}}。",
+      "findingsLine": "【内容特征与覆盖情况】：\n{{findings}}",
+      "findingStatus": {
+        "extracted": "已纳入文本提取",
+        "failed": "该内容提取失败",
+        "notProcessed": "尚未被文本提取覆盖",
+        "truncated": "仅部分纳入文本提取，已截断",
+        "unknown": "覆盖情况或结果可靠性尚无法核实",
+        "unsupported": "当前文本提取不支持该内容"
+      },
+      "limit": {
+        "diagnostics": "已达覆盖记录上限，部分详情未列出",
+        "text": "已达文字提取上限",
+        "units": "已达内容单元数量上限"
+      },
+      "limitsLine": "提取限制：{{limits}}。",
+      "limitsSeparator": "；",
+      "locationsLine": "定位：{{locations}}。",
+      "locationsOmitted": "部分定位已省略，所示定位并非完整列表。",
+      "noFindings": "未提供具体内容特征或定位条目。",
+      "unit": {
+        "occurrences_other": "{{count}} 次出现",
+        "pages_other": "{{count}} 页",
+        "parts_other": "{{count}} 个包内部件"
+      }
+    },
+    "coverageLocations": {
+      "itemSeparator": "，",
+      "listSeparator": "；",
+      "none": "未提供具体位置",
+      "pageLabel": "第 {{page}} 页",
+      "pagesOnly": "第 {{ranges}} 页",
+      "partLabel": "部件 {{part}}",
+      "rangeSeparator": "、",
+      "regionLabel": "区域 {{region}}",
+      "sheetLabel": "工作表「{{sheet}}」",
+      "slideLabel": "第 {{slide}} 张幻灯片",
+      "slidesOnly": "第 {{ranges}} 张幻灯片"
+    },
+    "execution": {
+      "attentionTitle": "本次运行需要关注",
+      "history": "执行历史",
+      "loadFailedTitle": "执行记录加载失败",
+      "newerRecords": "较新记录",
+      "olderRecords": "较早记录",
+      "promptMissing": "未保留任务指令",
+      "promptTitle": "任务指令",
+      "readonlyNote": "只读记录 · 查看不会重新执行任务",
+      "startedAt": "开始于",
+      "status": {
+        "cancelled": "已取消",
+        "failed": "失败",
+        "fallback": "执行结果",
+        "interrupted": "已中断",
+        "needsAttention": "需要关注",
+        "queued": "排队中",
+        "running": "运行中",
+        "skipped": "已跳过",
+        "succeeded": "成功",
+        "timedOut": "已超时"
+      },
+      "summaryTitle": "运行摘要",
+      "timelineTitle": "执行过程"
+    },
+    "executionTimeline": {
+      "assistant": "执行回复",
+      "emptyDescription": "本页没有可显示的执行消息，可查看运行状态或切换记录。",
+      "emptyTitle": "暂无执行内容",
+      "fallback": "运行说明",
+      "toolCall": "调用工具",
+      "toolResult": "工具返回",
+      "user": "补充指令"
+    },
+    "explorer": {
+      "collapseAll": "全部折叠",
+      "createFailed": "创建失败。",
+      "delete": "删除",
+      "deleteDescriptionMany_other": "确定要删除这 {{count}} 个项目吗？文件夹会连同其全部内容一起删除。此操作无法撤销。",
+      "deleteDescriptionOne": "确定要删除此项目吗？文件夹会连同其全部内容一起删除。此操作无法撤销。",
+      "deleteFailed": "删除失败。",
+      "deleteFile": "删除文件",
+      "deleteTitleMany_other": "删除 {{count}} 个项目",
+      "deleteTitleOne": "删除此项目",
+      "deleting": "删除中…",
+      "dirLoadFailedDescription": "暂时无法读取此目录，请重试。",
+      "dirLoadFailedTitle": "目录加载失败",
+      "downloadFile": "下载文件",
+      "editFile": "编辑文件",
+      "emptyDirectory": "此目录为空",
+      "invalidName": "请输入有效的名称。",
+      "loadFailedDescription": "暂时无法获取工作区文件，请重试。",
+      "loadFailedTitle": "文件列表加载失败",
+      "loadingFiles": "正在加载文件…",
+      "loadTimeout": "加载超时，请稍后重试。",
+      "newFile": "新建文件",
+      "newFolder": "新建文件夹",
+      "noFilesDescription": "你还没有创建任何文件。",
+      "noFilesTitle": "暂无文件",
+      "noWorkspaceDescription": "此工作区尚未设置。",
+      "noWorkspaceTitle": "暂无工作区",
+      "refreshFile": "刷新文件",
+      "retrying": "重试中…",
+      "uploadFile": "上传文件"
+    },
+    "extensionDialog": {
+      "customAnswerPlaceholder": "输入其他回答（可选）…",
+      "submitContinue": "继续",
+      "submitRespond": "回应"
+    },
+    "fileEditor": {
+      "enterFullscreen": "进入全屏",
+      "exitFullscreen": "退出全屏",
+      "loading": "正在加载文件…",
+      "openFailed": "无法打开文件",
+      "saveFailed": "无法保存文件",
+      "saving": "正在保存…",
+      "viewEditor": "编辑器",
+      "viewPreview": "预览"
+    },
+    "filesPanel": {
+      "copyPathTitle": "复制路径",
+      "title": "文件资源管理"
+    },
+    "fleetPanel": {
+      "badgeActive_other": "{{count}} 个活跃",
+      "badgeRecent": "最近",
+      "omittedCount_other": "另有 {{count}} 个项目未显示。",
+      "omittedTruncated": "更多智能体状态因传输限制被截断。",
+      "title": "子智能体后台"
+    },
+    "goal": {
+      "activeTime": "已运行 {{duration}}",
+      "automaticResponses_other": "{{count}} 次自动回复",
+      "clearFailed": "无法清除目标。",
+      "clearStopped": "清除已停止的目标",
+      "continuationLimit": "已达自动回复上限。使用 /goal 查看并继续。",
+      "noProgressGuard": "无进展保护已暂停此目标。使用 /goal 查看。",
+      "safetyResume": "安全恢复：{{date}}",
+      "status": {
+        "active": "进行中",
+        "blocked": "受阻",
+        "budgetLimited": "预算受限",
+        "paused": "已暂停",
+        "usageLimited": "用量受限",
+        "waiting": "等待中"
+      },
+      "tokenBudget": "Token 预算",
+      "updatedAt": "更新于 {{date}}"
+    },
+    "goalTool": {
+      "afterDelay": "{{delay}} 后",
+      "blocker": "阻塞原因",
+      "clampedNote": "请求 {{delay}}；已被 pi-goal 调整。",
+      "completionEvidence": "完成证据",
+      "evidence": "证据",
+      "goal": "目标",
+      "repeatedTurns_other": "重复 {{count}} 轮",
+      "resume": "恢复",
+      "waiting": "等待中"
+    },
+    "imageAttachment": {
+      "alt": "图片附件",
+      "unsupported": "不支持的附件"
+    },
+    "knowledgeEvidence": {
+      "citationLabel": "引用标识",
+      "citationMissing": "此结果未提供引用标识",
+      "emptyText": "此引用没有可显示的正文。",
+      "evidenceNumber": "证据 {{number}}",
+      "fragment": "资料片段",
+      "ocrBadge": "OCR 识别",
+      "quoteOriginal": "引用原文",
+      "readingPrefix": "资料阅读 · ",
+      "readQuote": "阅读引用",
+      "snapshotNote": "本次工具返回的资料快照",
+      "snapshotRetention": "保留检索时的内容，原资料后续可能更新。",
+      "truncatedNote": "片段过长，已展示前 24,000 个字符。"
+    },
+    "knowledgeMode": {
+      "apply": "应用来源设置",
+      "auto": "自动匹配",
+      "autoBadge": "自动匹配来源",
+      "autoDescription": "智能体从当前工作区和全局知识库中挑选相关资料，主题不明确时会先与你确认。",
+      "clearSelection": "清空选择",
+      "dialogDescription": "默认由智能体匹配集合；指定来源后，检索将限定在所选范围内。",
+      "dialogTitle": "让答案来自合适的资料",
+      "emptyPage": "本页没有匹配的集合",
+      "filterPlaceholder": "筛选本页集合…",
+      "localFallback": "本地知识集合",
+      "remoteFallback": "远程共享资料",
+      "scopeGlobal": "全局",
+      "scopeWorkspace": "工作区",
+      "selected": "指定集合",
+      "selectedBadge_other": "指定集合 ({{count}}个）",
+      "selectedCount_other": "已选 {{count}} / 20",
+      "settingsTitle": "来源设置",
+      "subtitle": "检索资料 · 回答附出处",
+      "title": "知识问答"
+    },
+    "knowledgeProjection": {
+      "collectionsSummary": "浏览可访问的知识集合",
+      "errorSummary": "知识请求未完成 · 展开查看详情",
+      "fragmentFallback": "文档片段",
+      "locator": {
+        "archivePath": "归档路径",
+        "page": "页码",
+        "paragraph": "段落",
+        "row": "行",
+        "sheet": "工作表",
+        "slide": "幻灯片"
+      },
+      "readSummary": "阅读引用原文及其位置",
+      "searchFallback": "查找与问题相关的知识",
+      "searchWithQuery": "搜索 · {{query}}",
+      "titleFallback": "引用原文"
+    },
+    "knowledgeTool": {
+      "catalogDescription": "本次可访问的知识集合",
+      "catalogEmptyDescription": "添加资料或调整来源范围后，再继续提问。",
+      "catalogEmptyTitle": "暂无可用的知识集合",
+      "catalogSummary": "本次展示 {{shown}} 个集合，共 {{total}} 个。",
+      "catalogTitle": "知识目录",
+      "collectionCount_other": "{{count}} 个集合",
+      "coveragePartialDescription": "已展示可用来源的结果，当前证据可能不完整。",
+      "coveragePartialTitle": "部分来源暂不可用",
+      "coverageUnavailableDescription": "知识来源暂时无法访问，请稍后重试。",
+      "coverageUnavailableTitle": "暂时无法检索资料",
+      "evidenceCount_other": "{{count}} 条证据",
+      "evidenceTruncated": "仅展示前 20 条证据。",
+      "loading": "正在查阅知识资料",
+      "noDescription": "此集合暂未添加说明。",
+      "remoteBadge": "远程挂载",
+      "searchDescription": "与本次问题相关的资料片段",
+      "searchEmptyDescription": "可以换一种提问方式，或调整知识来源范围。",
+      "searchEmptyTitle": "还没有找到相关资料",
+      "searchTitle": "知识检索",
+      "unavailableBadge": "暂不可用"
+    },
+    "loading": "正在加载会话…",
+    "loadingDescription": "正在同步所选工作区。",
+    "memoryProjection": {
+      "errorSummary": "请求未完成 · 展开查看详情",
+      "fallbackSummary": "展开查看记忆结果",
+      "noticeMorePages": "目录中还有后续内容可供查看。",
+      "noticePartialBody": "仅返回了部分正文，后续读取可以补全。",
+      "noticePartialLeads": "本次检索仅返回了部分相关线索。",
+      "noticeSearchSubset": "结果反映本次关键词检索，不代表全部记忆。",
+      "noticeSearchUnavailable": "检索暂不可用，这些结果不代表全部记忆。",
+      "runningRead": "正在读取记忆正文…",
+      "runningRecall": "正在检索记忆…",
+      "summaryLeads_other": "{{count}} 条记忆线索",
+      "summaryLeadsPartial_other": "本次展示 {{count}} 条记忆线索",
+      "summaryReadable_other": "{{count}} 条记忆可读",
+      "summaryReadablePartial_other": "本次展示 {{count}} 条记忆可读",
+      "topicFallback": "长期记忆",
+      "type": {
+        "architecture": "架构",
+        "constraint": "约束",
+        "correction": "纠正",
+        "decision": "决策",
+        "environment": "环境",
+        "instruction": "指令",
+        "other": "其他",
+        "preference": "偏好",
+        "workflow": "工作流"
+      },
+      "typeFallback": "记忆",
+      "unavailableSummary": "本次读取时该记忆不可用，可能已被删除或被取代。",
+      "unavailableTopic": "记忆 #{{id}}",
+      "unavailableType": "暂不可用"
+    },
+    "memorySave": {
+      "description": "后续对话，可按需参考。",
+      "globalMemory": "全局记忆",
+      "title_other": "已保存 {{count}} 条长期记忆"
+    },
+    "memoryTool": {
+      "emptyDescription": "可以调整关键词，或到记忆库中查阅。",
+      "entry": {
+        "noSources": "本次结果未附来源摘录。",
+        "sourceEmpty": "此来源未附文字摘录。",
+        "sources": "记忆来源",
+        "superseded": "历史版本",
+        "truncated": "展示内容已缩短，完整输出见原始结果。"
+      },
+      "manageMemory": "管理记忆",
+      "rawResult": "原始结果",
+      "readEmptyTitle": "本次没有可读的记忆",
+      "recallEmptyTitle": "本次没有找到记忆线索",
+      "showingFirst_other": "当前展示前 {{count}} 条，完整输出见原始结果。"
+    },
+    "messageFailure": {
+      "title": "模型请求失败"
+    },
+    "messageFile": {
+      "loadingPreview": "正在加载预览…",
+      "preview": "预览",
+      "previewFailed": "无法打开预览"
+    },
+    "messageRow": {
+      "interrupted": "已中断",
+      "you": "你"
+    },
+    "messageToolbar": {
+      "badResponse": "回答不佳",
+      "copied": "已复制",
+      "copyMessage": "复制消息",
+      "fork": "从此消息分叉会话",
+      "goodResponse": "回答不错"
+    },
+    "miniMap": {
+      "copyTitle": "复制标题",
+      "questionNumber": "问题 {{number}}"
+    },
+    "modelThinking": {
+      "chooseModel": "选择模型",
+      "model": "模型",
+      "notSelected": "未选择",
+      "thinkingLevel": "思考级别"
+    },
+    "notFound": "会话不存在",
+    "notFoundDescription": "从侧边栏选择另一个会话。",
+    "permission": {
+      "ask": "询问",
+      "askDescription": "编辑文件和使用互联网时总是询问。",
+      "auto": "自动",
+      "autoDescription": "仅对检测到的风险操作请求批准。",
+      "fallback": "权限",
+      "full": "完全访问",
+      "fullDescription": "不限制本地文件和互联网访问。",
+      "label": "权限模式"
+    },
+    "planExit": {
+      "description": "返回智能体模式将执行 Plan 扩展的退出流程，并丢弃已提议的计划。",
+      "discard": "丢弃并退出",
+      "keep": "继续规划",
+      "title": "丢弃已就绪的计划？"
+    },
+    "planTool": {
+      "answerPrefix": "回答：{{answer}}",
+      "cancelled": "问题已取消。",
+      "cancelledWithReason": "问题已取消：{{reason}}",
+      "custom": "自定义",
+      "proposedPlan": "提议的计划",
+      "waitingResponse": "等待回复"
+    },
+    "properties": {
+      "agentFile": "Agent 文件",
+      "autoCompaction": "自动压缩",
+      "autoRetry": "自动重试",
+      "behaviorTitle": "行为",
+      "clone": "克隆",
+      "compact": "压缩",
+      "connection": "连接",
+      "copyPathTitle": "复制路径",
+      "detailsTitle": "会话详情",
+      "exportHtml": "导出 HTML",
+      "model": "模型",
+      "noPending": "没有待处理的消息",
+      "queue": "队列",
+      "queueSummary": "{{steering}} 条引导 · {{followUp}} 条跟进",
+      "runtimeDefault": "运行时默认",
+      "sessionId": "会话 ID",
+      "stopRetry": "停止重试",
+      "thinking": "思考",
+      "workspace": "工作区"
+    },
+    "rename": {
+      "description": "为此会话输入新标题。",
+      "failed": "重命名会话失败。",
+      "fieldLabel": "标题",
+      "title": "重命名会话",
+      "titleRequired": "标题为必填项。",
+      "titleTooLong": "标题不能超过 160 个字符。"
+    },
+    "restartDialog": {
+      "confirm": "中断并重启",
+      "confirmTitle": "重启会话：{{title}}",
+      "description": "当前任务将中断，已保存的聊天记录和文件修改会保留。确认重启此会话？",
+      "errorTitle": "重启失败",
+      "pending": "正在重启…"
+    },
+    "runningControls": {
+      "guideDescription": "影响下一轮智能体回复。按 Enter 发送。",
+      "guideNow": "立即引导",
+      "guideTitle": "引导当前运行",
+      "guideTooltip": "引导当前运行 · Enter",
+      "menuLabel": "在 Dr.Octopus 工作时发送",
+      "queueDescription": "等当前任务结束后再发送。按 Alt+Enter。",
+      "queuedSuffix_other": " 已有 {{count}} 条排队。",
+      "queueNext": "排队发送",
+      "queueTitle": "本次运行后发送",
+      "queueTooltip": "运行结束后发送 · Enter",
+      "stoppingTooltip": "正在停止当前运行…",
+      "stopTooltip": "停止当前运行"
+    },
+    "schedulerAlert": {
+      "title_other": "定时任务结果（最近 {{count}} 条）",
+      "viewResult": "查看结果"
+    },
+    "schedulerAuth": {
+      "open": "打开定时任务",
+      "review": "查看与授权"
+    },
+    "schedulerProjection": {
+      "intervalAnchor": "起点 {{at}}",
+      "intervalDays_other": "{{count}} 天",
+      "intervalEvery": "每 {{interval}}",
+      "intervalHours_other": "{{count}} 小时",
+      "intervalMinutes_other": "{{count}} 分钟",
+      "intervalMs_other": "{{count}} 毫秒",
+      "onceTask": "一次性任务",
+      "runsCount_other": "{{count}} 条执行记录",
+      "tasksCount_other": "{{count}} 个任务"
+    },
+    "schedulerTool": {
+      "effect": {
+        "cancellationRequested": "取消中",
+        "cancelled": "已取消",
+        "deleted": "已删除",
+        "queued": "已排队",
+        "saved": "已保存"
+      },
+      "moreTasks_other": "另有 {{count}} 个任务未展开显示",
+      "nextRun": "下次执行",
+      "nextRunShort": "下次：{{date}}",
+      "runCount_other": "{{count}} 条执行记录",
+      "runStatus": {
+        "cancelled": "已取消",
+        "claimed": "已领取",
+        "dispatching": "正在提交",
+        "failed": "失败",
+        "fallback": "运行",
+        "interrupted": "已中断",
+        "needsAttention": "待人工处理",
+        "queued": "排队中",
+        "running": "运行中",
+        "skipped": "已跳过",
+        "succeeded": "成功",
+        "timedOut": "已超时"
+      },
+      "state": {
+        "completed": "已完成",
+        "enabled": "已启用",
+        "paused": "已暂停",
+        "task": "任务"
+      },
+      "statusTitle": {
+        "error": "错误",
+        "output": "输出",
+        "running": "正在处理"
+      },
+      "subtitle": "独立会话执行 · Scheduler 持久调度",
+      "taskCount_other": "{{count}} 个任务",
+      "thisRun": "本次运行",
+      "title": {
+        "cancel": "取消任务运行",
+        "create": "创建定时任务",
+        "delete": "删除定时任务",
+        "fallback": "定时任务",
+        "get": "定时任务详情",
+        "history": "任务运行历史",
+        "list": "定时任务清单",
+        "runNow": "立即执行任务",
+        "update": "更新定时任务"
+      },
+      "triggerManual": "手动触发",
+      "triggerScheduled": "计划触发",
+      "unnamedTask": "未命名任务",
+      "warnings": "提醒"
+    },
+    "stats": {
+      "cacheRead": "缓存读取",
+      "cacheWrite": "缓存写入",
+      "description": "Session 的累计统计，包含已压缩历史。",
+      "estimatedCost": "估算费用",
+      "inputTokens": "输入 Prompt",
+      "loadFailedPrefix": "统计加载失败：",
+      "loading": "正在加载统计…",
+      "outputTokens": "输出 Completion",
+      "title": "会话用量",
+      "toolCallsResults": "工具调用 / 结果",
+      "totalMessages": "消息总数",
+      "totalTokens": "总 tokens",
+      "userAssistantMessages": "用户 / 助手消息"
+    },
+    "subagentTool": {
+      "agents": "智能体",
+      "currentTool": "当前：{{tool}}",
+      "run": "运行",
+      "status": {
+        "completed": "已完成",
+        "detached": "已分离",
+        "failed": "失败",
+        "paused": "已暂停",
+        "pending": "排队等待",
+        "running": "运行中",
+        "stopped": "已停止"
+      },
+      "tokens_other": "{{count}} tokens"
+    },
+    "thoughtDisclosure": {
+      "thinking": "正在思考…",
+      "thought": "已思考",
+      "thoughtFor": "已思考 {{duration}}",
+      "waiting": "等待推理内容…"
+    },
+    "toolCard": {
+      "labels": {
+        "memoryRead": "读取记忆",
+        "memoryRecall": "召回记忆"
+      },
+      "patternInPath": "{{pattern}}，位于 {{path}}",
+      "status": {
+        "error": "错误",
+        "running": "运行中",
+        "success": "成功"
+      }
+    },
+    "toolParts": {
+      "arguments": "参数",
+      "details": "详情",
+      "noOutput": "未返回输出。",
+      "toolOutputAlt": "工具输出"
+    },
+    "turnDuration": {
+      "processed": "已处理",
+      "processing": "正在处理",
+      "tokens": "tokens",
+      "usageTitle": "输入：{{input}} tokens；输出：{{output}} tokens"
+    },
+    "workMode": {
+      "agent": "智能体",
+      "agentDescription": "常规的工具型工作",
+      "fallbackTitle": "智能体模式",
+      "knowledgeDescription": "检索知识资料，回答附出处",
+      "label": "智能体模式",
+      "plan": "计划",
+      "planDescription": "先给出计划再执行",
+      "unknown": "未知"
+    }
+  },
+  "settings": {
+    "defaultModel": {
+      "currentTitle": "当前默认模型",
+      "fieldLabel": "Provider / Model",
+      "loadFailed": "默认模型加载失败",
+      "notConfigured": "未配置",
+      "save": "保存默认模型",
+      "saveFailed": "保存失败",
+      "selectPlaceholder": "选择默认模型",
+      "selectRequired": "请选择一个可用模型。",
+      "selectTitle": "选择默认模型",
+      "unavailable": "不可用",
+      "updated": "默认模型已更新",
+      "updatedDescription": "新的 Session 将使用该模型。"
+    },
+    "environment": {
+      "addTitle": "添加环境变量",
+      "addVariable": "添加变量",
+      "alertAgentTitle": "新启动的 Agent 进程读取新配置",
+      "alertServerTitle": "重启 Server 后生效",
+      "columnActions": "操作",
+      "columnKey": "变量名",
+      "columnSource": "来源",
+      "columnValue": "下次加载值",
+      "configFile": "配置文件：{{path}}",
+      "confirmExposureSave": "确认本次修改并保存",
+      "deleteEntry": "删除配置",
+      "dialogDescription": "保存到 {{scope}} 配置。删除配置后将回退到其他来源。",
+      "editTitle": "编辑环境变量",
+      "emptyString": "（空字符串）",
+      "error": {
+        "busy": "其他进程正在修改配置，请稍后重试。",
+        "conflict": "配置已被其他窗口修改。请关闭编辑窗口，刷新列表后重试。",
+        "fallback": "无法读取或保存配置，请检查服务连接和配置文件权限后重试。",
+        "invalid": "配置无效，请检查变量名、端口、日志级别和数值范围。启动目录和内部进程变量不能在此修改。"
+      },
+      "exposureAlert": "其他能连接此服务的设备可以访问工作区、文件、Agent 工具和服务设置。请仅在可信网络使用。",
+      "keyExistsError": "该变量已存在，请编辑已有配置。",
+      "keyFormatError": "使用大写字母、数字或下划线，不能以数字开头。",
+      "keyLabel": "变量名",
+      "keyPlaceholder": "例如 OPENAI_API_KEY",
+      "loadFailed": "加载失败",
+      "loading": "正在加载环境变量…",
+      "noMatch": "没有匹配的环境变量",
+      "notSet": "未设置",
+      "overriddenAlert": "此变量被启动参数或进程环境覆盖。新值会保存，但需要移除上层覆盖才会使用。",
+      "priorityDescription": "优先级：启动参数 → 进程环境 / 开发 .env → 文件配置 → 默认值。下表展示下次加载时使用的值，已有进程保持原配置。",
+      "replaceValueLabel": "替换为新值",
+      "replaceValuePlaceholder": "已有值不会显示，请输入新值",
+      "saved": "环境变量已保存",
+      "savedAgentDescription": "新启动的 Agent 进程会读取新配置；已有进程需要重启。",
+      "savedServerDescription": "重启 Server 后生效。",
+      "searchPlaceholder": "搜索变量名…",
+      "sensitiveDescription": "自定义变量按敏感值处理，保存后不会回显。",
+      "source": {
+        "default": "默认值",
+        "dotenv": ".env",
+        "file": "文件配置",
+        "override": "启动参数",
+        "process": "进程环境 / .env"
+      },
+      "storedOverridden": "已保存的值被覆盖",
+      "valueDescription": "留空保存为空字符串；删除配置可恢复其他来源。",
+      "valueInvalidError": "值不能包含 NUL，长度不能超过 8192 个字符。",
+      "valueLabel": "变量值",
+      "valuePlaceholder": "输入变量值"
+    },
+    "extensions": {
+      "description": "页面框架已经就绪；Extension entrypoint 查询和启停操作将在下一垂直切片接入。",
+      "title": "扩展资源接线中"
+    },
+    "frame": {
+      "descriptionFallback": "管理应用设置。",
+      "dialogDescription": "配置全局智能体行为和 Pi 资源。",
+      "navigationDescription": "在全局设置模块间导航。",
+      "navigationTitle": "设置导航",
+      "titleFallback": "设置"
+    },
+    "knowledge": {
+      "model": {
+        "apiKeyEmptyPlaceholder": "本地服务可留空",
+        "apiKeyLabel": "API Key",
+        "apiKeySavedPlaceholder": "已保存，留空保持不变",
+        "dimensionsInvalid": "维度应为 1–8192",
+        "dimensionsLabel": "向量维度",
+        "embeddingDescription": "将文档转换为可检索的向量。更换模型后，需要重建已有集合。",
+        "embeddingTitle": "Embedding · 语义检索",
+        "enabledLabel": "启用结果重排",
+        "endpointInvalid": "请输入 HTTP 或 HTTPS 地址",
+        "endpointLabel": "服务地址",
+        "modeAuto": "自动识别扫描页",
+        "modeForce": "所有页面使用 OCR",
+        "modeLabel": "识别方式",
+        "modelLabel": "模型名称",
+        "modelRequired": "请输入模型名称",
+        "modeOff": "关闭 OCR",
+        "ocrDescription": "识别扫描 PDF 的页面文字。普通文本优先直接提取。",
+        "ocrTitle": "OCR · 扫描识别",
+        "optional": "可选",
+        "probeResult": "{{summary}} · {{elapsed}} ms",
+        "rerankerDescription": "对检索结果再次排序。服务不可用时保留基础检索结果。",
+        "rerankerTitle": "Reranker · 结果排序",
+        "save": "保存配置",
+        "saved": "配置已保存",
+        "saving": "保存中…",
+        "test": "测试模型",
+        "testing": "测试中…"
+      },
+      "models": {
+        "loading": "正在加载模型配置…",
+        "startHint": "启动知识库服务后，即可配置模型。内网模型无需 API Key。"
+      },
+      "mounts": {
+        "bearerSuffix": " · 需配置 HTTP Bearer",
+        "connectionLabel": "全局 MCP 连接",
+        "connectionPlaceholder": "选择已配置的连接",
+        "description": "接入其他 Dr.Octopus 实例，共享集合会出现在全局列表中。",
+        "introLink": "MCP 服务器",
+        "introPrefix": "先在",
+        "introSuffix": "保存 HTTP 连接和 Bearer 凭据，再选择连接验证挂载。",
+        "mounted": "已挂载",
+        "pending": "待恢复",
+        "sharedCollections_other": "{{count}} 个共享集合",
+        "synced": "目录已同步",
+        "title": "挂载远程知识库",
+        "unavailable": "连接不可用，请检查远端服务或令牌",
+        "verify": "验证并挂载",
+        "verifying": "验证中…"
+      },
+      "service": {
+        "description": "所有工作区共享一个后台服务，停止后需手动启动。",
+        "restart": "重启",
+        "start": "启动",
+        "starting": "启动中…",
+        "state": {
+          "notStarted": "未启动",
+          "running": "运行中",
+          "stopped": "已停止"
+        },
+        "stop": "停止",
+        "stopping": "停止中…",
+        "title": "知识库服务"
+      },
+      "sharing": {
+        "collectionsLabel": "共享集合",
+        "copyToken": "复制令牌",
+        "description": "向其他智能体只读共享选中的全局集合。服务端需保持运行。",
+        "enableLabel": "启用知识库 MCP",
+        "hostsLabel": "允许的主机名",
+        "networkHint": "默认仅本机回环访问。其他设备需通过 HTTPS 入口连接，代理信任范围沿用服务端配置。",
+        "noCollections": "请先创建本地全局集合。",
+        "originsLabel": "允许的浏览器来源（可选）",
+        "rotateLabel": "生成新令牌并撤销旧令牌",
+        "save": "保存共享设置",
+        "selectedCount_other": "已选择 {{count}} 个集合",
+        "title": "对外知识库 MCP",
+        "tlsLabel": "允许其他设备通过 HTTPS 访问",
+        "tokenNotice": "新令牌仅显示这一次，请保存到连接方的 MCP 配置。旧令牌已失效。"
+      }
+    },
+    "language": {
+      "description": "选择界面显示语言，切换后立即生效并在本机记住选择。",
+      "label": "显示语言",
+      "title": "语言"
+    },
+    "mcp": {
+      "addServer": "MCP 服务器",
+      "addTitle": "添加 MCP 服务器",
+      "argsLabel": "参数",
+      "argsPlaceholder": "每行一个参数",
+      "backToList": "返回列表",
+      "badgeDisabled": "禁用",
+      "confirmRemove": "确认删除",
+      "connectionCreateDescription": "添加本地进程、HTTP 或 Socket MCP 服务。",
+      "connectionEditDescription": "本地进程、HTTP 或 Socket MCP 服务配置。",
+      "connectionTitle": "连接配置",
+      "connectivity": {
+        "checking": "正在检测连接",
+        "connected": "连接正常",
+        "disabled": "已停用，未检测连接",
+        "failed": "连接检测失败",
+        "needsAuth": "连接失败：需要认证"
+      },
+      "created": "MCP 服务器已创建",
+      "createServer": "创建服务器",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "简要说明此 MCP 服务器的用途",
+      "directToolsDescription": "将该服务器的 MCP 工具逐个注册到 Agent 工具列表，无需先通过 mcp 代理检索。工具越多，占用的上下文也越多。",
+      "directToolsLabel": "注册工具",
+      "directToolsSearchHint": "当前为搜索后按需注册工具。保存其他设置会保留此模式；关闭开关将停用直接注册。",
+      "empty": "没有 MCP 服务器",
+      "emptyDescription": "使用下方按钮添加第一个配置。",
+      "enableDescription": "不启动或停止当前 Agent Runtime，保存后需重启 Agent。",
+      "enableTitle": "启用服务器",
+      "excludeToolsLabel": "排除工具",
+      "exposeResourcesDescription": "将服务器提供的 MCP Resource 映射为可调用的 read_<resource> 工具。关闭后不再暴露这些资源工具。",
+      "exposeResourcesLabel": "MCP 资源转工具",
+      "includeToolsLabel": "包含工具",
+      "loadFailed": "MCP 配置加载失败",
+      "managementTitle": "配置权限",
+      "nameLabel": "名称",
+      "nameRequired": "请输入名称。",
+      "noMatch": "没有匹配结果",
+      "noMatchDescription": "尝试按名称、连接方式或来源搜索。",
+      "operationFailed": "MCP 配置操作失败",
+      "readOnlyDescription": "该定义来自 {{source}}，只能创建允许的全局启停覆盖。",
+      "readOnlyTitle": "来源只读",
+      "removed": "MCP 配置已移除",
+      "removeDescription": "删除全局定义或覆盖后，下层同名配置可能重新显现。",
+      "removeDialogDescription": "此操作只删除 Host 的全局定义或覆盖。",
+      "removeDialogTitle": "删除 {{name}}？",
+      "removeHostButton": "删除 Host 配置",
+      "removeTitle": "删除配置",
+      "restartDescription": "重启 Agent 后生效。",
+      "saveChanges": "保存更改",
+      "saved": "MCP 配置已保存",
+      "saveFailed": "MCP 配置保存失败",
+      "searchPlaceholder": "搜索 MCP 服务器…",
+      "secretsDescription": "绑定的环境变量、HTTP Header 或 OAuth 客户端密钥。",
+      "secretsTitle": "密钥绑定",
+      "selectDescription": "从中间目录查看来源、连接和工具暴露配置。",
+      "selectTitle": "选择一个 MCP 服务器",
+      "source": {
+        "agentsGlobal": "通用智能体",
+        "agentsNestedGlobal": "通用智能体（嵌套）",
+        "hostImport": "Host 导入",
+        "packageOrPlugin": "扩展包",
+        "piGlobal": "Dr.Octopus",
+        "sharedGlobal": "共享配置"
+      },
+      "sourceTitle": "配置来源",
+      "stateDisabled": "已停用",
+      "stateEnabled": "已启用",
+      "targetDescription": "stdio 填命令，HTTP 填 URL，Socket 填套接字地址。",
+      "targetLabel": "命令或地址",
+      "targetRequired": "请输入连接目标。",
+      "toolsPlaceholder": "每行一个工具模式",
+      "transportLabel": "连接方式",
+      "transportStdio": "stdio（本地进程）"
+    },
+    "nav": {
+      "company": {
+        "description": "公司介绍页面尚未开放。",
+        "label": "公司"
+      },
+      "defaultModel": {
+        "description": "选择新建会话使用的默认模型，不影响正在运行的会话。",
+        "label": "默认模型"
+      },
+      "environment": {
+        "description": "分别管理 Server 和 Agent 的启动配置，配置保存在本机。",
+        "label": "环境变量"
+      },
+      "extensions": {
+        "description": "扩展查询和启停功能暂未开放。",
+        "label": "扩展管理"
+      },
+      "group": {
+        "about": "关于",
+        "advanced": "高级",
+        "appearance": "外观",
+        "basics": "基础",
+        "extensions": "扩展"
+      },
+      "knowledge": {
+        "description": "管理知识库服务、模型配置、共享和远程挂载。",
+        "label": "知识库"
+      },
+      "language": {
+        "description": "选择界面显示语言，切换后立即生效。",
+        "label": "语言"
+      },
+      "licenses": {
+        "description": "开源协议信息页面尚未开放。",
+        "label": "开源协议"
+      },
+      "mcp": {
+        "description": "添加和管理 MCP 服务器连接及可用工具。",
+        "label": "MCP 服务器"
+      },
+      "memory": {
+        "description": "设置跨工作区共享的长期记忆模式。",
+        "label": "记忆"
+      },
+      "modelProviders": {
+        "description": "管理模型提供商、访问地址和认证方式。",
+        "label": "模型服务"
+      },
+      "permissions": {
+        "description": "管理工具权限、运行模式和审计记录，可为每个工作区单独配置。",
+        "label": "权限"
+      },
+      "schedules": {
+        "description": "管理定时任务服务，配置默认时区和并发任务数量。",
+        "label": "定时任务"
+      },
+      "server": {
+        "description": "管理监听、会话容量与文件日志，保存后手动重启应用。",
+        "label": "服务"
+      },
+      "shortcuts": {
+        "description": "查看并自定义会话、布局与输入快捷键。",
+        "label": "快捷键"
+      },
+      "snippets": {
+        "description": "快捷短语配置尚未开放。",
+        "label": "快捷短语"
+      },
+      "theme": {
+        "description": "主题模式配置尚未开放。",
+        "label": "主题模式"
+      },
+      "version": {
+        "description": "版本信息页面尚未开放。",
+        "label": "版本"
+      }
+    },
+    "permissions": {
+      "action": {
+        "allow": "允许",
+        "ask": "询问",
+        "deny": "拒绝",
+        "inherit": "默认",
+        "perMode": "按模式"
+      },
+      "addRule": "添加工具规则",
+      "audit": {
+        "lengthDescription": "每个文本字段最多保留的字符数，超出部分截断",
+        "lengthLabel": "日志文本保留长度",
+        "toggleDescription": "开启后记录工具权限请求及审批结果，用于查询和排查问题",
+        "toggleLabel": "记录权限审计日志"
+      },
+      "configEditor": {
+        "generalTitle": "运行模式",
+        "globalDescription": "配置所有工作区的默认权限，选择“默认”使用系统预设。",
+        "jsonInvalid": "配置字段或取值无效，请检查工具规则、模式和审计选项。",
+        "jsonSyntaxError": "JSON 语法错误",
+        "jsonTitle": "JSON 权限配置",
+        "modeKindAriaLabel": "{{mode}}{{kind}}",
+        "rawDescriptionPrefix": "支持 toolRules、requestDefaults、policy、modes 和审计字段。保存空对象 ",
+        "rawDescriptionSuffix": " 可恢复当前范围的所有默认设置；toolRules 中设为 null 可移除默认分类。",
+        "rawLabel": "本级配置",
+        "save": "保存配置",
+        "workspaceDescription": "配置当前工作区的权限，选择“默认”使用全局配置。"
+      },
+      "configHelp": {
+        "auditMiddle": " 或 ",
+        "auditPrefix": "前者为审计日志开关，填写 ",
+        "auditSuffix": "；后者为每个日志文本字段的保留字符数，填写 1–100000 的整数。",
+        "closingMiddle": " 中的工具描述外，不能用 ",
+        "closingPrefix": "所有顶层字段均可省略。使用标准 JSON 双引号，不支持注释、尾随逗号或未知字段；除 ",
+        "closingSuffix": " 表示默认。动作映射按键覆盖，空对象不会清除继承的动作。",
+        "exampleTitle": "完整结构示例（请按需合并到现有配置）",
+        "inheritanceBody": "配置依次继承：系统预设 → 全局 → 工作区。工作区配置仅在工作区受信任时参与运行。",
+        "inheritanceSave": "保存会替换当前范围的整份配置；保留仍需使用的本级字段，删除字段则恢复继承。保存 ",
+        "inheritanceSuffix": " 会恢复当前范围的全部默认设置，包括审计选项；不能留空。",
+        "modesExternal": "（工作区外路径动作）。取值同样为 ",
+        "modesKindsMiddle": "（",
+        "modesKindsSuffix": " 的默认动作）和 ",
+        "modesPrefix": "每个模式可配置 ",
+        "modesSuffix": "。保存这些规则不会切换当前会话的运行模式。",
+        "modesTools": "（工具动作）、",
+        "policyAllow": "（允许）、",
+        "policyAsk": "（请求确认）、",
+        "policyBody": "。工具名精确匹配，不支持通配符。动作仅支持 ",
+        "policyDeny": "（拒绝）；继承请删除对应键，不要填写 ",
+        "policyPrefix": "固定工具动作，例如 ",
+        "policySuffix": "。",
+        "precedenceBody": " 都会拒绝。其余情况按“固定工具动作 → 模式工具动作 → 分类默认动作”选择规则；工作区外路径还要满足 ",
+        "precedencePrefix": "固定策略、当前模式的工具规则中任一 ",
+        "precedenceSuffix": "。有效的会话授权可复用确认结果，不能绕过拒绝或硬安全检查。",
+        "requestDefaultsMiddle": " 和 ",
+        "requestDefaultsPrefix": "通过 ",
+        "requestDefaultsSuffix": " 指定默认参数字段列表。工具描述未声明对应列表时使用此值；数组整体替换，",
+        "requestDefaultsSuffix2": " 表示清空该列表。",
+        "title": "只填写当前范围需要覆盖的配置",
+        "toolRulesBody": "。单个描述整体替换继承值；设为 ",
+        "toolRulesMiddle": " 和 ",
+        "toolRulesPrefix": "工具名到描述对象的映射，描述包含 ",
+        "toolRulesSuffix": " 移除分类，按 ",
+        "toolRulesSuffix2": " 处理，不代表拒绝执行。详细字段用法见“编辑工具规则 → 高级配置”。",
+        "trigger": "JSON 字段说明与示例",
+        "versionDescription": "版本号，仅支持数字 ",
+        "versionSuffix": "；可省略，保存时自动写入。"
+      },
+      "footerNote": "未配置的工具按“其他工具”处理。固定策略优先于模式规则，拒绝优先于会话授权；工作区外操作单独判断。",
+      "invalidDescription": "{{message}}。请通过 JSON 配置修复：{{path}}",
+      "invalidTitle": "配置无效",
+      "jsonConfig": "JSON 配置",
+      "kind": {
+        "custom": "其他工具",
+        "external": "工作区外",
+        "read": "读取",
+        "shell": "命令",
+        "write": "写入"
+      },
+      "loadFailed": "加载失败",
+      "loading": "加载权限配置…",
+      "mode": {
+        "ask": "请求批准",
+        "auto": "自动批准",
+        "full": "完全访问"
+      },
+      "modesDescription": "分别配置不同类型的工具：询问、自动和完全访问模式下的默认权限。",
+      "modesTitle": "权限运行模式",
+      "noMatch": "没有匹配的工具规则",
+      "noWorkspace": "暂无工作区，请先创建工作区。",
+      "reset": {
+        "globalTitle": "恢复所有全局设置为系统预设",
+        "workspaceTitle": "恢复当前工作区的所有默认设置，使用全局配置"
+      },
+      "restoreDefaults": "恢复默认",
+      "scopeGlobal": "全局",
+      "scopeWorkspace": "工作区",
+      "searchPlaceholder": "搜索工具名…",
+      "selectWorkspace": "选择工作区",
+      "sourceCustom": "自定义",
+      "sourceDefault": "默认",
+      "table": {
+        "actions": "操作",
+        "kind": "类型",
+        "policy": "固定策略",
+        "source": "来源",
+        "tool": "工具"
+      },
+      "toolEditor": {
+        "addTitle": "添加工具规则",
+        "advanced": "高级配置",
+        "defaultPrefix": "默认：",
+        "description": "精确匹配工具名。固定策略优先于模式配置，任何拒绝规则优先于授权。",
+        "descriptorDescription": "如您不了解具体配置，请留空使用默认配置，字段说明与示例见下方：",
+        "descriptorInvalid": "请输入有效的工具描述 JSON，或留空使用默认配置",
+        "descriptorLabel": "工具分类与授权范围（JSON）",
+        "editTitle": "编辑工具规则",
+        "nameExists": "该工具已存在，请编辑已有规则",
+        "nameInvalid": "请输入有效的工具名，不支持空白或保留字段名",
+        "nameLabel": "工具名",
+        "namePlaceholder": "例如 knowledge_search",
+        "policyLabel": "固定策略",
+        "save": "保存规则"
+      },
+      "toolHelp": {
+        "blankKind": " 缺少必填的 ",
+        "blankKindSuffix": "，不能作为工具描述。",
+        "blankMiddle": " 会移除继承描述，工具按 ",
+        "blankPrefix": "留空会恢复继承的工具描述；填写 ",
+        "blankSuffix": " 分类并使用默认参数字段，不会禁用工具。填写对象会整体替换该工具的描述，不会逐字段合并。",
+        "exampleMiddle": " 和 ",
+        "examplePrefix": "假设工具参数包含 ",
+        "exampleSuffix1": "。请按实际工具参数修改字段名；仅提取 ",
+        "exampleSuffix2": " 参数的命令工具可用",
+        "exampleSuffix3": "。",
+        "exampleTitle": "示例：按集合与来源目录授权的导入工具",
+        "fieldDefaultsExample": " 的参数提供默认字符串，例如 ",
+        "fieldDefaultsMiddle": " 中缺失或值为 ",
+        "fieldDefaultsPrefix": "为 ",
+        "fieldDefaultsSuffix": "，每个默认值最多 200 字符。只影响授权范围，不会补写工具参数，也不会替换空字符串。",
+        "fieldPathBody": "，不支持通配符、方括号或数组下标。",
+        "fieldPathNaming": "每段以英文字母或下划线开头，后续可含数字；不能使用 ",
+        "fieldPathPrefix": "参数字段支持点分嵌套路径，如 ",
+        "fieldPathSep1": "、",
+        "fieldPathSep2": "、",
+        "fieldPathSuffix": "。每个字段列表最多 16 项。",
+        "fieldsEmpty": "空数组不增加字段限制；若也没有路径或命令范围，则会变为该工具在当前工作区的整会话授权。",
+        "fieldsMatch": "。选择“本会话允许”后，只复用同一工作区、同一工具且范围字段值一致的授权；提取到的路径父目录和完整命令也会参与匹配。",
+        "fieldsNonEmpty": "范围字段必须得到非空字符串，否则仅提供单次授权。",
+        "fieldsPrefix": "配置 ",
+        "fieldsRequired": " 时必须提供此数组，例如 ",
+        "fieldsScope": "授权范围",
+        "introMiddle": "。最简写法是 ",
+        "introPrefix": "这里只填写当前工具的描述对象，不需要包裹工具名或 ",
+        "introSuffix": "；是否允许执行由上方的策略选项决定。",
+        "jsonNote": "请使用标准 JSON：字段名和字符串用双引号，不支持注释、尾随逗号或未列出的字段。",
+        "kindDescriptionPrefix": "工具分类：",
+        "kindGloss": {
+          "custom": "（其他）。用于匹配运行模式的分类默认动作。",
+          "read": "（读取）、",
+          "shell": "（命令）、",
+          "write": "（写入）、"
+        },
+        "kindRequired": "必填",
+        "optional": "可选",
+        "pathFieldsMiddle": "、",
+        "pathFieldsPrefix": "字符串数组，分别指定从工具参数的哪些字段读取文件路径或命令，例如 ",
+        "pathFieldsSuffix1": "。这里填参数字段名，不填实际文件路径或命令；对应参数值可为字符串或字符串数组。省略时使用 ",
+        "pathFieldsSuffix2": "，填写 ",
+        "pathFieldsSuffix3": " 表示不从该列表提取值。",
+        "pathParentsBody": "。将这些路径的父目录加入授权范围；相对路径以工作区为基准，对应参数必须是非空字符串。",
+        "pathParentsMissing": "指定的参数缺失时仅提供单次授权。此项不会替代 ",
+        "pathParentsPrefix": "参数字段名数组，例如 ",
+        "pathParentsSuffix": " 的路径提取。",
+        "title": "填写说明"
+      },
+      "workspacesFailed": "无法加载工作区。"
+    },
+    "placeholder": {
+      "defaultModule": "设置模块",
+      "description": "此入口已纳入 Settings 信息架构，后端契约完成后再提供真实配置能力。",
+      "title": "{{module}}尚未开放"
+    },
+    "providers": {
+      "addProvider": "模型服务",
+      "apiAddress": "API 地址",
+      "auth": {
+        "answerDescription": "提交后等待 Provider 返回下一步。",
+        "answerRequired": "请填写认证信息。",
+        "apiKeyConfiguredPlaceholder": "sk-***************（已配置）",
+        "apiKeyDescription": "出于安全原因，已保存的 API Key 不会回填；输入新值将替换现有凭证。",
+        "apiKeyLabel": "API Key",
+        "apiKeyPlaceholder": "请输入 API Key",
+        "apiKeyRequired": "请输入 API Key。",
+        "browserTitle": "在浏览器中完成授权",
+        "cancelNow": "立即取消",
+        "clearedDescription": "Provider 状态暂未同步，请刷新后确认。",
+        "clearedTitle": "凭证已清除",
+        "completedDescription": "Provider 凭证已保存，模型可用状态已刷新。",
+        "completedTitle": "认证完成",
+        "confirmReset": "确认重置",
+        "copyCode": "复制验证码",
+        "deviceCodeTitle": "设备验证码：{{code}}",
+        "failed": "无法完成 Provider 认证。",
+        "loadFailedTitle": "认证状态加载失败",
+        "methodLabel": "认证方式",
+        "noApiKeyPrompt": "Provider 未请求 API Key。",
+        "noMethods": "无可用认证方式",
+        "oauthActiveDescription": "Provider {{name}} 已通过 OAuth 认证。",
+        "oauthActiveTitle": "OAuth 已登录",
+        "oauthButton": "使用 OAuth 认证",
+        "oauthDescription": "提交后按 Provider 指引打开授权页面并完成登录。",
+        "oauthTitle": "OAuth 认证",
+        "openAuthPage": "打开授权页面",
+        "openProviderLink": "打开 Provider 链接",
+        "openVerification": "打开验证页面",
+        "progressTitle": "认证进度",
+        "promptTitle": "Provider 提示",
+        "reset": "重置认证",
+        "resetConfirmDescription": "将清除本机保存的 {{method}} 凭证，之后需要重新认证才能继续使用。",
+        "resetConfirmTitle": "重置 {{name}} 认证？",
+        "resetDescription": "{{name}} 的本机凭证已清除。",
+        "resetFailed": "认证重置失败，请稍后重试。",
+        "resetImmediateDescription": "如果运行环境另行配置了凭证，刷新后仍可能显示为已认证。",
+        "resetImmediateTitle": "此操作会立即删除凭证",
+        "resetTitle": "认证已重置",
+        "retryHint": "请重新开始认证。",
+        "saveApiKey": "保存 API Key",
+        "secretDescription": "此值仅用于当前请求，提交后立即从表单状态清除。",
+        "selectPlaceholder": "请选择",
+        "starting": "正在启动认证…",
+        "status": {
+          "awaitingInput": "等待输入",
+          "cancelled": "已取消",
+          "completed": "认证成功",
+          "expired": "已过期",
+          "failed": "认证失败",
+          "running": "认证中...",
+          "unsynced": "等待同步"
+        },
+        "submissionFailed": "认证失败",
+        "submitFailed": "提交失败",
+        "successDescription": "{{name}} 的凭证已安全保存。",
+        "successTitle": "认证成功",
+        "unsupportedUrl": "Provider 返回了不受支持的授权地址。",
+        "unsyncedDescription": "请刷新 Provider；仍未恢复时重启服务。",
+        "unsyncedTitle": "凭证已保存，但状态尚未同步",
+        "waiting": "等待 Provider 返回下一步…"
+      },
+      "authDescription": "选择提供商的认证方式",
+      "authenticated": "已认证",
+      "authEnvManagedDescription": "当前 Provider 没有可在此页面修改的认证方式。",
+      "authEnvManagedTitle": "认证由运行环境管理",
+      "authTitle": "认证",
+      "avatarAlt": "{{name}} 头像",
+      "backToList": "返回列表",
+      "capabilityHelp": "请按模型实际能力标记。可用思考等级由 Pi 决定；已有会话可能需要重启才能使用更新后的配置。",
+      "configured": "已配置",
+      "defaultBadge": "默认",
+      "detailsLoadFailed": "Provider 详情加载失败",
+      "editCapabilities": "编辑能力",
+      "empty": "没有模型服务",
+      "emptyDescription": "点击下方按钮添加本地模型服务。",
+      "endpointDescription": "大模型提供商的 API 访问地址",
+      "endpointTitle": "Endpoint",
+      "imageInput": "支持图像输入",
+      "loadFailed": "模型服务加载失败",
+      "local": {
+        "addDescription": "添加本地模型服务，随后配置服务地址和模型。",
+        "adding": "添加中…",
+        "addTitle": "添加提供商",
+        "detect": "检测模型",
+        "detecting": "检测中…",
+        "endpointHelpOllama": "通过 /api/tags 获取本地模型；推理使用 /v1。",
+        "endpointHelpOpenAI": "通过 OpenAI 兼容的 /v1/models 获取已加载模型。",
+        "endpointLabel": "服务地址",
+        "footerHint": "保存后可在默认模型设置中选择此模型，新会话使用最新配置。",
+        "helpSuffix": "本地地址指运行 Dr.Octopus Server 的机器。当前支持无需 API Key 的本地服务。",
+        "modelLabel": "模型",
+        "modelPlaceholder": "选择模型",
+        "nameLabel": "提供商名称",
+        "namePlaceholder": "例如 我的 Ollama",
+        "noModels": "服务已连接，但没有可用模型。请先下载或加载模型后重新检测。",
+        "runtimeHelp": {
+          "lmstudio": "在 LM Studio 中加载模型并启动 Local Server。默认地址：http://127.0.0.1:1234/v1。",
+          "ollama": "启动 Ollama（ollama serve），并用 ollama pull 下载模型。默认地址：http://127.0.0.1:11434。",
+          "vllm": "启动 vLLM 的 OpenAI 兼容服务（vllm serve <模型>）。默认地址：http://127.0.0.1:8000/v1。"
+        },
+        "runtimeLabel": "提供商类型",
+        "runtimesFailed": "提供商类型加载失败。",
+        "save": "保存配置",
+        "saved": "配置已保存。",
+        "saving": "保存中…",
+        "title": "本地模型配置",
+        "unreachable": "无法连接服务，请检查服务已启动且地址正确，然后重新检测。"
+      },
+      "modelCapabilities": "模型能力",
+      "modelsAvailable": "{{available}}/{{total}} 个模型当前可用",
+      "modelsAvailableShort": "{{available}}/{{total}} 个模型可用",
+      "modelsTitle": "模型",
+      "noMatch": "没有匹配结果",
+      "noMatchDescription": "尝试其他名称或 Provider ID。",
+      "pendingConfiguration": "待配置",
+      "readonlySuffix": "（只读）",
+      "reasoning": "支持推理",
+      "searchPlaceholder": "搜索模型服务…",
+      "selectDescription": "从左侧目录查看认证状态、Endpoint 和模型能力。",
+      "selectTitle": "选择一个模型服务",
+      "unauthenticated": "未认证",
+      "unavailable": "模型不可用"
+    },
+    "scheduler": {
+      "concurrencyDescription": "降低上限不会中断正在运行的任务，只限制后续任务进入执行。",
+      "concurrencyInvalid": "并发任务数量必须是 1 到 32 的整数。",
+      "concurrencyLabel": "并发任务数量",
+      "cronDescription": "配置保存在 Scheduler 的 cron.json；任务和运行数据仍保存在 SQLite。",
+      "cronTitle": "Cron 配置",
+      "save": "保存配置",
+      "saved": "定时任务配置已保存",
+      "savedDescription": "新建 Cron 任务将使用默认时区，并发上限已立即生效。",
+      "saveFailed": "配置保存失败",
+      "service": {
+        "description": "全局单例服务独立于会话 Runtime 运行。显式停止后不会被 Agent 自动拉起。",
+        "executionStatus": "执行状态",
+        "lastScan": "最近扫描",
+        "nextRun": "下次执行",
+        "notReady": "未就绪",
+        "operationFailed": "服务操作失败",
+        "ready": "就绪",
+        "restart": "重启服务",
+        "runningQueued": "运行 / 排队",
+        "started": "定时任务服务已启动",
+        "startedDescription": "服务将在后台独立运行。",
+        "stateAbsent": "未启动",
+        "stateDegraded": "运行异常",
+        "stateRunning": "运行中",
+        "stateStopped": "已停止",
+        "stateUnreachable": "无法连接",
+        "stopped": "定时任务服务已停止",
+        "stoppedDescription": "任务数据会保留；正在执行的任务将被中断。",
+        "title": "定时任务服务"
+      },
+      "timezoneDescription": "只作为新建 Cron 任务的默认值，不改写已有任务。",
+      "timezoneInvalid": "请输入有效的 IANA 时区。",
+      "timezoneLabel": "默认 Cron 时区"
+    },
+    "server": {
+      "access": {
+        "originRemovedHint": "重启后当前额外来源将无法访问，请使用服务同源入口或调整启动配置。",
+        "remoteClosesHint": "重启后远程页面会断开。请在服务主机使用本机地址访问。"
+      },
+      "addOrigin": "添加来源",
+      "advancedSettings": "高级设置",
+      "conflictMessage": "配置已被其他窗口修改。草稿已保留；请先查看最新配置，再决定是否放弃并重新编辑。",
+      "customSuffix": "（自定义）",
+      "dangerousBadge": "危险",
+      "discardRefresh": "放弃修改 / 刷新",
+      "exposure": {
+        "confirm": "确认并保存",
+        "description": "其他能连接此服务的设备可以访问工作区、文件、Agent 工具和服务设置。请仅在可信网络使用。保存后需要手动重启。",
+        "title": "允许其他设备访问？"
+      },
+      "hostExposureHint": "开启后对外提供服务，意味着其他人可以通过智能体控制你的电脑资源（危险）- 当前：{{value}}",
+      "hostManagedAlert": "此服务由嵌入宿主管理，无法预测下次加载值。保存后请联系宿主应用配置。",
+      "hostManagedValue": "由宿主管理",
+      "inheritedSourceSummary": "继承配置 · 配置来源与运行值",
+      "inheritLogLevel": "继承 LOG_LEVEL",
+      "labels": {
+        "corsOrigin": "允许的额外来源",
+        "fileLogEnabled": "启用文件日志",
+        "fileLogLevel": "日志级别",
+        "fileLogMaxFiles": "最大文件数",
+        "fileLogMaxSizeMb": "单文件大小（MB）",
+        "fileLogMaxTotalSizeMb": "日志总容量（MB）",
+        "fileLogRequired": "日志失败时阻止启动",
+        "fileLogRetentionDays": "保留天数",
+        "host": "允许其他设备访问",
+        "maxActiveRuntimes": "全局最大激活实例",
+        "maxActiveRuntimesPerWorkspace": "每个工作区最大激活实例",
+        "port": "服务端口"
+      },
+      "loadFailed": "无法加载服务配置。",
+      "nextValueLine": "已保存配置的下次加载值：{{next}} · 来源：{{source}}",
+      "notConfigured": "未配置",
+      "originListHint": "本机或 IP 地址同源访问无需配置；使用自定义域名、独立前端或跨端口访问时填写可信来源。",
+      "overrideSourceSummary": "文件覆盖 · 配置来源与运行值",
+      "refreshFailed": "无法刷新配置，草稿已保留。",
+      "reloaded": "已载入最新配置。",
+      "responseLostConnection": "提交结果未知，草稿已保留。请检查服务连接。",
+      "responseLostMatched": "当前保存值已符合提交目标；响应丢失，未重复提交。",
+      "responseLostUnknown": "提交结果未知，草稿已保留。请刷新核对。",
+      "restart": {
+        "accessLocalOnly": "关闭远程访问后，请在服务主机打开 {{url}}。不要在远程设备访问自己的 localhost。",
+        "accessPortChanged": "目标端口：{{port}}。",
+        "accessProxyHint": "反向代理请继续使用当前公共入口。Vite 开发环境需同步根 .env 的 SERVER_PORT 并重启 Vite。",
+        "actualAddress": "实际监听地址：{{address}}",
+        "confirmButton": "确认重启",
+        "confirmDescription_other": "当前有 {{count}} 个驻留会话实例。重启会断开连接并中断运行中的会话；聊天记录会保留，任务不会自动续跑。下次监听：{{host}}:{{port}}。",
+        "confirmTitle": "重启服务？",
+        "openDirectLink": "打开直连入口",
+        "pollHint": "服务暂不可达或操作结果未知；自动查询最多持续 60 秒，停止查询不会取消重启。",
+        "repoll": "重新查询结果",
+        "resultUnknown": "重启提交结果未知。请检查当前服务状态，不要重复提交。",
+        "state": {
+          "accepted": "已接受重启",
+          "cancelled": "重启已被停止操作取消。",
+          "draining": "正在关闭旧服务…",
+          "failed": "重启失败，请通过宿主 stop/start 恢复。",
+          "restored": "应用失败，已恢复旧运行配置。新保存的配置仍待应用。",
+          "restoring": "正在恢复旧配置…",
+          "starting": "正在启动服务…",
+          "succeeded": "服务已重启"
+        }
+      },
+      "restoreInherit": "恢复继承",
+      "restoreInheritHint": "保存后恢复继承；继承值将在保存后显示。",
+      "saveBeforeRestart": "重启前请先保存或放弃修改。",
+      "savedNoRestart": "设置已保存。保存不会自动重启服务。",
+      "savedWithOverrideWarning": "设置已保存，但部分值仍由启动配置覆盖。",
+      "saveSettings": "保存设置",
+      "sectionFileLog": "文件日志",
+      "sectionFileLogDescription": "实际状态：{{state}} · 日志目录：{{directory}}",
+      "sectionNetwork": "网络访问",
+      "sectionNetworkDescription": "保存监听范围和端口，重启后生效。",
+      "sectionSessions": "会话实例",
+      "sectionSessionsDescription": "限制驻留会话进程数量，包含空闲实例。工作区上限仍受全局上限约束。",
+      "service": {
+        "description": "智能体服务进程，重启将短暂断开当前服务，请谨慎操作。",
+        "pendingRestart": "待重启",
+        "residentInstances_other": "{{count}} 个驻留实例",
+        "restart": "重启",
+        "state": {
+          "failed": "不可用",
+          "restarting": "重启中",
+          "running": "运行中",
+          "stopping": "停止中"
+        },
+        "title": "服务运行"
+      },
+      "stillOverridden": "已保存的配置仍由启动配置覆盖。",
+      "storedCurrentLine": "已保存：{{stored}} · 当前：{{current}}",
+      "undoRestoreInherit": "撤销恢复继承",
+      "unsavedConfirm": "有未保存的服务设置，确定离开并放弃修改？",
+      "validation": {
+        "integerRange": "请输入 {{min}}–{{max}} 的整数。",
+        "invalidOrigin": "每行填写一个 HTTP(S) 来源，不含路径、凭据、查询参数或通配符。",
+        "tooLong": "值过长或包含非法字符。"
+      }
+    },
+    "shortcuts": {
+      "chromeShortcutsHint": "Chrome 用户可将以下地址粘贴到地址栏，检查扩展快捷键：",
+      "clear": "清除快捷键",
+      "columnActions": "操作",
+      "columnBinding": "按键绑定",
+      "columnCommand": "命令",
+      "comingSoon": "即将推出",
+      "commands": {
+        "focusComposer": "聚焦输入框",
+        "insertNewline": "输入时换行",
+        "newSession": "新会话",
+        "nextSession": "下一个会话",
+        "previousSession": "上一个会话",
+        "sendMessage": "发送消息",
+        "stopGeneration": "停止生成",
+        "toggleLeftSidebar": "切换左侧栏",
+        "toggleRightPanel": "切换右侧资源管理栏",
+        "voiceToggle": "语音识别开关"
+      },
+      "conflict": "与「{{command}}」冲突",
+      "description": "查看并自定义快捷键，修改立即生效并保存在本机。",
+      "edit": "编辑快捷键",
+      "empty": "没有匹配的快捷键。",
+      "externalConflictHint": "快捷键无响应？浏览器、扩展或系统可能占用了该组合键，请尝试更换。",
+      "notSet": "未设置",
+      "recordHint": "按 Esc 取消，按 Backspace 清除",
+      "recordPrompt": "按下新的快捷键…",
+      "replace": "替换",
+      "reset": "恢复默认",
+      "resetAll": "全部恢复默认",
+      "resetAllDescription": "将清除所有自定义按键，所有命令恢复默认快捷键。",
+      "resetAllTitle": "恢复全部默认快捷键？",
+      "searchPlaceholder": "搜索快捷键",
+      "title": "快捷键"
+    }
+  },
+  "skills": {
+    "card": {
+      "viewDetails": "查看详情"
+    },
+    "common": {
+      "delete": "删除",
+      "effectiveNote": "技能 {{name}} 将在新会话中生效。",
+      "footerMeta_other": "{{count}} 个文件 · {{size}} · 更新于 {{updated}}",
+      "manualInvocation": "手动调用",
+      "needsFixing": "需要修复",
+      "noMatch": "没有匹配的技能",
+      "reload": "重新加载",
+      "scope": "作用域",
+      "scopeGlobalItem": "全局技能（所有工作区）",
+      "scopeWorkspaceItem": "工作区技能",
+      "scopeWorkspaceItemNamed": "工作区技能（{{name}}）",
+      "uploadSkill": "上传技能"
+    },
+    "deleteDialog": {
+      "deletedDescription": "技能 {{name}} 已从本机移除。",
+      "deletedTitle": "技能已删除",
+      "failedFallback": "删除失败，请稍后重试。",
+      "irreversible": "此操作不可撤销。",
+      "scopeGlobal": "本机用户目录",
+      "scopeWorkspace": "当前工作区",
+      "title": "删除技能 {{name}}",
+      "warning_other": "将从{{scope}}删除该技能及其全部 {{count}} 个文件；进行中的会话不受影响，但新会话将无法再使用该技能。"
+    },
+    "detailDialog": {
+      "filesTitle": "资源文件",
+      "loadFailed": "加载失败",
+      "loadFailedFallback": "无法读取技能详情。",
+      "noBody": "（暂无指令内容）",
+      "noDescription": "（缺少描述，请编辑补充）",
+      "warningsTitle": "加载器警告"
+    },
+    "editDialog": {
+      "bodyLabel": "指令内容（Markdown）",
+      "bodyPlaceholder": "# 使用说明\n\n在这里编写 Agent 执行该技能时需要遵循的步骤、约束和示例。",
+      "createdTitle": "技能已创建",
+      "createSubmit": "创建",
+      "descriptionGlobal": "技能以 SKILL.md 保存在本机用户目录，对所有工作区的新会话生效。",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "用一两句话说明这个技能擅长什么、何时使用。",
+      "descriptionRequired": "请输入技能描述。",
+      "descriptionTooLong": "描述不能超过 1024 个字符。",
+      "descriptionWorkspace": "技能以 SKILL.md 保存在当前工作区的 .dr-octopus/skills 目录，仅对该工作区的新会话生效。",
+      "descriptionWorkspaceNamed": "技能以 SKILL.md 保存在当前工作区的 .dr-octopus/skills 目录，仅对「{{name}}」的新会话生效。",
+      "loadFailedFallback": "加载技能详情失败。",
+      "manualOnlyHint": "开启后技能不进入模型提示，只能通过 /skill:{{name}} 显式调用。",
+      "manualOnlyLabel": "仅手动调用",
+      "nameHint": "小写字母、数字和单个连字符；创建后不可修改。",
+      "nameLabel": "名称",
+      "namePattern": "名称只能包含小写字母、数字和单个连字符。",
+      "namePlaceholder": "例如 deep-research",
+      "nameRequired": "请输入技能名称。",
+      "nameTooLong": "名称不能超过 64 个字符。",
+      "savedTitle": "技能已保存",
+      "saveFailedFallback": "保存技能失败，请稍后重试。",
+      "scopeNote": "同名资源的实际生效结果由 Pi 统一解析，可在“系统技能”中确认。",
+      "titleEdit": "编辑技能 {{name}}"
+    },
+    "effectiveCard": {
+      "managed": {
+        "global": "全局管理",
+        "workspace": "工作区管理"
+      },
+      "originPackage": "扩展包提供",
+      "scope": {
+        "project": "项目级",
+        "temporary": "临时",
+        "user": "用户级"
+      },
+      "source": {
+        "auto": "系统自动发现",
+        "cli": "命令行指定",
+        "local": "本地配置"
+      }
+    },
+    "effectiveSection": {
+      "description": "当前上下文实际加载的只读技能；新增或维护请切换到管理页签。",
+      "diagnosticPrefix": "{{name}}：",
+      "diagnosticsTitle": "部分技能未能正常加载",
+      "emptyDescription": "当前上下文尚未解析出有效技能。",
+      "emptyTitle": "当前上下文没有可用技能",
+      "loadFailed": "系统技能加载失败",
+      "loadFailedFallback": "无法读取 Pi 技能列表，请稍后重试。",
+      "noMatchDescription": "系统技能中没有匹配项。",
+      "snapshotPreview": "智能体解析预览",
+      "snapshotRuntime": "当前会话快照",
+      "title": "系统技能"
+    },
+    "page": {
+      "add": "添加",
+      "description": "查看已加载技能，管理工作区和全局技能。",
+      "globalDescription": "供所有工作区的新会话复用。",
+      "globalEmptyDescription": "创建可跨项目复用的通用能力。",
+      "globalEmptyTitle": "还没有全局技能",
+      "globalSectionTitle": "全局技能",
+      "newSkill": "新建技能",
+      "searchPlaceholder": "按名称或描述搜索全部技能…",
+      "tabGlobal": "全局",
+      "tabSystem": "系统",
+      "tabWorkspace": "工作区",
+      "title": "技能",
+      "workspaceDescription": "仅用于当前工作区的新会话。",
+      "workspaceDescriptionNamed": "仅用于「{{name}}」的新会话。",
+      "workspaceEmptyDescription": "创建项目专属的约定、流程或领域知识。",
+      "workspaceEmptyTitle": "当前工作区还没有技能",
+      "workspaceSectionTitle": "工作区技能"
+    },
+    "section": {
+      "createManually": "手动创建",
+      "loadFailed": "{{title}}加载失败",
+      "loadFailedFallback": "无法读取技能列表，请稍后重试。",
+      "noMatchDescription": "当前分区没有匹配的技能。"
+    },
+    "uploadDialog": {
+      "conflictSuffix": "确认后将完整替换原有技能文件。",
+      "conflictTitle": "同名技能已存在",
+      "descriptionGlobal": "支持单个 SKILL.md 文件或包含 SKILL.md 的 .zip 技能包；上传后对所有工作区的新会话生效。",
+      "descriptionWorkspace": "支持单个 SKILL.md 文件或包含 SKILL.md 的 .zip 技能包；上传后仅对当前工作区的新会话生效。",
+      "dropFormats": ".md 单个技能文件 · .zip 技能包（含资源文件）",
+      "dropHint": "点击选择文件，或将文件拖到这里",
+      "submit": "上传",
+      "submitOverwrite": "覆盖上传",
+      "typeError": "仅支持 .md 或 .zip 文件。",
+      "uploadedTitle": "技能已上传",
+      "uploadFailedFallback": "上传失败，请稍后重试。"
+    }
+  },
+  "workspaces": {
+    "generalName": "通用"
+  }
+}
