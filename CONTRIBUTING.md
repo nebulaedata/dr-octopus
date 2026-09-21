@@ -81,7 +81,7 @@ Tests involving live services or paid models must be explicitly enabled, use iso
 - List the verification commands actually run and their results. Clearly state untested platforms and failed or skipped checks.
 - Include redacted screenshots for visible UI changes. Explain any user actions required by configuration, migration, or compatibility changes.
 
-Before submitting, inspect the diff and untracked files for `.env` files, tokens, user data, personal absolute paths, or unrelated files. `release/` is generated output. Edit release configuration, scripts, and source files such as `RELEASE.README*.md` instead of maintaining generated files directly.
+Before submitting, inspect the diff and untracked files for `.env` files, tokens, user data, personal absolute paths, or unrelated files. `release/` is generated output. Edit release configuration, scripts, and source files such as `README*.md` instead of maintaining generated files directly.
 
 `pnpm release` creates a version commit and tag and pushes them. `pnpm release:publish` publishes the npm package. Ordinary contributions do not require these commands. To verify packaging only, run `pnpm release:build`; it does not publish the npm package.
 

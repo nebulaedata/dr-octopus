@@ -1,8 +1,23 @@
-# Dr.Octopus
+<p align="center">
+  <img src="https://raw.githubusercontent.com/nebulaedata/dr-octopus/main/apps/web/public/logo-256.png" alt="Dr.Octopus logo" width="144" height="144" />
+</p>
 
-[English](./README.md) | 简体中文
+<h1 align="center">Dr.Octopus</h1>
 
-基于 Pi、本地优先、以 Workspace 为边界的通用智能体系统，提供终端 TUI 和 Web 界面。
+<p align="center">
+  <strong>本地优先 · Workspace 隔离 · TUI 与 Web 双界面</strong><br />
+  基于 Pi 的通用智能体系统。
+</p>
+
+<p align="center">
+  <a href="https://github.com/nebulaedata/dr-octopus/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-3b82f6?style=flat-square" alt="License: MIT" /></a>
+  <a href="https://github.com/earendil-works/pi"><img src="https://img.shields.io/badge/built_with-Pi-ef4444?style=flat-square" alt="Built with Pi" /></a>
+  <a href="https://pnpm.io/"><img src="https://img.shields.io/badge/pnpm-11.18.0-f69220?style=flat-square&amp;logo=pnpm&amp;logoColor=white" alt="pnpm 11.18.0" /></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/nebulaedata/dr-octopus/blob/main/README.md">English</a> · <strong>简体中文</strong> · <a href="https://github.com/nebulaedata/dr-octopus/blob/main/README.dev.zh-CN.md">开发文档</a>
+</p>
 
 ## 让智能体帮你安装
 
@@ -113,6 +128,10 @@ dr-octopus gateway restart
 
 新版本首次运行时按需安装对应运行依赖。可先用 `dr-octopus runtimes prune --dry-run` 预览旧运行环境，再执行 `dr-octopus runtimes prune` 清理未使用的旧版本。
 
+## 开发
+
+源码环境搭建、开发命令和架构文档请参阅[开发指南](https://github.com/nebulaedata/dr-octopus/blob/main/README.dev.zh-CN.md)。
+
 ## 许可证
 
-Dr.Octopus 原创代码采用 [MIT License](./LICENSE)。第三方组件保留各自的许可证与权利，详见 [第三方声明](./THIRD_PARTY_NOTICES.md)。
+Dr.Octopus 原创代码采用 [MIT License](https://github.com/nebulaedata/dr-octopus/blob/main/LICENSE)。第三方组件保留各自的许可证与权利，详见 [第三方声明](https://github.com/nebulaedata/dr-octopus/blob/main/THIRD_PARTY_NOTICES.md)。

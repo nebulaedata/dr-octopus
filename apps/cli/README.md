@@ -40,7 +40,7 @@ npm publish
 
 ```text
 release/
-  README.md             # 从根 RELEASE.README.md 复制的 npm 说明
+  README.md             # 从根 README.md 复制的 npm 说明
   package.json          # npm 清单：bin、精确 files、固定版本 pnpm dependency
   bin/dr-octopus.mjs       # 已内联管理和安装代码的 CLI
   release-layout.json   # 构建自动生成的路径索引及归档校验和
@@ -78,7 +78,7 @@ dr-octopus deps install --yes --registry https://registry.npmmirror.com --json
 dr-octopus gateway start --yes --registry https://registry.npmmirror.com
 ```
 
-源优先级为 CLI 指定值、安装上下文中的 pnpm 有效配置、默认源；不修改全局配置、scoped registry 或冻结锁文件。不会检测地区、自动换源或额外编排重试。安装器对日志进行凭据脱敏，网络下载、认证和原生模块失败给出不同建议；无法可靠识别时保留诊断而不猜测原因。JSON 模式的安装日志写入 stderr，结构化结果写入 stdout。详细用户操作见根 [发布 README](../../RELEASE.README.md#非交互安装与镜像)。
+源优先级为 CLI 指定值、安装上下文中的 pnpm 有效配置、默认源；不修改全局配置、scoped registry 或冻结锁文件。不会检测地区、自动换源或额外编排重试。安装器对日志进行凭据脱敏，网络下载、认证和原生模块失败给出不同建议；无法可靠识别时保留诊断而不猜测原因。JSON 模式的安装日志写入 stderr，结构化结果写入 stdout。详细用户操作见根 [发布 README](../../README.zh-CN.md#非交互安装与镜像)。
 
 ## 清理旧运行目录
 
@@ -97,7 +97,7 @@ dr-octopus runtimes list --json          # 使用统一 service/action/result JS
 
 ## 独立发布配置
 
-日常发布调整只编辑根 `release.config.json`，不要手改生成的 release-layout.json 或 release/package.json。npm 包说明在根 [RELEASE.README.md](../../RELEASE.README.md) 维护，由 `readme` 字段指定仓库相对路径，构建时原样复制为 `release/README.md`。
+日常发布调整只编辑根 `release.config.json`，不要手改生成的 release-layout.json 或 release/package.json。npm 包说明在根 [README.md](../../README.md) 和 [README.zh-CN.md](../../README.zh-CN.md) 维护，由 `readme` 字段指定仓库相对路径，构建时原样复制为 `release/README.md`。
 
 | 字段                         | 维护内容                                                      |
 | ---------------------------- | ------------------------------------------------------------- |

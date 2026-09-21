@@ -132,7 +132,7 @@ dr-octopus deps install --yes --registry https://registry.npmjs.org
 - 验证参数位置及 TUI `--` 透传边界；帮助、版本、基础控制与依赖已就绪时不安装；所有路径均不依赖归属地服务或额外可达性探测。
 - 模拟下载网络错误、认证失败、原生下载/编译失败及未知错误，验证建议与证据匹配，不自动换源或额外重试。
 - 验证安装锁、服务占用保护、失败退出码、凭据脱敏和 JSON 输出协议不退化。
-- 同步更新 CLI 操作说明和根 `RELEASE.README.md`，运行相关测试、lint、typecheck。真实网络故障仍需依据实际日志区分 registry、tarball 和原生模块下载/编译阶段，不以离线 fixture 代替目标网络验收。
+- 同步更新 CLI 操作说明和根 `README.md`，运行相关测试、lint、typecheck。真实网络故障仍需依据实际日志区分 registry、tarball 和原生模块下载/编译阶段，不以离线 fixture 代替目标网络验收。
 
 2026-09-15 实施验证：发布 CLI fixture 覆盖根命令与启动入口、非交互安装授权、registry 传递、无效 URL、TUI `--` 边界；新增错误分类、URL/认证脱敏和跨输出分块脱敏测试。真实 pnpm 11.18.0 的隔离离线空依赖安装验证了 `.npmrc` 有效源读取、显式覆盖，以及 scoped registry 配置与规范格式锁文件保持原样。该检查不下载应用完整依赖，不能证明中国网络下所有原生模块都可安装。
 

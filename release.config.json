@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "outputDirectory": "release",
-  "readme": "RELEASE.README.md",
+  "readme": "README.md",
   "readmeTranslations": {
-    "README.zh-CN.md": "RELEASE.README.zh-CN.md"
+    "README.zh-CN.md": "README.zh-CN.md"
   },
   "buildArgs": ["build"],
   "manifest": {
