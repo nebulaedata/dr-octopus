@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "octopus": "./dist/bin/octopus.js"
+    "octopus": "./bin/octopus.mjs"
   },
   "exports": {
     ".": {

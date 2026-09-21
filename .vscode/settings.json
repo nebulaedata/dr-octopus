@@ -1,7 +1,8 @@
 {
-    "cSpell.words": [
-        "earendil",
-        "narumitw",
-        "reranker"
-    ]
+  "cSpell.words": ["earendil", "narumitw", "reranker", "rerank"],
+  "json.schemaDownload.trustedDomains": {
+    "https://*.turborepo.dev/schema.json": true,
+    "https://turbo.build/schema.json": true,
+    "https://unpkg.com/release-it@21/schema/": true
+  }
 }
