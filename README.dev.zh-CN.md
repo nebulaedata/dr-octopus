@@ -12,7 +12,7 @@ Octopus 是一个本地优先、以 Workspace 为边界的通用智能体系统�
 
 在仓库根目录执行 `pnpm release:dry patch` 预览，或执行 `pnpm release` 交互选择版本，随后自动更新 `release.config.json`、提交、创建 tag 并推送当前分支。要求工作区已提交且分支配置了 upstream。
 
-当前仅接入 Git 版本发版；构建产物使用 `pnpm release:build`，npm 与 GitHub Release 发布尚未自动化。完整命令、预发布和重试说明见 [CLI 版本发版](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版)。
+构建产物使用 `pnpm release:build`；执行 `pnpm release:publish` 会在 npm 发布成功后通过 release-it 创建同版本的 GitHub Release，需要 npm 登录及具有仓库 Contents 读写权限的 `GITHUB_TOKEN`。发布脚本自动加载仓库根目录的 `.env.publish`，已有进程环境变量优先；文件不存在时输出警告并以退出码 1 终止，不会构建或发布。若 GitHub 发布失败，使用 `pnpm release:publish --github-only` 补发当前版本。完整命令、预发布和重试说明见 [CLI 版本发版](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版)。
 
 ## 架构要点
 

@@ -1,14 +1,17 @@
 /**
  * @author longlongago2
- * @description Publishes the assembled npm release: verifies authentication, bumps the version when occupied, builds, and publishes.
+ * @description Publishes the assembled npm release: verifies authentication, bumps the version when occupied, builds, and publishes npm followed by a matching GitHub Release.
  */
 import { readFile } from 'node:fs/promises';
+import { loadEnvFile } from 'node:process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { execute, pnpmCommand } from '../apps/cli/src/process.ts';
 import { readReleaseConfig } from '../apps/cli/src/distribution/config.ts';
 import { findConfiguration } from '../apps/cli/src/distribution/location.ts';
+
+import { assertGithubReleaseReady, publishGithubRelease } from './github-release.mjs';
 
 const DEFAULT_REGISTRY = 'https://registry.npmjs.org/';
 const BUILD_TIMEOUT = 900_000;
@@ -21,14 +24,15 @@ Options:
   --registry <url>   Registry to publish to (default: ${DEFAULT_REGISTRY})
   --otp <code>       One-time password for accounts with 2FA publishing
   --bump             Always run release-it to bump the version first
-  --dry-run          Run npm publish --dry-run without uploading
+  --dry-run          Preview npm publication without uploading or creating a GitHub Release
+  --github-only      Retry GitHub Release for the current already-published npm version
   --skip-build       Reuse the existing release/ directory
   -y, --yes          Skip the interactive confirmation
   -h, --help         Show this help`;
 
 /**
  * Parses CLI flags, accepting both "--flag value" and "--flag=value" forms.
- * @returns {{registry: string, otp: string | undefined, bump: boolean, dryRun: boolean, skipBuild: boolean, yes: boolean, help: boolean}}
+ * @returns {{registry: string, otp: string | undefined, bump: boolean, dryRun: boolean, githubOnly: boolean, skipBuild: boolean, yes: boolean, help: boolean}}
  */
 function parseArgs(argv) {
   const options = {
@@ -36,6 +40,7 @@ function parseArgs(argv) {
     otp: undefined,
     bump: false,
     dryRun: false,
+    githubOnly: false,
     skipBuild: false,
     yes: false,
     help: false,
@@ -54,6 +59,8 @@ function parseArgs(argv) {
       options.bump = true;
     } else if (flag === '--dry-run') {
       options.dryRun = true;
+    } else if (flag === '--github-only') {
+      options.githubOnly = true;
     } else if (flag === '--skip-build') {
       options.skipBuild = true;
     } else if (flag === '--yes' || flag === '-y') {
@@ -66,6 +73,9 @@ function parseArgs(argv) {
   }
   if (!/^https?:\/\//.test(options.registry)) {
     throw new Error(`Invalid registry URL: ${options.registry}`);
+  }
+  if (options.githubOnly && (options.bump || options.dryRun)) {
+    throw new Error('--github-only cannot be combined with --bump or --dry-run.');
   }
   return options;
 }
@@ -111,6 +121,15 @@ if (!configPath) {
   throw new Error('release.config.json was not found above the publish script.');
 }
 const repoRoot = dirname(configPath);
+try {
+  loadEnvFile(join(repoRoot, '.env.publish'));
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
+  console.warn(
+    '⚠ Missing .env.publish in the repository root. Create it and configure GITHUB_TOKEN before publishing. Publication aborted.'
+  );
+  process.exit(1);
+}
 let config = readReleaseConfig(configPath);
 const release = join(repoRoot, config.outputDirectory);
 const npm = await npmCommand(repoRoot);
@@ -159,8 +178,7 @@ async function getVersionState(name, version) {
       console.log(`→ ${name}@${version} not found on ${options.registry} (new version)`);
       return 'available';
     }
-    console.warn(`⚠ Registry check failed (${error.message.split('\n')[0]}); continuing.`);
-    return 'available';
+    throw error;
   }
 }
 
@@ -190,7 +208,7 @@ async function confirmPublish(manifest) {
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   try {
     const answer = await rl.question(
-      `\nPublish ${manifest.name}@${manifest.version} to ${options.registry}? [y/N] `
+      `\nPublish ${manifest.name}@${manifest.version} to ${options.registry} and GitHub Release v${manifest.version}? [y/N] `
     );
     if (!/^y(?:es)?$/i.test(answer.trim())) {
       console.log('Publish aborted.');
@@ -235,8 +253,18 @@ async function publish(manifest) {
  * Verifies authentication, bumps the version when it is already taken, builds, confirms, and publishes.
  */
 async function main() {
+  if (!options.dryRun && !process.env.GITHUB_TOKEN) {
+    throw new Error('GITHUB_TOKEN is required (repository Contents: read and write).');
+  }
   await assertAuthenticated();
   const state = await getVersionState(config.manifest.name, config.manifest.version);
+  if (options.githubOnly) {
+    if (state !== 'published') throw new Error('Publish the current version to npm before --github-only.');
+    const exists = await assertGithubReleaseReady(repoRoot, config.manifest.version);
+    if (!exists) await publishGithubRelease(repoRoot, config.manifest.version);
+    console.log(`✓ GitHub Release v${config.manifest.version} is published.`);
+    return;
+  }
   if (options.dryRun) {
     if (state === 'published') {
       console.warn('⚠ Version already published; dry-run skips the version bump.');
@@ -244,19 +272,32 @@ async function main() {
   } else if (state === 'published' || options.bump) {
     await bumpVersion();
   }
+  const githubExists = options.dryRun
+    ? false
+    : await assertGithubReleaseReady(repoRoot, config.manifest.version);
   if (!options.skipBuild) {
     console.log('→ Building release (pnpm release:build)...');
     await execute(pnpm.command, [...pnpm.args, 'run', 'release:build'], repoRoot, 'inherit', BUILD_TIMEOUT);
   }
   const manifest = JSON.parse(await readFile(join(release, 'package.json'), 'utf8'));
-  if (manifest.name !== config.manifest.name) {
-    throw new Error(`Release output is not a release of ${config.manifest.name}.`);
+  if (manifest.name !== config.manifest.name || manifest.version !== config.manifest.version) {
+    throw new Error(`Release output must match ${config.manifest.name}@${config.manifest.version}.`);
   }
-  if ((await getVersionState(manifest.name, manifest.version)) === 'published') {
+  if (!options.dryRun && (await getVersionState(manifest.name, manifest.version)) === 'published') {
     throw new Error(`${manifest.name}@${manifest.version} is already published; aborting.`);
   }
   await confirmPublish(manifest);
   await publish(manifest);
+  if (!options.dryRun && !githubExists) {
+    try {
+      await publishGithubRelease(repoRoot, manifest.version);
+    } catch (error) {
+      throw new Error(
+        `npm publication succeeded, but GitHub Release failed. Retry with pnpm release:publish --github-only.\n${error.message}`,
+        { cause: error }
+      );
+    }
+  }
 }
 
 main().catch((error) => {

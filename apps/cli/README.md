@@ -13,11 +13,32 @@ pnpm release patch              # 直接发布下一个 patch 版本
 pnpm release minor --preRelease=beta  # 例如 0.1.0 → 0.2.0-beta.0
 ```
 
-版本操作由根 [.release-it.json](../../.release-it.json) 配置，要求已提交当前改动、当前分支有 upstream，且本机拥有远端 Git 推送权限。使用当前分支的 upstream；目前是 Gitee，迁移 GitHub 后更新 Git remote/upstream 即可。正式命令会推送代码，应先使用 `release:dry` 检查版本和目标远端。
+版本操作由根 [.release-it.json](../../.release-it.json) 配置，要求已提交当前改动、当前分支有 upstream，且本机拥有远端 Git 推送权限。使用当前分支的 upstream；联合发布要求 `origin` 指向 GitHub，且对应 tag 已推送到该仓库。正式命令会推送代码，应先使用 `release:dry` 检查版本和目标远端。
 
-开发包的 package.json 版本与 pnpm 锁文件不随发版更新。版本发版不构建产物、不执行 npm publish、不创建 GitHub/GitLab Release；本机无需 npm 或 GitHub API Token。未来由 tag 触发 GitHub Actions，校验 tag 与发布配置版本一致，再构建、发布 npm 和创建 GitHub Release。
+开发包的 package.json 版本与 pnpm 锁文件不随发版更新。版本发版不构建产物、不执行 npm publish、不创建 GitHub/GitLab Release；本机无需 npm 或 GitHub API Token。`pnpm release:publish` 负责构建、发布 npm，并在 npm 成功后通过 release-it 创建同版本的 GitHub Release。
 
 `pnpm release:build` 仍仅负责本地构建交付包，两条命令用途不同。首次要给当前 `0.1.0` 创建 tag，可执行 `pnpm release --no-increment`；必须先提交该版本的源码与配置。遇到推送失败，先检查本地提交、tag 和远端状态；已存在的本地版本提交和 tag 可直接重试 Git push，不要为重试再次执行 patch 升版。
+
+## npm 与 GitHub 联合发布
+
+先运行 `npm login`，并在仓库根目录的 `.env.publish` 中配置 `GITHUB_TOKEN`，或通过当前进程环境设置；Token 需要目标仓库的 Contents 读写权限。发布脚本自动加载 `.env.publish`，已有进程环境变量优先，文件不存在时输出警告并终止（退出码 1），即使进程环境已有 Token 也不会继续。此要求同样适用于 `--dry-run` 和 `--github-only`；`--help` 无需该文件。该文件已被 `.gitignore` 忽略，不会自动读取开发用的 `.env`。
+
+```dotenv
+GITHUB_TOKEN=your_github_token
+```
+
+GitHub 发布配置独立放在 [.release-it.github.json](../../.release-it.github.json)，不会修改版本、提交或 tag，并自动生成 Release notes、识别预发布版本。
+
+```powershell
+pnpm release:publish                 # 构建并依次发布 npm、GitHub Release
+pnpm release:publish --bump          # 先交互升版并推送 tag，再联合发布
+pnpm release:publish --dry-run       # npm 打包预览，不升版或发布到两个平台
+pnpm release:publish --github-only   # npm 已成功时，只补发当前版本的 GitHub Release
+```
+
+发布前校验工作区干净、当前版本 tag 指向 HEAD、GitHub origin 上的 tag 一致，以及 GitHub 访问权限。当前版本尚无 tag 时，先执行 `pnpm release --no-increment`。已有 npm 版本会触发升版；GitHub 失败后的恢复必须使用 `--github-only`，避免再次升版。已发布的 GitHub Release 会跳过，已有 draft 则要求先处理。
+
+两个平台不支持原子发布：npm 失败时不会创建 GitHub Release；npm 成功而 GitHub 失败时，命令返回失败并提示补发。补发要求当前配置、HEAD 和远端 tag 仍对应已发布版本。`--skip-build` 复用的产物必须与配置中的名称和版本一致。`--dry-run` 仍需 npm 登录，但不要求 GitHub Token，也不会调用 GitHub 发布 API。
 
 ## 构建与安装
 

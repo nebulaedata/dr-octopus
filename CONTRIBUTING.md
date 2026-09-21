@@ -83,6 +83,6 @@ Tests involving live services or paid models must be explicitly enabled, use iso
 
 Before submitting, inspect the diff and untracked files for `.env` files, tokens, user data, personal absolute paths, or unrelated files. `release/` is generated output. Edit release configuration, scripts, and source files such as `README*.md` instead of maintaining generated files directly.
 
-`pnpm release` creates a version commit and tag and pushes them. `pnpm release:publish` publishes the npm package. Ordinary contributions do not require these commands. To verify packaging only, run `pnpm release:build`; it does not publish the npm package.
+`pnpm release` creates a version commit and tag and pushes them. `pnpm release:publish` publishes the npm package and then creates the matching GitHub Release through release-it. Ordinary contributions do not require these commands. To verify packaging only, run `pnpm release:build`; it does not publish the npm package.
 
 Before contributing, confirm that you have the right to provide your contribution under the project's [MIT License](./LICENSE). Third-party content retains its original license and attribution; adding the project license does not relicense it.

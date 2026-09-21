@@ -12,7 +12,7 @@ See the [contributing guide](https://github.com/nebulaedata/dr-octopus/blob/main
 
 From the repository root, run `pnpm release:dry patch` to preview a release, or `pnpm release` to select a version interactively. The workflow then updates `release.config.json`, commits the change, creates a tag, and pushes the current branch. All working-tree changes must be committed, and the branch must have an upstream configured.
 
-Currently, only Git version releases are integrated into this workflow. Build release artifacts with `pnpm release:build`; npm and GitHub Release publication are not yet automated. See [CLI version releases](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版) for commands, prereleases, and retries.
+Build release artifacts with `pnpm release:build`. Run `pnpm release:publish` to publish npm first, then create the matching GitHub Release through release-it. This requires npm authentication and a `GITHUB_TOKEN` with repository Contents read/write permissions. The publish script automatically loads the repository-root `.env.publish`; existing process environment variables take precedence. If the file is missing, it prints a warning and exits with code 1 before building or publishing. If GitHub publication fails, retry the current version with `pnpm release:publish --github-only`. See [CLI version releases](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版) for commands, prereleases, and retries.
 
 ## Architecture highlights
 
