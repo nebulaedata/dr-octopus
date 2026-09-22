@@ -3,20 +3,24 @@
  * @description Verifies that publication metadata is generated only from the independent release contract.
  */
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { createPublicationManifest } from '../scripts/release-manifest.mjs';
 import { readReleaseConfig, createReleaseLayout } from '../src/distribution/config.ts';
 
 const configPath = new URL('../../../release.config.json', import.meta.url);
-const config = JSON.parse(await readFile(configPath, 'utf8'));
+const config = readReleaseConfig(fileURLToPath(configPath));
 
 test('public manifest contains bootstrap and pinned pnpm, without development workspace metadata', () => {
   const manifest = createPublicationManifest(config);
   assert.equal(manifest.private, false);
   assert.equal(manifest.license, 'MIT');
+  assert.deepEqual(manifest.repository, config.manifest.repository);
+  assert.equal(manifest.homepage, config.manifest.homepage);
+  assert.deepEqual(manifest.bugs, config.manifest.bugs);
   assert.equal(manifest.version, config.manifest.version);
   assert.deepEqual(manifest.dependencies, { pnpm: config.pnpmVersion });
   assert.deepEqual(manifest.bin, { [config.command]: './' + config.bootstrap.destination });
@@ -122,4 +126,56 @@ test('runtime layout follows discovered package moves and rejects missing packag
   const layout = createReleaseLayout(root, projects, config);
   assert.match(layout.paths.serverEntry, /^relocated\/component-\d+\/dist\/runtime.js$/);
   assert.throws(() => createReleaseLayout(root, projects.slice(1), config), /Expected one workspace package/);
+});
+
+test('publication links accept npm string and object forms and reject malformed metadata', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'octopus-metadata-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const path = join(root, 'release.config.json');
+  const cases = {
+    repository: {
+      valid: [
+        undefined,
+        'github:example/project',
+        { type: 'git', url: 'https://example.com/repo', directory: 'cli' },
+      ],
+      invalid: [
+        null,
+        '',
+        ' ',
+        1,
+        [],
+        {},
+        { type: 'git' },
+        { type: 'git', url: false },
+        { type: 'git', url: 'repo', extra: 'field' },
+      ],
+    },
+    homepage: {
+      valid: [undefined, 'https://example.com'],
+      invalid: [null, '', ' ', 1, [], {}],
+    },
+    bugs: {
+      valid: [
+        undefined,
+        'https://example.com/issues',
+        { url: 'https://example.com/issues' },
+        { email: 'bugs@example.com' },
+      ],
+      invalid: [null, '', ' ', 1, [], {}, { url: '' }, { email: false }, { extra: 'field' }],
+    },
+  };
+  for (const [field, { valid, invalid }] of Object.entries(cases)) {
+    for (const value of [...valid, ...invalid]) {
+      const candidate = structuredClone(config);
+      candidate.manifest[field] = value;
+      await writeFile(path, JSON.stringify(candidate));
+      if (valid.includes(value)) {
+        const manifest = createPublicationManifest(readReleaseConfig(path));
+        assert.deepEqual(manifest[field], value);
+      } else {
+        assert.throws(() => readReleaseConfig(path), /Invalid release.config.json publication/);
+      }
+    }
+  }
 });

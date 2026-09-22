@@ -21,6 +21,9 @@ export interface ReleaseConfig {
     version: string;
     description: string;
     license: string;
+    repository?: string | { type: string; url: string; directory?: string };
+    homepage?: string;
+    bugs?: string | { url?: string; email?: string };
     keywords?: string[];
     engines: { node: string };
   };
@@ -83,6 +86,26 @@ export function insidePath(root: string, path: string): string {
 }
 
 /**
+ * Accepts npm metadata strings or objects with non-empty, explicitly supported string fields.
+ */
+function validPublicationLink(value: unknown, allowed: string[], required: string[]): boolean {
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const fields = value as Record<string, unknown>;
+  return (
+    Object.keys(fields).length > 0 &&
+    required.every((key) => key in fields) &&
+    Object.entries(fields).every(
+      ([key, entry]) => allowed.includes(key) && typeof entry === 'string' && entry.trim().length > 0
+    )
+  );
+}
+
+/**
  * Reads the sole editable release contract; unknown publication fields fail instead of leaking dev metadata.
  */
 export function readReleaseConfig(path: string): ReleaseConfig {
@@ -108,6 +131,12 @@ export function readReleaseConfig(path: string): ReleaseConfig {
     !config.artifacts ||
     typeof config.artifacts !== 'object' ||
     Array.isArray(config.artifacts) ||
+    (config.manifest.repository !== undefined &&
+      !validPublicationLink(config.manifest.repository, ['type', 'url', 'directory'], ['type', 'url'])) ||
+    (config.manifest.homepage !== undefined &&
+      (typeof config.manifest.homepage !== 'string' || !config.manifest.homepage.trim())) ||
+    (config.manifest.bugs !== undefined &&
+      !validPublicationLink(config.manifest.bugs, ['url', 'email'], [])) ||
     (config.manifest.keywords !== undefined &&
       (!Array.isArray(config.manifest.keywords) ||
         !config.manifest.keywords.every((keyword) => typeof keyword === 'string')))
@@ -115,7 +144,19 @@ export function readReleaseConfig(path: string): ReleaseConfig {
     throw new Error('Invalid release.config.json publication or build settings.');
   }
   for (const key of Object.keys(config.manifest)) {
-    if (!['name', 'version', 'description', 'license', 'keywords', 'engines'].includes(key)) {
+    if (
+      ![
+        'name',
+        'version',
+        'description',
+        'license',
+        'repository',
+        'homepage',
+        'bugs',
+        'keywords',
+        'engines',
+      ].includes(key)
+    ) {
       throw new Error(`Unsupported publication metadata: ${key}`);
     }
   }
