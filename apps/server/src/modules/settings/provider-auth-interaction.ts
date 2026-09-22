@@ -3,6 +3,7 @@
  * @description Bridges Pi authentication prompts and events into one bounded in-memory session record.
  */
 
+import { touchProviderAuthSession } from './provider-auth-session-model.js';
 import { ApplicationError } from '../../lib/errors/application-error.js';
 import {
   sanitizeProviderAuthEvent,
@@ -45,7 +46,7 @@ export function requestProviderAuthAnswer(
       record.currentPrompt = undefined;
       if (isActive(record)) {
         record.status = 'running';
-        record.revision += 1;
+        touchProviderAuthSession(record);
       }
       reject(new DOMException('Authentication prompt was cancelled.', 'AbortError'));
     };
@@ -58,7 +59,7 @@ export function requestProviderAuthAnswer(
       detachAbort: () => prompt.signal?.removeEventListener('abort', onAbort),
     };
     record.status = 'awaiting_input';
-    record.revision += 1;
+    touchProviderAuthSession(record);
   });
 }
 
@@ -79,7 +80,7 @@ export function appendProviderAuthEvent(
   }
   record.events.push(sanitizeProviderAuthEvent(event, (record.events.at(-1)?.seq ?? 0) + 1, now));
   trimProviderAuthEvents(record.events);
-  record.revision += 1;
+  touchProviderAuthSession(record);
 }
 
 /**

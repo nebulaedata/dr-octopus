@@ -12,9 +12,38 @@ import type { ErrorMessageCatalog } from '../../lib/i18n/error-catalog.js';
  * Session-domain message variants keyed by stable error code.
  */
 export const sessionErrorMessages: ErrorMessageCatalog = {
+  CONVERSATION_DELIVERY_UNKNOWN: {
+    en: 'Delivery could not be confirmed. Inspect the conversation before sending again.',
+    'zh-CN': '无法确认消息是否送达，请检查会话后再决定是否重新发送。',
+  },
+  CONVERSATION_PREPARATION_FAILED: {
+    en: 'Conversation preparation did not complete. Check the model and selected work-mode settings, then retry your saved draft.',
+    'zh-CN': '会话准备未完成，请检查模型和所选工作模式的配置后重试，草稿内容已保留。',
+  },
+  CONVERSATION_START_CONFLICT: {
+    en: 'This submission conflicts with another saved request. Check its status before retrying.',
+    'zh-CN': '提交与已保存的请求冲突，请先检查提交状态。',
+  },
+  CONVERSATION_MODEL_REQUIRED: {
+    en: 'Choose an available model before sending.',
+    'zh-CN': '请先配置并选择可用模型。',
+  },
+  CONVERSATION_START_CLOSED: {
+    en: 'Conversation preparation is unavailable.',
+    'zh-CN': '暂时无法准备会话。',
+  },
+  CONVERSATION_START_NOT_FOUND: {
+    en: 'Conversation submission was not found.',
+    'zh-CN': '未找到会话提交记录。',
+  },
+  CONVERSATION_START_INVALID: { en: 'Invalid conversation submission.', 'zh-CN': '会话提交内容无效。' },
   INVALID_RESTART_REQUEST: {
     en: 'The session restart request is invalid.',
     'zh-CN': '无效的会话重启请求。',
+  },
+  SESSION_CONFIGURATION_STALE: {
+    en: 'Configuration changed. Apply the update before sending another message.',
+    'zh-CN': '配置已变化，请应用更新后再发送新消息。',
   },
   SESSION_BUSY: {
     en: 'A task or interaction is still running; restarting will interrupt it.',

@@ -17,6 +17,34 @@ const roots = new Set([
  * Select only business projections; Conversation snapshots stay owned by their runtime lifecycle.
  */
 export function matchesDataChange(key: QueryKey, change?: DataChange): boolean {
+  if (key[0] === 'conversation-models' || key[0] === 'settings') {
+    return (
+      !change ||
+      change.resource === 'model-config' ||
+      (key[0] === 'settings' && change.resource === 'provider-auth')
+    );
+  }
+  if (key[0] === 'attachments' || key[0] === 'memory' || key[0] === 'knowledge') {
+    return !change || change.resource === key[0];
+  }
+  if (
+    key[0] === 'server-restart-operation' ||
+    key[0] === 'server-settings' ||
+    key[0] === 'environment-settings'
+  ) {
+    return !change || change.resource === 'server-lifecycle';
+  }
+  if (key[0] === 'session-stats') {
+    return (
+      !change || (change.resource === 'sessions' && (!change.workspaceId || key[1] === change.workspaceId))
+    );
+  }
+  if (key[0] === 'conversation-start' || key[0] === 'conversation-start-receipt') {
+    return (
+      !change ||
+      (change.resource === 'conversation-starts' && (!change.workspaceId || key[1] === change.workspaceId))
+    );
+  }
   if (!roots.has(String(key[0]))) {
     return false;
   }

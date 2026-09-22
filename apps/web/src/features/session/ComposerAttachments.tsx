@@ -3,7 +3,7 @@
  * @description Renders and synchronizes the six-state Composer attachment task tray above the input.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { FileIcon, ImageIcon, RefreshCwIcon, XIcon } from 'lucide-react';
 import { useStore } from 'zustand';
@@ -26,8 +26,8 @@ import { sessionStores } from '@/stores/session';
 import { AttachmentDiagnostics } from './AttachmentDiagnostics';
 import { documentCoverageLabel } from './document-coverage-label';
 import { abortAttachmentUploadTask } from './attachment-upload-tasks';
+import { toComposerAttachment } from './attachment-projection';
 import { cn } from '@octopus/ui/lib/utils';
-import type { AttachmentResourceDto } from '@octopus/shared/protocol/attachments';
 import type { ComposerAttachmentViewModel } from '@/stores/session';
 import type { Translate } from '@/i18n/use-i18n';
 
@@ -38,18 +38,13 @@ export interface ComposerAttachmentsProps {
 }
 
 /**
- * Owns revision polling, monotonic merge, retry, removal, and task-state presentation.
+ * Owns event-driven revision reconciliation, monotonic merge, retry, removal, and task-state presentation.
  */
 export function ComposerAttachments({ disabled = false, sessionId, workspaceId }: ComposerAttachmentsProps) {
   const { t } = useI18n();
   const store = sessionStores.ensure(sessionId);
   const attachments = useStore(store, (state) => state.attachments);
   const ids = attachments.filter((item) => !item.id.startsWith('local-')).map((item) => item.id);
-  const needsPolling = attachments.some(
-    (item) => item.status === 'uploading' || item.status === 'processing'
-  );
-  const lastRevisionSignature = useRef('');
-  const pollStep = useRef(0);
   const query = useQuery({
     queryKey: ['attachments', workspaceId, ids],
     queryFn: ({ signal }) => getAttachments(workspaceId, ids, signal),
@@ -57,20 +52,6 @@ export function ComposerAttachments({ disabled = false, sessionId, workspaceId }
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 0,
-    refetchInterval(queryState) {
-      if (!needsPolling) {
-        return false;
-      }
-      const data = queryState.state.data as { items: AttachmentResourceDto[] } | undefined;
-      const signature = data?.items.map((item) => `${item.id}:${String(item.revision)}`).join('|') ?? '';
-      if (signature !== lastRevisionSignature.current) {
-        lastRevisionSignature.current = signature;
-        pollStep.current = 0;
-      }
-      const delay = [1_000, 2_000, 5_000][Math.min(pollStep.current, 2)] ?? 5_000;
-      pollStep.current += 1;
-      return delay;
-    },
   });
   useEffect(() => {
     if (query.data === undefined) {
@@ -82,7 +63,7 @@ export function ComposerAttachments({ disabled = false, sessionId, workspaceId }
         const resource = incoming.get(current.id);
         return resource === undefined || resource.revision < current.revision
           ? current
-          : fromResource(resource, current.localKey, current.uploadFingerprint);
+          : toComposerAttachment(resource, current.localKey, current.uploadFingerprint);
       }),
     }));
   }, [query.data, store]);
@@ -155,7 +136,7 @@ export function ComposerAttachments({ disabled = false, sessionId, workspaceId }
         store.setState((state) => ({
           attachments: state.attachments.map((candidate) =>
             candidate.id === item.id
-              ? fromResource(resource, candidate.localKey, candidate.uploadFingerprint)
+              ? toComposerAttachment(resource, candidate.localKey, candidate.uploadFingerprint)
               : candidate
           ),
         })),
@@ -261,34 +242,6 @@ function description(t: Translate, item: ComposerAttachmentViewModel): string {
     return t('session.composer.attachments.statusRemoving', 'Removing');
   }
   return `${item.detectedMediaType ?? t('session.composer.attachments.verifiedFile', 'Verified file')} · ${formatBytes(item.byteSize)}`;
-}
-/**
- * Maps a monotonic Server resource into Composer state while retaining local-only identity.
- */
-function fromResource(
-  resource: AttachmentResourceDto,
-  localKey?: string,
-  uploadFingerprint?: string
-): ComposerAttachmentViewModel {
-  const status =
-    resource.status === 'initiated' || resource.status === 'uploading'
-      ? 'uploading'
-      : resource.status === 'verifying' || resource.status === 'processing'
-        ? 'processing'
-        : resource.status;
-  return {
-    id: resource.id,
-    ...(localKey === undefined ? {} : { localKey }),
-    ...(uploadFingerprint === undefined ? {} : { uploadFingerprint }),
-    name: resource.name,
-    byteSize: resource.byteSize,
-    coverage: resource.coverage,
-    revision: resource.revision,
-    status,
-    ...(resource.detectedMediaType === undefined ? {} : { detectedMediaType: resource.detectedMediaType }),
-    ...(resource.presentationKind === undefined ? {} : { presentationKind: resource.presentationKind }),
-    ...(resource.error === undefined ? {} : { error: resource.error }),
-  };
 }
 /**
  * Formats byte counts without guessing file type.

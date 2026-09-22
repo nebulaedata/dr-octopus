@@ -72,8 +72,22 @@ export function createRealtimeMessageHandler({
           .catch(() => undefined);
       }
     }
+    if (
+      isHostEventEnvelope(message) &&
+      message.type === 'agent.event' &&
+      typeof message.payload === 'object' &&
+      message.payload !== null &&
+      'type' in message.payload &&
+      ['message_end', 'agent_settled'].includes(String(message.payload.type))
+    ) {
+      void queryClient.invalidateQueries({
+        queryKey: ['session-stats', message.workspaceId, message.sessionId],
+      });
+    }
     const failedCommand = browserSessionRuntime.observe(message);
     if (failedCommand !== undefined) {
+      // A rejected control may have an optimistic catalog value even when no Server mutation event fired.
+      void queryClient.invalidateQueries({ queryKey: ['sessions'] });
       const state = sessionStores.ensure(failedCommand.sessionId).getState();
       state.rejectOptimisticUserMessage(failedCommand.requestId, failedCommand.message);
       state.rejectWorkModeChange(failedCommand.requestId, failedCommand.message);

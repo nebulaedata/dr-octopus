@@ -44,6 +44,10 @@ export default defineConfig([
       'no-restricted-syntax': [
         'error',
         {
+          selector: "Property[key.name='refetchInterval'], Property[key.value='refetchInterval']",
+          message: '业务状态禁止定时轮询；请在统一 SSE/WS 事件同步入口失效对应 Query。',
+        },
+        {
           selector: "ImportSpecifier[importKind='type']",
           message: '类型导入必须使用独立的 import type 声明，禁止与值导入混用。',
         },
@@ -66,7 +70,8 @@ export default defineConfig([
             {
               name: 'react-i18next',
               importNames: ['useTranslation'],
-              message: '业务代码必须使用 @/i18n/use-i18n 的 useI18n()；react-i18next 仅限 src/i18n/ 内部使用。',
+              message:
+                '业务代码必须使用 @/i18n/use-i18n 的 useI18n()；react-i18next 仅限 src/i18n/ 内部使用。',
             },
           ],
           patterns: [

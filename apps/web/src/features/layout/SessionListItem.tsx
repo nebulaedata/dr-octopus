@@ -149,11 +149,7 @@ export function SessionListItem(props: SessionListItemProps) {
             }
             onClick={() => void props.onPinnedChange(props.session, props.session.pinnedAt === undefined)}
           >
-            {props.session.pinnedAt === undefined ? (
-              <PinIcon className="rotate-45" />
-            ) : (
-              <PinOffIcon className="rotate-45" />
-            )}
+            {props.session.pinnedAt === undefined ? <PinIcon className="rotate-45" /> : <PinOffIcon />}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger

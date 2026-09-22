@@ -56,6 +56,18 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
                 ))}
           </span>
           <AlertAction>
+            {session.runtime?.state === 'running' && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={restarting || control?.restartOnIdle}
+                onClick={() => action.start(session, true)}
+              >
+                {control?.restartOnIdle
+                  ? t('session.configAlert.queued', 'Update queued until the task finishes')
+                  : t('session.configAlert.whenIdle', 'Apply after task finishes')}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"

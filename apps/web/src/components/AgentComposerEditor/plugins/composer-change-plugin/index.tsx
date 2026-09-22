@@ -23,7 +23,7 @@ export function ComposerChangePlugin({ onChange }: ComposerChangePluginProps) {
    * Reads the editor only within its immutable transaction boundary.
    */
   function handleChange(editorState: EditorState): void {
-    onChange(editorState.read($buildComposerDraft));
+    onChange({ ...editorState.read($buildComposerDraft), editorState: JSON.stringify(editorState.toJSON()) });
   }
 
   return <OnChangePlugin ignoreSelectionChange onChange={handleChange} />;

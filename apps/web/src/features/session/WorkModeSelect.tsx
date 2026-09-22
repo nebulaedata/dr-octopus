@@ -54,6 +54,10 @@ function getWorkModeItems(t: Translate) {
 }
 
 export interface WorkModeSelectProps {
+  /**
+   * Keeps the trigger usable while its Agent options are not loaded yet.
+   */
+  loaded?: boolean;
   knowledgeAvailable?: boolean;
   planAvailable: boolean;
   disabled?: boolean;
@@ -68,6 +72,7 @@ export interface WorkModeSelectProps {
  * Delegates enabled work-mode changes to the Session runtime control plane.
  */
 export function WorkModeSelect({
+  loaded = true,
   knowledgeAvailable = false,
   disabled = false,
   planAvailable,
@@ -79,7 +84,7 @@ export function WorkModeSelect({
   return (
     <Select
       disabled={disabled}
-      items={workModeItems}
+      items={loaded ? workModeItems : []}
       value={value}
       onValueChange={(nextValue) => {
         if (nextValue !== null) {
@@ -123,7 +128,7 @@ export function WorkModeSelect({
               </span>
             </div>
           </SelectLabel>
-          {workModeItems.map((item) => {
+          {(loaded ? workModeItems : []).map((item) => {
             const Icon = item.icon;
             return (
               <SelectItem

@@ -68,6 +68,7 @@ import type { FastifyInstance } from 'fastify';
  */
 export class SessionsService {
   readonly #drafts: SessionDraftsService;
+  readonly #refreshConfiguration: () => Promise<unknown>;
   readonly #runtime: SessionRuntimeCoordinator;
   readonly #sessions: SessionsRepository;
   readonly #feedback: MessageFeedbackRepository;
@@ -88,6 +89,7 @@ export class SessionsService {
     options: SessionsServiceOptions
   ) {
     this.#runtime = options.runtime ?? server.sessionRuntime;
+    this.#refreshConfiguration = () => options.refreshConfiguration?.() ?? Promise.resolve();
     this.#sessions = options.sessionsRepository ?? new SessionsRepository(server.database);
     this.#feedback = options.messageFeedbackRepository ?? new MessageFeedbackRepository(server.database);
     this.#workspaces = options.workspaceService;
@@ -137,6 +139,7 @@ export class SessionsService {
    * 激活已登记 Session；已有 runtime 时保持原绑定。
    */
   public async activate(sessionId: string): Promise<SessionRuntimeDto> {
+    await this.#refreshConfiguration();
     this.#assertInteractive(sessionId);
     const row = this.#requireSessionRow(sessionId);
     const workspace = await this.#workspaces.resolve({ id: row.workspaceId });
@@ -157,6 +160,7 @@ export class SessionsService {
     if (row.execution || this.#sessions.get(sessionId)?.isDraft) {
       throw new ApplicationError('SESSION_RESTART_UNSUPPORTED', '此会话不支持重启。', { statusCode: 409 });
     }
+    await this.#refreshConfiguration();
     const workspace = await this.#workspaces.resolve({ id: row.workspaceId });
     try {
       await this.#runtime.restart(
@@ -304,6 +308,16 @@ export class SessionsService {
     expected: RuntimeGenerationTarget = {}
   ): Promise<unknown> {
     this.#assertInteractive(sessionId);
+    if (command.type === 'prompt') {
+      await this.#refreshConfiguration();
+      if (this.#runtime.getControl(sessionId).restartRequired) {
+        throw new ApplicationError(
+          'SESSION_CONFIGURATION_STALE',
+          'Configuration changed. Apply the update before sending another message.',
+          { statusCode: 409 }
+        );
+      }
+    }
     return this.#commands.execute(sessionId, command, expected);
   }
 

@@ -27,7 +27,6 @@ export function KnowledgeSettingsPage() {
   const service = useQuery({
     queryKey: ['knowledge', 'service'],
     queryFn: ({ signal }) => knowledgeService('status', signal),
-    refetchInterval: 5000,
   });
   const models = useQuery({
     queryKey: ['knowledge', 'models'],
@@ -81,10 +80,7 @@ export function KnowledgeSettingsPage() {
               onClick={() => lifecycle.mutate(active ? 'stop' : 'start')}
             >
               {changingState ? (
-                <Spinner
-                  data-icon="inline-start"
-                  aria-label="Action in progress"
-                />
+                <Spinner data-icon="inline-start" aria-label="Action in progress" />
               ) : active ? (
                 <SquareIcon data-icon="inline-start" />
               ) : (

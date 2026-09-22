@@ -1,31 +1,30 @@
 /**
  * @author Codex
- * @description Starts unpublished Session preparation from empty-home route loaders without delaying route rendering.
+ * @description Prefetches Host model metadata for home routes without starting Agent processes.
  */
-import { prepareSessionDraft } from '@/api/sessions';
+import { getConversationModels } from '@/api/conversation-starts';
 import { getWorkspaces } from '@/api/workspace';
 import { queryKeys } from '@/queries/query-keys';
-import { useWorkbenchHome } from '@/stores/workbench-home';
 import type { QueryClient } from '@tanstack/react-query';
 
 /**
- * Starts or reuses preparation for one Workspace home draft.
+ * Prefetches the shared model directory without allocating a Session.
  *
  * @param queryClient Shared application query cache.
  * @param workspaceId Workspace selected by the matched route.
  */
 export function prewarmWorkspaceHome(queryClient: QueryClient, workspaceId: string): void {
-  const draftId = useWorkbenchHome.getState().ensureDraftId(workspaceId);
+  void workspaceId;
   void queryClient.prefetchQuery({
-    queryKey: queryKeys.sessionDraft(workspaceId, draftId),
-    queryFn: () => prepareSessionDraft(workspaceId, draftId),
-    staleTime: Infinity,
+    queryKey: ['conversation-models'],
+    queryFn: ({ signal }) => getConversationModels(signal),
+    staleTime: 0,
     retry: false,
   });
 }
 
 /**
- * Resolves the general Workspace and starts its home draft preparation.
+ * Resolves the general Workspace and warms only the Host model query.
  *
  * @param queryClient Shared application query cache.
  */

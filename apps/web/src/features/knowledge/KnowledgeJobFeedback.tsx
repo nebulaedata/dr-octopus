@@ -12,7 +12,7 @@ import type { KnowledgeJob } from '@octopus/shared/protocol/knowledge';
 import type { KnowledgeJobResult } from './knowledge-job-feedback';
 
 /**
- * Deduplicates polled outcomes by job attempt and keeps each retry bound to the job that failed.
+ * Deduplicates event-driven outcomes by job attempt and keeps each retry bound to the job that failed.
  */
 export function KnowledgeJobFeedback({
   workspaceId,

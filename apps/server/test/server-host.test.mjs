@@ -173,3 +173,37 @@ test('startup timeout requires candidate cleanup before recovery', async () => {
   assert.equal(f.entries.length, 2);
   assert.equal(f.entries[1].closes, 1);
 });
+
+test('restart completion notifies subscribers retained by the Host without status polling', async () => {
+  const f = fixture();
+  await f.host.start();
+  const control = f.entries[0].control;
+  const finished = Promise.withResolvers();
+  let operationId;
+  const unsubscribe = control.subscribe(() => {
+    if (operationId) {
+      const operation = control.operation(operationId);
+      if (operation.completedAt) finished.resolve(operation);
+    }
+  });
+  try {
+    const accepted = await f.accept('push');
+    operationId = accepted.operation.operationId;
+    accepted.handoff();
+    let deadline;
+    try {
+      const value = await Promise.race([
+        finished.promise,
+        new Promise((_, reject) => {
+          deadline = setTimeout(() => reject(new Error('No Host notification')), 1000);
+        }),
+      ]);
+      assert.equal(value.state, 'succeeded');
+    } finally {
+      clearTimeout(deadline);
+    }
+  } finally {
+    unsubscribe();
+    await f.host.stop();
+  }
+});

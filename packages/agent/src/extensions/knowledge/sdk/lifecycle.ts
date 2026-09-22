@@ -2,9 +2,11 @@
  * @author Codex
  * @description Explicit and lazy daemon lifecycle with persistent stop suppression and OS-lock ownership.
  */
+import { retryFileContention } from '../../../lib/daemon-platform/file-contention.js';
+import { tmpdir } from 'node:os';
 import { access, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
+import { DirectorySignal } from '../../../lib/daemon-platform/directory-signal.js';
 import { fileURLToPath } from 'node:url';
 import { KnowledgeError } from '../definitions/error.js';
 import { knowledgeProfile, readKnowledgeMetadata, writeKnowledgeMetadata } from '../lib/profile.js';
@@ -90,30 +92,36 @@ export async function startKnowledgeService(
   const requestedAt = Date.now();
   await launchDetachedNode(
     [entry, profile.agentDir, explicit ? 'start' : 'ensure', String(control?.revision ?? 0)],
-    profile.directory
+    tmpdir()
   );
   const deadline = Date.now() + timeoutMs;
-  do {
-    const status = await getKnowledgeServiceStatus(agentDir);
-    if (status.state === 'running') {
-      return status;
-    }
-    const latest = await readKnowledgeMetadata<KnowledgeControl>(join(profile.directory, 'control.json'));
-    const failure = await readKnowledgeMetadata<{ at: number; code: string }>(
-      join(profile.directory, 'startup-error.json')
-    );
-    if (failure && failure.at >= requestedAt) {
-      throw new KnowledgeError(
-        'KNOWLEDGE_START_FAILED',
-        `知识服务启动失败（${failure.code}），请检查安装依赖与数据目录`
+  const events = new DirectorySignal(profile.directory);
+  try {
+    do {
+      const observed = events.revision;
+      const status = await getKnowledgeServiceStatus(agentDir);
+      if (status.state === 'running') {
+        return status;
+      }
+      const latest = await readKnowledgeMetadata<KnowledgeControl>(join(profile.directory, 'control.json'));
+      const failure = await readKnowledgeMetadata<{ at: number; code: string }>(
+        join(profile.directory, 'startup-error.json')
       );
-    }
-    if (latest?.stopped && (!explicit || latest.revision !== (control?.revision ?? 0))) {
-      throw new KnowledgeError('KNOWLEDGE_SERVICE_STOPPED', '启动已被较新的停止操作取消');
-    }
-    await delay(100);
-  } while (Date.now() < deadline);
-  throw new KnowledgeError('KNOWLEDGE_SERVICE_TIMEOUT', '知识服务未能及时启动，请检查依赖和服务状态', true);
+      if (failure && failure.at >= requestedAt) {
+        throw new KnowledgeError(
+          'KNOWLEDGE_START_FAILED',
+          `知识服务启动失败（${failure.code}），请检查安装依赖与数据目录`
+        );
+      }
+      if (latest?.stopped && (!explicit || latest.revision !== (control?.revision ?? 0))) {
+        throw new KnowledgeError('KNOWLEDGE_SERVICE_STOPPED', '启动已被较新的停止操作取消');
+      }
+      await events.wait(observed, deadline);
+    } while (Date.now() < deadline);
+    throw new KnowledgeError('KNOWLEDGE_SERVICE_TIMEOUT', '知识服务未能及时启动，请检查依赖和服务状态', true);
+  } finally {
+    await events.close();
+  }
 }
 
 /**
@@ -126,42 +134,48 @@ export async function stopKnowledgeService(
   const profile = (await knowledgeProfile(agentDir, true))!;
   const { tryAcquireProcessLock } = await import('../../../lib/daemon-platform/singleton-lease.js');
   const deadline = Date.now() + timeoutMs;
-  do {
-    const lock = await tryAcquireProcessLock(join(profile.directory, 'daemon.lock'));
-    if (lock) {
-      try {
-        const control = await readKnowledgeMetadata<KnowledgeControl>(
-          join(profile.directory, 'control.json')
-        );
-        const controlRevision = (control?.revision ?? 0) + 1;
-        await writeKnowledgeMetadata(join(profile.directory, 'control.json'), {
-          stopped: true,
-          revision: controlRevision,
-        });
-        await rm(join(profile.directory, 'endpoint.json'), { force: true });
-        return {
-          schemaVersion: 1,
-          state: 'stopped',
-          health: 'unknown',
-          profileId: profile.profileId,
-          autostartSuppressed: true,
-          controlRevision,
-        };
-      } finally {
-        lock.release();
+  const events = new DirectorySignal(profile.directory);
+  try {
+    do {
+      const observed = events.revision;
+      const lock = await tryAcquireProcessLock(join(profile.directory, 'daemon.lock'));
+      if (lock) {
+        try {
+          const control = await readKnowledgeMetadata<KnowledgeControl>(
+            join(profile.directory, 'control.json')
+          );
+          const controlRevision = (control?.revision ?? 0) + 1;
+          await writeKnowledgeMetadata(join(profile.directory, 'control.json'), {
+            stopped: true,
+            revision: controlRevision,
+          });
+          await retryFileContention(() => rm(join(profile.directory, 'endpoint.json'), { force: true }));
+          return {
+            schemaVersion: 1,
+            state: 'stopped',
+            health: 'unknown',
+            profileId: profile.profileId,
+            autostartSuppressed: true,
+            controlRevision,
+          };
+        } finally {
+          lock.release();
+        }
       }
-    }
-    const endpoint = await discoverKnowledge(profile);
-    if (endpoint) {
-      try {
-        await knowledgeRequest(profile, endpoint, 'stop', {}, undefined, 3000);
-      } catch {
-        // Ownership may be draining; only acquiring its released OS lock proves completion.
+      const endpoint = await discoverKnowledge(profile);
+      if (endpoint) {
+        try {
+          await knowledgeRequest(profile, endpoint, 'stop', {}, undefined, 3000);
+        } catch {
+          // Ownership may be draining; only acquiring its released OS lock proves completion.
+        }
       }
-    }
-    await delay(100);
-  } while (Date.now() < deadline);
-  throw new KnowledgeError('KNOWLEDGE_SERVICE_TIMEOUT', '停止尚未完成，请查询 status；不会强杀进程', true);
+      await events.wait(observed, deadline);
+    } while (Date.now() < deadline);
+    throw new KnowledgeError('KNOWLEDGE_SERVICE_TIMEOUT', '停止尚未完成，请查询 status；不会强杀进程', true);
+  } finally {
+    await events.close();
+  }
 }
 
 /**

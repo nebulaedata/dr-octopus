@@ -46,6 +46,19 @@ export function createServerHost(options: ServerHostOptions = {}) {
       throw controlError('SERVER_RESTART_IN_PROGRESS', 'Server is restarting or stopping.');
     }
   }
+  const listeners = new Set<() => void>();
+  /**
+   * Notifies the current HTTP instance after each Host-owned lifecycle transition.
+   */
+  function notify(): void {
+    for (const listener of listeners) {
+      try {
+        listener();
+      } catch {
+        /* State queries remain authoritative. */
+      }
+    }
+  }
   /**
    * Builds an instance-specific port; old HTTP requests cannot target a replacement implicitly.
    */
@@ -67,6 +80,12 @@ export function createServerHost(options: ServerHostOptions = {}) {
         stopRequested ? 'stopping' : state === 'failed' ? 'failed' : active ? 'restarting' : 'running',
       restart: accept,
       operation: (operationId) => history.get(operationId),
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
     };
   }
   /**
@@ -124,6 +143,7 @@ export function createServerHost(options: ServerHostOptions = {}) {
     operation.actualAddress =
       result === 'succeeded' || result === 'restored' ? (runtime?.getStatus().address ?? null) : null;
     active = undefined;
+    notify();
   }
   /**
    * Releases old resources, applies the target, then attempts at most one clean recovery.
@@ -139,10 +159,12 @@ export function createServerHost(options: ServerHostOptions = {}) {
     try {
       assertGeneration(epoch);
       operation.state = 'draining';
+      notify();
       await within(runtime!.close(), closeMs);
       runtime = undefined;
       assertGeneration(epoch);
       operation.state = 'starting';
+      notify();
       try {
         operation.targetInstanceId = await launch(target, config, epoch);
         finish(operation, 'succeeded');
@@ -151,6 +173,7 @@ export function createServerHost(options: ServerHostOptions = {}) {
         await closeCandidate();
         assertGeneration(epoch);
         operation.state = 'restoring';
+        notify();
         candidateCleanupAttempted = false;
         operation.error = {
           code: 'SERVER_RESTART_APPLY_FAILED',

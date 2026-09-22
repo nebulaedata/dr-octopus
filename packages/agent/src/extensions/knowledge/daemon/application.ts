@@ -28,7 +28,11 @@ import type { KnowledgeCommand } from './protocol.js';
  * @param directory Knowledge storage directory resolved by the profile.
  * @param agentDir Canonical Agent configuration directory for MCP connections and attachment tickets.
  */
-export async function createKnowledgeApplication(directory: string, agentDir: string) {
+export async function createKnowledgeApplication(
+  directory: string,
+  agentDir: string,
+  onChanged: () => void = () => undefined
+) {
   const database = openKnowledgeDatabase(join(directory, 'control.sqlite'));
   let index: LanceKnowledgeIndex;
   try {
@@ -41,7 +45,7 @@ export async function createKnowledgeApplication(directory: string, agentDir: st
   const catalog = new KnowledgeCatalogService(repository);
   const blobs = new KnowledgeBlobStore(directory);
   const models = new KnowledgeModelSettings(database, directory);
-  const jobs = new KnowledgeJobRepository(database);
+  const jobs = new KnowledgeJobRepository(database, onChanged);
   const runner = new KnowledgeIndexingRunner(jobs, index, models, directory);
   const search = new KnowledgeSearchEngine(new KnowledgeSearchRepository(database, catalog), index, models);
   const sharing = new KnowledgeSharingStore(database);
@@ -66,10 +70,9 @@ export async function createKnowledgeApplication(directory: string, agentDir: st
         .finally(() => {
           maintenance = null;
         });
-    } else {
-      runner.wake();
     }
-  }, 1000);
+  }, 60_000);
+  timer.unref();
 
   /**
    * A short exclusive maintenance window protects native readers without persisting distributed query leases.
@@ -105,7 +108,30 @@ export async function createKnowledgeApplication(directory: string, agentDir: st
     async call(command: KnowledgeCommand, signal?: AbortSignal): Promise<unknown> {
       await enter();
       try {
-        return await dispatch(command, signal);
+        const result = await dispatch(command, signal);
+        if (
+          [
+            'collections.create',
+            'collections.update',
+            'collections.delete',
+            'documents.update',
+            'documents.delete',
+            'jobs.import',
+            'jobs.importAttachment',
+            'jobs.reindex',
+            'jobs.retry',
+            'jobs.cancel',
+            'sharing.save',
+            'mounts.create',
+            'mounts.refresh',
+            'mounts.delete',
+            'settings.save',
+          ].includes(command.operation)
+        ) {
+          onChanged();
+          runner.wake();
+        }
+        return result;
       } finally {
         activeCalls -= 1;
       }

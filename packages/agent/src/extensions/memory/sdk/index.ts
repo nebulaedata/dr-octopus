@@ -22,3 +22,5 @@ export {
   restartMemoryService,
   checkMemoryServiceHealth,
 } from './lifecycle.js';
+
+export { subscribeMemoryChanges } from './changes.js';

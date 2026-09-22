@@ -36,9 +36,12 @@ function createFixture() {
       binding = undefined;
     },
   });
+  const invalidated = [];
   const handle = createRealtimeMessageHandler({
     queryClient: {
-      invalidateQueries: async () => {},
+      invalidateQueries: async (filter) => {
+        invalidated.push(filter.queryKey);
+      },
       fetchQuery: () => response.promise,
     },
     realtimeClient: { getConfirmedSubscription: () => binding },
@@ -47,6 +50,7 @@ function createFixture() {
   });
   return {
     snapshot,
+    invalidated,
     store,
     registry,
     handle,
@@ -132,6 +136,25 @@ test('a subscription snapshot still hydrates an uninitialized generation and rep
     assert.equal(fixture.store.getState().lastSequence, 2);
     assert.equal(fixture.store.getState().draft, 'Keep this draft');
   } finally {
+    fixture.registry.dispose();
+  }
+});
+
+test('rejected runtime controls reconcile optimistic session metadata without waiting for another event', () => {
+  const fixture = createFixture();
+  const close = fixture.registry.openView('session');
+  try {
+    fixture.registry.retainCommand('session', 'model-change', 1, true);
+    fixture.handle({
+      type: 'error',
+      requestId: 'model-change',
+      sessionId: 'session',
+      code: 'SESSION_RUNTIME_STALE',
+      message: 'Model change rejected',
+    });
+    assert.deepEqual(fixture.invalidated, [['sessions']]);
+  } finally {
+    close();
     fixture.registry.dispose();
   }
 });

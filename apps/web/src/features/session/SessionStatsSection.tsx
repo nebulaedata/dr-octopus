@@ -17,7 +17,6 @@ export function SessionStatsSection({ session }: { session: SessionDto }) {
     queryKey: ['session-stats', session.workspaceId, session.id],
     queryFn: ({ signal }) => getSessionStats(session.workspaceId, session.id, signal),
     staleTime: 0,
-    refetchInterval: 5_000,
     retry: false,
   });
   const data = stats.data;
@@ -45,10 +44,7 @@ export function SessionStatsSection({ session }: { session: SessionDto }) {
           ],
         ];
   return (
-    <section
-      aria-label="Session usage"
-      className="flex flex-col gap-3.5 px-0.5 py-4.5"
-    >
+    <section aria-label="Session usage" className="flex flex-col gap-3.5 px-0.5 py-4.5">
       <h3 className="text-sm font-semibold">{t('session.stats.title', 'Session usage')}</h3>
       <p className="text-xs text-muted-foreground">
         {t('session.stats.description', 'Cumulative Session statistics, including compacted history.')}

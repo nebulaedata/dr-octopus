@@ -94,3 +94,36 @@ test('channel accepts collection-only config, discards legacy model fields and r
   message.payload.knowledge.collectionIds = Array(21).fill('x');
   assert.throws(() => decodeClientMessage(JSON.stringify(message)));
 });
+
+for (const loaded of [false, true]) {
+  test(`knowledge startup rejects ${loaded ? 'unapplied source configuration' : 'a missing extension'} before enabling mode`, async () => {
+    const calls = [];
+    const commands = new RuntimeCommands({
+      withRuntime: async (_id, fn) =>
+        fn({
+          binding: {},
+          execute: async (command) => {
+            if (command.type === 'get_commands')
+              return {
+                success: true,
+                data: { commands: loaded ? [{ name: 'knowledge', source: 'extension' }] : [] },
+              };
+            calls.push(command.message);
+            return { success: true };
+          },
+        }),
+      readPlanModeState: () => ({
+        available: false,
+        workMode: 'agent',
+        phase: 'off',
+        awaitingAction: false,
+        knowledge: { version: 1, enabled: false, collectionIds: [] },
+      }),
+    });
+    await assert.rejects(
+      commands.executeWorkModeControl('s', 'knowledge', {}, { collectionIds: ['source'] }),
+      { code: 'SESSION_RUNTIME_STALE' }
+    );
+    assert.deepEqual(calls, loaded ? ['/knowledge config {"collectionIds":["source"]}'] : []);
+  });
+}

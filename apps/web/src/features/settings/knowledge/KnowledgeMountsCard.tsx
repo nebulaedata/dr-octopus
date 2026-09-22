@@ -32,7 +32,6 @@ export function KnowledgeMountsCard() {
   const mounts = useQuery({
     queryKey: ['knowledge', 'mounts'],
     queryFn: ({ signal }) => listKnowledgeMounts(signal),
-    refetchInterval: 60_000,
   });
   const refresh = () => {
     void cache.invalidateQueries({ queryKey: ['knowledge', 'mounts'] });
@@ -52,7 +51,9 @@ export function KnowledgeMountsCard() {
   return (
     <Card className="shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">{t('settings.knowledge.mounts.title', 'Mount remote knowledge bases')}</CardTitle>
+        <CardTitle className="text-base">
+          {t('settings.knowledge.mounts.title', 'Mount remote knowledge bases')}
+        </CardTitle>
         <CardDescription>
           {t(
             'settings.knowledge.mounts.description',
@@ -84,7 +85,10 @@ export function KnowledgeMountsCard() {
                 <Select value={field.state.value} onValueChange={(value) => field.handleChange(value ?? '')}>
                   <SelectTrigger id="knowledge-mount-connection" className="w-full">
                     <SelectValue
-                      placeholder={t('settings.knowledge.mounts.connectionPlaceholder', 'Select a configured connection')}
+                      placeholder={t(
+                        'settings.knowledge.mounts.connectionPlaceholder',
+                        'Select a configured connection'
+                      )}
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -124,7 +128,10 @@ export function KnowledgeMountsCard() {
                 })}{' '}
                 ·{' '}
                 {mount.error
-                  ? t('settings.knowledge.mounts.unavailable', 'Connection unavailable; check the remote service or token')
+                  ? t(
+                      'settings.knowledge.mounts.unavailable',
+                      'Connection unavailable; check the remote service or token'
+                    )
                   : t('settings.knowledge.mounts.synced', 'Catalog synced')}
               </p>
             </div>

@@ -29,6 +29,10 @@ export interface ServerControl {
    * Reads a bounded Host-owned restart record.
    */
   operation?(id: string): RestartOperationDto;
+  /**
+   * Subscribes to Host restart transitions across HTTP instance replacement.
+   */
+  subscribe?(listener: () => void): () => void;
 }
 
 /**

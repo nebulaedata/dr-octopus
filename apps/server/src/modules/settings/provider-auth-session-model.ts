@@ -35,6 +35,10 @@ export interface PendingProviderAuthPrompt {
 }
 
 export interface ProviderAuthSessionRecord {
+  /**
+   * Publishes a non-secret revision hint after observable state changes.
+   */
+  onChanged?(): void;
   id: string;
   providerKey: string;
   providerId: string;
@@ -74,7 +78,7 @@ export function toProviderAuthSessionDto(record: ProviderAuthSessionRecord): Pro
 }
 
 /**
- * Sanitizes a Provider prompt before retaining it for browser polling.
+ * Sanitizes a Provider prompt before exposing it through event-driven snapshots.
  */
 export function sanitizeProviderAuthPrompt(prompt: PiProviderAuthPrompt, id: string): AuthSessionPromptDto {
   const base = {
@@ -165,4 +169,16 @@ export function trimProviderAuthEvents(events: AuthSessionEventDto[]): void {
  */
 function boundedText(value: string): string {
   return value.slice(0, MAX_TEXT_LENGTH);
+}
+
+/**
+ * Advances one observable revision without allowing listeners to interrupt credential handling.
+ */
+export function touchProviderAuthSession(record: ProviderAuthSessionRecord): void {
+  record.revision += 1;
+  try {
+    record.onChanged?.();
+  } catch {
+    /* Reconnect reads the current snapshot. */
+  }
 }

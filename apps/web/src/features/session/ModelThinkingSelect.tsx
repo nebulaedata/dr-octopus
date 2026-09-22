@@ -11,6 +11,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -28,6 +29,11 @@ export interface ModelThinkingSelectProps {
    */
   onOpenChange?(open: boolean): void;
   modelValue: string | null;
+  followDefault?: boolean;
+  /**
+   * Restores the draft's default-model selection intent.
+   */
+  onFollowDefault?(): void;
   thinkingLevels: ThinkingLevel[];
   thinkingValue: ThinkingLevel;
   /**
@@ -49,6 +55,8 @@ export function ModelThinkingSelect({
   open,
   onOpenChange,
   modelValue,
+  followDefault,
+  onFollowDefault,
   thinkingLevels,
   thinkingValue,
   onModelValueChange,
@@ -65,6 +73,10 @@ export function ModelThinkingSelect({
    * Narrows the Base UI radio value before updating the model contract.
    */
   function handleModelValueChange(value: unknown): void {
+    if (value === 'follow-default' && onFollowDefault) {
+      onFollowDefault();
+      return;
+    }
     if (typeof value === 'string' && modelItems.some((model) => model.value === value)) {
       onModelValueChange(value);
     }
@@ -105,7 +117,7 @@ export function ModelThinkingSelect({
       <DropdownMenuContent align="start" side="top" className="w-60">
         <DropdownMenuGroup>
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger disabled={models.length === 0}>
+            <DropdownMenuSubTrigger>
               <BotIcon data-icon="inline-start" />
               <span>{t('session.modelThinking.model', 'Model')}</span>
               <span
@@ -117,7 +129,18 @@ export function ModelThinkingSelect({
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="min-w-56">
               <DropdownMenuGroup>
-                <DropdownMenuRadioGroup value={modelValue ?? ''} onValueChange={handleModelValueChange}>
+                <DropdownMenuRadioGroup
+                  value={followDefault ? 'follow-default' : (modelValue ?? '')}
+                  onValueChange={handleModelValueChange}
+                >
+                  {onFollowDefault && (
+                    <>
+                      <DropdownMenuRadioItem value="follow-default">
+                        {t('session.modelThinking.followDefault', 'Follow default model')}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   {modelItems.map((model) => (
                     <DropdownMenuRadioItem key={model.value} value={model.value}>
                       <span className="max-w-52 truncate" title={model.label}>
@@ -130,7 +153,7 @@ export function ModelThinkingSelect({
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger disabled={thinkingLevels.length === 0}>
+            <DropdownMenuSubTrigger>
               <BrainCircuitIcon data-icon="inline-start" />
               <span>{t('session.modelThinking.thinkingLevel', 'Thinking level')}</span>
               <span className="ml-auto text-xs text-muted-foreground">{thinkingValue}</span>

@@ -1,6 +1,6 @@
 /**
  * @author Codex
- * @description Reports query failures once per continuous error while keeping polling from repeating toasts.
+ * @description Reports query failures once per continuous error while avoiding duplicate event-driven toasts.
  */
 import { useEffect, useRef } from 'react';
 import { toast } from '@octopus/ui/components/toast';

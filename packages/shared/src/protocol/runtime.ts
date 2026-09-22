@@ -67,6 +67,7 @@ export interface ContextUsageDto {
 }
 
 export interface ModelDto {
+  thinkingLevels?: ThinkingLevel[];
   provider: string;
   id: string;
   name: string;

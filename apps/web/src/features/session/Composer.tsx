@@ -26,7 +26,7 @@ import { Upload } from '@/components/Upload';
 import { download } from '@/utils/common';
 import { realtimeClient } from '@/utils/realtime-client';
 import { awaitRealtimeCommand } from '@/utils/await-realtime-command';
-import { getSessionExportUrl, publishSessionDraft } from '@/api/sessions';
+import { getSessionExportUrl } from '@/api/sessions';
 import { AgentComposerEditor } from '@/components/AgentComposerEditor';
 import {
   comboMatches,
@@ -35,6 +35,7 @@ import {
   useShortcut,
   useShortcutBinding,
 } from '@/lib/shortcuts';
+import { toComposerAttachment } from './attachment-projection';
 import { ComposerAttachments } from './ComposerAttachments';
 import { RunningMessageControls } from './RunningMessageControls';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
@@ -48,10 +49,10 @@ import { ExtensionDialogHost } from './ExtensionDialogHost';
 import { useComposerReferences } from './hooks/use-composer-references';
 import { registerAttachmentUploadTask, unregisterAttachmentUploadTask } from './attachment-upload-tasks';
 import { toWorkspaceReferences } from './workspace-reference-payload';
-import type { KnowledgeModeConfig } from '@octopus/shared/protocol/knowledge';
+import type { WorkspaceReferenceDto, DraftControls } from '@octopus/shared/protocol';
+import type { KnowledgeModeState, KnowledgeModeConfig } from '@octopus/shared/protocol/knowledge';
 import type { CommandDto, ModelDto, SessionDto, ThinkingLevel } from '@octopus/shared/protocol';
 import type { PermissionMode } from '@octopus/shared/protocol';
-import type { AttachmentResourceDto } from '@octopus/shared/protocol/attachments';
 import type { AgentComposerEditorHandle } from '@/components/AgentComposerEditor';
 import type { ComposerCommand, ComposerDraft } from '@/components/AgentComposerEditor/types';
 import type { RunningMessageMode } from './RunningMessageControls';
@@ -59,15 +60,57 @@ import type { AgentWorkMode } from './composer-types';
 import type { ComposerAttachmentViewModel, SessionStoreApi } from '@/stores/session';
 
 export interface ComposerProps {
+  initialDraft?: ComposerDraft;
+  followDefaultModel?: boolean;
+  modelMenuOpen?: boolean;
+  /**
+   * Controls model-menu visibility from the home guidance dialog.
+   */
+  onModelMenuOpenChange?(open: boolean): void;
+  /**
+   * Restores default-model intent without changing an established Session.
+   */
+  onFollowDefaultModel?(): void;
+  /**
+   * Opens configuration guidance when no model choices are available.
+   */
+  onModelConfigurationNeeded?(): void;
+  draftControls?: DraftControls;
+  /**
+   * Updates desired first-turn preferences without sending RPC commands.
+   */
+  onDraftControlsChange?(controls: DraftControls): void;
+  /**
+   * Persists local editing without coupling generic editor components to stores.
+   */
+  onDraftChange?(draft: ComposerDraft): void;
+  /**
+   * Selects an unstarted draft model without a runtime command.
+   */
+  onDraftModelChange?(value: string): void;
+  /**
+   * Submits the first message through the Host-owned admission boundary.
+   */
+  onFirstSubmit?(text: string, attachmentIds: string[], references: WorkspaceReferenceDto[]): Promise<void>;
+  firstSubmitPending?: boolean;
   variant?: 'home' | 'conversation';
-  /** Overrides the editor hint for route-specific transient states. */
+  /**
+   * Overrides the editor hint for route-specific transient states.
+   */
   placeholder?: string;
   /**
    * Navigates after the first prompt has been dispatched using the existing runtime identity.
    */
   onPromptSubmitted?(): void;
   commands: CommandDto[];
-  disabled?: boolean;
+  /**
+   * Blocks message submission without changing editor or toolbar availability.
+   */
+  submitDisabled?: boolean;
+  /**
+   * Shows connection progress inside the existing submit button.
+   */
+  connecting?: boolean;
   models: ModelDto[];
   session: SessionDto;
 }
@@ -77,10 +120,23 @@ export interface ComposerProps {
  */
 export function Composer({
   commands,
-  disabled = false,
+  submitDisabled = false,
+  connecting = false,
   models,
   session,
   variant = 'conversation',
+  initialDraft,
+  followDefaultModel,
+  modelMenuOpen,
+  onModelMenuOpenChange,
+  onFollowDefaultModel,
+  onModelConfigurationNeeded,
+  draftControls,
+  onDraftControlsChange,
+  onDraftChange,
+  onDraftModelChange,
+  onFirstSubmit,
+  firstSubmitPending = false,
   onPromptSubmitted,
   placeholder: placeholderOverride,
 }: ComposerProps) {
@@ -133,10 +189,21 @@ export function Composer({
   const [runningMessageMode, setRunningMessageMode] = useState<RunningMessageMode>('steer');
   const [planExitOpen, setPlanExitOpen] = useState(false);
   const [exitTarget, setExitTarget] = useState<AgentWorkMode>('agent');
-  const [modelOpen, setModelOpen] = useState(false);
+  const [localModelOpen, setLocalModelOpen] = useState(false);
+  const modelOpen = modelMenuOpen ?? localModelOpen;
+  /**
+   * Routes an empty catalog to actionable guidance instead of opening an empty menu.
+   */
+  function setModelOpen(open: boolean): void {
+    if (open && models.length === 0 && onModelConfigurationNeeded) {
+      onModelConfigurationNeeded();
+      return;
+    }
+    (onModelMenuOpenChange ?? setLocalModelOpen)(open);
+  }
   const [renameOpen, setRenameOpen] = useState(false);
   const attachmentDraftHydratedKeyRef = useRef<string | undefined>(undefined);
-  const draftRef = useRef<ComposerDraft>({ text: draft, references: [] });
+  const draftRef = useRef<ComposerDraft>(initialDraft ?? { text: draft, references: [] });
   const editorRef = useRef<AgentComposerEditorHandle>(null);
   const send = useRealtimeCommand();
   const queryClient = useQueryClient();
@@ -147,8 +214,17 @@ export function Composer({
   });
   const [publishing, setPublishing] = useState(false);
   const publishingRef = useRef(false);
-  const interactionDisabled = disabled || publishing || pendingWorkMode !== undefined;
-  const workMode = planMode.workMode;
+  const interactionDisabled = publishing || firstSubmitPending;
+  const sendingDisabled = submitDisabled || interactionDisabled || pendingWorkMode !== undefined;
+  const controlsLoaded = Boolean(onFirstSubmit) || (runtimeId !== undefined && epoch !== undefined);
+  const workMode = draftControls?.workMode ?? planMode.workMode;
+  const knowledgeState: KnowledgeModeState | undefined = onDraftControlsChange
+    ? {
+        version: 1,
+        enabled: workMode === 'knowledge',
+        collectionIds: draftControls?.knowledge?.collectionIds ?? [],
+      }
+    : planMode.knowledge;
   const references = useComposerReferences(session.workspaceId);
   const modelValue = session.model === undefined ? null : `${session.provider ?? ''}/${session.model}`;
   const deriveSession = useDeriveSession(session);
@@ -262,7 +338,7 @@ export function Composer({
    */
   const submit = useMemoizedFn(
     async (composerDraft: ComposerDraft, modeOverride?: RunningMessageMode): Promise<void> => {
-      if (interactionDisabled || submitting || publishingRef.current) {
+      if (sendingDisabled || submitting || publishingRef.current) {
         return;
       }
       const text = composerDraft.text.trim();
@@ -274,21 +350,39 @@ export function Composer({
       const attachmentIds = store.getState().attachments.map((item) => item.id);
       const workspaceReferences = toWorkspaceReferences(composerDraft.references);
       if (workspaceReferences.length > MAX_WORKSPACE_REFERENCES) {
-        store
-          .getState()
-          .setError(
-            t('session.composer.tooManyReferences', 'A message can reference at most {{max}} Workspace entries.', {
+        store.getState().setError(
+          t(
+            'session.composer.tooManyReferences',
+            'A message can reference at most {{max}} Workspace entries.',
+            {
               max: MAX_WORKSPACE_REFERENCES,
-            })
-          );
+            }
+          )
+        );
         return;
       }
       if (store.getState().attachments.some((item) => item.status !== 'ready')) {
         store
           .getState()
           .setError(
-            t('session.composer.attachmentsPending', 'Wait for every attachment to finish processing before sending.')
+            t(
+              'session.composer.attachmentsPending',
+              'Wait for every attachment to finish processing before sending.'
+            )
           );
+        return;
+      }
+      if (onFirstSubmit) {
+        publishingRef.current = true;
+        setPublishing(true);
+        try {
+          await onFirstSubmit(text, attachmentIds, workspaceReferences);
+        } catch (error) {
+          store.getState().setError(error instanceof Error ? error.message : 'Could not send message.');
+        } finally {
+          publishingRef.current = false;
+          setPublishing(false);
+        }
         return;
       }
       const message = running
@@ -318,14 +412,6 @@ export function Composer({
           };
       try {
         publishingRef.current = true;
-        if (session.isDraft) {
-          setPublishing(true);
-          const published = await publishSessionDraft(session, text.slice(0, 80));
-          queryClient.setQueryData<SessionDto[]>(queryKeys.sessions(session.workspaceId), (sessions = []) => [
-            published,
-            ...sessions.filter((candidate) => candidate.id !== sessionId),
-          ]);
-        }
         send(message);
         store.getState().appendOptimisticUserMessage(requestId, text);
         draftRef.current = { text: '', references: [] };
@@ -334,7 +420,9 @@ export function Composer({
         store
           .getState()
           .setError(
-            error instanceof Error ? error.message : t('session.composer.sendFailed', 'Could not send message.')
+            error instanceof Error
+              ? error.message
+              : t('session.composer.sendFailed', 'Could not send message.')
           );
       } finally {
         publishingRef.current = false;
@@ -367,7 +455,9 @@ export function Composer({
       store
         .getState()
         .setError(
-          error instanceof Error ? error.message : t('session.composer.stopFailed', 'Could not stop the session.')
+          error instanceof Error
+            ? error.message
+            : t('session.composer.stopFailed', 'Could not stop the session.')
         );
     }
   });
@@ -410,6 +500,7 @@ export function Composer({
   const handleDraftChange = useMemoizedFn((nextDraft: ComposerDraft): void => {
     draftRef.current = nextDraft;
     store.getState().setDraft(nextDraft.text);
+    onDraftChange?.(nextDraft);
   });
 
   /**
@@ -476,7 +567,9 @@ export function Composer({
       store
         .getState()
         .setError(
-          error instanceof Error ? error.message : t('session.composer.commandFailed', 'Could not execute command.')
+          error instanceof Error
+            ? error.message
+            : t('session.composer.commandFailed', 'Could not execute command.')
         );
     }
   });
@@ -493,6 +586,10 @@ export function Composer({
    */
   const handleModelChange = useMemoizedFn((value: string): void => {
     if (interactionDisabled) {
+      return;
+    }
+    if (onDraftModelChange) {
+      onDraftModelChange(value);
       return;
     }
     const [provider, ...id] = value.split('/');
@@ -526,6 +623,10 @@ export function Composer({
    * Adjusts the Session's reasoning effort level.
    */
   const handleThinkingChange = useMemoizedFn((value: ThinkingLevel): void => {
+    if (onDraftControlsChange) {
+      onDraftControlsChange({ thinkingLevel: value });
+      return;
+    }
     if (interactionDisabled) {
       return;
     }
@@ -543,6 +644,10 @@ export function Composer({
    * Changes the permission mode through the fenced Session control plane.
    */
   const handlePermissionModeChange = useMemoizedFn((mode: PermissionMode): void => {
+    if (onDraftControlsChange) {
+      onDraftControlsChange({ permissionMode: mode });
+      return;
+    }
     if (interactionDisabled) {
       return;
     }
@@ -561,6 +666,10 @@ export function Composer({
    */
   const requestWorkModeChange = useMemoizedFn(
     (mode: AgentWorkMode, knowledge?: KnowledgeModeConfig): void => {
+      if (onDraftControlsChange) {
+        onDraftControlsChange({ workMode: mode, ...(knowledge ? { knowledge } : {}) });
+        return;
+      }
       if (interactionDisabled || (mode === workMode && !knowledge)) {
         return;
       }
@@ -602,21 +711,9 @@ export function Composer({
 
   const placeholder =
     placeholderOverride ??
-    (workMode === 'knowledge' && !running
-      ? t('session.composer.placeholderKnowledge', 'Ask the knowledge base; answers will include sources…')
-      : variant === 'home'
-        ? t('session.composer.placeholderHome', 'Tell Dr.Octopus what you want to accomplish…')
-        : interactionDisabled
-          ? t('session.composer.placeholderLoading', 'Loading Session resources…')
-          : running
-            ? runningMessageMode === 'steer'
-              ? t('session.composer.placeholderGuide', 'Guide the current run…')
-              : t('session.composer.placeholderFollowUp', 'Add a follow-up for when this run finishes…')
-            : workMode === 'knowledge'
-              ? t('session.composer.placeholderKnowledge', 'Ask the knowledge base; answers will include sources…')
-              : workMode === 'plan'
-                ? t('session.composer.placeholderPlan', 'Describe what you want to plan…')
-                : t('session.composer.placeholderDefault', 'Ask Dr.Octopus anything…'));
+    (variant === 'home'
+      ? t('session.composer.placeholderHome', 'Tell Dr.Octopus what you want to accomplish…')
+      : t('session.composer.placeholderDefault', 'Ask Dr.Octopus anything…'));
 
   const composerCommands = commands
     .filter(
@@ -652,10 +749,10 @@ export function Composer({
       }
     >
       <ExtensionDialogHost sessionId={sessionId} runtimeId={runtimeId} epoch={epoch} />
-      {workMode === 'knowledge' && planMode.knowledge && (
+      {workMode === 'knowledge' && knowledgeState && (
         <KnowledgeModeBar
           workspaceId={session.workspaceId}
-          state={planMode.knowledge}
+          state={knowledgeState}
           disabled={interactionDisabled || running}
           onChange={(config) => requestWorkModeChange('knowledge', config)}
         />
@@ -674,10 +771,11 @@ export function Composer({
           ref={editorRef}
           key={sessionId}
           value={draft}
+          initialEditorState={initialDraft?.editorState}
           placeholder={placeholder}
           references={references}
           commands={composerCommands}
-          disabled={publishing}
+          disabled={publishing || firstSubmitPending}
           isSubmitEvent={isSubmitEvent}
           keyShortcutsHint={keyShortcutsHint}
           onChange={handleDraftChange}
@@ -762,9 +860,10 @@ export function Composer({
           </div>
           <div className={running ? 'contents md:hidden' : 'contents'}>
             <WorkModeSelect
-              knowledgeAvailable={planMode.knowledge !== undefined}
+              loaded={controlsLoaded}
+              knowledgeAvailable={knowledgeState !== undefined}
               disabled={interactionDisabled || running}
-              planAvailable={planMode.available}
+              planAvailable={Boolean(onFirstSubmit) || planMode.available}
               value={workMode}
               onValueChange={handleWorkModeChange}
             />
@@ -774,15 +873,25 @@ export function Composer({
               open={modelOpen}
               onOpenChange={setModelOpen}
               modelValue={modelValue}
-              thinkingLevels={thinking.availableLevels}
-              thinkingValue={thinking.level}
+              followDefault={followDefaultModel}
+              onFollowDefault={onFollowDefaultModel}
+              thinkingLevels={
+                onFirstSubmit
+                  ? (models.find((model) => `${model.provider}/${model.id}` === modelValue)
+                      ?.thinkingLevels ?? ['off'])
+                  : controlsLoaded
+                    ? thinking.availableLevels
+                    : []
+              }
+              thinkingValue={draftControls?.thinkingLevel ?? thinking.level}
               onModelValueChange={handleModelChange}
               onThinkingValueChange={handleThinkingChange}
             />
           </div>
           <PermissionSelect
+            loaded={controlsLoaded}
             disabled={interactionDisabled}
-            value={permissionMode}
+            value={draftControls?.permissionMode ?? permissionMode}
             onValueChange={handlePermissionModeChange}
           />
           <div className="ml-auto flex shrink-0 items-center gap-1">
@@ -798,7 +907,7 @@ export function Composer({
                   disabled={interactionDisabled}
                   mode={runningMessageMode}
                   followUpCount={followUpCount}
-                  sendDisabled={draft.trim() === '' || !attachmentsReady}
+                  sendDisabled={sendingDisabled || draft.trim() === '' || !attachmentsReady}
                   onModeChange={setRunningMessageMode}
                   onSend={submitSelectedMode}
                   onStop={stop}
@@ -808,12 +917,15 @@ export function Composer({
             <Button
               className={running ? 'shrink-0 md:hidden' : 'shrink-0'}
               onClick={submitSelectedMode}
-              disabled={interactionDisabled || submitting || draft.trim() === '' || !attachmentsReady}
+              disabled={sendingDisabled || submitting || draft.trim() === '' || !attachmentsReady}
               size="icon"
-              title={sendButtonTitle}
+              title={
+                connecting ? t('session.composer.waitingForAgent', 'Waiting for Agent…') : sendButtonTitle
+              }
+              aria-busy={connecting || submitting}
               aria-label={submitting ? 'Sending message' : 'Send message'}
             >
-              {submitting ? <Spinner /> : <ArrowUpIcon />}
+              {connecting || submitting ? <Spinner /> : <ArrowUpIcon />}
             </Button>
           </div>
         </div>
@@ -848,27 +960,4 @@ function updateComposerAttachment(
       item.id === localId || item.localKey === localId ? update(item) : item
     ),
   }));
-}
-
-/**
- * Maps the monotonic Server projection to the six-state Composer task model.
- */
-function toComposerAttachment(resource: AttachmentResourceDto): ComposerAttachmentViewModel {
-  const status =
-    resource.status === 'initiated' || resource.status === 'uploading'
-      ? 'uploading'
-      : resource.status === 'verifying' || resource.status === 'processing'
-        ? 'processing'
-        : resource.status;
-  return {
-    id: resource.id,
-    name: resource.name,
-    byteSize: resource.byteSize,
-    coverage: resource.coverage,
-    revision: resource.revision,
-    status,
-    ...(resource.detectedMediaType === undefined ? {} : { detectedMediaType: resource.detectedMediaType }),
-    ...(resource.presentationKind === undefined ? {} : { presentationKind: resource.presentationKind }),
-    ...(resource.error === undefined ? {} : { error: resource.error }),
-  };
 }

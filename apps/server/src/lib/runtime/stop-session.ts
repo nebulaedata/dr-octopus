@@ -2,7 +2,6 @@
  * @author Codex
  * @description Coordinates fenced main-Agent and detached subagent cancellation without owning Pi process state.
  */
-import { setTimeout as delay } from 'node:timers/promises';
 import { SessionRuntimeError } from './errors.js';
 import { waitForRuntime } from './deadline.js';
 import { beginBackgroundStop } from './stop-background.js';
@@ -23,7 +22,6 @@ export interface StopSessionOptions {
    */
   readBackground?: () => BackgroundTasksSnapshot | null | undefined;
   timeoutMs?: number;
-  pollIntervalMs?: number;
 }
 
 /**
@@ -32,10 +30,21 @@ export interface StopSessionOptions {
  * The caller owns the runtime lease and deduplicates concurrent stop requests.
  */
 export async function stopSession(
-  target: Pick<SessionRuntimeOperation, 'execute'>,
+  target: Pick<SessionRuntimeOperation, 'execute'> & Partial<Pick<SessionRuntimeOperation, 'onChange'>>,
   options: StopSessionOptions
 ): Promise<unknown> {
   const deadline = Date.now() + (options.timeoutMs ?? 15_000);
+  let revision = 0;
+  let wake: (() => void) | undefined;
+  /**
+   * Latches real evidence and command-completion changes, including changes during a snapshot read.
+   */
+  function changed(): void {
+    revision++;
+    wake?.();
+    wake = undefined;
+  }
+  const unsubscribe = target.onChange?.(changed);
   const requested = new Set<string>();
   const captured = new Set<string>();
   let captureComplete = false;
@@ -52,6 +61,7 @@ export async function stopSession(
     }
     captureComplete = true;
     mainDone = true;
+    changed();
   }
   /**
    * Bounds each transport wait by the same stop deadline without cancelling shared runtime work.
@@ -63,7 +73,11 @@ export async function stopSession(
       options.timeoutMs ?? 15_000,
       Date.now,
       'stop'
-    );
+    ).finally(() => {
+      if (command.type !== 'get_state' && command.type !== 'get_commands') {
+        changed();
+      }
+    });
   // Send abort immediately; waiting for background work must never prevent main-loop cancellation.
   void execute({ type: 'abort' }).then(
     (response) => {
@@ -92,6 +106,7 @@ export async function stopSession(
     )
     .finally(() => {
       backgroundReady = true;
+      changed();
     });
   try {
     // Pi abort leaves steering/follow-up messages queued; they would keep the Host busy indefinitely.
@@ -101,7 +116,8 @@ export async function stopSession(
       throw new Error('Pi rejected clearing queued messages.');
     }
     while (Date.now() < deadline) {
-      // This read is fenced by the acquired operation and detects generation replacement during polling.
+      const observed = revision;
+      // Revalidate only after a real state change, under the same generation fence.
       const state = await execute({ type: 'get_state' });
       if (!responseSucceeded(state)) {
         throw new Error('Cannot verify the stopped runtime.');
@@ -162,8 +178,17 @@ export async function stopSession(
         await background?.finish();
         return mainResponse;
       }
-      const poll = delay(options.pollIntervalMs ?? 100);
-      await (backgroundReady ? poll : Promise.race([poll, backgroundPromise]));
+      if (observed === revision) {
+        await waitForRuntime(
+          new Promise<void>((resolve) => {
+            wake = resolve;
+          }),
+          { deadlineAt: deadline },
+          options.timeoutMs ?? 15_000,
+          Date.now,
+          'stop'
+        );
+      }
     }
     throw new Error('Timed out waiting for the main Agent and background tasks to stop.');
   } catch (error) {
@@ -175,6 +200,9 @@ export async function stopSession(
       `Stop could not be confirmed: ${messages.join(' ')}`,
       error
     );
+  } finally {
+    unsubscribe?.();
+    wake = undefined;
   }
 }
 

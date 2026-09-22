@@ -2,9 +2,11 @@
  * @author Codex
  * @description Explicit and lazy daemon lifecycle with persistent stop suppression and OS-lock ownership.
  */
+import { retryFileContention } from '../../../lib/daemon-platform/file-contention.js';
+import { tmpdir } from 'node:os';
 import { access, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
+import { DirectorySignal } from '../../../lib/daemon-platform/directory-signal.js';
 import { fileURLToPath } from 'node:url';
 import { MemoryError } from '../definitions/error.js';
 import { memoryProfile, readMemoryMetadata, writeMemoryMetadata } from '../lib/profile.js';
@@ -100,31 +102,37 @@ export async function startMemoryService(
       String(control?.revision ?? 0),
       ...(migrationsFolder ? [migrationsFolder] : []),
     ],
-    profile.directory
+    tmpdir()
   );
   const deadline = Date.now() + timeoutMs;
-  do {
-    signal?.throwIfAborted();
-    const status = await getMemoryServiceStatus(dataRoot);
-    if (status.state === 'running') {
-      return status;
-    }
-    const latest = await readMemoryMetadata<MemoryControl>(join(profile.directory, 'control.json'));
-    const failure = await readMemoryMetadata<{ at: number; code: string }>(
-      join(profile.directory, 'startup-error.json')
-    );
-    if (failure && failure.at >= requestedAt) {
-      throw new MemoryError(
-        'MEMORY_START_FAILED',
-        `记忆服务启动失败（${failure.code}），请检查安装依赖与数据目录`
+  const events = new DirectorySignal(profile.directory);
+  try {
+    do {
+      const observed = events.revision;
+      signal?.throwIfAborted();
+      const status = await getMemoryServiceStatus(dataRoot);
+      if (status.state === 'running') {
+        return status;
+      }
+      const latest = await readMemoryMetadata<MemoryControl>(join(profile.directory, 'control.json'));
+      const failure = await readMemoryMetadata<{ at: number; code: string }>(
+        join(profile.directory, 'startup-error.json')
       );
-    }
-    if (latest?.stopped && (!explicit || latest.revision !== (control?.revision ?? 0))) {
-      throw new MemoryError('MEMORY_SERVICE_STOPPED', '启动已被较新的停止操作取消');
-    }
-    await delay(100, undefined, { signal });
-  } while (Date.now() < deadline);
-  throw new MemoryError('MEMORY_SERVICE_TIMEOUT', '记忆服务未能及时启动，请检查依赖和服务状态');
+      if (failure && failure.at >= requestedAt) {
+        throw new MemoryError(
+          'MEMORY_START_FAILED',
+          `记忆服务启动失败（${failure.code}），请检查安装依赖与数据目录`
+        );
+      }
+      if (latest?.stopped && (!explicit || latest.revision !== (control?.revision ?? 0))) {
+        throw new MemoryError('MEMORY_SERVICE_STOPPED', '启动已被较新的停止操作取消');
+      }
+      await events.wait(observed, deadline, signal);
+    } while (Date.now() < deadline);
+    throw new MemoryError('MEMORY_SERVICE_TIMEOUT', '记忆服务未能及时启动，请检查依赖和服务状态');
+  } finally {
+    await events.close();
+  }
 }
 
 /**
@@ -134,40 +142,46 @@ export async function stopMemoryService(dataRoot?: string, timeoutMs = 30_000): 
   const profile = (await memoryProfile(dataRoot, true))!;
   const { tryAcquireProcessLock } = await import('../../../lib/daemon-platform/singleton-lease.js');
   const deadline = Date.now() + timeoutMs;
-  do {
-    const lock = await tryAcquireProcessLock(join(profile.directory, 'daemon.lock'));
-    if (lock) {
-      try {
-        const control = await readMemoryMetadata<MemoryControl>(join(profile.directory, 'control.json'));
-        const controlRevision = (control?.revision ?? 0) + 1;
-        await writeMemoryMetadata(join(profile.directory, 'control.json'), {
-          stopped: true,
-          revision: controlRevision,
-        });
-        await rm(join(profile.directory, 'endpoint.json'), { force: true });
-        return {
-          schemaVersion: 1,
-          state: 'stopped',
-          health: 'unknown',
-          profileId: profile.profileId,
-          autostartSuppressed: true,
-          controlRevision,
-        };
-      } finally {
-        lock.release();
+  const events = new DirectorySignal(profile.directory);
+  try {
+    do {
+      const observed = events.revision;
+      const lock = await tryAcquireProcessLock(join(profile.directory, 'daemon.lock'));
+      if (lock) {
+        try {
+          const control = await readMemoryMetadata<MemoryControl>(join(profile.directory, 'control.json'));
+          const controlRevision = (control?.revision ?? 0) + 1;
+          await writeMemoryMetadata(join(profile.directory, 'control.json'), {
+            stopped: true,
+            revision: controlRevision,
+          });
+          await retryFileContention(() => rm(join(profile.directory, 'endpoint.json'), { force: true }));
+          return {
+            schemaVersion: 1,
+            state: 'stopped',
+            health: 'unknown',
+            profileId: profile.profileId,
+            autostartSuppressed: true,
+            controlRevision,
+          };
+        } finally {
+          lock.release();
+        }
       }
-    }
-    const endpoint = await discoverMemory(profile);
-    if (endpoint) {
-      try {
-        await memoryRequest(profile, endpoint, 'stop', {}, undefined, 3000);
-      } catch {
-        // Ownership may be draining; only acquiring its released OS lock proves completion.
+      const endpoint = await discoverMemory(profile);
+      if (endpoint) {
+        try {
+          await memoryRequest(profile, endpoint, 'stop', {}, undefined, 3000);
+        } catch {
+          // Ownership may be draining; only acquiring its released OS lock proves completion.
+        }
       }
-    }
-    await delay(100);
-  } while (Date.now() < deadline);
-  throw new MemoryError('MEMORY_SERVICE_TIMEOUT', '停止尚未完成，请查询 status；不会强杀进程');
+      await events.wait(observed, deadline);
+    } while (Date.now() < deadline);
+    throw new MemoryError('MEMORY_SERVICE_TIMEOUT', '停止尚未完成，请查询 status；不会强杀进程');
+  } finally {
+    await events.close();
+  }
 }
 
 /**

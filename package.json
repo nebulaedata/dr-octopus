@@ -3,7 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
-  "description": "基于 Pi，本地优先、以 Workspace 为边界的通用智能体系统",
+  "description": "A local-first, workspace-scoped general-purpose agent system built on Pi.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nebulaedata/dr-octopus.git"
+  },
+  "homepage": "https://github.com/nebulaedata/dr-octopus#readme",
+  "bugs": {
+    "url": "https://github.com/nebulaedata/dr-octopus/issues"
+  },
   "packageManager": "pnpm@11.18.0",
   "engines": {
     "node": ">=22.19.0",

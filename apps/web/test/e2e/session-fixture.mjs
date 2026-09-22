@@ -22,7 +22,14 @@ const session = {
  */
 export async function installSessionFixture(
   page,
-  { partial = '', abortReason = 'aborted', holdStopReply = false, subagentFleet, backgroundTasks } = {}
+  {
+    partial = '',
+    abortReason = 'aborted',
+    holdStopReply = false,
+    subagentFleet,
+    backgroundTasks,
+    initialMessages = [],
+  } = {}
 ) {
   const runtime = {
     runtimeId: 'runtime-e2e',
@@ -34,7 +41,7 @@ export async function installSessionFixture(
   };
   let sequence = 0;
   let socket;
-  let messages = [];
+  let messages = initialMessages;
   let abortCount = 0;
   let stopRequestId;
   const assistant = { id: 'assistant-e2e', role: 'assistant', content: [], timestamp: 1767225601000 };
@@ -135,8 +142,28 @@ export async function installSessionFixture(
     }
     let json = [];
     if (path === '/api/workspaces') json = [workspace];
+    else if (path === '/api/conversation-models')
+      json = {
+        models: [
+          {
+            provider: 'fixture',
+            id: 'fixture-model',
+            name: 'Fixture model',
+            reasoning: false,
+            input: ['text'],
+          },
+        ],
+        defaults: {
+          configured: true,
+          available: true,
+          providerId: 'fixture',
+          modelId: 'fixture-model',
+          effect: 'new_sessions',
+        },
+      };
     else if (path === '/api/notifications') json = { items: [], unreadCount: 0, hasMore: false };
     else if (path.endsWith('/bootstrap') || path.endsWith('/snapshot')) json = snapshot();
+    else if (path.endsWith('/start-receipt')) json = null;
     else if (path.endsWith('/history')) json = { sessionId: session.id, messages, messageFeedback: [] };
     else if (path.endsWith('/sessions')) json = [session];
     else if (path.endsWith(`/sessions/${session.id}`)) json = session;

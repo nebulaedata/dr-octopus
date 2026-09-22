@@ -35,7 +35,6 @@ test('Provider authentication stays inline and keeps API Keys out of mutation va
   assert.match(authForm, /value=\{field\.state\.value\}/u);
   assert.doesNotMatch(authForm, /value=\{provider[^}]*apiKey/u);
   assert.match(authForm, /answer: readApiKey\(\)/u);
-  assert.match(queries, /refetchIntervalInBackground: false/u);
   assert.match(queries, /answerProviderAuthPrompt\(providerKey, authSessionId/u);
   assert.doesNotMatch(queries, /mutationFn:[^\n]*answerProviderAuthPrompt/u);
   assert.match(prompt, /submission\.submit\(prompt\.id, \(\) => value\.answer\)/u);

@@ -127,3 +127,37 @@ test('Scheduler availability is refreshed before task queries and a stopped daem
     client.clear();
   }
 });
+
+test('configuration and reconnect events refresh Host catalogs without preparing a runtime', () => {
+  assert.equal(matchesDataChange(['conversation-models'], { resource: 'model-config' }), true);
+  assert.equal(matchesDataChange(['settings', 'default-model']), true);
+  assert.equal(matchesDataChange(['conversation-models'], { resource: 'sessions', workspaceId: 'w' }), false);
+  assert.equal(matchesDataChange(['session-draft', 'w', 'id'], { resource: 'sessions' }), false);
+});
+
+test('domain events target their own caches and reconnect includes operation receipts', () => {
+  assert.equal(
+    matchesDataChange(['conversation-start', 'w', 'id'], {
+      resource: 'conversation-starts',
+      workspaceId: 'w',
+    }),
+    true
+  );
+  assert.equal(
+    matchesDataChange(['conversation-start', 'other', 'id'], {
+      resource: 'conversation-starts',
+      workspaceId: 'w',
+    }),
+    false
+  );
+  assert.equal(matchesDataChange(['conversation-start-receipt', 'w', 's']), true);
+  for (const resource of ['memory', 'knowledge', 'attachments']) {
+    assert.equal(matchesDataChange([resource], { resource }), true);
+    assert.equal(matchesDataChange([resource], { resource: 'sessions' }), false);
+  }
+  assert.equal(
+    matchesDataChange(['settings', 'model-providers', 'auth'], { resource: 'provider-auth' }),
+    true
+  );
+  assert.equal(matchesDataChange(['server-restart-operation', 'op'], { resource: 'server-lifecycle' }), true);
+});

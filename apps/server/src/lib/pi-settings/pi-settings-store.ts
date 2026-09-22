@@ -10,6 +10,7 @@ import {
   ModelRuntime,
   SettingsManager,
 } from '@earendil-works/pi-coding-agent';
+import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
 import { PiCredentialSynchronizationError } from './types.js';
 import { saveModelCapabilities } from './local-provider-repository.js';
 import { LocalProviderStore } from './local-provider-store.js';
@@ -132,6 +133,7 @@ class ServerPiSettingsStore implements PiSettingsStore {
           api: model.api,
           baseUrl: model.baseUrl,
           reasoning: model.reasoning,
+          thinkingLevels: getSupportedThinkingLevels(model),
           input: [...model.input],
           contextWindow: model.contextWindow,
           maxTokens: model.maxTokens,
@@ -222,6 +224,17 @@ class ServerPiSettingsStore implements PiSettingsStore {
    *
    * @returns Configured pair, which may be incomplete for an existing user file.
    */
+  /**
+   * Reconciles external configuration edits with the Host catalog before admission.
+   */
+  public async refreshCatalog(): Promise<void> {
+    const runtime = await this.#getRuntime();
+    const result = await runtime.refresh({ allowNetwork: false });
+    if (result.aborted || result.errors.size > 0) {
+      throw new Error('Model catalog refresh failed.');
+    }
+  }
+
   public async getDefaultModel(): Promise<PiSettingsDefaultModel> {
     await this.#settings.reload();
     const providerId = this.#settings.getDefaultProvider();

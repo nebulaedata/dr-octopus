@@ -2,6 +2,7 @@
  * @author Codex
  * @description Canonical global memory identity and atomic lifecycle metadata independent of Agent directories.
  */
+import { retryFileContention } from '../../../lib/daemon-platform/file-contention.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, realpath, rename, rm } from 'node:fs/promises';
 import { userInfo } from 'node:os';
@@ -45,7 +46,7 @@ export async function memoryProfile(dataRoot?: string, create = false): Promise<
  */
 export async function readMemoryMetadata<T>(path: string): Promise<T | null> {
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as T;
+    return JSON.parse(await retryFileContention(() => readFile(path, 'utf8'))) as T;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return null;
@@ -66,8 +67,8 @@ export async function writeMemoryMetadata(path: string, value: unknown): Promise
     await file.close();
   }
   try {
-    await rename(temporary, path);
+    await retryFileContention(() => rename(temporary, path));
   } finally {
-    await rm(temporary, { force: true });
+    await retryFileContention(() => rm(temporary, { force: true }));
   }
 }

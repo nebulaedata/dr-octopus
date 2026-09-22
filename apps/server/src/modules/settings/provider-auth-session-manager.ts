@@ -1,8 +1,9 @@
 /**
  * @author Codex
- * @description Owns bounded in-memory Provider authentication sessions and bridges Pi prompts to HTTP polling.
+ * @description Owns bounded in-memory Provider authentication sessions and publishes Pi authentication changes through domain notifications.
  */
 
+import { touchProviderAuthSession } from './provider-auth-session-model.js';
 import { randomUUID } from 'node:crypto';
 import { ApplicationError } from '../../lib/errors/application-error.js';
 import { PiCredentialSynchronizationError } from '../../lib/pi-settings/index.js';
@@ -19,16 +20,18 @@ import type {
 
 export const PROVIDER_AUTH_ACTIVE_TTL_MS = 15 * 60_000;
 export const PROVIDER_AUTH_TERMINAL_TTL_MS = 5 * 60_000;
-export const PROVIDER_AUTH_POLL_INTERVAL_MS = 750;
 const MAX_ANSWER_LENGTH = 65_536;
 const MAX_ACCEPTED_PROMPT_IDS = 100;
 const SHUTDOWN_DRAIN_TIMEOUT_MS = 5_000;
 
 export interface ProviderAuthSessionManagerOptions {
   modelConfigChanges?: ModelConfigChanges;
+  /**
+   * Emits authentication state changes without transporting credentials.
+   */
+  onChanged?(): void;
   now?: () => number;
   createId?: () => string;
-  cleanupIntervalMs?: number;
 }
 
 /**
@@ -39,7 +42,8 @@ export class ProviderAuthSessionManager {
   readonly #activeByProvider = new Map<string, string>();
   readonly #now: () => number;
   readonly #createId: () => string;
-  readonly #cleanupTimer: NodeJS.Timeout;
+  #cleanupTimer: NodeJS.Timeout | undefined;
+  readonly #onChanged: () => void;
   readonly #modelConfigChanges: ModelConfigChanges | undefined;
   #closed = false;
 
@@ -56,11 +60,7 @@ export class ProviderAuthSessionManager {
     this.#now = options.now ?? Date.now;
     this.#modelConfigChanges = options.modelConfigChanges;
     this.#createId = options.createId ?? randomUUID;
-    this.#cleanupTimer = setInterval(
-      () => this.#cleanup(),
-      options.cleanupIntervalMs ?? PROVIDER_AUTH_POLL_INTERVAL_MS
-    );
-    this.#cleanupTimer.unref();
+    this.#onChanged = () => options.onChanged?.();
   }
 
   /**
@@ -97,6 +97,7 @@ export class ProviderAuthSessionManager {
     const now = this.#now();
     const record: ProviderAuthSessionRecord = {
       id: this.#createId(),
+      onChanged: this.#onChanged,
       providerKey,
       providerId,
       authType,
@@ -112,6 +113,7 @@ export class ProviderAuthSessionManager {
     this.#sessions.set(record.id, record);
     this.#activeByProvider.set(providerId, record.id);
     record.task = this.#run(record);
+    this.#scheduleExpiry();
     return toProviderAuthSessionDto(record);
   }
 
@@ -199,7 +201,7 @@ export class ProviderAuthSessionManager {
       }
     }
     record.status = 'running';
-    record.revision += 1;
+    touchProviderAuthSession(record);
     pending.resolve(answer);
     return toProviderAuthSessionDto(record);
   }
@@ -230,7 +232,7 @@ export class ProviderAuthSessionManager {
       return;
     }
     this.#closed = true;
-    clearInterval(this.#cleanupTimer);
+    clearTimeout(this.#cleanupTimer);
     for (const record of this.#sessions.values()) {
       if (isActive(record.status)) {
         this.#finish(record, 'cancelled');
@@ -320,12 +322,13 @@ export class ProviderAuthSessionManager {
    */
   #finish(record: ProviderAuthSessionRecord, status: ProviderAuthSessionStatus): void {
     record.status = status;
-    record.revision += 1;
+    touchProviderAuthSession(record);
     record.terminalExpiresAt = this.#now() + PROVIDER_AUTH_TERMINAL_TTL_MS;
     if (this.#activeByProvider.get(record.providerId) === record.id) {
       this.#activeByProvider.delete(record.providerId);
     }
     this.#rejectPrompt(record, abortError());
+    this.#scheduleExpiry();
   }
 
   /**
@@ -343,6 +346,24 @@ export class ProviderAuthSessionManager {
   }
 
   /**
+   * Arms only the earliest actual expiry, rather than scanning active flows on a fixed interval.
+   */
+  #scheduleExpiry(): void {
+    clearTimeout(this.#cleanupTimer);
+    if (this.#closed) {
+      return;
+    }
+    const deadlines = [...this.#sessions.values()].map((record) =>
+      isActive(record.status) ? record.expiresAt : (record.terminalExpiresAt ?? Infinity)
+    );
+    const next = Math.min(...deadlines);
+    if (Number.isFinite(next)) {
+      this.#cleanupTimer = setTimeout(() => this.#cleanup(), Math.max(0, next - this.#now()));
+      this.#cleanupTimer.unref();
+    }
+  }
+
+  /**
    * Expires active sessions and purges terminal sessions on the shared cleanup tick.
    */
   #cleanup(): void {
@@ -355,6 +376,7 @@ export class ProviderAuthSessionManager {
         this.#sessions.delete(id);
       }
     }
+    this.#scheduleExpiry();
   }
 }
 

@@ -35,7 +35,6 @@ export function KnowledgeCollectionItem({
     enabled: collection.source !== 'remote',
     select: (data) => data.total,
     staleTime: 30000,
-    refetchInterval: 30000,
   });
   const createdAt = new Date(collection.createdAt);
   const date = Number.isNaN(createdAt.getTime()) ? undefined : createdAt.toLocaleDateString();

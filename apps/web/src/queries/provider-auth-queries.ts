@@ -15,16 +15,8 @@ import {
 import { queryKeys } from './query-keys';
 import type { ModelProviderAuthMethod, ProviderAuthSessionDto } from '@octopus/shared/protocol';
 
-const TERMINAL_STATUSES = new Set<ProviderAuthSessionDto['status']>([
-  'completed',
-  'failed',
-  'committed_but_unsynced',
-  'cancelled',
-  'expired',
-]);
-
 /**
- * Polls one active authentication session without persisting it outside Query memory.
+ * Subscribes through the shared event-driven query cache for one authentication session without persisting it outside Query memory.
  *
  * @param providerKey Opaque Provider key.
  * @param authSessionId Opaque authentication session ID.
@@ -41,11 +33,6 @@ export function useProviderAuthSession(
     queryFn: ({ signal }) => getProviderAuthSession(providerKey, authSessionId ?? '', signal),
     enabled: enabled && authSessionId !== undefined,
     retry: false,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status === undefined || !TERMINAL_STATUSES.has(status) ? 750 : false;
-    },
-    refetchIntervalInBackground: false,
   });
 }
 
@@ -163,8 +150,10 @@ export function useAuthPromptSubmission(
   };
 }
 
+const TERMINAL_STATUSES = new Set(['completed', 'failed', 'committed_but_unsynced', 'cancelled', 'expired']);
+
 /**
- * Identifies authentication sessions that no longer require polling or cancellation.
+ * Identifies authentication sessions that have completed and no longer accept cancellation.
  */
 export function isProviderAuthSessionTerminal(status: ProviderAuthSessionDto['status']): boolean {
   return TERMINAL_STATUSES.has(status);

@@ -158,6 +158,19 @@ export class AttachmentJobsRepository {
   }
 
   /**
+   * Returns the next known retry or abandoned-lease deadline; active local jobs wake the pump on completion.
+   */
+  public nextWake(owner: string): number | undefined {
+    const row = this.#sqlite
+      .prepare(
+        `SELECT MIN(CASE WHEN status='pending' THEN available_at ELSE lease_expires_at END) AS deadline
+      FROM attachment_jobs WHERE attempts < max_attempts AND (status='pending' OR (status='running' AND lease_owner<>?))`
+      )
+      .get(owner) as { deadline: string | null };
+    return row.deadline === null ? undefined : Date.parse(row.deadline);
+  }
+
+  /**
    * Extends the lease held by an active parent-side job runner.
    */
   public heartbeat(id: string, owner: string): void {

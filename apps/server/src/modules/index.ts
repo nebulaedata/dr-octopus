@@ -3,6 +3,7 @@
  * @description Composes application Services, HTTP route Modules, and realtime transport without owning infrastructure lifecycle.
  */
 
+import { subscribeKnowledgeChanges, subscribeMemoryChanges } from '@octopus/agent';
 import { createWorkspaceService, subscribeSchedulerChanges } from '@octopus/agent';
 import { DataEventsService } from './data-events/data-events.service.js';
 import { MemoryService } from './memory/memory.service.js';
@@ -46,6 +47,10 @@ import { registerScheduledTasksController } from './scheduled-tasks/scheduled-ta
 import { SkillsService } from './skills/skills.service.js';
 import { WorkspacesService } from './workspaces/workspaces.service.js';
 import { SettingsService } from './settings/settings.service.js';
+import { ConversationStartService } from './sessions/conversation-start.service.js';
+import { ConversationStartRepository } from './sessions/conversation-start.repository.js';
+import { registerConversationStartController } from './sessions/conversation-start.controller.js';
+import { ModelConfigMonitor } from './settings/model-config-monitor.js';
 import { createModelConfigChanges } from './settings/model-config-changes.js';
 import { McpSettingsService } from './settings/mcp-settings.service.js';
 import { PermissionSettingsService } from './settings/permission-settings.service.js';
@@ -104,12 +109,14 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
   done
 ) => {
   const dataEvents = new DataEventsService();
+  let daemonSubscriptions = Promise.resolve<Awaited<ReturnType<typeof subscribeMemoryChanges>>[]>([]);
   // Services
   const workspacesService = new WorkspacesService(server, {
     workspaceBackend: createWorkspaceService(),
   });
   const attachmentsService = new AttachmentsService(server, {
     maxBytes: options.config.attachmentLimitBytes,
+    onChanged: () => dataEvents.publish({ resource: 'attachments' }),
     ...(options.storagePaths === undefined
       ? {}
       : {
@@ -121,7 +128,13 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
     workspaceService: workspacesService,
     skillsRoot: join(options.config.agentDir, 'skills'),
   });
-  registerKnowledgeMcpController(server, options.config.agentDir);
+  registerKnowledgeMcpController(server, options.config.agentDir, (listener) =>
+    dataEvents.subscribe((change) => {
+      if (change.resource === 'knowledge') {
+        listener();
+      }
+    })
+  );
   const effectiveSkillsService = new EffectiveSkillsService(server, {
     workspaceService: workspacesService,
     agentDir: options.config.agentDir,
@@ -135,10 +148,17 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
     }),
     workspaceService: workspacesService,
     listMessageAttachments: (sessionId) => attachmentsService.listMessageAttachments(sessionId),
+    refreshConfiguration: () => modelConfigMonitor.refresh(),
   });
   const settingsService = new SettingsService(
     createPiSettingsStore({ agentDir: options.config.agentDir }),
-    createModelConfigChanges(server.sessionRuntime.configChanges)
+    createModelConfigChanges({ record: () => modelConfigMonitor.invalidate() }, () =>
+      modelConfigMonitor.invalidate()
+    ),
+    () => dataEvents.publish({ resource: 'provider-auth' })
+  );
+  const unsubscribeHost = options.control.subscribe?.(() =>
+    dataEvents.publish({ resource: 'server-lifecycle' })
   );
   const unsubscribeControl = server.sessionRuntime.onControlChanged(() => {
     dataEvents.publish({ resource: 'sessions' });
@@ -170,6 +190,28 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
     { maxSubscriptions: MAX_SUBSCRIPTIONS }
   );
 
+  const modelConfigMonitor = new ModelConfigMonitor({
+    agentDir: options.config.agentDir,
+    changes: server.sessionRuntime.configChanges,
+    refresh: () => settingsService.refreshCatalog(),
+    notify: () => dataEvents.publish({ resource: 'model-config' }),
+    onError: (err) => server.log.warn({ err }, 'Model configuration reconciliation failed'),
+  });
+  const conversationStarts = new ConversationStartService({
+    repository: new ConversationStartRepository(server.database),
+    sessions: sessionsService,
+    settings: settingsService,
+    channel: sessionChannelService,
+    attachments: attachmentsService,
+    configuration: () => modelConfigMonitor.refresh(),
+    assertWorkspace: (id) => workspacesService.resolve({ id }),
+    onChanged: (workspaceId) => dataEvents.publish({ resource: 'conversation-starts', workspaceId }),
+  });
+  // Invalid initial configuration must not prevent opening Settings to repair it.
+  void modelConfigMonitor
+    .start()
+    .catch((err) => server.log.warn({ err }, 'Initial model configuration unavailable'));
+
   const unsubscribeNotices = subscribeSessionCompletionNotices(
     sessionsService,
     notices,
@@ -194,6 +236,26 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
   let schedulerSubscription: SchedulerChangeSubscription | undefined;
   server.addHook('onReady', (done) => {
     scheduledResults.start();
+    daemonSubscriptions = Promise.allSettled([
+      subscribeKnowledgeChanges(
+        options.config.agentDir,
+        () => dataEvents.publish({ resource: 'knowledge' }),
+        (err) => server.log.warn({ err }, 'Knowledge change stream disconnected')
+      ),
+      subscribeMemoryChanges(
+        undefined,
+        () => dataEvents.publish({ resource: 'memory' }),
+        (err) => server.log.warn({ err }, 'Memory change stream disconnected')
+      ),
+    ]).then((results) =>
+      results.flatMap((result) => {
+        if (result.status === 'fulfilled') {
+          return [result.value];
+        }
+        server.log.warn({ err: result.reason }, 'Daemon change subscription unavailable');
+        return [];
+      })
+    );
     schedulerSubscription = subscribeSchedulerChanges(options.config.agentDir, () => {
       dataEvents.publish({ resource: 'scheduler' });
       scheduledResults.requestSync();
@@ -201,6 +263,7 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
     done();
   });
   server.addHook('preClose', async () => {
+    await Promise.all((await daemonSubscriptions).map((subscription) => subscription.close()));
     await schedulerSubscription?.close();
     await scheduledResults.close();
     scheduler.close();
@@ -211,6 +274,16 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
   // Registers
   server.register(
     (server, _options, registerDone) => {
+      server.addHook('onResponse', (request, reply, next) => {
+        if (
+          !['GET', 'HEAD', 'OPTIONS'].includes(request.method) &&
+          reply.statusCode < 400 &&
+          request.routeOptions.url?.includes('/attachments')
+        ) {
+          dataEvents.publish({ resource: 'attachments' });
+        }
+        next();
+      });
       registerHttpModules(
         server,
         {
@@ -292,6 +365,7 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
         }
         next();
       });
+      registerConversationStartController(server, conversationStarts);
       registerScheduledTasksController(server, scheduler);
       registerSessionNotificationsController(server, notices, sessionsService);
       registerScheduledResultsController(server, scheduledResults);
@@ -312,6 +386,9 @@ export const registerApplicationModules: FastifyPluginCallback<ApplicationModule
     unsubscribeNotices();
     unsubscribeCatalog();
     unsubscribeControl();
+    unsubscribeHost?.();
+    await conversationStarts.close();
+    await modelConfigMonitor.close();
     await attachmentsService.close();
     await settingsService.close();
     await sessionsService.closeDrafts();

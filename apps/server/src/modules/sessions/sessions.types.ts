@@ -11,6 +11,10 @@ import type { MessageAttachmentDto } from '@octopus/shared/protocol/attachments'
 
 export interface SessionsServiceOptions {
   runtime?: SessionRuntimeCoordinator;
+  /**
+   * Reconciles effective configuration before activating or sending new work.
+   */
+  refreshConfiguration?(): Promise<unknown>;
   sessionsRepository?: SessionsRepository;
   messageFeedbackRepository?: MessageFeedbackRepository;
   workspaceService: WorkspaceService;

@@ -29,6 +29,14 @@ export class SessionRuntimeOperation {
   }
 
   /**
+   * Subscribes to evidence changes on this exact leased runtime generation.
+   */
+  public onChange(listener: () => void): () => void {
+    this.#assertActive();
+    return this.#runtime.onChange(listener);
+  }
+
+  /**
    * Executes an allowed command while this operation owns its runtime lease.
    */
   public async execute(command: ManagedSessionCommand): Promise<unknown> {

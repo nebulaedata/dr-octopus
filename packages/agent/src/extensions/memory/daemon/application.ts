@@ -18,8 +18,12 @@ import { createCurationSessions } from './curation.js';
 /**
  * Migrate before publishing readiness; no caller receives a SQLite or transaction handle.
  */
-export async function createMemoryApplication(directory: string, migrationsFolder?: string) {
-  const repository = createMemoryRepository(directory, migrationsFolder);
+export async function createMemoryApplication(
+  directory: string,
+  migrationsFolder?: string,
+  onChanged: () => void = () => undefined
+) {
+  const repository = createMemoryRepository(directory, migrationsFolder, onChanged);
   const hash = (value: string) => createHash('sha256').update(value).digest('hex');
   const service = memoryService(repository, hash);
   const curation = createCurationSessions(repository, hash);

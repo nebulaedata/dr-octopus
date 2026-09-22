@@ -49,16 +49,11 @@ export function KnowledgeDocuments({
   const documents = useQuery({
     queryKey: ['knowledge', workspaceId ?? 'global', collection.id, 'documents', page],
     queryFn: ({ signal }) => listKnowledgeDocuments(workspaceId, collection.id, page, signal),
-    refetchInterval: 5000,
   });
   const job = useQuery({
     queryKey: ['knowledge', workspaceId ?? 'global', 'job', jobId],
     enabled: !!jobId,
     queryFn: ({ signal }) => getKnowledgeJob(workspaceId, jobId!, signal),
-    refetchInterval: (query) =>
-      query.state.data && !['queued', 'running', 'waiting_dependency'].includes(query.state.data.job.state)
-        ? false
-        : 1000,
   });
   const upload = useMutation({
     mutationFn: ({ file, requestId }: { file: File; requestId: string }) =>
@@ -85,7 +80,10 @@ export function KnowledgeDocuments({
             <h2 className="text-base font-semibold tracking-tight">{collection.name}</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
               {collection.description ||
-                t('knowledge.documents.descriptionFallback', 'Upload materials so the agent can find answers here.')}
+                t(
+                  'knowledge.documents.descriptionFallback',
+                  'Upload materials so the agent can find answers here.'
+                )}
             </p>
           </div>
           <div className="flex max-w-full flex-wrap items-center gap-3">
@@ -113,7 +111,9 @@ export function KnowledgeDocuments({
                 ) : (
                   <PlusIcon data-icon="inline-start" />
                 )}
-                {upload.isPending ? t('knowledge.documents.uploading', 'Uploading…') : t('knowledge.documents.add', 'Add')}
+                {upload.isPending
+                  ? t('knowledge.documents.uploading', 'Uploading…')
+                  : t('knowledge.documents.add', 'Add')}
                 <ChevronDownIcon data-icon="inline-end" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -181,9 +181,14 @@ export function KnowledgeDocuments({
               <EmptyMedia variant="icon">
                 <FileTextIcon />
               </EmptyMedia>
-              <EmptyTitle>{t('knowledge.documents.emptyTitle', 'No documents in this collection yet')}</EmptyTitle>
+              <EmptyTitle>
+                {t('knowledge.documents.emptyTitle', 'No documents in this collection yet')}
+              </EmptyTitle>
               <EmptyDescription className="text-xs">
-                {t('knowledge.documents.emptyDescription', 'Upload documents or add text to start building this knowledge.')}
+                {t(
+                  'knowledge.documents.emptyDescription',
+                  'Upload documents or add text to start building this knowledge.'
+                )}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

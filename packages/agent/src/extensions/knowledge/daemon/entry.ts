@@ -1,7 +1,17 @@
 /**
  * @author Codex
  * @description Single-owner loopback knowledge daemon with identity-bound control and graceful shutdown.
+ * - GET /knowledge/v1/status
+ * - GET /knowledge/v1/health
+ * - GET /knowledge/v1/events
+ * - POST /knowledge/v1/stop
+ * - POST /knowledge/v1/call
+ * - POST /knowledge/v1/blobs
  */
+import { retryFileContention } from '../../../lib/daemon-platform/file-contention.js';
+import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
+import { DaemonChangeEvents } from '../../../lib/daemon-platform/change-events.js';
 import { createServer } from 'node:http';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile, rm, writeFile } from 'node:fs/promises';
@@ -61,6 +71,7 @@ async function main(): Promise<void> {
   let application: Awaited<ReturnType<typeof createKnowledgeApplication>> | undefined;
   let releaseUse: Awaited<ReturnType<typeof acquireKnowledgeReleaseUse>> | undefined;
   const inFlight = new Set<Promise<void>>();
+  const changes = new DaemonChangeEvents();
   try {
     releaseUse = await acquireKnowledgeReleaseUse(import.meta.url);
     let control = (await readKnowledgeMetadata<KnowledgeControl>(
@@ -70,7 +81,7 @@ async function main(): Promise<void> {
       return;
     }
     control = { stopped: false, revision: control.revision + 1 };
-    await rm(join(profile.directory, 'startup-error.json'), { force: true });
+    await retryFileContention(() => rm(join(profile.directory, 'startup-error.json'), { force: true }));
     await writeKnowledgeMetadata(join(profile.directory, 'control.json'), control);
     let token: string;
     try {
@@ -84,7 +95,7 @@ async function main(): Promise<void> {
     }
     application = await (
       await import('./application.js')
-    ).createKnowledgeApplication(profile.directory, profile.agentDir);
+    ).createKnowledgeApplication(profile.directory, profile.agentDir, () => changes.changed());
     const app = application;
     const daemonId = randomUUID();
     const started = Date.now();
@@ -126,6 +137,7 @@ async function main(): Promise<void> {
         return;
       }
       stopping = true;
+      changes.close();
       if (persist) {
         control = { stopped: true, revision: control.revision + 1 };
         await writeKnowledgeMetadata(join(profile.directory, 'control.json'), control);
@@ -155,6 +167,10 @@ async function main(): Promise<void> {
           return;
         }
         const route = request.url;
+        if (request.method === 'GET' && route === '/knowledge/v1/events' && !stopping) {
+          changes.attach(response);
+          return;
+        }
         if (
           request.method === 'GET' &&
           (route === '/knowledge/v1/status' || route === '/knowledge/v1/health')
@@ -215,7 +231,7 @@ async function main(): Promise<void> {
       // A management client may retain an active keep-alive socket; stop must not depend on its lifetime.
       setImmediate(() => server.closeAllConnections());
     });
-    await rm(join(profile.directory, 'endpoint.json'), { force: true });
+    await retryFileContention(() => rm(join(profile.directory, 'endpoint.json'), { force: true }));
   } catch (error) {
     const code =
       error &&
@@ -232,11 +248,20 @@ async function main(): Promise<void> {
     throw error;
   } finally {
     try {
+      changes.close();
       await Promise.allSettled(inFlight);
       await application?.close();
     } finally {
       releaseUse?.release();
+      process.chdir(tmpdir());
       lock.release();
+      try {
+        writeFileSync(join(profile.directory, 'lifecycle.json'), JSON.stringify({ stoppedAt: Date.now() }), {
+          mode: 0o600,
+        });
+      } catch {
+        /* A retiring owner must not recreate removed storage. */
+      }
     }
   }
 }

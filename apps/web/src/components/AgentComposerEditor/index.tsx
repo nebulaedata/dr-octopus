@@ -26,6 +26,7 @@ export type { AgentComposerEditorHandle } from './types';
 export interface AgentComposerEditorProps {
   ref?: Ref<AgentComposerEditorHandle>;
   value: string;
+  initialEditorState?: string;
   placeholder: string;
   references: ComposerReference[];
   commands: ComposerCommand[];
@@ -65,6 +66,7 @@ function handleEditorError(error: Error): never {
 export function AgentComposerEditor({
   ref,
   value,
+  initialEditorState,
   placeholder,
   references,
   commands,
@@ -81,11 +83,13 @@ export function AgentComposerEditor({
     nodes: [FileMentionNode],
     editable: !disabled,
     onError: handleEditorError,
-    editorState: () => {
-      const root = $getRoot();
-      root.clear();
-      root.append($createParagraphNode().append($createTextNode(value)));
-    },
+    editorState:
+      initialEditorState ??
+      (() => {
+        const root = $getRoot();
+        root.clear();
+        root.append($createParagraphNode().append($createTextNode(value)));
+      }),
   };
 
   return (

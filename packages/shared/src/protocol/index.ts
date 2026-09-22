@@ -22,6 +22,9 @@ export * from './subagents.js';
 export * from './workspaces.js';
 export * from './workspace-references.js';
 export type { DataChange } from './data-events.js';
+export { DATA_CHANGE_RESOURCES } from './data-events.js';
 
 export * from './permission-config.js';
 export * from './background-tasks.js';
+
+export * from './conversation-start.js';

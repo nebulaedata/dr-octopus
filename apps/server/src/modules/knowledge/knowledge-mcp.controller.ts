@@ -16,7 +16,11 @@ import type { KnowledgeClient, KnowledgeSharing } from '@octopus/shared/protocol
 /**
  * Retain one stateless official handler; each request receives a fresh scoped tool server.
  */
-export function registerKnowledgeMcpController(server: FastifyInstance, agentDir: string): void {
+export function registerKnowledgeMcpController(
+  server: FastifyInstance,
+  agentDir: string,
+  subscribe?: (listener: () => void) => () => void
+): void {
   const client = createKnowledgeClient({
     agentDir,
     autostart: false,
@@ -85,26 +89,37 @@ export function registerKnowledgeMcpController(server: FastifyInstance, agentDir
           }
         };
         reply.raw.once('close', disconnected);
-        let checking = false;
-        const permissionTimer = setInterval(() => {
-          if (checking || signal.aborted) {
+        const bearerToken = authorization.slice(7);
+        let pendingCheck: Promise<void> | undefined;
+        let dirty = false;
+        /**
+         * Revalidates once per change burst and compensates for events received during authorization.
+         */
+        function recheck(): void {
+          dirty = true;
+          if (pendingCheck || signal.aborted) {
             return;
           }
-          checking = true;
-          void client
-            .call('sharing.authorize', { token: authorization.slice(7) }, signal)
-            .then(
-              (latest) => {
+          pendingCheck = (async () => {
+            while (dirty && !signal.aborted) {
+              dirty = false;
+              try {
+                const latest = await client.call('sharing.authorize', { token: bearerToken }, signal);
                 if (latest.revision !== policy.revision) {
                   cancelled.abort();
                 }
-              },
-              () => cancelled.abort()
-            )
-            .finally(() => {
-              checking = false;
-            });
-        }, 1000);
+              } catch {
+                cancelled.abort();
+              }
+            }
+          })().finally(() => {
+            pendingCheck = undefined;
+          });
+        }
+        const unsubscribe = subscribe?.(recheck);
+        if (subscribe) {
+          recheck();
+        }
         try {
           const headers = new Headers();
           for (const [key, value] of Object.entries(request.headers)) {
@@ -131,7 +146,7 @@ export function registerKnowledgeMcpController(server: FastifyInstance, agentDir
           }
           return reply.code(response.status).send(Buffer.from(bytes));
         } finally {
-          clearInterval(permissionTimer);
+          unsubscribe?.();
           reply.raw.off('close', disconnected);
           cancelled.abort();
           active--;

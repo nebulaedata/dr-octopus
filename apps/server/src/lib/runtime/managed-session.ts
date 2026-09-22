@@ -17,6 +17,10 @@ const REPLACEMENT_COMMANDS = new Set(['switch_session', 'new_session', 'fork', '
 
 export interface ManagedSessionRuntimeOptions {
   configRevision?: number;
+  /**
+   * Signals that task, interaction and lease safety gates may now permit a deferred restart.
+   */
+  onReclaimable?(): void;
   binding: Omit<SessionRuntimeBinding, 'state' | 'lastActiveAt'>;
   process: AgentRpcProcess;
   state: RpcSessionState;
@@ -49,12 +53,15 @@ export class ManagedSessionRuntime {
   #unsubscribeEvent = (): void => undefined;
   #unsubscribeLifecycle = (): void => undefined;
   #active = false;
+  readonly #observers = new Set<() => void>();
+  readonly #onReclaimable: () => void;
 
   /**
    * Creates mutable state for one ready process without publishing it before Coordinator indexes exist.
    */
   public constructor(options: ManagedSessionRuntimeOptions) {
     this.configRevision = options.configRevision ?? 0;
+    this.#onReclaimable = () => options.onReclaimable?.();
     this.#binding = options.binding;
     this.#process = options.process;
     this.#manager = options.manager;
@@ -78,6 +85,16 @@ export class ManagedSessionRuntime {
    */
   public getBinding(): SessionRuntimeBinding {
     return { ...this.#binding, state: this.#runtimeState.getState(), lastActiveAt: this.#lastActiveAt };
+  }
+
+  /**
+   * Observes state and task evidence without repeatedly querying the Agent.
+   */
+  public onChange(listener: () => void): () => void {
+    this.#observers.add(listener);
+    return () => {
+      this.#observers.delete(listener);
+    };
   }
 
   /**
@@ -239,6 +256,7 @@ export class ManagedSessionRuntime {
    */
   public dispose(): void {
     this.#active = false;
+    this.#observers.clear();
     this.#unsubscribeEvent();
     this.#unsubscribeLifecycle();
   }
@@ -274,6 +292,9 @@ export class ManagedSessionRuntime {
   #notifyDrained(): void {
     if (!this.#isDrained()) {
       return;
+    }
+    if (this.#active && !this.#suspended && this.isSafelyReclaimable()) {
+      this.#onReclaimable();
     }
     for (const waiter of [...this.#drainWaiters]) {
       waiter();
@@ -384,6 +405,7 @@ export class ManagedSessionRuntime {
       this.#emit('runtime-state', { state: this.#runtimeState.getState() });
     }
     this.#emit(event.type === 'extension_ui_request' ? 'extension-ui' : 'agent-event', event);
+    this.#notifyDrained();
   }
 
   /**
@@ -397,6 +419,13 @@ export class ManagedSessionRuntime {
    * Publishes one monotonically sequenced Host event for this Session runtime.
    */
   #emit(type: HostAgentEvent['type'], payload: unknown): void {
+    for (const listener of this.#observers) {
+      try {
+        listener();
+      } catch {
+        /* Observers cannot stop Agent event projection. */
+      }
+    }
     this.#publish({
       type,
       runtimeId: this.#binding.runtimeId,

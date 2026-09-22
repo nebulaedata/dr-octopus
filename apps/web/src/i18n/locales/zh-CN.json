@@ -48,10 +48,27 @@
     }
   },
   "home": {
-    "composerPlaceholder": "等待的时候先输入任务试试吧…",
-    "loadingTitle": "我是 Dr.Octopus，正在为您准备智能体！",
+    "configureModels": "配置模型服务",
     "loadingWorkspaces": "正在加载工作空间…",
-    "readyTitle": "我是 Dr.Octopus，今天想做点什么呢？"
+    "modelSetup": {
+      "choose": "选择模型",
+      "cloud": "云端模型",
+      "cloudDescription": "使用 API Key 或账号连接模型服务。",
+      "configure": "配置模型",
+      "description": "添加一个模型服务，让 Dr.Octopus 帮你完成接下来的任务。",
+      "draftSaved": "配置期间，你的输入内容会保留在这里。",
+      "errorDescription": "检查连接后重试，或检查模型服务的配置。",
+      "errorTitle": "暂时无法加载模型",
+      "later": "稍后再说",
+      "local": "本地模型",
+      "localDescription": "连接 Ollama、LM Studio 或其他本地服务。",
+      "selectDescription": "在模型菜单中选择其他模型，或前往设置更新模型服务。",
+      "selectTitle": "选择一个可用模型",
+      "title": "连接模型，开始对话"
+    },
+    "readyTitle": "我是 Dr.Octopus，今天想做点什么呢？",
+    "separateDraft": "保留输入并另建会话",
+    "statusUnavailable": "暂时无法确认提交状态，请重试查询同一请求。"
   },
   "knowledge": {
     "batchActions": {
@@ -734,12 +751,7 @@
       "mentionTooltip": "提及文件或文件夹",
       "newlineHint": "{{newline}} 换行",
       "placeholderDefault": "向 Dr.Octopus 随便问…",
-      "placeholderFollowUp": "添加一条在本次运行结束后发送的跟进…",
-      "placeholderGuide": "引导当前运行…",
       "placeholderHome": "告诉 Dr.Octopus 你想完成什么…",
-      "placeholderKnowledge": "向知识库提问，答案将附上资料来源…",
-      "placeholderLoading": "正在加载 Session 资源…",
-      "placeholderPlan": "描述你想规划的内容…",
       "sendFailed": "无法发送消息。",
       "slashComingSoon": "即将推出",
       "slashNoMatch": "没有匹配的命令。",
@@ -749,15 +761,18 @@
       "submitHint": "{{send}} 键提交",
       "tooManyReferences": "一条消息最多可引用 {{max}} 个工作区条目。",
       "unavailableWhileRunning": "智能体运行时不可用。",
+      "waitingForAgent": "正在等待 Agent…",
       "workModeFailed": "无法切换智能体模式。"
     },
     "configAlert": {
       "descriptionDefault": "重启会话后生效，聊天记录会保留。",
       "descriptionRestarting": "正在重新加载配置，请稍候。",
+      "queued": "将在当前任务结束后更新",
       "restartButton": "重启会话",
       "titleChanged": "模型服务配置已变更",
       "titleFailed": "会话重启失败",
-      "titleRestarting": "正在重启会话"
+      "titleRestarting": "正在重启会话",
+      "whenIdle": "任务结束后应用"
     },
     "connectingAlert": {
       "label": "正在连接 Agent..."
@@ -1048,8 +1063,6 @@
       "searchTitle": "知识检索",
       "unavailableBadge": "暂不可用"
     },
-    "loading": "正在加载会话…",
-    "loadingDescription": "正在同步所选工作区。",
     "memoryProjection": {
       "errorSummary": "请求未完成 · 展开查看详情",
       "fallbackSummary": "展开查看记忆结果",
@@ -1126,12 +1139,13 @@
     },
     "modelThinking": {
       "chooseModel": "选择模型",
+      "followDefault": "跟随默认模型",
       "model": "模型",
       "notSelected": "未选择",
       "thinkingLevel": "思考级别"
     },
+    "newSession": "新会话",
     "notFound": "会话不存在",
-    "notFoundDescription": "从侧边栏选择另一个会话。",
     "permission": {
       "ask": "询问",
       "askDescription": "编辑文件和使用互联网时总是询问。",
@@ -1281,6 +1295,16 @@
       "unnamedTask": "未命名任务",
       "warnings": "提醒"
     },
+    "startAccepted": "消息已保存，正在准备投递…",
+    "startAttachmentsUnavailable": "部分已保存附件暂时不可用，原始提交仍已保留。",
+    "startCancelled": "已取消准备，消息已保留。",
+    "startDispatching": "正在发送首条消息…",
+    "startDraftConflict": "当前工作区已有其他草稿，请先完成或清空该草稿，再恢复这条消息。",
+    "startFailed": "无法准备会话，消息已保留。",
+    "startOpenDraft": "打开当前草稿",
+    "startPreparing": "正在准备会话…",
+    "startRestore": "返回草稿",
+    "startUnknown": "无法确认消息是否送达，请检查会话后再决定是否重新发送。",
     "stats": {
       "cacheRead": "缓存读取",
       "cacheWrite": "缓存写入",
@@ -2065,12 +2089,12 @@
         "accessPortChanged": "目标端口：{{port}}。",
         "accessProxyHint": "反向代理请继续使用当前公共入口。Vite 开发环境需同步根 .env 的 SERVER_PORT 并重启 Vite。",
         "actualAddress": "实际监听地址：{{address}}",
+        "checkResult": "查询结果",
         "confirmButton": "确认重启",
         "confirmDescription_other": "当前有 {{count}} 个驻留会话实例。重启会断开连接并中断运行中的会话；聊天记录会保留，任务不会自动续跑。下次监听：{{host}}:{{port}}。",
         "confirmTitle": "重启服务？",
+        "connectionHint": "正在等待服务重新连接。你可以查询已保存的结果，不会重复提交重启。",
         "openDirectLink": "打开直连入口",
-        "pollHint": "服务暂不可达或操作结果未知；自动查询最多持续 60 秒，停止查询不会取消重启。",
-        "repoll": "重新查询结果",
         "resultUnknown": "重启提交结果未知。请检查当前服务状态，不要重复提交。",
         "state": {
           "accepted": "已接受重启",

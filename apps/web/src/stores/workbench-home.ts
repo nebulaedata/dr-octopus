@@ -40,6 +40,12 @@ export function createWorkbenchHomeStore(getStorage: () => StateStorage = () => 
           return get().draftIds[workspaceId] ?? expiredId;
         },
         /**
+         * Activates a recovered draft after the caller has protected any other current input.
+         */
+        resumeDraft(workspaceId: string, id: string): void {
+          set({ draftIds: { ...get().draftIds, [workspaceId]: id } });
+        },
+        /**
          * Removes a published identity from memory and storage before the next home visit.
          */
         forgetDraft(workspaceId: string): void {

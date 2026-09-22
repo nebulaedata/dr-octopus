@@ -108,13 +108,19 @@ export function MemorySettingsPage() {
               </ToggleGroup>
               <FieldDescription id="memory-mode-description" aria-live="polite">
                 {!active
-                  ? t('memory.settings.startHint', 'Start the memory service to view and configure the memory mode.')
+                  ? t(
+                      'memory.settings.startHint',
+                      'Start the memory service to view and configure the memory mode.'
+                    )
                   : policy.isPending
                     ? t('memory.settings.saving', 'Saving memory mode…')
                     : mode
                       ? modeDescriptions[mode]
                       : status.isError
-                        ? t('memory.settings.readError', 'The memory mode could not be read. Please try again.')
+                        ? t(
+                            'memory.settings.readError',
+                            'The memory mode could not be read. Please try again.'
+                          )
                         : t('memory.settings.reading', 'Reading memory mode…')}
               </FieldDescription>
             </Field>
@@ -128,6 +134,7 @@ export function MemorySettingsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="ml-2"
               onClick={() => void client.invalidateQueries({ queryKey: memoryQueryKey })}
             >
               {t('memory.settings.refresh', 'Refresh settings')}

@@ -62,10 +62,6 @@ export function KnowledgeCollectionActions({
     queryKey: ['knowledge', workspaceId ?? 'global', 'job', jobId],
     enabled: !!jobId,
     queryFn: ({ signal }) => getKnowledgeJob(workspaceId, jobId!, signal),
-    refetchInterval: (query) =>
-      query.state.data && !['queued', 'running', 'waiting_dependency'].includes(query.state.data.job.state)
-        ? false
-        : 1000,
   });
   const reindex = useMutation({
     mutationFn: () => reindexKnowledgeCollection(workspaceId, collection.id, crypto.randomUUID()),

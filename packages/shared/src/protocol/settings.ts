@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import type { ThinkingLevel } from './runtime.js';
 import type { LocalProviderConfigurationDto } from './settings-local.js';
 
 export const UpdateModelCapabilitiesBodySchema = z
@@ -86,6 +87,7 @@ export interface DefaultModelDto {
 }
 
 export interface DefaultModelCandidateDto {
+  thinkingLevels?: ThinkingLevel[];
   providerKey: string;
   providerId: string;
   providerName: string;

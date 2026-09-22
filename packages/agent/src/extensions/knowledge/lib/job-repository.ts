@@ -18,7 +18,10 @@ export class KnowledgeJobRepository {
   /**
    * Borrow the sole writer's connection; publication never spans an asynchronous transaction.
    */
-  constructor(readonly database: KnowledgeDatabase) {}
+  constructor(
+    readonly database: KnowledgeDatabase,
+    readonly onChanged: () => void = () => undefined
+  ) {}
 
   /**
    * Replaying an identical request returns its original job, including after a response was lost.
@@ -343,6 +346,7 @@ export class KnowledgeJobRepository {
           .run();
       }
     }
+    this.onChanged();
   }
 
   /**

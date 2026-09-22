@@ -13,7 +13,6 @@ export const memoryServiceQuery = () =>
   queryOptions({
     queryKey: [...memoryQueryKey, 'service'],
     queryFn: ({ signal }) => memoryService('status', signal),
-    refetchInterval: 5000,
   });
 /**
  * Refresh global policy while its management page is visible.
@@ -22,7 +21,6 @@ export const memoryStatusQuery = () =>
   queryOptions({
     queryKey: [...memoryQueryKey, 'status'],
     queryFn: ({ signal }) => getMemoryStatus(signal),
-    refetchInterval: 5000,
   });
 /**
  * A mutation invalidates the whole directory; stale cursors require a deliberate restart.
@@ -32,7 +30,6 @@ export const memoryIndexesQuery = (query: string, cursor?: string) =>
     queryKey: [...memoryQueryKey, 'indexes', query, cursor],
     queryFn: ({ signal }) => getMemoryIndexes(query, cursor, signal),
     retry: false,
-    refetchInterval: 5000,
   });
 /**
  * Keep document identity bound to a store, never a Workspace.

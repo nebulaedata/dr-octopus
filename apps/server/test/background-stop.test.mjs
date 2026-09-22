@@ -48,7 +48,6 @@ test('background initialization failure still stops the subagent fleet before re
         readFleet: () => ({ runs: [run], omitted: { runs: 0, children: 0, byteLimitExceeded: false } }),
         readBackground: () => (failure === 'invalid-snapshot' ? null : snapshot),
         timeoutMs: 1000,
-        pollIntervalMs: 1,
       }),
       /Stop could not be confirmed/
     );
@@ -107,7 +106,6 @@ test('a pending background handshake cannot prevent dispatching subagent cancell
     readFleet: () => ({ runs: [run], omitted: { runs: 0, children: 0, byteLimitExceeded: false } }),
     readBackground: () => ({ ...snapshot }),
     timeoutMs: 1000,
-    pollIntervalMs: 1,
   });
   assert.equal(run.state, 'stopped');
   assert.equal(snapshot.accepting, true);

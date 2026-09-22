@@ -11,6 +11,7 @@ export const RestartSessionBodySchema = z
       .strict()
       .nullable(),
     allowInterrupt: z.boolean().default(false),
+    whenIdle: z.boolean().optional(),
   })
   .strict();
 
@@ -18,6 +19,7 @@ export type RestartSessionBody = z.infer<typeof RestartSessionBodySchema>;
 
 export interface SessionRuntimeControlDto {
   restartRequired: boolean;
+  restartOnIdle?: boolean;
   changedConfigRoutes: string[];
   restart: {
     status: 'idle' | 'restarting' | 'failed';

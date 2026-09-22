@@ -1,6 +1,6 @@
 /**
  * @author Codex
- * @description Displays ordinary Session knowledge scope and delegates configuration changes to Agent controls.
+ * @description Displays knowledge scope for local drafts and active Sessions through one source-selection interface.
  */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -39,7 +39,7 @@ interface KnowledgeModeBarProps {
   state: KnowledgeModeState;
   disabled: boolean;
   /**
-   * Forward configuration while retaining the authoritative state until Agent acknowledgement.
+   * Saves draft intent or forwards runtime configuration through the owning Composer.
    */
   onChange(config: KnowledgeModeConfig): void;
 }

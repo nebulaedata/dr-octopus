@@ -50,7 +50,7 @@ export function useRestartSession() {
   /**
    * Starts an idle restart immediately; busy state always remains subject to Server revalidation.
    */
-  const start = (session: SessionDto): void => {
+  const start = (session: SessionDto, whenIdle = false): void => {
     if (pending.includes(session.id) || session.runtimeControl?.restart.status === 'restarting') {
       return;
     }
@@ -62,9 +62,10 @@ export function useRestartSession() {
           ? { runtimeId: session.runtime.runtimeId, epoch: session.runtime.epoch }
           : null,
         allowInterrupt: false,
+        whenIdle,
       },
     };
-    if (session.runtime?.state === 'running') {
+    if (session.runtime?.state === 'running' && !whenIdle) {
       setConfirmation(attempt);
     } else {
       mutation.mutate(attempt);

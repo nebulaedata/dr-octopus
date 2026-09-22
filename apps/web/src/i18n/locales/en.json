@@ -49,10 +49,27 @@
     }
   },
   "home": {
-    "composerPlaceholder": "Type a task while you wait…",
-    "loadingTitle": "I'm Dr.Octopus, getting your agent ready!",
+    "configureModels": "Configure model services",
     "loadingWorkspaces": "Loading workspaces…",
-    "readyTitle": "I'm Dr.Octopus — what would you like to do today?"
+    "modelSetup": {
+      "choose": "Choose model",
+      "cloud": "Cloud models",
+      "cloudDescription": "Connect a provider with your API key or account.",
+      "configure": "Set up a model",
+      "description": "Add a model service so Dr.Octopus can help with your next task.",
+      "draftSaved": "Your draft stays here while you configure your models.",
+      "errorDescription": "Check your connection and try again, or review your model settings.",
+      "errorTitle": "Could not load your models",
+      "later": "Not now",
+      "local": "Local models",
+      "localDescription": "Use Ollama, LM Studio, or another local service.",
+      "selectDescription": "Choose another model from the menu, or update your model services in Settings.",
+      "selectTitle": "Choose an available model",
+      "title": "Connect a model to get started"
+    },
+    "readyTitle": "I'm Dr.Octopus — what would you like to do today?",
+    "separateDraft": "Keep input in a separate conversation",
+    "statusUnavailable": "Submission status is unavailable. Retry to check the same request."
   },
   "knowledge": {
     "batchActions": {
@@ -748,12 +765,7 @@
       "mentionTooltip": "Mention file or folder",
       "newlineHint": "{{newline}} for a new line",
       "placeholderDefault": "Ask Dr.Octopus anything…",
-      "placeholderFollowUp": "Add a follow-up for when this run finishes…",
-      "placeholderGuide": "Guide the current run…",
       "placeholderHome": "Tell Dr.Octopus what you want to accomplish…",
-      "placeholderKnowledge": "Ask the knowledge base; answers will include sources…",
-      "placeholderLoading": "Loading Session resources…",
-      "placeholderPlan": "Describe what you want to plan…",
       "sendFailed": "Could not send message.",
       "slashComingSoon": "Coming soon",
       "slashNoMatch": "No matching commands.",
@@ -763,15 +775,18 @@
       "submitHint": "{{send}} to submit",
       "tooManyReferences": "A message can reference at most {{max}} Workspace entries.",
       "unavailableWhileRunning": "Unavailable while the Agent is running.",
+      "waitingForAgent": "Waiting for Agent…",
       "workModeFailed": "Could not change Agent mode."
     },
     "configAlert": {
       "descriptionDefault": "Takes effect after restarting the session; chat history is kept.",
       "descriptionRestarting": "Reloading the configuration; one moment please.",
+      "queued": "Update queued until the task finishes",
       "restartButton": "Restart session",
       "titleChanged": "Model service configuration changed",
       "titleFailed": "Session restart failed",
-      "titleRestarting": "Restarting session"
+      "titleRestarting": "Restarting session",
+      "whenIdle": "Apply after task finishes"
     },
     "connectingAlert": {
       "label": "Connecting to Agent…"
@@ -1075,8 +1090,6 @@
       "searchTitle": "Knowledge search",
       "unavailableBadge": "Temporarily unavailable"
     },
-    "loading": "Loading session…",
-    "loadingDescription": "Synchronizing the selected workspace.",
     "memoryProjection": {
       "errorSummary": "Request incomplete · expand for details",
       "fallbackSummary": "Expand to view memory results",
@@ -1159,12 +1172,13 @@
     },
     "modelThinking": {
       "chooseModel": "Choose model",
+      "followDefault": "Follow default model",
       "model": "Model",
       "notSelected": "Not selected",
       "thinkingLevel": "Thinking level"
     },
+    "newSession": "New session",
     "notFound": "Session not found",
-    "notFoundDescription": "Choose another session from the sidebar.",
     "permission": {
       "ask": "Ask",
       "askDescription": "Always ask when editing files and using the Internet.",
@@ -1325,6 +1339,16 @@
       "unnamedTask": "Unnamed task",
       "warnings": "Reminders"
     },
+    "startAccepted": "Your first message is saved and is being delivered.",
+    "startAttachmentsUnavailable": "Some saved attachments are unavailable. Your original submission is still saved.",
+    "startCancelled": "Preparation cancelled. Your message is saved.",
+    "startDispatching": "Sending your first message…",
+    "startDraftConflict": "Another draft already contains input. Finish or clear it before restoring this message.",
+    "startFailed": "Could not prepare the conversation. Your message is saved.",
+    "startOpenDraft": "Open current draft",
+    "startPreparing": "Preparing your conversation…",
+    "startRestore": "Return to draft",
+    "startUnknown": "Delivery could not be confirmed. Check the conversation before sending again.",
     "stats": {
       "cacheRead": "Cache read",
       "cacheWrite": "Cache write",
@@ -2112,13 +2136,13 @@
         "accessPortChanged": "Target port: {{port}}.",
         "accessProxyHint": "Reverse proxies should keep using the current public entry. The Vite dev environment needs the root .env SERVER_PORT synced and Vite restarted.",
         "actualAddress": "Actual listen address: {{address}}",
+        "checkResult": "Check result",
         "confirmButton": "Confirm restart",
         "confirmDescription_one": "There are {{count}} resident session instances. Restarting disconnects them and interrupts running sessions; chat history is preserved but tasks do not resume automatically. Next listen: {{host}}:{{port}}.",
         "confirmDescription_other": "There are {{count}} resident session instances. Restarting disconnects them and interrupts running sessions; chat history is preserved but tasks do not resume automatically. Next listen: {{host}}:{{port}}.",
         "confirmTitle": "Restart the service?",
+        "connectionHint": "Waiting for the service to reconnect. You can check the saved result without submitting another restart.",
         "openDirectLink": "Open direct entry",
-        "pollHint": "The service is temporarily unreachable or the operation result is unknown; automatic polling lasts at most 60 seconds, and stopping polling does not cancel the restart.",
-        "repoll": "Poll the result again",
         "resultUnknown": "Restart submission result unknown. Check the current service status and do not resubmit.",
         "state": {
           "accepted": "Restart accepted",

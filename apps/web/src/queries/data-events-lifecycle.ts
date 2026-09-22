@@ -3,6 +3,7 @@
  * @description Owns the application business-data SSE connection independently of Conversation WebSocket.
  */
 import { useEffect } from 'react';
+import { DATA_CHANGE_RESOURCES } from '@octopus/shared/protocol';
 import { useQueryClient } from '@tanstack/react-query';
 import { createDataEventsSync } from './data-events-sync';
 import type { DataChange } from '@octopus/shared/protocol';
@@ -17,7 +18,7 @@ export function parseDataChange(data: string): DataChange | undefined {
       return undefined;
     }
     const { resource, workspaceId } = value as Record<string, unknown>;
-    if (typeof resource !== 'string' || !['sessions', 'notifications', 'scheduler'].includes(resource)) {
+    if (typeof resource !== 'string' || !DATA_CHANGE_RESOURCES.some((candidate) => candidate === resource)) {
       return undefined;
     }
     if (workspaceId !== undefined && (typeof workspaceId !== 'string' || !workspaceId.length)) {

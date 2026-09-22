@@ -49,6 +49,7 @@ function settleBackgroundTask() {
 test('API Key answers are never retained in authentication snapshots', async () => {
   const ids = [SESSION_ID, PROMPT_ID];
   let receivedAnswer;
+  let notifications = 0;
   const settings = {
     async loginProvider(_providerId, _type, interaction) {
       interaction.notify({ type: 'progress', message: 'Waiting for key' });
@@ -57,7 +58,7 @@ test('API Key answers are never retained in authentication snapshots', async () 
   };
   const manager = new ProviderAuthSessionManager(settings, {
     createId: () => ids.shift(),
-    cleanupIntervalMs: 60_000,
+    onChanged: () => notifications++,
   });
   try {
     const created = manager.create('provider-key', 'provider-a', 'api_key');
@@ -72,6 +73,7 @@ test('API Key answers are never retained in authentication snapshots', async () 
     const completed = manager.get('provider-key', SESSION_ID);
     assert.equal(completed.status, 'completed');
     assert.equal(completed.result.credentialCommitted, true);
+    assert.ok(notifications >= 2, 'prompt and terminal transitions must emit changes');
     assert.equal(receivedAnswer, 'top-secret-value');
   } finally {
     await manager.close();
@@ -91,7 +93,6 @@ test('sessions reject Provider conflicts and invalid select answers', async () =
   };
   const manager = new ProviderAuthSessionManager(settings, {
     createId: () => ids.shift(),
-    cleanupIntervalMs: 60_000,
   });
   try {
     manager.create('provider-key', 'provider-a', 'oauth');
@@ -117,7 +118,7 @@ test('committed credentials retain partial-success synchronization semantics', a
         throw new PiCredentialSynchronizationError('login');
       },
     },
-    { createId: () => SESSION_ID, cleanupIntervalMs: 60_000 }
+    { createId: () => SESSION_ID }
   );
   try {
     manager.create('provider-key', 'provider-a', 'api_key');

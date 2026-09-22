@@ -16,6 +16,7 @@ import { PiSessionRepository } from './pi-session-repository.js';
 import { SessionRuntimeRetirement } from './retirement.js';
 import { SessionRuntimeDirectory } from './runtime-directory.js';
 import { SessionRuntimeError } from './errors.js';
+import { DeferredRestarts } from './deferred-restarts.js';
 import { restartSessionRuntime } from './restart.js';
 import { RuntimeConfigChanges } from '../runtime-config/runtime-config-changes.js';
 import { DEFAULT_SESSION_RUNTIME_LIMITS } from './types.js';
@@ -88,6 +89,10 @@ export class SessionRuntimeCoordinator {
   readonly #operationTimeoutMs: number;
   readonly #listeners = new Set<(event: HostAgentEvent) => void>();
   #closing = false;
+  readonly #deferred = new DeferredRestarts(
+    (id) => this.canRestartSafely(id),
+    (id) => this.#publishControl(id)
+  );
   readonly #hostAssertOpen: (() => void) | undefined;
 
   /**
@@ -303,6 +308,13 @@ export class SessionRuntimeCoordinator {
   }
 
   /**
+   * Checks the same task, interaction and lease gates used by safe runtime reclamation.
+   */
+  public canRestartSafely(sessionId: string): boolean {
+    return this.#directory.get(sessionId)?.getRuntime()?.isSafelyReclaimable() ?? true;
+  }
+
+  /**
    * Projects configuration staleness and lifecycle status without activating a process.
    */
   public getControl(sessionId: string): SessionRuntimeControlDto {
@@ -316,7 +328,12 @@ export class SessionRuntimeCoordinator {
     if (slot.getState() === 'draining' && restart.error) {
       restart.error.retryable = false;
     }
-    return { restartRequired: changedConfigRoutes.length > 0, changedConfigRoutes, restart };
+    return {
+      restartRequired: changedConfigRoutes.length > 0,
+      changedConfigRoutes,
+      restart,
+      restartOnIdle: this.#deferred.has(sessionId),
+    };
   }
 
   /**
@@ -331,6 +348,7 @@ export class SessionRuntimeCoordinator {
    * Retires a Session and deletes its artifacts under one lifecycle gate.
    */
   public async deleteSession<T>(sessionId: string, remove: () => Promise<T>): Promise<T> {
+    this.#deferred.cancel(sessionId);
     this.#assertOpen();
     const slot = this.#directory.getOrCreate(sessionId);
     return slot.lifecycle.exclusive(async () => {
@@ -349,6 +367,35 @@ export class SessionRuntimeCoordinator {
    * Restarts the exact expected generation and restores its original durable Session identity.
    */
   public restart(
+    input: ActivateExistingSessionInput,
+    request: RestartSessionBody
+  ): Promise<SessionRuntimeBinding> {
+    this.#assertOpen();
+    const slot = this.#directory.getOrCreate(input.sessionId);
+    const binding = slot.getRuntime()?.getBinding();
+    if (request.whenIdle && binding && !this.canRestartSafely(input.sessionId)) {
+      if (
+        binding.runtimeId !== request.expectedRuntime?.runtimeId ||
+        binding.epoch !== request.expectedRuntime.epoch
+      ) {
+        throw new SessionRuntimeError(
+          'SESSION_RUNTIME_BINDING_MISMATCH',
+          'Session runtime changed. Refresh before retrying.'
+        );
+      }
+      this.#deferred.enqueue(input.sessionId, () =>
+        this.#restartNow(input, { ...request, whenIdle: false, allowInterrupt: false })
+      );
+      return Promise.resolve(binding);
+    }
+    this.#deferred.cancel(input.sessionId);
+    return this.#restartNow(input, request);
+  }
+
+  /**
+   * Uses one lifecycle gate for immediate and deferred restarts.
+   */
+  #restartNow(
     input: ActivateExistingSessionInput,
     request: RestartSessionBody
   ): Promise<SessionRuntimeBinding> {
@@ -392,6 +439,7 @@ export class SessionRuntimeCoordinator {
    */
   public async close(): Promise<void> {
     this.#closing = true;
+    this.#deferred.close();
     this.#unsubscribeConfig();
     this.#controlListeners.clear();
     this.configChanges.close();
@@ -532,6 +580,7 @@ export class SessionRuntimeCoordinator {
       manager: this.#manager,
       now: this.#now,
       publish: (event) => this.#emit(event),
+      onReclaimable: () => queueMicrotask(() => this.#deferred.wake(sessionId)),
     });
   }
 

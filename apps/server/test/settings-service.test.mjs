@@ -11,13 +11,17 @@ test('model commits notify before a refresh failure is returned; unchanged and f
   const fixture = createPiSettingsFixture();
   let result = { changed: false, synchronized: true };
   let commits = 0;
+  let defaultCommits = 0;
   fixture.piSettings.configureLocalProvider = async () => {
     if (result instanceof Error) {
       throw result;
     }
     return result;
   };
-  const service = new SettingsService(fixture.piSettings, { recordCommitted: () => commits++ });
+  const service = new SettingsService(fixture.piSettings, {
+    recordCommitted: () => commits++,
+    recordDefaultCommitted: () => defaultCommits++,
+  });
   try {
     const key = (await service.listProviders()).providers[0].providerKey;
     await service.configureLocalProvider(key, {});
@@ -33,6 +37,7 @@ test('model commits notify before a refresh failure is returned; unchanged and f
     const candidates = await service.listDefaultModelCandidates();
     await service.setDefaultModel(key, candidates.candidates[0].modelKey);
     assert.equal(commits, 1);
+    assert.equal(defaultCommits, 1, 'default updates notify drafts without staling established runtimes');
   } finally {
     await service.close();
   }

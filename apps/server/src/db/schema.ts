@@ -5,6 +5,7 @@
 
 import { sql } from 'drizzle-orm';
 import { check, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import type { ConversationStartInput, ConversationStartStatus } from '@octopus/shared/protocol';
 // Historical experiment tables remain as an archive; ordinary Session mode owns all new QA state.
 type QaConfig = { collectionIds: string[]; provider: string; model: string; revision: number };
 type QaTurnState = 'accepted' | 'running' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
@@ -440,3 +441,16 @@ export type MessageFeedbackRow = typeof messageFeedback.$inferSelect;
 export type NewMessageFeedbackRow = typeof messageFeedback.$inferInsert;
 export type AttachmentRow = typeof attachments.$inferSelect;
 export type NewAttachmentRow = typeof attachments.$inferInsert;
+
+export const conversationStarts = sqliteTable('conversation_starts', {
+  submissionId: text('submission_id').primaryKey(),
+  workspaceId: text('workspace_id').notNull(),
+  draftId: text('draft_id').notNull(),
+  activeDraftId: text('active_draft_id').unique(),
+  sessionId: text('session_id').notNull(),
+  fingerprint: text('fingerprint').notNull(),
+  request: text('request_json', { mode: 'json' }).$type<ConversationStartInput>().notNull(),
+  status: text('status').$type<ConversationStartStatus>().notNull(),
+  error: text('error'),
+  updatedAt: text('updated_at').notNull(),
+});

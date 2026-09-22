@@ -198,7 +198,11 @@ function transaction(database: MemoryDatabase): MemoryTransaction {
 /**
  * Hold one daemon-owned connection and serialize short transactions, including asynchronous busy retries.
  */
-export function createMemoryRepository(directory: string, migrationsFolder?: string): MemoryRepository {
+export function createMemoryRepository(
+  directory: string,
+  migrationsFolder?: string,
+  onCommitted: () => void = () => undefined
+): MemoryRepository {
   let closed = false;
   let database: MemoryDatabase | undefined;
   let queue: Promise<unknown> = Promise.resolve();
@@ -232,9 +236,17 @@ export function createMemoryRepository(directory: string, migrationsFolder?: str
           }
           signal?.throwIfAborted();
           const connection = database;
-          return connection.db.transaction(() => work(transaction(connection)), {
+          const result = connection.db.transaction(() => work(transaction(connection)), {
             behavior: create ? 'immediate' : 'deferred',
           });
+          if (create) {
+            try {
+              onCommitted();
+            } catch {
+              /* Subscribers cannot undo a committed write. */
+            }
+          }
+          return result;
         } catch (error) {
           if (error instanceof MemoryError || signal?.aborted) {
             throw error;

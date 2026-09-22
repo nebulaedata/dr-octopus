@@ -23,6 +23,7 @@ import { useI18n } from '@/i18n/use-i18n';
 import { ConversationMiniMap } from './ConversationMiniMap';
 import { CompactionMarker } from './CompactionMarker';
 import { ExtensionNotificationRow } from './ExtensionNotificationRow';
+import { MessageView } from './MessageView';
 import { MessageRow } from './MessageRow';
 import { RetryMarker } from './RetryMarker';
 import { ToolCard } from './ToolCard';
@@ -30,17 +31,19 @@ import { TurnDurationMarker } from './TurnDurationMarker';
 import { getLastItemIndexByTurn } from './turn-transcript-model';
 import type { ReactNode } from 'react';
 import type { TranscriptItem } from '@/stores/session';
-import type { SessionDto } from '@octopus/shared/protocol';
+import type { SessionDto, ConversationStartDto } from '@octopus/shared/protocol';
 
 /**
  * Subscribes only to ordered projection identifiers so row updates remain local.
  */
 export function Conversation({
   loading = false,
+  savedMessage,
   session,
   sessionId,
 }: {
   loading?: boolean;
+  savedMessage?: ConversationStartDto | null;
   session: SessionDto;
   sessionId: string;
 }) {
@@ -59,8 +62,21 @@ export function Conversation({
       <SubmittedMessageScroll sessionId={sessionId} />
       <MessageScroller className="min-h-0 flex-1">
         <MessageScrollerViewport>
-          <MessageScrollerContent className="mx-auto w-full max-w-4xl px-5 py-8 sm:px-8">
-            {isLoading ? (
+          <MessageScrollerContent className="mx-auto w-full max-w-4xl px-5 pt-20 pb-8 sm:px-8">
+            {savedMessage &&
+            transcriptItems.length === 0 &&
+            (savedMessage.status !== 'running' || !historyLoaded || loading) ? (
+              <MessageScrollerItem messageId={`start:${sessionId}`}>
+                <MessageView
+                  session={session}
+                  message={{
+                    id: `start:${sessionId}`,
+                    role: 'user',
+                    content: [{ type: 'text', text: savedMessage.message }],
+                  }}
+                />
+              </MessageScrollerItem>
+            ) : isLoading ? (
               <MessageSkeleton />
             ) : (
               <>

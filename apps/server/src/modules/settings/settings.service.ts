@@ -108,9 +108,13 @@ export class SettingsService {
    */
   public constructor(
     private readonly piSettings: PiSettingsStore,
-    private readonly modelConfigChanges?: ModelConfigChanges
+    private readonly modelConfigChanges?: ModelConfigChanges,
+    onAuthChanged?: () => void
   ) {
-    this.#authSessions = new ProviderAuthSessionManager(piSettings, { modelConfigChanges });
+    this.#authSessions = new ProviderAuthSessionManager(piSettings, {
+      modelConfigChanges,
+      onChanged: onAuthChanged,
+    });
   }
 
   /**
@@ -118,6 +122,13 @@ export class SettingsService {
    *
    * @returns Provider catalog.
    */
+  /**
+   * Refreshes local Provider snapshots after an effective configuration change.
+   */
+  public async refreshCatalog(): Promise<void> {
+    await this.piSettings.refreshCatalog?.();
+  }
+
   public async listProviders(): Promise<ModelProviderCatalogDto> {
     const [providers, defaultModel] = await Promise.all([
       this.piSettings.listProviders(),
@@ -258,6 +269,7 @@ export class SettingsService {
           modelId: model.id,
           modelName: model.name,
           reasoning: model.reasoning,
+          ...(model.thinkingLevels ? { thinkingLevels: model.thinkingLevels } : {}),
           input: model.input,
         }))
     );
@@ -281,6 +293,7 @@ export class SettingsService {
       throw new Error('The selected default model no longer exists.');
     }
     await this.piSettings.setDefaultModel(provider.id, model.id);
+    this.modelConfigChanges?.recordDefaultCommitted?.();
     return this.getDefaultModel();
   }
 

@@ -4,21 +4,10 @@
  */
 
 import { useStore } from 'zustand';
-import { Bubble, BubbleContent } from '@octopus/ui/components/bubble';
-import { Message, MessageContent, MessageFooter, MessageHeader } from '@octopus/ui/components/message';
 import { MessageScrollerItem } from '@octopus/ui/components/message-scroller';
 import { sessionStores } from '@/stores/session';
-import { useI18n } from '@/i18n/use-i18n';
-import { formatMessageTime } from '@/utils/date';
-import { FileAttachment } from './FileAttachment';
-import { ImageAttachment } from './ImageAttachment';
-import { MessageAttachmentGroup } from './MessageAttachmentGroup';
-import { MessageFailure } from './MessageFailure';
-import { MessageToolbar } from './MessageToolbar';
-import { MemorySaveCard } from './MemorySaveCard';
-import { projectMemorySave } from './memory-save-projection';
-import { RichContent } from './RichContent';
-import type { ContentBlock, MessageProjection } from '@/stores/session';
+import { MessageView } from './MessageView';
+import type { MessageProjection } from '@/stores/session';
 import type { SessionDto } from '@octopus/shared/protocol';
 
 /**
@@ -60,7 +49,6 @@ export function MessageRow({
   messageId: string;
   turnId?: string;
 }) {
-  const { t } = useI18n();
   const store = sessionStores.ensure(sessionId);
   const message = useStore(store, (state) => state.messagesById[messageId]);
   const isStreaming = useStore(store, (state) => state.currentAssistantId === messageId);
@@ -74,74 +62,9 @@ export function MessageRow({
   if (message === undefined || deferredFailure || !hasVisibleContent(message, isStreaming)) {
     return null;
   }
-  const memorySave = projectMemorySave(message);
-  if (memorySave !== undefined) {
-    return (
-      <MessageScrollerItem messageId={messageId}>
-        <Message align="start">
-          <MessageContent className="p-1">
-            <MemorySaveCard receipt={memorySave} timestamp={message.timestamp ?? message.persistedAt} />
-          </MessageContent>
-        </Message>
-      </MessageScrollerItem>
-    );
-  }
-  const isUserRole = message.role === 'user';
-  const attachmentBlocks = message.content.filter(
-    (block): block is Extract<ContentBlock, { type: 'image' } | { type: 'file' }> =>
-      block.type === 'image' || block.type === 'file'
-  );
-  const hasTextContent =
-    isStreaming || message.content.some((block) => block.type === 'text' || block.type === 'thinking');
-  const hasResponseText = message.content.some(
-    (block) => block.type === 'text' && block.text.trim().length > 0
-  );
   return (
     <MessageScrollerItem messageId={messageId}>
-      <Message align={isUserRole ? 'end' : 'start'}>
-        <MessageContent>
-          <MessageHeader>
-            <div className="flex items-center gap-2">
-              {isUserRole && (
-                <span className="text-[11px]">
-                  {message.timestamp && formatMessageTime(message.timestamp)}
-                </span>
-              )}
-              <span className="text-primary font-semibold">
-                {isUserRole ? t('session.messageRow.you', 'You') : 'Dr.Octopus'}
-              </span>
-            </div>
-          </MessageHeader>
-          {attachmentBlocks.map((block, index) =>
-            block.type === 'image' ? (
-              <ImageAttachment key={`attachment-${String(index)}`} block={block} />
-            ) : (
-              <FileAttachment key={`attachment-${String(index)}`} block={block} />
-            )
-          )}
-          {message.attachments !== undefined && message.attachments.length > 0 ? (
-            <MessageAttachmentGroup attachments={message.attachments} />
-          ) : null}
-          {hasTextContent && (
-            <Bubble variant={isUserRole ? 'muted' : 'ghost'} align={isUserRole ? 'end' : 'start'}>
-              <BubbleContent>
-                <RichContent isStreaming={isStreaming} message={message} />
-              </BubbleContent>
-            </Bubble>
-          )}
-          {message.interrupted === true && (
-            <p className="text-xs text-muted-foreground py-2 italic">
-              {t('session.messageRow.interrupted', 'Interrupted')}
-            </p>
-          )}
-          {message.errorMessage !== undefined ? <MessageFailure errorMessage={message.errorMessage} /> : null}
-          {hasResponseText && (
-            <MessageFooter>
-              <MessageToolbar session={session} message={message} />
-            </MessageFooter>
-          )}
-        </MessageContent>
-      </Message>
+      <MessageView session={session} message={message} isStreaming={isStreaming} />
     </MessageScrollerItem>
   );
 }

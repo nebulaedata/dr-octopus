@@ -1,7 +1,16 @@
 /**
  * @author Codex
  * @description Single-owner loopback memory daemon with identity-bound control and graceful shutdown.
+ * - GET /memory/v1/status
+ * - GET /memory/v1/health
+ * - GET /memory/v1/events
+ * - POST /memory/v1/stop
+ * - POST /memory/v1/call
  */
+import { retryFileContention } from '../../../lib/daemon-platform/file-contention.js';
+import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
+import { DaemonChangeEvents } from '../../../lib/daemon-platform/change-events.js';
 import { createServer } from 'node:http';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile, rm, writeFile } from 'node:fs/promises';
@@ -58,6 +67,7 @@ async function main(): Promise<void> {
   }
   let application: Awaited<ReturnType<typeof createMemoryApplication>> | undefined;
   const inFlight = new Set<Promise<void>>();
+  const changes = new DaemonChangeEvents();
   try {
     let control = (await readMemoryMetadata<MemoryControl>(join(profile.directory, 'control.json'))) ?? {
       stopped: false,
@@ -67,7 +77,7 @@ async function main(): Promise<void> {
       return;
     }
     control = { stopped: false, revision: control.revision + 1 };
-    await rm(join(profile.directory, 'startup-error.json'), { force: true });
+    await retryFileContention(() => rm(join(profile.directory, 'startup-error.json'), { force: true }));
     await writeMemoryMetadata(join(profile.directory, 'control.json'), control);
     let token: string;
     try {
@@ -81,7 +91,7 @@ async function main(): Promise<void> {
     }
     application = await (
       await import('./application.js')
-    ).createMemoryApplication(profile.directory, migrationsFolder);
+    ).createMemoryApplication(profile.directory, migrationsFolder, () => changes.changed());
     const app = application;
     const daemonId = randomUUID();
     const started = Date.now();
@@ -116,6 +126,7 @@ async function main(): Promise<void> {
         return;
       }
       stopping = true;
+      changes.close();
       if (persist) {
         control = { stopped: true, revision: control.revision + 1 };
         await writeMemoryMetadata(join(profile.directory, 'control.json'), control);
@@ -150,6 +161,10 @@ async function main(): Promise<void> {
           return;
         }
         const route = request.url;
+        if (request.method === 'GET' && route === '/memory/v1/events' && !stopping) {
+          changes.attach(response);
+          return;
+        }
         if (request.method === 'GET' && (route === '/memory/v1/status' || route === '/memory/v1/health')) {
           respond(response, 200, status());
         } else if (request.method === 'POST' && route === '/memory/v1/stop') {
@@ -202,7 +217,7 @@ async function main(): Promise<void> {
       // A management client may retain an active keep-alive socket; stop must not depend on its lifetime.
       setImmediate(() => server.closeAllConnections());
     });
-    await rm(join(profile.directory, 'endpoint.json'), { force: true });
+    await retryFileContention(() => rm(join(profile.directory, 'endpoint.json'), { force: true }));
   } catch (error) {
     const code =
       error &&
@@ -219,10 +234,19 @@ async function main(): Promise<void> {
     throw error;
   } finally {
     try {
+      changes.close();
       await Promise.allSettled(inFlight);
       await application?.close();
     } finally {
+      process.chdir(tmpdir());
       lock.release();
+      try {
+        writeFileSync(join(profile.directory, 'lifecycle.json'), JSON.stringify({ stoppedAt: Date.now() }), {
+          mode: 0o600,
+        });
+      } catch {
+        /* A retiring owner must not recreate removed storage. */
+      }
     }
   }
 }

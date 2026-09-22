@@ -37,6 +37,7 @@ export interface ComposerCommand {
 }
 
 export interface ComposerDraft {
+  editorState?: string;
   text: string;
   references: ComposerReference[];
 }

@@ -23,6 +23,7 @@ export class KnowledgeIndexingRunner {
   private running: Promise<void> | null = null;
   private controller: AbortController | null = null;
   private stopped = false;
+  private wakeRequested = false;
   private activeJob: string | null = null;
 
   /**
@@ -46,9 +47,21 @@ export class KnowledgeIndexingRunner {
    * Coalesce wakeups so only one process writes Lance tables at a time.
    */
   wake(): void {
+    if (this.stopped) {
+      return;
+    }
+    if (this.running) {
+      this.wakeRequested = true;
+      return;
+    }
     if (!this.stopped && !this.running) {
       this.running = this.drain().finally(() => {
         this.running = null;
+        this.repository.onChanged();
+        if (this.wakeRequested) {
+          this.wakeRequested = false;
+          this.wake();
+        }
       });
     }
   }
@@ -82,6 +95,7 @@ export class KnowledgeIndexingRunner {
         return;
       }
       this.activeJob = job.id;
+      this.repository.onChanged();
       this.controller = new AbortController();
       try {
         await this.execute(job, this.controller.signal);
@@ -108,6 +122,7 @@ export class KnowledgeIndexingRunner {
       } finally {
         this.activeJob = null;
         this.controller = null;
+        this.repository.onChanged();
       }
     }
   }

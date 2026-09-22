@@ -2,6 +2,7 @@
  * @author Codex
  * @description Canonical per-user Agent profile identity and atomic knowledge control metadata.
  */
+import { retryFileContention } from '../../../lib/daemon-platform/file-contention.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, realpath, rename, rm } from 'node:fs/promises';
 import { userInfo } from 'node:os';
@@ -50,7 +51,7 @@ export async function knowledgeProfile(agentDir: string, create = false): Promis
  */
 export async function readKnowledgeMetadata<T>(path: string): Promise<T | null> {
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as T;
+    return JSON.parse(await retryFileContention(() => readFile(path, 'utf8'))) as T;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return null;
@@ -72,8 +73,8 @@ export async function writeKnowledgeMetadata(path: string, value: unknown): Prom
     await file.close();
   }
   try {
-    await rename(temporary, path);
+    await retryFileContention(() => rename(temporary, path));
   } finally {
-    await rm(temporary, { force: true });
+    await retryFileContention(() => rm(temporary, { force: true }));
   }
 }

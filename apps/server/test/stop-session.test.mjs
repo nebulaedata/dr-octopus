@@ -33,7 +33,7 @@ function fixture({ rejectStop = false, omitted = false } = {}) {
       return { success: true };
     },
   };
-  return { target, fleet, calls, options: { readFleet: () => fleet, pollIntervalMs: 1, timeoutMs: 200 } };
+  return { target, fleet, calls, options: { readFleet: () => fleet, timeoutMs: 200 } };
 }
 
 test('stops detached roots once and confirms terminal state, while always aborting the main loop', async () => {

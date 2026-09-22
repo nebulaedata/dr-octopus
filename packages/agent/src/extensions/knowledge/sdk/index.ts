@@ -18,3 +18,5 @@ export type { KnowledgeClient, KnowledgeClientOptions, KnowledgeOperations } fro
 export type { KnowledgeServiceStatus } from '../definitions/lifecycle.js';
 export type * from '../definitions/types.js';
 export type * from '../definitions/models.js';
+
+export { subscribeKnowledgeChanges } from './changes.js';

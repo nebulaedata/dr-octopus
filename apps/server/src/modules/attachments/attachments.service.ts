@@ -48,6 +48,10 @@ export interface AttachmentsServiceOptions {
   jobsRepository?: AttachmentJobsRepository;
   supervisor?: ProcessorSupervisor;
   backupRoot?: string;
+  /**
+   * Publishes committed attachment progress without exposing worker infrastructure.
+   */
+  onChanged?(): void;
 }
 
 /**
@@ -66,6 +70,7 @@ export class AttachmentsService {
   #closed = false;
   #storagePressure = false;
   #timer?: NodeJS.Timeout;
+  readonly #onChanged: () => void;
   #backupTimer?: NodeJS.Timeout;
   #lifecycleTimer?: NodeJS.Timeout;
   #ephemeralRoot?: string;
@@ -80,6 +85,13 @@ export class AttachmentsService {
     protected readonly server: FastifyInstance,
     options: AttachmentsServiceOptions = {}
   ) {
+    this.#onChanged = () => {
+      try {
+        options.onChanged?.();
+      } catch {
+        /* Observer failures cannot roll back worker commits. */
+      }
+    };
     this.maxBytes = options.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES;
     const memoryBacked = server.database.sqlite.name === ':memory:';
     if (memoryBacked && options.dataRoot === undefined) {
@@ -122,8 +134,6 @@ export class AttachmentsService {
     this.#backupTimer = setInterval(() => void this.#runScheduledBackup(), 24 * 60 * 60_000);
     this.#backupTimer.unref();
     setTimeout(() => void this.#runScheduledBackup(), 5_000).unref();
-    this.#timer = setInterval(() => void this.#drainJobs(), 1_000);
-    this.#timer.unref();
     this.#drainJobs();
   }
 
@@ -139,7 +149,7 @@ export class AttachmentsService {
   public async close(): Promise<void> {
     this.#closed = true;
     if (this.#timer !== undefined) {
-      clearInterval(this.#timer);
+      clearTimeout(this.#timer);
     }
     if (this.#backupTimer !== undefined) {
       clearInterval(this.#backupTimer);
@@ -710,12 +720,18 @@ export class AttachmentsService {
    * Claims available leases until the configured process-wide concurrency is full.
    */
   #drainJobs(): void {
+    clearTimeout(this.#timer);
     if (this.#closed) {
       return;
     }
     while (this.#activeJobs < 2) {
       const job = this.#jobs.claim(this.#owner);
       if (job === undefined) {
+        const deadline = this.#jobs.nextWake(this.#owner);
+        if (deadline !== undefined) {
+          this.#timer = setTimeout(() => this.#drainJobs(), Math.max(0, deadline - Date.now()));
+          this.#timer.unref();
+        }
         return;
       }
       this.#activeJobs += 1;
@@ -806,6 +822,7 @@ export class AttachmentsService {
       }
     } finally {
       clearInterval(heartbeat);
+      this.#onChanged();
     }
   }
 

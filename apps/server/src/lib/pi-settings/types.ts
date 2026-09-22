@@ -4,6 +4,7 @@
  */
 
 import type {
+  ThinkingLevel,
   UpdateModelCapabilitiesBody,
   ConfigureLocalProviderBody,
   CreateLocalProviderBody,
@@ -15,6 +16,7 @@ import type {
 export type PiSettingsProviderProvenance = 'builtin' | 'models_json' | 'extension';
 
 export interface PiSettingsModel {
+  thinkingLevels?: ThinkingLevel[];
   id: string;
   name: string;
   api: string;
@@ -128,6 +130,10 @@ export interface PiSettingsStore {
    * Lists the composed Pi Provider catalog without triggering network refresh.
    */
   listProviders(): Promise<PiSettingsProvider[]>;
+  /**
+   * Reloads on-disk model and auth inputs without network discovery.
+   */
+  refreshCatalog?(): Promise<void>;
   /**
    * Reads the configured global default-model pair.
    */

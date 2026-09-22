@@ -7,6 +7,7 @@ import { OCTOPUS_PROTOCOL_VERSION } from '@octopus/shared/protocol';
 import { isUserMessageCommand, UserMessageRequestCorrelator } from './user-message-request-correlator.js';
 import { MutationIdempotencyLedger, mutationFingerprint } from '../../lib/idempotency/mutation-ledger.js';
 import { SessionRuntimeError } from '../../lib/runtime/errors.js';
+import { responseSucceeded } from '../../lib/runtime/utils.js';
 import { projectHostVisibleUserMessage } from './host-user-message-projection.js';
 import { createWorkspaceReferencePromptSuffix } from './workspace-reference-context.js';
 import type { AttachmentsService } from '../attachments/attachments.service.js';
@@ -20,6 +21,7 @@ import type {
   ThinkingStateDto,
   WorkspaceReferenceDto,
 } from '@octopus/shared/protocol';
+import type { ManagedSessionCommand } from '../../lib/runtime/index.js';
 import type { FastifyInstance } from 'fastify';
 
 type SendMessage = (message: ServerRealtimeMessage) => void;
@@ -436,22 +438,55 @@ export class ChannelService {
   }
 
   /**
+   * Correlates the durable HTTP submission with Agent events using the same context pipeline as WebSocket.
+   */
+  public async dispatchFirstMessage(
+    message: Extract<ClientRealtimeMessage, { type: 'agent.prompt' }>,
+    command: ManagedSessionCommand
+  ) {
+    this.#userMessages.register(message);
+    try {
+      const response = await this.#dependencies.sessionsService.execute(message.sessionId, command, message);
+      if (!responseSucceeded(response)) {
+        throw new SessionRuntimeError('SESSION_RUNTIME_STALE', 'Agent rejected first-message delivery.');
+      }
+    } catch (error) {
+      this.#userMessages.cancel(message.sessionId, message.requestId);
+      throw error;
+    }
+  }
+
+  /**
+   * Resolves first-message inputs before the durable acceptance transaction, without executing them.
+   */
+  public async prepareFirstMessage(message: Extract<ClientRealtimeMessage, { type: 'agent.prompt' }>) {
+    let prepared: ManagedSessionCommand | undefined;
+    await this.#executeUserMessageWithContext(message, 'prompt', message, (command) => {
+      prepared = command;
+      return Promise.resolve();
+    });
+    if (!prepared) {
+      throw new Error('First message could not be prepared.');
+    }
+    return prepared;
+  }
+
+  /**
    * Validates Workspace references and adapts attachments for all Pi user-message commands.
    */
   async #executeUserMessageWithContext(
     message: Extract<ClientRealtimeMessage, { type: 'agent.prompt' | 'agent.steer' | 'agent.follow-up' }>,
     commandType: 'prompt' | 'steer' | 'follow_up',
-    expected: { runtimeId?: string; epoch?: number }
+    expected: { runtimeId?: string; epoch?: number },
+    prepare?: (command: ManagedSessionCommand) => Promise<void>
   ): Promise<void> {
+    const execute = (sessionId: string, command: ManagedSessionCommand, target: typeof expected) =>
+      prepare ? prepare(command) : this.#dependencies.sessionsService.execute(sessionId, command, target);
     const ids = message.payload.attachmentIds ?? [];
     const requestedReferences = message.payload.workspaceReferences ?? [];
     const sessions = this.#dependencies.sessionsService;
     if (ids.length === 0 && requestedReferences.length === 0) {
-      await sessions.execute(
-        message.sessionId,
-        { type: commandType, message: message.payload.message },
-        expected
-      );
+      await execute(message.sessionId, { type: commandType, message: message.payload.message }, expected);
       return;
     }
     const legacyAttachments = this.#dependencies.attachmentsService as AttachmentsService & {
@@ -469,7 +504,7 @@ export class ChannelService {
       legacyAttachments.consume !== undefined
     ) {
       const adapted = legacyAttachments.consume(ids);
-      await sessions.execute(
+      await execute(
         message.sessionId,
         {
           type: commandType,
@@ -487,7 +522,7 @@ export class ChannelService {
         : await this.#dependencies.resolveWorkspaceReferences(session.workspaceId, requestedReferences);
     const referenceSuffix = createWorkspaceReferencePromptSuffix(message.requestId, references);
     if (ids.length === 0) {
-      await sessions.execute(
+      await execute(
         message.sessionId,
         { type: commandType, message: `${message.payload.message}${referenceSuffix}` },
         expected
@@ -521,7 +556,7 @@ export class ChannelService {
             () =>
               '\n<host_knowledge_imports>Knowledge import references are temporarily unavailable. Ordinary attachments remain usable.</host_knowledge_imports>'
           )) ?? '';
-      await sessions.execute(
+      await execute(
         message.sessionId,
         {
           type: commandType,
@@ -572,7 +607,9 @@ function isUserMessageEvent(
   );
 }
 
-/** Identifies an enriched authoritative user message end carrying a durable Pi entry id. */
+/**
+ * Identifies an enriched authoritative user message end carrying a durable Pi entry id.
+ */
 function isUserMessageEnd(
   event: HostEventEnvelope
 ): event is HostEventEnvelope<{ type: 'message_end'; message: { role: 'user'; entryId: string } }> {

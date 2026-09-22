@@ -24,7 +24,7 @@ import type { ServerSettingsDto, RestartOperationDto } from '@octopus/shared/pro
 
 const terminal = ['succeeded', 'restored', 'failed', 'cancelled'];
 /**
- * Keeps the accepted operation identity local and stops automatic polling after sixty seconds.
+ * Observes Host restart events and offers an explicit one-shot check when reconnection is delayed.
  */
 export function ServerRestart({
   snapshot,
@@ -62,7 +62,7 @@ export function ServerRestart({
   const expired = startedAt > 0 && remaining === 0;
   const submitting = useRef(false);
   const result = useQuery({
-    queryKey: ['server-restart-operation', accepted?.operationId, startedAt],
+    queryKey: ['server-restart-operation', accepted?.operationId],
     enabled: !!accepted,
     retry: false,
     refetchOnWindowFocus: false,
@@ -81,24 +81,6 @@ export function ServerRestart({
         }
         throw cause;
       }
-    },
-    refetchInterval: (query) => {
-      if (
-        terminal.includes(query.state.data?.state ?? '') ||
-        (query.state.error instanceof ApiRequestError && query.state.error.statusCode === 404)
-      ) {
-        return false;
-      }
-      const elapsed = Date.now() - startedAt;
-      return elapsed >= 60_000
-        ? false
-        : elapsed < 1000
-          ? 1000
-          : elapsed < 3000
-            ? 2000
-            : elapsed < 7000
-              ? 4000
-              : 5000;
     },
   });
   const operation = result.data ?? accepted;
@@ -164,12 +146,20 @@ export function ServerRestart({
               <>
                 <span>
                   {t(
-                    'settings.server.restart.pollHint',
-                    'The service is temporarily unreachable or the operation result is unknown; automatic polling lasts at most 60 seconds, and stopping polling does not cancel the restart.'
+                    'settings.server.restart.connectionHint',
+                    'Waiting for the service to reconnect. You can check the saved result without submitting another restart.'
                   )}
                 </span>
-                <Button type="button" variant="outline" size="sm" onClick={() => setStartedAt(Date.now())}>
-                  {t('settings.server.restart.repoll', 'Poll the result again')}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setStartedAt(Date.now());
+                    void result.refetch();
+                  }}
+                >
+                  {t('settings.server.restart.checkResult', 'Check result')}
                 </Button>
               </>
             ) : null}

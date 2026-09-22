@@ -79,3 +79,4 @@
 | [ADR-0062](./0062-child-launch-admission.md) | Accepted | 固定父路径边界、统一子入口启动复核与过期拒绝 |
 | [ADR-0063](./0063-explicit-knowledge-model-access.md) | Accepted | 将本地模型调用能力与知识库写权限拆分 |
 | [ADR-0064](./0064-web-keyboard-shortcut-registry.md) | Implemented | Web 统一快捷键注册器、双作用域派发与本机可定制绑定 |
+| [ADR-0065](./0065-draft-first-conversation-start.md) | Implemented | 草稿独立、可丢弃预热与首条消息统一提交 |

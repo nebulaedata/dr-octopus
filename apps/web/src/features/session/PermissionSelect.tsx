@@ -61,6 +61,10 @@ function getPermissionItems(t: Translate) {
 }
 
 export interface PermissionSelectProps {
+  /**
+   * Keeps the trigger usable while its Agent options are not loaded yet.
+   */
+  loaded?: boolean;
   disabled?: boolean;
   value: PermissionMode;
   /**
@@ -72,13 +76,18 @@ export interface PermissionSelectProps {
 /**
  * Highlights silent allow as the high-attention choice without claiming runtime enforcement.
  */
-export function PermissionSelect({ disabled = false, value, onValueChange }: PermissionSelectProps) {
+export function PermissionSelect({
+  loaded = true,
+  disabled = false,
+  value,
+  onValueChange,
+}: PermissionSelectProps) {
   const { t } = useI18n();
   const permissionItems = getPermissionItems(t);
   return (
     <Select
       disabled={disabled}
-      items={permissionItems}
+      items={loaded ? permissionItems : []}
       value={value}
       onValueChange={(nextValue) => {
         if (nextValue !== null) {
@@ -125,7 +134,7 @@ export function PermissionSelect({ disabled = false, value, onValueChange }: Per
               </span>
             </div>
           </SelectLabel>
-          {permissionItems.map((item) => {
+          {(loaded ? permissionItems : []).map((item) => {
             const Icon = item.icon;
             return (
               <SelectItem

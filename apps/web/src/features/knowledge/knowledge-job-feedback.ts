@@ -45,7 +45,7 @@ export function getKnowledgeJobNotification(t: Translate, result: KnowledgeJobRe
 }
 
 /**
- * Includes leaf failures and dependency blocks even when the polling request itself succeeded.
+ * Includes leaf failures and dependency blocks even when the snapshot request itself succeeded.
  */
 export function getKnowledgeJobFailure(t: Translate, { job, leaves }: KnowledgeJobResult) {
   if (!['failed', 'partial', 'waiting_dependency'].includes(job.state)) {
