@@ -30,7 +30,7 @@ try {
   if (!stopping) {
     console.error(error);
     process.exitCode = 1;
-    process.disconnect?.();
+    await shutdown();
   }
 }
 

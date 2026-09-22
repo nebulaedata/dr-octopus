@@ -62,7 +62,7 @@ function create() {
   closeError = undefined;
   install = async () => {
     calls.push('extensions');
-    return { installed: [], failures: [{ source: 'fixture', error: 'offline', networkUnavailable: true }] };
+    return { installed: [], failures: [] };
   };
   return createServerRuntime();
 }
@@ -76,10 +76,10 @@ test('Starts once, exposes detached diagnostics, and closes once without signal 
   const status = runtime.getStatus();
   assert.equal(status.state, 'running');
   assert.equal(status.address, 'http://127.0.0.1:12345');
-  assert.match(status.warnings[0], /offline/);
-  status.warnings.length = 0;
+  assert.deepEqual(status.warnings, []);
+  status.warnings.push('detached');
   status.fileLogging.enabled = true;
-  assert.equal(runtime.getStatus().warnings.length, 1);
+  assert.equal(runtime.getStatus().warnings.length, 0);
   assert.equal(runtime.getStatus().fileLogging.enabled, false);
   await Promise.all([runtime.close(), runtime.close()]);
   assert.equal(calls.filter((call) => call === 'close').length, 1);
@@ -141,4 +141,16 @@ test('Closing before start prevents initialization', async () => {
   await runtime.close();
   await assert.rejects(runtime.start(), /closed/);
   assert.deepEqual(calls, ['close']);
+});
+
+test('Extension failure prevents listening and fails startup after cleanup', async () => {
+  const runtime = create();
+  install = async () => ({
+    installed: [],
+    failures: [{ source: 'fixture', error: 'installation failed', networkUnavailable: false }],
+  });
+  await assert.rejects(runtime.start(), /Pi extension installation failed: fixture: installation failed/);
+  assert.deepEqual(calls, ['infra', 'close']);
+  assert.equal(runtime.getStatus().state, 'failed');
+  await runtime.close();
 });

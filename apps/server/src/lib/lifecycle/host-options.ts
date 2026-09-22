@@ -25,5 +25,8 @@ export interface ServerHostOptions {
    */
   onFailure?(): void;
   closeTimeoutMs?: number;
+  /**
+   * Optional embedding override; by default startup waits for installation without a deadline.
+   */
   startTimeoutMs?: number;
 }

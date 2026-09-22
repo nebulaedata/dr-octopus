@@ -10,7 +10,7 @@ import type { ForkOptions } from 'node:child_process';
 import type { EnsureExtensionsResult } from '@octopus/agent';
 
 /**
- * Runs the Agent installer in a disposable process, returning only serializable installation diagnostics.
+ * Waits for installation without a deadline; only explicit Host cancellation terminates the installer.
  */
 export async function initializeExtensions(
   agentDir: string,
@@ -26,6 +26,7 @@ export async function initializeExtensions(
     env: {
       ...createAgentEnvironmentStore(agentDir).load().values,
       DR_OCTOPUS_CODING_AGENT_DIR: agentDir,
+      PI_CODING_AGENT_DIR: agentDir,
     },
     stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
     windowsHide: true,

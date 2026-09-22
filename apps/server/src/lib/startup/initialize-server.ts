@@ -40,17 +40,11 @@ export async function initializeServer(
         'Missing Pi extensions installed'
       );
     }
-    for (const failure of result.failures) {
-      const warning = `${failure.source}: ${String(failure.error)}; networkUnavailable=${String(failure.networkUnavailable)}. Retry by restarting the server.`;
-      status.warnings.push(warning);
-      server.log.warn(
-        {
-          err: failure.error,
-          extension: failure.source,
-          networkUnavailable: failure.networkUnavailable,
-          phase: 'extensions',
-        },
-        warning
+    if (result.failures.length > 0) {
+      throw new Error(
+        `Pi extension installation failed: ${result.failures
+          .map((failure) => `${failure.source}: ${String(failure.error)}`)
+          .join('; ')}`
       );
     }
     signal.throwIfAborted();

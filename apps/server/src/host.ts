@@ -27,7 +27,7 @@ export function createServerHost(options: ServerHostOptions = {}) {
   const prepare = options.prepare ?? prepareServerEnvironment;
   const apply = options.apply ?? applyServerEnvironment;
   const closeMs = options.closeTimeoutMs ?? 30_000;
-  const startMs = options.startTimeoutMs ?? 60_000;
+  const startMs = options.startTimeoutMs;
   let state: ServerStatus['state'] = 'starting';
   let runtime: ServerRuntime | undefined;
   let candidate: ServerRuntime | undefined;
@@ -101,7 +101,7 @@ export function createServerHost(options: ServerHostOptions = {}) {
    */
   async function closeCandidate(): Promise<void> {
     if (candidate) {
-      await within(candidate.close(), closeMs);
+      await within(candidate.close(), closeMs, () => 'Server candidate cleanup');
       candidate = undefined;
     }
   }
@@ -122,8 +122,17 @@ export function createServerHost(options: ServerHostOptions = {}) {
     const id = randomUUID();
     const factory = options.createRuntime ?? (await import('./runtime.js')).createServerRuntime;
     assertGeneration(epoch);
-    candidate = factory({ config, control: control(id, snapshot) });
-    await within(candidate.start(), startMs);
+    const launching = factory({ config, control: control(id, snapshot) });
+    candidate = launching;
+    if (startMs === undefined) {
+      await launching.start();
+    } else {
+      await within(
+        launching.start(),
+        startMs,
+        () => `Server startup (phase: ${launching.getStatus().phase})`
+      );
+    }
     assertGeneration(epoch);
     runtime = candidate;
     candidate = undefined;
@@ -160,7 +169,7 @@ export function createServerHost(options: ServerHostOptions = {}) {
       assertGeneration(epoch);
       operation.state = 'draining';
       notify();
-      await within(runtime!.close(), closeMs);
+      await within(runtime!.close(), closeMs, () => 'Server restart shutdown');
       runtime = undefined;
       assertGeneration(epoch);
       operation.state = 'starting';

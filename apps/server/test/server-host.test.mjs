@@ -12,7 +12,13 @@ import { createServerHost } from '../dist/host.js';
 /**
  * Builds isolated fake resources while using the production Host state machine.
  */
-function fixture({ failStart = [], failClose = [], pendingStart = [], startGates = [] } = {}) {
+function fixture({
+  failStart = [],
+  failClose = [],
+  pendingStart = [],
+  startGates = [],
+  startTimeoutMs = 40,
+} = {}) {
   let target = snapshot(3000, 'a');
   const entries = [];
   const applied = [];
@@ -20,7 +26,7 @@ function fixture({ failStart = [], failClose = [], pendingStart = [], startGates
     prepare: () => target,
     apply: (value) => applied.push(value),
     closeTimeoutMs: 40,
-    startTimeoutMs: 40,
+    ...(startTimeoutMs === null ? {} : { startTimeoutMs }),
     createRuntime({ config, control }) {
       const index = entries.length;
       const entry = { config, control, closed: false, starts: 0, closes: 0 };
@@ -40,7 +46,7 @@ function fixture({ failStart = [], failClose = [], pendingStart = [], startGates
         getStatus() {
           return {
             state: 'running',
-            phase: 'ready',
+            phase: pendingStart.includes(index) ? 'extensions' : 'ready',
             dataDir: '',
             address: `http://127.0.0.1:${config.port}`,
             fileLogging: { enabled: false, state: 'disabled', directory: '' },
@@ -206,4 +212,27 @@ test('restart completion notifies subscribers retained by the Host without statu
     unsubscribe();
     await f.host.stop();
   }
+});
+
+test('Initial startup timeout identifies its phase before cleaning up the candidate', async () => {
+  const f = fixture({ pendingStart: [0] });
+  await assert.rejects(f.host.start(), /Server startup \(phase: extensions\) deadline exceeded after 40ms/);
+  assert.equal(f.entries[0].closed, true);
+  assert.equal(f.host.getStatus().state, 'failed');
+  await f.host.stop();
+});
+
+test('Default startup waits past the former deadline until installation completes', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const gate = Promise.withResolvers();
+  const f = fixture({ startGates: [gate.promise], startTimeoutMs: null });
+  const starting = f.host.start();
+  t.mock.timers.tick(120_000);
+  await Promise.resolve();
+  assert.equal(f.entries[0].closed, false);
+  assert.equal(f.host.getStatus().state, 'starting');
+  gate.resolve();
+  await starting;
+  assert.equal(f.host.getStatus().state, 'running');
+  await f.host.stop();
 });

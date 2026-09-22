@@ -75,14 +75,22 @@ export class RestartHistory {
 
 /**
  * Limits waiting without claiming that the underlying resource has been cancelled.
+ * @param context Reads the current lifecycle phase at timeout, before failure cleanup can change it.
  */
-export async function within<T>(promise: Promise<T>, milliseconds: number): Promise<T> {
+export async function within<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  context: () => string = () => 'Lifecycle'
+): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error('Lifecycle deadline exceeded')), milliseconds);
+        timer = setTimeout(
+          () => reject(new Error(`${context()} deadline exceeded after ${String(milliseconds)}ms`)),
+          milliseconds
+        );
       }),
     ]);
   } finally {
