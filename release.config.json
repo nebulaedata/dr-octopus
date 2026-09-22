@@ -9,7 +9,7 @@
   "manifest": {
     "name": "dr-octopus",
     "license": "MIT",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "description": "A local-first AI agent workspace powered by Pi, combining persistent memory, knowledge bases, and task automation through web and terminal interfaces.",
     "repository": {
       "type": "git",
@@ -38,7 +38,12 @@
     "*": ["dist"],
     "@octopus/agent": ["dist", "bin"]
   },
-  "requiredFiles": [{ "package": "@octopus/agent", "path": "dist/bin/octopus.js" }],
+  "requiredFiles": [
+    {
+      "package": "@octopus/agent",
+      "path": "dist/bin/octopus.js"
+    }
+  ],
   "paths": {
     "cli": {
       "package": "@octopus/cli",
