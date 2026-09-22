@@ -57,7 +57,6 @@
       "cloudDescription": "Connect a provider with your API key or account.",
       "configure": "Set up a model",
       "description": "Add a model service so Dr.Octopus can help with your next task.",
-      "draftSaved": "Your draft stays here while you configure your models.",
       "errorDescription": "Check your connection and try again, or review your model settings.",
       "errorTitle": "Could not load your models",
       "later": "Not now",

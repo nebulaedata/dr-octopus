@@ -4,7 +4,7 @@
  */
 import { useRef, useState } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { ArrowRightIcon, BotIcon, CloudIcon, LaptopIcon, FileCheckIcon, RefreshCwIcon } from 'lucide-react';
+import { ArrowRightIcon, BotIcon, CloudIcon, LaptopIcon, RefreshCwIcon } from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -79,10 +79,10 @@ export function ModelSetupDialog({
         className="max-h-[calc(100dvh-2rem)] gap-6 overflow-y-auto p-6 sm:max-w-md"
       >
         <DialogHeader className="gap-3 pr-5">
-          <div className="mb-1 flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <BotIcon className="size-6" aria-hidden="true" />
-          </div>
-          <DialogTitle className="text-xl leading-snug">
+          <DialogTitle className="text-xl leading-snug flex items-center gap-2">
+            <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <BotIcon className="size-6" aria-hidden="true" />
+            </div>
             {issue === 'error'
               ? t('home.modelSetup.errorTitle', 'Could not load your models')
               : issue === 'selection'
@@ -134,10 +134,6 @@ export function ModelSetupDialog({
             <ArrowRightIcon className="ml-auto" data-icon="inline-end" />
           </Button>
         )}
-        <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
-          <FileCheckIcon className="size-4 shrink-0" aria-hidden="true" />
-          {t('home.modelSetup.draftSaved', 'Your draft stays here while you configure your models.')}
-        </p>
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
           <Button variant="ghost" onClick={() => setDismissed(token)}>
             {t('home.modelSetup.later', 'Not now')}
