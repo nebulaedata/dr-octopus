@@ -8,7 +8,7 @@ const current = JSON.parse(readFileSync('release.config.json', 'utf8')).manifest
 const next = process.argv[2];
 if (!next || next === current) {
   console.error(
-    `Select a new version instead of ${current}. To retry ${current}, check out v${current} with a clean working tree and run pnpm release:publish without --bump.`
+    `Select a new version instead of ${current}. To retry ${current}, run pnpm release:publish --resume with a clean working tree.`
   );
   process.exit(1);
 }

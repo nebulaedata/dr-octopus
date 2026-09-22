@@ -49,7 +49,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {
+    "@clack/prompts": "^1.8.0",
     "@release-it/bumper": "8.0.0",
+    "commander": "15.0.0",
     "prettier": "^3.9.6",
     "release-it": "21.0.2",
     "tsx": "^4.23.5",

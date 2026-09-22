@@ -89,6 +89,7 @@ test('release-it dry run uses the exact existing prerelease tag without changing
   git('add', '.');
   git('commit', '-m', 'fixture');
   git('tag', 'v1.2.3-beta.0');
+  git('commit', '--allow-empty', '-m', 'subsequent development');
   git('remote', 'add', 'origin', 'https://github.com/example/octopus.git');
   const head = git('rev-parse', 'HEAD');
   await publishGithubRelease(root, '1.2.3-beta.0', async (command, args, cwd) => {
@@ -193,4 +194,20 @@ test('retry recovers when a tag push times out before or after the remote accept
     assert.equal(await assertGithubReleaseReady('.', '1.2.3', options), false);
     assert.equal(pushes, acceptedBeforeTimeout ? 1 : 2);
   }
+});
+
+test('GitHub-only recovery validates the existing tag without requiring HEAD or moving it', async () => {
+  const defaults = fixture();
+  assert.equal(
+    await assertGithubReleaseReady(
+      '.',
+      '1.2.3',
+      fixture({
+        requireHead: false,
+        run: async (command, args) =>
+          args[0] === 'rev-parse' && args[1] === 'HEAD' ? 'newer-commit' : defaults.run(command, args),
+      })
+    ),
+    false
+  );
 });

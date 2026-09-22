@@ -17,7 +17,7 @@ pnpm release minor --preRelease=beta  # 例如 0.1.0 → 0.2.0-beta.0
 
 开发包的 package.json 版本与 pnpm 锁文件不随发版更新。版本发版不构建产物、不执行 npm publish、不创建 GitHub/GitLab Release；本机无需 npm 或 GitHub API Token。`pnpm release:publish` 负责构建、发布 npm，并在 npm 成功后通过 release-it 创建同版本的 GitHub Release。
 
-`pnpm release:build` 仍仅负责本地构建交付包，两条命令用途不同。首次要给当前 `0.1.0` 创建 tag，可执行 `pnpm release --no-increment`；必须先提交该版本的源码与配置。遇到推送失败，先检查本地提交、tag 和远端状态；已存在的本地版本提交和 tag 可直接重试 Git push，不要为重试再次执行 patch 升版。
+`pnpm release:build` 仍仅负责本地构建交付包，两条命令用途不同。首次要发布配置中的当前版本，可执行 `pnpm release:publish --resume` 自动创建 tag；必须先提交该版本的源码与配置。遇到推送失败，先检查本地提交、tag 和远端状态；已存在的本地版本提交和 tag 可直接重试 Git push，不要为重试再次执行 patch 升版。
 
 ## npm 与 GitHub 联合发布
 
@@ -30,15 +30,20 @@ GITHUB_TOKEN=your_github_token
 GitHub 发布配置独立放在 [.release-it.github.json](../../.release-it.github.json)，不会修改版本、提交或 tag，并自动生成 Release notes、识别预发布版本。
 
 ```powershell
-pnpm release:publish                 # 构建并依次发布 npm、GitHub Release
+pnpm release:publish                 # 查询发布状态，选择继续当前版本或发布下一版本
+pnpm release:publish --resume       # 继续当前未完成版本，必要时重建未发布版本的 tag
 pnpm release:publish --bump          # 先交互升版并推送 tag，再联合发布
 pnpm release:publish --dry-run       # npm 打包预览，不升版或发布到两个平台
 pnpm release:publish --github-only   # npm 已成功时，只补发当前版本的 GitHub Release
 ```
 
-发布前校验工作区干净、当前版本 tag 指向 HEAD、GitHub origin 上的 tag 一致，以及 GitHub 访问权限。当前版本尚无 tag 时，先执行 `pnpm release --no-increment`。已有 npm 版本会触发升版；GitHub 失败后的恢复必须使用 `--github-only`，避免再次升版。已发布的 GitHub Release 会跳过，已有 draft 则要求先处理。
+发布参数使用 Commander 解析，选项和确认使用 `@clack/prompts`（方向键选择、回车确认、Ctrl+C 取消）。发布入口先查询当前版本在 npm 和 GitHub 的状态，只有未完整发布时才显示“继续发布当前版本”；两边均已成功时只显示“发布下一版本”。`--resume` 显式继续当前版本，`--bump` 显式选择下一版本。非交互环境必须指定操作，`--yes` 只跳过最终确认。查询失败会中止，已有 draft 需要先处理。
 
-两个平台不支持原子发布：npm 失败时不会创建 GitHub Release；npm 成功而 GitHub 失败时，命令返回失败并提示补发。补发要求当前配置、HEAD 和远端 tag 仍对应已发布版本。`--skip-build` 复用的产物必须与配置中的名称和版本一致。`--dry-run` 仍需 npm 登录，但不要求 GitHub Token，也不会调用 GitHub 发布 API。
+继续当前版本时，若 npm 与 GitHub 均尚未发布，脚本在干净的当前 HEAD 创建或重建该版本 tag，使用 `--force-with-lease` 更新远端并重新构建，不需要切换旧 tag 或再次升版。若推送超时，重复运行 `pnpm release:publish --resume`；恢复时会重新检查状态，远端并发修改会使推送失败而非被覆盖。`--resume` 的 npm 发布不能搭配 `--skip-build`。
+
+npm 已成功时，继续操作只补发 GitHub Release，不重建 tag、不重发 npm；也可以使用 `--github-only`。此时 HEAD 可以有后续提交，但本地与远端原版本 tag 必须一致。若只有 GitHub 已成功，则保留原 tag，并要求 HEAD 与该 tag 一致才能继续发布 npm。`--bump` 必须选择不同的新版本。恢复示例见[开发文档](../../README.dev.zh-CN.md#git-推送超时后用当前代码继续发布-009)。
+
+两个平台不支持原子发布：npm 失败时不会创建 GitHub Release；npm 成功而 GitHub 失败时，命令返回失败并提示补发。补发要求当前配置版本、本地 tag 和远端 tag 仍对应已发布版本。`--skip-build` 复用的产物必须与配置中的名称和版本一致。`--dry-run` 仍需 npm 登录，但不要求 GitHub Token，也不会调用 GitHub 发布 API。
 
 ## 构建与安装
 

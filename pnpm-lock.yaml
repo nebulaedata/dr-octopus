@@ -11,9 +11,15 @@ importers:
 
   .:
     devDependencies:
+      '@clack/prompts':
+        specifier: ^1.8.0
+        version: 1.8.0
       '@release-it/bumper':
         specifier: 8.0.0
         version: 8.0.0(release-it@21.0.2(@types/node@26.5.1)(supports-color@8.1.1))
+      commander:
+        specifier: 15.0.0
+        version: 15.0.0
       prettier:
         specifier: ^3.9.6
         version: 3.9.6

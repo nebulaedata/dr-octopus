@@ -1,120 +1,29 @@
 /**
  * @author longlongago2
- * @description Publishes the assembled npm release: verifies authentication, bumps the version when occupied, builds, and publishes npm followed by a matching GitHub Release.
+ * @description Publishes the assembled npm release: offers current-version recovery or a new version, then publishes npm followed by its GitHub Release.
  */
 import { readFile } from 'node:fs/promises';
 import { loadEnvFile } from 'node:process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createInterface } from 'node:readline/promises';
+import { cancel } from '@clack/prompts';
 import { execute, pnpmCommand } from '../apps/cli/src/process.ts';
 import { readReleaseConfig } from '../apps/cli/src/distribution/config.ts';
 import { findConfiguration } from '../apps/cli/src/distribution/location.ts';
 
 import { assertGithubReleaseReady, publishGithubRelease } from './github-release.mjs';
+import { getGithubPublicationState } from './github-publication-state.mjs';
+import { getNpmPublicationState } from './npm-publication-state.mjs';
+import { choosePublicationAction, confirmPublication } from './publication-choice.mjs';
+import { createPublicationCommand } from './publication-options.mjs';
+import { npmCommand } from './npm-command.mjs';
+import { resumeReleaseTag } from './resume-release-tag.mjs';
 
-const DEFAULT_REGISTRY = 'https://registry.npmjs.org/';
 const BUILD_TIMEOUT = 900_000;
 const PUBLISH_TIMEOUT = 600_000;
 const BUMP_TIMEOUT = 120_000;
 
-const USAGE = `Usage: publish-release.mjs [options]
-
-Options:
-  --registry <url>   Registry to publish to (default: ${DEFAULT_REGISTRY})
-  --otp <code>       One-time password for accounts with 2FA publishing
-  --bump             Always run release-it to bump the version first
-  --dry-run          Preview npm publication without uploading or creating a GitHub Release
-  --github-only      Retry GitHub Release for the current already-published npm version
-  --skip-build       Reuse the existing release/ directory
-  -y, --yes          Skip the interactive confirmation
-  -h, --help         Show this help`;
-
-/**
- * Parses CLI flags, accepting both "--flag value" and "--flag=value" forms.
- * @returns {{registry: string, otp: string | undefined, bump: boolean, dryRun: boolean, githubOnly: boolean, skipBuild: boolean, yes: boolean, help: boolean}}
- */
-function parseArgs(argv) {
-  const options = {
-    registry: DEFAULT_REGISTRY,
-    otp: undefined,
-    bump: false,
-    dryRun: false,
-    githubOnly: false,
-    skipBuild: false,
-    yes: false,
-    help: false,
-  };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    const separator = arg.indexOf('=');
-    const flag = separator === -1 ? arg : arg.slice(0, separator);
-    const inline = separator === -1 ? undefined : arg.slice(separator + 1);
-    if (flag === '--registry' || flag === '--otp') {
-      const value = inline !== undefined ? inline : argv[++i];
-      if (value === undefined) throw new Error(`Missing value for ${flag}.`);
-      if (flag === '--registry') options.registry = value;
-      else options.otp = value;
-    } else if (flag === '--bump') {
-      options.bump = true;
-    } else if (flag === '--dry-run') {
-      options.dryRun = true;
-    } else if (flag === '--github-only') {
-      options.githubOnly = true;
-    } else if (flag === '--skip-build') {
-      options.skipBuild = true;
-    } else if (flag === '--yes' || flag === '-y') {
-      options.yes = true;
-    } else if (flag === '--help' || flag === '-h') {
-      options.help = true;
-    } else {
-      throw new Error(`Unknown argument: ${arg}.\n\n${USAGE}`);
-    }
-  }
-  if (!/^https?:\/\//.test(options.registry)) {
-    throw new Error(`Invalid registry URL: ${options.registry}`);
-  }
-  if (options.githubOnly && (options.bump || options.dryRun)) {
-    throw new Error('--github-only cannot be combined with --bump or --dry-run.');
-  }
-  return options;
-}
-
-/**
- * Resolves npm's JS entry on Windows so arguments never pass through cmd.exe quoting.
- * @param {string} cwd Directory used to probe for the npm shim.
- * @returns {Promise<{command: string, args: string[]}>}
- */
-async function npmCommand(cwd) {
-  if (process.platform !== 'win32') {
-    return { command: 'npm', args: [] };
-  }
-  const { access } = await import('node:fs/promises');
-  const paths = (await execute('where.exe', ['npm'], cwd)).split(/\r?\n/);
-  for (const path of paths) {
-    for (const entry of [
-      join(dirname(path), 'node_modules/npm/bin/npm-cli.js'),
-      join(dirname(path), 'npm-cli.js'),
-    ]) {
-      try {
-        await access(entry);
-        return { command: process.execPath, args: [entry] };
-      } catch {
-        /* Try the next standard npm shim layout. */
-      }
-    }
-    if (path.endsWith('.exe')) {
-      return { command: path, args: [] };
-    }
-  }
-  throw new Error('npm was not found. Install Node.js 22.19+, which bundles npm.');
-}
-
-const options = parseArgs(process.argv.slice(2));
-if (options.help) {
-  console.log(USAGE);
-  process.exit(0);
-}
+const options = createPublicationCommand().parse().opts();
 
 const configPath = findConfiguration(dirname(fileURLToPath(import.meta.url)), 'release.config.json');
 if (!configPath) {
@@ -162,24 +71,9 @@ async function assertAuthenticated() {
  * @returns {Promise<'published' | 'available'>}
  */
 async function getVersionState(name, version) {
-  try {
-    const published = await execute(
-      npm.command,
-      [...npm.args, 'view', `${name}@${version}`, 'version', `--registry=${options.registry}`],
-      repoRoot
-    );
-    if (published === version) {
-      console.log(`→ ${name}@${version} is already published on ${options.registry}`);
-      return 'published';
-    }
-    return 'available';
-  } catch (error) {
-    if (error.message.includes('E404')) {
-      console.log(`→ ${name}@${version} not found on ${options.registry} (new version)`);
-      return 'available';
-    }
-    throw error;
-  }
+  const state = await getNpmPublicationState(repoRoot, npm, options.registry, name, version);
+  console.log(`→ ${name}@${version}: ${state} on ${options.registry}`);
+  return state;
 }
 
 /**
@@ -197,26 +91,6 @@ async function bumpVersion() {
     throw new Error(`${config.manifest.name}@${config.manifest.version} is already published; aborting.`);
   }
   console.log(`✓ Version bumped to ${config.manifest.version}`);
-}
-
-/**
- * Asks for a final confirmation unless --yes or --dry-run was passed, since npm publish is irreversible.
- * @param {{name: string, version: string}} manifest Built release manifest.
- */
-async function confirmPublish(manifest) {
-  if (options.yes || options.dryRun) return;
-  const rl = createInterface({ input: process.stdin, output: process.stderr });
-  try {
-    const answer = await rl.question(
-      `\nPublish ${manifest.name}@${manifest.version} to ${options.registry} and GitHub Release v${manifest.version}? [y/N] `
-    );
-    if (!/^y(?:es)?$/i.test(answer.trim())) {
-      console.log('Publish aborted.');
-      process.exit(0);
-    }
-  } finally {
-    rl.close();
-  }
 }
 
 /**
@@ -250,7 +124,7 @@ async function publish(manifest) {
 }
 
 /**
- * Verifies authentication, bumps the version when it is already taken, builds, confirms, and publishes.
+ * Inspects both platforms, selects continuation or a new version, then executes only the missing publication steps.
  */
 async function main() {
   if (!options.dryRun && !process.env.GITHUB_TOKEN) {
@@ -258,21 +132,41 @@ async function main() {
   }
   await assertAuthenticated();
   const state = await getVersionState(config.manifest.name, config.manifest.version);
-  if (options.githubOnly) {
-    if (state !== 'published') throw new Error('Publish the current version to npm before --github-only.');
-    const exists = await assertGithubReleaseReady(repoRoot, config.manifest.version, {
-      pushMissingTag: true,
-    });
-    if (!exists) await publishGithubRelease(repoRoot, config.manifest.version);
-    console.log(`✓ GitHub Release v${config.manifest.version} is published.`);
-    return;
-  }
   if (options.dryRun) {
-    if (state === 'published') {
-      console.warn('⚠ Version already published; dry-run skips the version bump.');
+    if (state === 'published') console.warn('⚠ Version already published; dry-run skips the version bump.');
+  } else {
+    const github = await getGithubPublicationState(repoRoot, config.manifest.version);
+    console.log(`→ Current publication: npm=${state}, GitHub=${github}`);
+    const action = await choosePublicationAction(config.manifest.version, { npm: state, github }, options);
+    if (action === 'cancel' || action === 'done') {
+      if (action === 'done') console.log('✓ Current version is already fully published.');
+      else cancel('Publish aborted.');
+      return;
     }
-  } else if (state === 'published' || options.bump) {
-    await bumpVersion();
+    if (action === 'github-only') {
+      const exists = await assertGithubReleaseReady(repoRoot, config.manifest.version, {
+        requireHead: false,
+      });
+      if (!exists) {
+        if (!(await confirmPublication(config.manifest, options, { githubOnly: true })))
+          return cancel('Publish aborted.');
+        await publishGithubRelease(repoRoot, config.manifest.version);
+      }
+      console.log(`✓ GitHub Release v${config.manifest.version} is published.`);
+      return;
+    }
+    if (action === 'bump') {
+      await bumpVersion();
+    } else {
+      if (options.skipBuild)
+        throw new Error('Continuing the current version requires a fresh build; remove --skip-build.');
+      await resumeReleaseTag(repoRoot, config.manifest.version, {
+        readState: async () => ({
+          npm: await getVersionState(config.manifest.name, config.manifest.version),
+          github: await getGithubPublicationState(repoRoot, config.manifest.version),
+        }),
+      });
+    }
   }
   const githubExists = options.dryRun
     ? false
@@ -288,7 +182,7 @@ async function main() {
   if (!options.dryRun && (await getVersionState(manifest.name, manifest.version)) === 'published') {
     throw new Error(`${manifest.name}@${manifest.version} is already published; aborting.`);
   }
-  await confirmPublish(manifest);
+  if (!(await confirmPublication(manifest, options))) return cancel('Publish aborted.');
   await publish(manifest);
   if (!options.dryRun && !githubExists) {
     try {

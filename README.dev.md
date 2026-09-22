@@ -36,6 +36,50 @@ This publishes the tagged code, excluding subsequent commits. After the publish 
 
 If the current version is not yet published to npm and only the tag push was interrupted (for example, `Push v0.0.9 to origin before publishing`), retry `pnpm release:publish` with a clean working tree and the local tag still pointing to HEAD. The script pushes the missing current tag and verifies the remote result. If the remote tag points to another commit, it stops with a conflict instead of overwriting it. If npm succeeded and only the GitHub Release failed, use `pnpm release:publish --github-only`.
 
+### Continue the current version or publish the next version
+
+Commit the source and release configuration and keep the working tree clean, then run:
+
+```powershell
+pnpm release:publish
+```
+
+Commander handles CLI arguments. Interactive selection and confirmation use `@clack/prompts`: use arrow keys to select, Enter to confirm, and Ctrl+C to cancel. The script checks the configured version on npm and GitHub before showing the available actions:
+
+| Current state                            | Available actions                                                       |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| Not published to npm                     | Continue the current version, or publish the next version               |
+| npm published, GitHub Release incomplete | Continue the current version (GitHub only), or publish the next version |
+| Both npm and GitHub Release published    | Publish the next version only                                           |
+
+Network, permission, and lookup failures stop the workflow; they never count as an unpublished version. An existing GitHub draft must be resolved before continuing.
+
+You can also select an action explicitly:
+
+```powershell
+pnpm release:publish --resume       # Continue the current incomplete version
+pnpm release:publish --bump         # Select and publish the next version
+pnpm release:publish --github-only  # Complete GitHub after npm publication
+```
+
+With `--bump`, select a new version, such as `patch → 0.0.10` from `0.0.9`. Do not use `--bump` to retry `0.0.9`; selecting the same version is rejected before changing files or committing. Noninteractive invocation requires `--resume`, `--bump`, or `--github-only`. `--yes` skips the final confirmation but does not select an action.
+
+### Resume 0.0.9 from the current code after a Git push timeout
+
+A push timeout can leave a local version commit and tag; the remote might also have accepted the push. This does not imply npm publication succeeded and does not require a rollback or another version bump.
+
+Keep and commit the publication recovery fixes and current source. Ensure `release.config.json` still specifies `manifest.version: 0.0.9` and the working tree is clean, then run:
+
+```powershell
+pnpm release:publish --resume
+```
+
+When both npm and GitHub confirm that the version is unpublished, the script creates or recreates `v0.0.9` at the current HEAD, updates the remote tag, rebuilds, and publishes. There is no need to check out the old tag or delete tags manually. The remote update uses `--force-with-lease` to check the previously observed tag and replace it in one push, avoiding a deletion gap if another timeout occurs. A concurrent remote tag change stops the update instead of being overwritten.
+
+If the push times out again, retry the same `--resume` command; it rechecks publication and tag states. Continuing the current version requires a fresh build and rejects `--skip-build` to avoid uploading stale artifacts with the same version number.
+
+Once npm succeeds, continuation never republishes that npm version or recreates its tag; it only completes the GitHub Release. If GitHub succeeded but npm did not, the existing Release tag is also preserved. If HEAD differs from that tag, select the next version.
+
 ## Architecture highlights
 
 - [System architecture overview](https://github.com/nebulaedata/dr-octopus/blob/main/docs/architecture/overview.md)

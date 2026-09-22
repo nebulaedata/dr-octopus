@@ -36,6 +36,50 @@ git switch -
 
 若 npm 尚未发布当前版本，且只是 tag 推送中断（例如报错 `Push v0.0.9 to origin before publishing`），本地 tag 仍指向 HEAD、工作区干净时，直接重试 `pnpm release:publish`。脚本会补推远端缺失的当前 tag 并验证结果；若远端同名 tag 指向其他提交，会停止并提示冲突，不会覆盖。若 npm 已成功、仅 GitHub Release 失败，使用 `pnpm release:publish --github-only`。
 
+### 选择继续当前版本或发布下一版本
+
+在工作区干净、当前源码和发布配置已提交后，运行：
+
+```powershell
+pnpm release:publish
+```
+
+参数解析由 Commander 负责；交互使用 `@clack/prompts`，用方向键选择、回车确认，Ctrl+C 取消。脚本先查询配置中当前版本的 npm 和 GitHub Release 状态，再显示选择：
+
+| 当前状态                          | 可用操作                                              |
+| --------------------------------- | ----------------------------------------------------- |
+| npm 尚未发布                      | 继续发布当前版本，或发布下一版本                      |
+| npm 已发布，GitHub Release 未完成 | 继续当前版本（仅补发 GitHub Release），或发布下一版本 |
+| npm 和 GitHub Release 均已成功    | 只提供发布下一版本                                    |
+
+网络、权限或查询异常会中止流程，不会被当作“尚未发布”。GitHub 已有 draft 时，继续发布会提示先处理 draft。
+
+也可以明确指定操作：
+
+```powershell
+pnpm release:publish --resume       # 继续当前未完成版本
+pnpm release:publish --bump         # 选择并发布下一个版本
+pnpm release:publish --github-only  # npm 已成功，仅补发 GitHub Release
+```
+
+`--bump` 必须选择新版本，例如从 `0.0.9` 选择 `patch → 0.0.10`。不要用 `--bump` 重试 `0.0.9`；选择相同版本会在修改文件和提交之前被拒绝。非交互环境需要显式指定 `--resume`、`--bump` 或 `--github-only`；`--yes` 只跳过最终发布确认，不替你选择操作。
+
+### Git 推送超时后，用当前代码继续发布 0.0.9
+
+推送超时可能留下本地版本提交和 tag，远端也可能已接收推送。这不表示该版本已经发布到 npm，也不需要自动回滚或再次升版。
+
+保留并提交发布恢复相关修复及当前源码，确认 `release.config.json` 的 `manifest.version` 仍为 `0.0.9`、工作区干净，然后执行：
+
+```powershell
+pnpm release:publish --resume
+```
+
+当 npm 和 GitHub 均确认该版本尚未发布时，脚本会在当前 HEAD 创建或重建 `v0.0.9`，再更新远端 tag、重新构建并发布。无需切换到旧 tag，也无需手动删 tag。远端更新使用 `--force-with-lease` 校验之前读取的 tag 值并一次替换，避免“先删除、再推送”之间再次超时导致标签丢失；若期间远端 tag 被修改，则停止而不覆盖。
+
+推送再次超时时，重复运行同一条 `--resume` 命令即可，脚本会重新检查两端状态。继续当前版本必须重新构建，不能使用 `--skip-build`，避免把同版本的旧产物重新上传。
+
+npm 已成功时不允许重发该 npm 版本或重建其 tag，继续操作仅补发 GitHub Release。若 GitHub Release 已成功但 npm 尚未成功，也必须保留该 Release 的原 tag；当前 HEAD 与它不一致时，需要选择下一版本。
+
 ## 架构要点
 
 - [系统架构概览](https://github.com/nebulaedata/dr-octopus/blob/main/docs/architecture/overview.md)
