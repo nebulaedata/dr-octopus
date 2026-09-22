@@ -93,8 +93,20 @@ async function fixture(t) {
   await file(source, 'LICENSE', 'Fixture MIT license');
   await file(source, 'THIRD_PARTY_NOTICES.md', 'Fixture third-party notices');
   const layout = await assembleRelease(source, target, projects, config);
-  return { temporary, source, target, layout, config };
+  return { temporary, source, target, layout, config, projects };
 }
+
+test('assembly rejects missing or directory-valued compiled command entries', async (t) => {
+  const { source, target, config, projects } = await fixture(t);
+  config.requiredFiles = [{ package: 'fixture-cli', path: 'compiled/agent.js' }];
+  const entry = join(source, 'relocated/cli/compiled/agent.js');
+  await assert.rejects(assembleRelease(source, target, projects, config), /Missing required release file/);
+  await mkdir(entry);
+  await assert.rejects(assembleRelease(source, target, projects, config), /Missing required release file/);
+  await rm(entry, { recursive: true });
+  await writeFile(entry, 'export {};');
+  await assembleRelease(source, target, projects, config);
+});
 
 test('publication is independent, preserves its frozen workspace and extracts away from npm', async (t) => {
   const { temporary, source, target, layout, config } = await fixture(t);

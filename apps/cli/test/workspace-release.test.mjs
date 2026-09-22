@@ -73,3 +73,58 @@ test('Release rejects packages and patches outside the workspace', async (t) => 
   assert.equal(isInside(root, join(root, 'packages/extra')), true);
   assert.equal(isInside(root, join(temp, 'source-other')), false);
 });
+
+test('configured Agent artifacts preserve its command wrapper and built entry', async (t) => {
+  const temp = await mkdtemp(join(tmpdir(), 'octopus release bin '));
+  t.after(() => rm(temp, { recursive: true, force: true }));
+  const root = join(temp, 'source');
+  const target = join(temp, 'release');
+  await mkdir(target);
+  const config = JSON.parse(await readFile(new URL('../../../release.config.json', import.meta.url), 'utf8'));
+  const manifest = JSON.parse(
+    await readFile(new URL('../../../packages/agent/package.json', import.meta.url), 'utf8')
+  );
+  const wrapper = await readFile(new URL('../../../packages/agent/bin/octopus.mjs', import.meta.url), 'utf8');
+  await fixtureFile(root, 'package.json', '{}');
+  await fixtureFile(root, 'pnpm-workspace.yaml', 'packages: ["packages/*"]');
+  await fixtureFile(root, 'pnpm-lock.yaml', 'lockfileVersion: "9.0"');
+  await fixtureFile(root, 'packages/agent/package.json', JSON.stringify(manifest));
+  await fixtureFile(root, 'packages/agent/bin/octopus.mjs', wrapper);
+  await fixtureFile(root, 'packages/agent/dist/bin/octopus.js', 'export {};');
+  const projects = [{ path: join(root, 'packages/agent') }];
+  await assert.rejects(
+    copyWorkspaceRelease(root, target, projects, { '*': ['dist'] }),
+    /Missing release bin for @octopus\/agent: .*octopus.mjs/
+  );
+  await copyWorkspaceRelease(root, target, projects, config.artifacts);
+  assert.equal(await readFile(join(target, 'packages/agent/bin/octopus.mjs'), 'utf8'), wrapper);
+  assert.equal(await readFile(join(target, 'packages/agent/dist/bin/octopus.js'), 'utf8'), 'export {};');
+  assert.deepEqual(JSON.parse(await readFile(join(target, 'packages/agent/package.json'), 'utf8')), manifest);
+});
+
+test('release validates string bins and rejects directory or out-of-package commands', async (t) => {
+  const temp = await mkdtemp(join(tmpdir(), 'octopus release bin validation '));
+  t.after(() => rm(temp, { recursive: true, force: true }));
+  const root = join(temp, 'source');
+  const target = join(temp, 'release');
+  await mkdir(target);
+  await fixtureFile(root, 'package.json', '{}');
+  await fixtureFile(root, 'pnpm-workspace.yaml', 'packages: ["packages/*"]');
+  await fixtureFile(root, 'pnpm-lock.yaml', 'lockfileVersion: "9.0"');
+  await fixtureFile(root, 'packages/command/dist/cli.mjs', 'export {};');
+  const projects = [{ path: join(root, 'packages/command') }];
+  for (const bin of ['./dist/missing.mjs', './dist', '../package.json']) {
+    await fixtureFile(root, 'packages/command/package.json', JSON.stringify({ name: 'command', bin }));
+    await assert.rejects(
+      copyWorkspaceRelease(root, target, projects, { '*': ['dist'] }),
+      /Missing release bin/
+    );
+  }
+  await fixtureFile(
+    root,
+    'packages/command/package.json',
+    JSON.stringify({ name: 'command', bin: './dist/cli.mjs' })
+  );
+  await copyWorkspaceRelease(root, target, projects, { '*': ['dist'] });
+  assert.equal(await readFile(join(target, 'packages/command/dist/cli.mjs'), 'utf8'), 'export {};');
+});

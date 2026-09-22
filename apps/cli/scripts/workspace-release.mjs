@@ -15,6 +15,25 @@ export function isInside(root, path) {
 }
 
 /**
+ * Rejects declared commands that selected artifacts would leave absent from the installed workspace.
+ */
+async function assertPackageBins(destination, manifest) {
+  const bins = typeof manifest.bin === 'string' ? [manifest.bin] : Object.values(manifest.bin ?? {});
+  for (const bin of bins) {
+    const path = resolve(destination, bin);
+    const info = isInside(destination, path)
+      ? await stat(path).catch((error) => {
+          if (error.code !== 'ENOENT') throw error;
+          return null;
+        })
+      : null;
+    if (!info?.isFile()) {
+      throw new Error(`Missing release bin for ${manifest.name}: ${bin}. Include it in release artifacts.`);
+    }
+  }
+}
+
+/**
  * Copies an unchanged install graph; pnpm owns discovery and dependency resolution.
  * @param {string} root Source workspace root.
  * @param {string} target Empty staging directory outside all package dist directories.
@@ -57,6 +76,7 @@ export async function copyWorkspaceRelease(root, target, projects, artifacts) {
         await cp(dist, join(destination, artifact), { recursive: true, dereference: false });
       }
     }
+    await assertPackageBins(destination, manifest);
   }
   const config = parse(await readFile(join(root, 'pnpm-workspace.yaml'), 'utf8'));
   for (const patch of Object.values(config.patchedDependencies ?? {})) {

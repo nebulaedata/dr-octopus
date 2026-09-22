@@ -47,6 +47,16 @@ export async function assembleRelease(root, target, projects, config) {
   const workspace = await mkdtemp(join(target, '.workspace-'));
   try {
     await copyWorkspaceRelease(root, workspace, projects, config.artifacts);
+    for (const resource of config.requiredFiles ?? []) {
+      const path = resourcePath(root, projects, resource);
+      const info = await lstat(insidePath(workspace, path)).catch((error) => {
+        if (error.code !== 'ENOENT') throw error;
+        return null;
+      });
+      if (!info?.isFile()) {
+        throw new Error(`Missing required release file: ${resource.package}/${resource.path}`);
+      }
+    }
     for (const file of legalFiles) {
       await cp(join(root, file), join(workspace, file), { recursive: true, dereference: false });
     }

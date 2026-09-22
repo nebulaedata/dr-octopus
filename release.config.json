@@ -27,8 +27,10 @@
   "archive": "payload/runtime.tar.gz",
   "installFilter": "@octopus/cli...",
   "artifacts": {
-    "*": ["dist"]
+    "*": ["dist"],
+    "@octopus/agent": ["dist", "bin"]
   },
+  "requiredFiles": [{ "package": "@octopus/agent", "path": "dist/bin/octopus.js" }],
   "paths": {
     "cli": {
       "package": "@octopus/cli",

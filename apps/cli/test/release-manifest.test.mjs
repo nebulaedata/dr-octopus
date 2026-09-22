@@ -41,6 +41,15 @@ test('configuration rejects traversal, malformed versions and accidental develop
   const path = join(root, 'release.config.json');
   for (const modify of [
     (value) => {
+      value.requiredFiles = {};
+    },
+    (value) => {
+      value.requiredFiles = [{ package: '@octopus/agent', path: '../escape.js' }];
+    },
+    (value) => {
+      value.requiredFiles = [{ path: 'dist/bin/octopus.js' }];
+    },
+    (value) => {
       delete value.manifest.license;
     },
     (value) => {

@@ -31,6 +31,7 @@ export interface ReleaseConfig {
   archive: string;
   installFilter: string;
   artifacts: Record<string, string[]>;
+  requiredFiles?: PackageResource[];
   paths: Record<'cli' | 'server' | 'serverEntry' | 'gatewayEntry' | 'webClient', PackageResource>;
 }
 
@@ -182,6 +183,17 @@ export function readReleaseConfig(path: string): ReleaseConfig {
       throw new Error('Release artifacts must be arrays of package-relative paths.');
     }
     paths.forEach((path) => portablePath(path));
+  }
+  if (config.requiredFiles !== undefined) {
+    if (!Array.isArray(config.requiredFiles)) {
+      throw new Error('Release requiredFiles must be an array of package resources.');
+    }
+    for (const resource of config.requiredFiles) {
+      if (typeof resource?.package !== 'string' || !resource.package.trim()) {
+        throw new Error('Required release file must declare a package.');
+      }
+      portablePath(resource.path);
+    }
   }
   return config;
 }
