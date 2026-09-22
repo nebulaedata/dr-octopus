@@ -36,6 +36,7 @@ export function useOctopusLogoMotion(loading = false) {
   const [reactionStart, setReactionStart] = useState<number | null>(null);
   const [reactionDuration, setReactionDuration] = useState(1.6);
   const logoRef = useRef<SVGSVGElement>(null);
+  const mouseHover = useRef(false);
   const pupilsRef = useRef<SVGGElement>(null);
   const reactionAnimationRef = useRef<SVGAnimateTransformElement>(null);
   const rhythm = useRef({ lastInput: -Infinity, consumedInput: -Infinity, interval: 300 });
@@ -55,10 +56,9 @@ export function useOctopusLogoMotion(loading = false) {
     if (logo === null) {
       return;
     }
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     /**
-     * Keeps loading in motion, pauses idle hover, and resets reduced motion to an open-eyed pose.
+     * Keeps the original animation regardless of system motion preferences, pausing only idle mouse hover.
      */
     function syncPlayback(): void {
       if (logo === null) {
@@ -67,11 +67,7 @@ export function useOctopusLogoMotion(loading = false) {
       if (loading && reactionStart !== null) {
         setReactionStart(null);
       }
-      if (reducedMotion.matches) {
-        logo.pauseAnimations();
-        logo.setCurrentTime(0);
-        setReactionStart(null);
-      } else if (!loading && reactionStart === null && logo.matches(':hover')) {
+      if (!loading && reactionStart === null && mouseHover.current) {
         logo.pauseAnimations();
       } else {
         logo.unpauseAnimations();
@@ -92,7 +88,6 @@ export function useOctopusLogoMotion(loading = false) {
       if (
         reactionDuration < 1 &&
         !loading &&
-        !reducedMotion.matches &&
         input.lastInput > input.consumedInput &&
         performance.now() - input.lastInput < 350
       ) {
@@ -106,9 +101,22 @@ export function useOctopusLogoMotion(loading = false) {
     }
 
     animation?.addEventListener('endEvent', finishReaction);
-    reducedMotion.addEventListener('change', syncPlayback);
-    logo.addEventListener('pointerenter', syncPlayback);
-    logo.addEventListener('pointerleave', syncPlayback);
+    /**
+     * Uses actual mouse entry rather than sticky touchscreen :hover matching.
+     */
+    function handlePointerEnter(event: PointerEvent): void {
+      mouseHover.current = event.pointerType === 'mouse';
+      syncPlayback();
+    }
+    /**
+     * Clears hover explicitly before resuming, independent of pseudo-class update timing.
+     */
+    function handlePointerLeave(): void {
+      mouseHover.current = false;
+      syncPlayback();
+    }
+    logo.addEventListener('pointerenter', handlePointerEnter);
+    logo.addEventListener('pointerleave', handlePointerLeave);
     let frame: number | undefined;
     let pointerX = window.innerWidth / 2;
     let pointerY = window.innerHeight / 2;
@@ -195,13 +203,7 @@ export function useOctopusLogoMotion(loading = false) {
       if (typingKey) {
         ime.endedTarget = null;
       }
-      if (
-        !editable ||
-        logo === null ||
-        loading ||
-        reducedMotion.matches ||
-        performance.now() - rhythm.current.lastInput < 24
-      ) {
+      if (!editable || logo === null || loading || performance.now() - rhythm.current.lastInput < 24) {
         return;
       }
       const gap = now - rhythm.current.lastInput;
@@ -245,9 +247,8 @@ export function useOctopusLogoMotion(loading = false) {
       window.removeEventListener('compositionstart', handleTyping, true);
       window.removeEventListener('compositionupdate', handleCompositionUpdate, true);
       window.removeEventListener('compositionend', handleTyping, true);
-      reducedMotion.removeEventListener('change', syncPlayback);
-      logo.removeEventListener('pointerenter', syncPlayback);
-      logo.removeEventListener('pointerleave', syncPlayback);
+      logo.removeEventListener('pointerenter', handlePointerEnter);
+      logo.removeEventListener('pointerleave', handlePointerLeave);
       window.removeEventListener('pointermove', handlePointerMove);
       if (frame !== undefined) {
         window.cancelAnimationFrame(frame);
@@ -256,16 +257,11 @@ export function useOctopusLogoMotion(loading = false) {
   }, [loading, reactionStart, reactionDuration]);
 
   /**
-   * Starts one splash unless loading, already reacting, or the user prefers reduced motion.
+   * Starts one splash unless loading or already reacting.
    */
   function activateSplash(): void {
     const logo = logoRef.current;
-    if (
-      logo === null ||
-      loading ||
-      reactionStart !== null ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
+    if (logo === null || loading || reactionStart !== null) {
       return;
     }
     setIsContinuing(false);

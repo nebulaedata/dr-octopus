@@ -22,7 +22,7 @@ export interface OctopusLogoProps {
 const ORIGINAL_LOGO_SRC = `${import.meta.env.BASE_URL}logo-256.png`;
 
 /**
- * Displays the mascot with pointer-following eyes and an optional, reduced-motion-aware loading loop.
+ * Displays the mascot with pointer-following eyes and an optional loading loop.
  */
 export function OctopusLogo({ className, label = 'Dr.Octopus', loading = false }: OctopusLogoProps) {
   const waveClipId = useId();

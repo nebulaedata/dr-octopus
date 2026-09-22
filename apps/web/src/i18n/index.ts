@@ -1,12 +1,12 @@
 /**
  * @author Claude
- * @description Initializes the browser i18next instance with language detection and keeps the dayjs locale in sync with the resolved language.
+ * @description Initializes the browser i18next instance from the persisted device preference and keeps the dayjs locale in sync with the resolved language.
  */
 
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import i18n from 'i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+import { useLanguageStore } from '../stores/language';
 import { initReactI18next } from 'react-i18next';
 import { createI18nOptions, fallbackLanguage, normalizeLanguage } from './config';
 import type { SupportedLanguage } from './config';
@@ -26,21 +26,18 @@ function syncDayjsLocale(language: string): void {
 }
 
 void i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     ...createI18nOptions(),
-    detection: {
-      // Explicit user choice wins; the browser language is only the first-visit guess.
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'],
-      convertDetectedLanguage: normalizeLanguage,
-    },
+    lng: useLanguageStore.getState().language,
     // Keep missing-key logs in development to surface untranslated copy; stay quiet in production.
     debug: import.meta.env.DEV,
   })
   .then(() => syncDayjsLocale(i18n.resolvedLanguage ?? fallbackLanguage));
 
-i18n.on('languageChanged', syncDayjsLocale);
+i18n.on('languageChanged', (language) => {
+  syncDayjsLocale(language);
+  useLanguageStore.getState().setLanguage(normalizeLanguage(language));
+});
 
 export default i18n;

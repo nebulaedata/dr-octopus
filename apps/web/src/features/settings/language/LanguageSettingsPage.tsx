@@ -12,7 +12,7 @@ import { SettingContainer } from '../layout/SettingContainer';
 import type { SupportedLanguage } from '@/i18n/config';
 
 /**
- * Switches the interface language through i18next; the detector caches the choice in localStorage.
+ * Switches the interface language through i18next; the language store persists the choice in localStorage.
  */
 export function LanguageSettingsPage() {
   const { t, i18n } = useI18n();
