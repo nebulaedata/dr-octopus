@@ -347,6 +347,8 @@
     },
     "sidebar": {
       "createWorkspaceTooltip": "新建工作区",
+      "emptyDescription": "新建会话以开始",
+      "emptyTitle": "暂无会话",
       "hideProperties": "隐藏属性面板",
       "newSession": "新建会话",
       "pinFailedDescription": "请稍后重试。",

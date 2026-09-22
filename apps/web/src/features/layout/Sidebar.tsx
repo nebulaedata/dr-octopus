@@ -7,6 +7,7 @@ import {
   FolderIcon,
   FolderPlusIcon,
   LoaderCircleIcon,
+  MessagesSquareIcon,
   PanelLeftCloseIcon,
   PlusIcon,
   Settings2Icon,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
 import { ScrollArea } from '@octopus/ui/components/scroll-area';
 import {
   Select,
@@ -198,6 +200,19 @@ export function Sidebar(props: SidebarProps) {
           <div className="flex flex-col gap-2">
             {props.loading &&
               Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-14 w-full" />)}
+            {!props.loading && !props.error && props.sessions.length === 0 && (
+              <Empty className="px-3 py-12">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <MessagesSquareIcon aria-hidden="true" strokeWidth={1.5} />
+                  </EmptyMedia>
+                  <EmptyTitle>{t('layout.sidebar.emptyTitle', 'No sessions yet')}</EmptyTitle>
+                  <EmptyDescription>
+                    {t('layout.sidebar.emptyDescription', 'Create a session to get started.')}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )}
             {props.sessions.map((session) => (
               <SessionListItem
                 key={session.id}

@@ -354,6 +354,8 @@
     },
     "sidebar": {
       "createWorkspaceTooltip": "Create new workspace",
+      "emptyDescription": "Create a session to get started.",
+      "emptyTitle": "No sessions yet",
       "hideProperties": "Hide properties panel",
       "newSession": "New session",
       "pinFailedDescription": "Please try again later.",
