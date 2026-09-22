@@ -14,6 +14,16 @@ Octopus 是一个本地优先、以 Workspace 为边界的通用智能体系统�
 
 构建产物使用 `pnpm release:build`；执行 `pnpm release:publish` 会在 npm 发布成功后通过 release-it 创建同版本的 GitHub Release，需要 npm 登录及具有仓库 Contents 读写权限的 `GITHUB_TOKEN`。发布脚本自动加载仓库根目录的 `.env.publish`，已有进程环境变量优先；文件不存在时输出警告并以退出码 1 终止，不会构建或发布。若 GitHub 发布失败，使用 `pnpm release:publish --github-only` 补发当前版本。完整命令、预发布和重试说明见 [CLI 版本发版](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版)。
 
+### 发布失败后的恢复
+
+若发布失败后又提交了修复，导致当前 HEAD 不再是原版本 tag 指向的提交，先确认工作区干净，再执行以下命令，交互选择新版本、提交并推送新 tag，然后发布：
+
+```powershell
+pnpm release:publish --bump
+```
+
+若 npm 尚未发布当前版本，且只是 tag 推送中断（例如报错 `Push v0.0.9 to origin before publishing`），本地 tag 仍指向 HEAD、工作区干净时，直接重试 `pnpm release:publish`。脚本会补推远端缺失的当前 tag 并验证结果；若远端同名 tag 指向其他提交，会停止并提示冲突，不会覆盖。若 npm 已成功、仅 GitHub Release 失败，使用 `pnpm release:publish --github-only`。
+
 ## 架构要点
 
 - [系统架构概览](https://github.com/nebulaedata/dr-octopus/blob/main/docs/architecture/overview.md)

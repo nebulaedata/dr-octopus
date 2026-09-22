@@ -14,6 +14,16 @@ From the repository root, run `pnpm release:dry patch` to preview a release, or 
 
 Build release artifacts with `pnpm release:build`. Run `pnpm release:publish` to publish npm first, then create the matching GitHub Release through release-it. This requires npm authentication and a `GITHUB_TOKEN` with repository Contents read/write permissions. The publish script automatically loads the repository-root `.env.publish`; existing process environment variables take precedence. If the file is missing, it prints a warning and exits with code 1 before building or publishing. If GitHub publication fails, retry the current version with `pnpm release:publish --github-only`. See [CLI version releases](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版) for commands, prereleases, and retries.
 
+### Recovering from a failed publication
+
+If you committed a fix after a failed publication and HEAD no longer matches the original version tag, ensure the working tree is clean, then run the following command to select a new version, commit and push its tag, and publish:
+
+```powershell
+pnpm release:publish --bump
+```
+
+If the current version is not yet published to npm and only the tag push was interrupted (for example, `Push v0.0.9 to origin before publishing`), retry `pnpm release:publish` with a clean working tree and the local tag still pointing to HEAD. The script pushes the missing current tag and verifies the remote result. If the remote tag points to another commit, it stops with a conflict instead of overwriting it. If npm succeeded and only the GitHub Release failed, use `pnpm release:publish --github-only`.
+
 ## Architecture highlights
 
 - [System architecture overview](https://github.com/nebulaedata/dr-octopus/blob/main/docs/architecture/overview.md)
