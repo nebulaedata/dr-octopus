@@ -10,7 +10,7 @@
     "name": "dr-octopus",
     "license": "MIT",
     "version": "0.0.8",
-    "description": "A local-first, workspace-scoped general-purpose agent system built on Pi.",
+    "description": "A local-first AI agent workspace powered by Pi, combining persistent memory, knowledge bases, and task automation through web and terminal interfaces.",
     "repository": {
       "type": "git",
       "url": "git+https://github.com/nebulaedata/dr-octopus.git"
@@ -19,7 +19,7 @@
     "bugs": {
       "url": "https://github.com/nebulaedata/dr-octopus/issues"
     },
-    "keywords": ["pi", "agent", "octopus", "dr.octopus"],
+    "keywords": ["pi", "agent", "octopus", "dr.octopus", "tui", "knowledge", "memory", "cron"],
     "engines": {
       "node": ">=22.19.0"
     }
