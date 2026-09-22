@@ -22,6 +22,18 @@ Octopus 是一个本地优先、以 Workspace 为边界的通用智能体系统�
 pnpm release:publish --bump
 ```
 
+`--bump` 必须选择新版本，例如当前为 `0.0.9` 时选择 `patch → 0.0.10`，不要再次输入 `0.0.9`。同版本会在修改文件、提交和推送之前被拒绝。
+
+若要继续发布原来的 `0.0.9`，且本地和远端 tag 均已存在并指向同一提交，先保存并提交工作区改动，再切回该 tag 发布：
+
+```powershell
+git switch --detach v0.0.9
+pnpm release:publish
+git switch -
+```
+
+这会发布 tag 对应的代码，不包含之后的新提交。发布命令结束后，最后一条命令返回之前的分支。
+
 若 npm 尚未发布当前版本，且只是 tag 推送中断（例如报错 `Push v0.0.9 to origin before publishing`），本地 tag 仍指向 HEAD、工作区干净时，直接重试 `pnpm release:publish`。脚本会补推远端缺失的当前 tag 并验证结果；若远端同名 tag 指向其他提交，会停止并提示冲突，不会覆盖。若 npm 已成功、仅 GitHub Release 失败，使用 `pnpm release:publish --github-only`。
 
 ## 架构要点

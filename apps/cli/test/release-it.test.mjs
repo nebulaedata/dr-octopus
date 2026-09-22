@@ -57,7 +57,12 @@ async function fixture(t) {
   );
   const publication = JSON.parse(await readFile(join(repository, 'release.config.json'), 'utf8'));
   publication.manifest.version = '1.2.3';
+  await mkdir(join(worktree, 'scripts'));
   const unchanged = {
+    'scripts/validate-release-version.mjs': await readFile(
+      join(repository, 'scripts/validate-release-version.mjs'),
+      'utf8'
+    ),
     '.prettierrc': await readFile(join(repository, '.prettierrc'), 'utf8'),
     '.editorconfig': await readFile(join(repository, '.editorconfig'), 'utf8'),
     'package.json': JSON.stringify(rootManifest) + '\r\n',
@@ -151,4 +156,20 @@ test('release refuses tracked local changes before changing the publication vers
   assert.equal(await f.git('rev-parse', 'HEAD'), head);
   assert.equal(await f.git('tag', '--list'), '');
   assert.equal(await f.git('--git-dir', f.remote, 'rev-parse', 'main'), head);
+});
+
+test('selecting the current version fails before changing files, commits or tags', async (t) => {
+  const f = await fixture(t);
+  await f.git('tag', '-a', 'v1.2.3', '-m', 'Release v1.2.3');
+  await f.git('push', 'origin', 'refs/tags/v1.2.3');
+  const before = await readFile(f.publicationPath, 'utf8');
+  const head = await f.git('rev-parse', 'HEAD');
+  const tag = await f.git('rev-parse', 'refs/tags/v1.2.3');
+  await assert.rejects(f.release('release', '1.2.3'), /Select a new version instead of 1.2.3/);
+  assert.equal(await readFile(f.publicationPath, 'utf8'), before);
+  assert.equal(await f.git('status', '--porcelain'), '');
+  assert.equal(await f.git('rev-parse', 'HEAD'), head);
+  assert.equal(await f.git('rev-parse', 'refs/tags/v1.2.3'), tag);
+  assert.equal(await f.git('--git-dir', f.remote, 'rev-parse', 'main'), head);
+  assert.equal(await f.git('--git-dir', f.remote, 'rev-parse', 'refs/tags/v1.2.3'), tag);
 });

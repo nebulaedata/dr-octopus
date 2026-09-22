@@ -22,6 +22,18 @@ If you committed a fix after a failed publication and HEAD no longer matches the
 pnpm release:publish --bump
 ```
 
+With `--bump`, select a new version: for example, choose `patch → 0.0.10` when the current version is `0.0.9`. Do not enter `0.0.9` again. An unchanged version is rejected before files, commits, or pushes are modified.
+
+To publish the original `0.0.9` when its local and remote tags already exist and point to the same commit, save and commit any working-tree changes, then publish from that tag:
+
+```powershell
+git switch --detach v0.0.9
+pnpm release:publish
+git switch -
+```
+
+This publishes the tagged code, excluding subsequent commits. After the publish command finishes, the last command returns to the previous branch.
+
 If the current version is not yet published to npm and only the tag push was interrupted (for example, `Push v0.0.9 to origin before publishing`), retry `pnpm release:publish` with a clean working tree and the local tag still pointing to HEAD. The script pushes the missing current tag and verifies the remote result. If the remote tag points to another commit, it stops with a conflict instead of overwriting it. If npm succeeded and only the GitHub Release failed, use `pnpm release:publish --github-only`.
 
 ## Architecture highlights

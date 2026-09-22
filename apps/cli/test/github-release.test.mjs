@@ -170,3 +170,27 @@ test('tag recovery refuses conflicts, API failures and unverified pushes', async
     assert.equal(pushes, ['push-failure', 'not-visible'].includes(scenario) ? 1 : 0);
   }
 });
+
+test('retry recovers when a tag push times out before or after the remote accepts it', async () => {
+  const defaults = fixture();
+  for (const acceptedBeforeTimeout of [false, true]) {
+    let remoteHasTag = false;
+    let pushes = 0;
+    const options = fixture({
+      pushMissingTag: true,
+      run: async (command, args) => {
+        if (args[0] === 'ls-remote' && !remoteHasTag) return '';
+        if (args.includes('push')) {
+          pushes += 1;
+          remoteHasTag = acceptedBeforeTimeout || pushes > 1;
+          if (pushes === 1) throw new Error('Git push timed out');
+          return '';
+        }
+        return defaults.run(command, args);
+      },
+    });
+    await assert.rejects(assertGithubReleaseReady('.', '1.2.3', options), /Git push timed out/);
+    assert.equal(await assertGithubReleaseReady('.', '1.2.3', options), false);
+    assert.equal(pushes, acceptedBeforeTimeout ? 1 : 2);
+  }
+});

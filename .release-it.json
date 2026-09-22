@@ -1,6 +1,7 @@
 {
   "$schema": "https://unpkg.com/release-it@21/schema/release-it.json",
   "hooks": {
+    "before:bump": "node scripts/validate-release-version.mjs ${version}",
     "after:bump": "prettier --write release.config.json"
   },
   "git": {
