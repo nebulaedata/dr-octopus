@@ -58,7 +58,7 @@ export function MessageView({
             {isUserRole && (
               <span className="text-[11px]">{message.timestamp && formatMessageTime(message.timestamp)}</span>
             )}
-            <span className="text-primary font-semibold">
+            <span className="text-primary font-semibold text-xs font-serif">
               {isUserRole ? t('session.messageRow.you', 'You') : 'Dr.Octopus'}
             </span>
           </div>

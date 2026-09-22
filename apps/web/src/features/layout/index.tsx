@@ -112,6 +112,26 @@ function WorkbenchLayout() {
   }, [canShowRightPanel]);
 
   /**
+   * Closes the right panel while preserving the current route and other search parameters.
+   */
+  const closeRightPanel = () => {
+    void navigate({ to: '.', search: (prev) => ({ ...prev, sideright: undefined }) });
+  };
+
+  /**
+   * Toggles the requested panel using the latest URL state, preserving other search parameters.
+   */
+  const toggleRightPanel = (panel: NonNullable<typeof sideright>) => {
+    void navigate({
+      to: '.',
+      search: (prev) => ({
+        ...prev,
+        sideright: prev.sideright === panel ? undefined : panel,
+      }),
+    });
+  };
+
+  /**
    * Cycles through Sidebar Sessions, entering from either end when no Session is selected.
    */
   const navigateSiblingSession = (direction: -1 | 1): boolean => {
@@ -135,13 +155,7 @@ function WorkbenchLayout() {
     if (!isXl || selectedWorkspaceId === undefined) {
       return false;
     }
-    void navigate({
-      to: '.',
-      search: (prev) => ({
-        ...prev,
-        sideright: prev.sideright === 'file-explorer' ? undefined : 'file-explorer',
-      }),
-    });
+    toggleRightPanel('file-explorer');
     return true;
   });
   useShortcut(ShortcutKeyRegister.NEW_SESSION, () => {
@@ -182,9 +196,11 @@ function WorkbenchLayout() {
         useWorkbenchHome.getState().ensureDraftId(selectedWorkspaceId);
         void navigate({ to: '/workspaces/$workspaceId', params: { workspaceId: selectedWorkspaceId } });
       }}
-      onSelectWorkspace={(workspaceId) =>
-        void navigate({ to: '/workspaces/$workspaceId', params: { workspaceId } })
-      }
+      onSelectWorkspace={(workspaceId) => {
+        setTimeout(() => {
+          void navigate({ to: '/workspaces/$workspaceId', params: { workspaceId } });
+        }, 100);
+      }}
       onCreateWorkspace={async (input) => {
         const workspace = await createWorkspace.mutateAsync(input);
         void navigate({ to: '/workspaces/$workspaceId', params: { workspaceId: workspace.id } });
@@ -212,15 +228,7 @@ function WorkbenchLayout() {
         })
       }
       showPropertiesPanel={sideright === 'properties-panel'}
-      onTogglePropertiesPanel={() =>
-        void navigate({
-          to: '.',
-          search: (prev) => ({
-            ...prev,
-            sideright: sideright === 'properties-panel' ? undefined : 'properties-panel',
-          }),
-        })
-      }
+      onTogglePropertiesPanel={() => toggleRightPanel('properties-panel')}
       onToggleSidebar={toggleSidebar}
       settingsActive={search.settings !== undefined || pathname.startsWith('/settings')}
       onOpenSettings={() => {
@@ -256,15 +264,7 @@ function WorkbenchLayout() {
         session={activeSession}
         workspaceId={selectedWorkspaceId}
         filesPanelOpen={sideright === 'file-explorer'}
-        onToggleFilesPanel={() =>
-          void navigate({
-            to: '.',
-            search: (prev) => ({
-              ...prev,
-              sideright: sideright === 'file-explorer' ? undefined : 'file-explorer',
-            }),
-          })
-        }
+        onToggleFilesPanel={() => toggleRightPanel('file-explorer')}
       />
       <div className="min-h-0 min-w-0 flex-1">
         <Outlet />
@@ -302,6 +302,7 @@ function WorkbenchLayout() {
         <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
           <ResizablePanel
             id="workbench-left-sidebar"
+            className="min-w-0"
             panelRef={leftPanelRef}
             defaultSize={SIDEBAR_DEFAULT_WIDTH}
             minSize={SIDEBAR_MIN_WIDTH}
@@ -317,7 +318,6 @@ function WorkbenchLayout() {
                 setOpen(true);
               }
             }}
-            className="min-w-0"
           >
             {sidebarContent}
           </ResizablePanel>
@@ -325,7 +325,6 @@ function WorkbenchLayout() {
           <ResizablePanel id="workbench-main" className="min-w-0">
             {mainContent}
           </ResizablePanel>
-          {/* Keep the separator in layout flow so the preceding handle remains measurable while collapsed. */}
           <ResizableHandle
             withHandle
             disabled={!canShowRightPanel}
@@ -343,20 +342,10 @@ function WorkbenchLayout() {
             className="min-w-0"
           >
             {canShowProperties && (
-              <SessionPropertiesPanel
-                session={activeSession}
-                onClose={() =>
-                  void navigate({ to: '.', search: (prev) => ({ ...prev, sideright: undefined }) })
-                }
-              />
+              <SessionPropertiesPanel session={activeSession} onClose={closeRightPanel} />
             )}
             {canShowFileExplorer && (
-              <FileExplorerPanel
-                workspaceId={selectedWorkspaceId}
-                onClose={() =>
-                  void navigate({ to: '.', search: (prev) => ({ ...prev, sideright: undefined }) })
-                }
-              />
+              <FileExplorerPanel workspaceId={selectedWorkspaceId} onClose={closeRightPanel} />
             )}
           </ResizablePanel>
         </ResizablePanelGroup>

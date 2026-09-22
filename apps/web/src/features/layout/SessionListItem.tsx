@@ -37,6 +37,7 @@ import { Label } from '@octopus/ui/components/label';
 import { RuntimeStatus } from './RuntimeStatus';
 import { SessionTitle } from './SessionTitle';
 import { useI18n } from '@/i18n/use-i18n';
+import { Spinner } from '@octopus/ui/components/spinner';
 import type { Translate } from '@/i18n/use-i18n';
 import type { DeleteSessionOptionsDto, RuntimeProjectionState, SessionDto } from '@octopus/shared/protocol';
 
@@ -284,6 +285,7 @@ function DeleteSessionDialog({ session, open, onOpenChange, onDelete }: DeleteSe
             {t('common.cancel', 'Cancel')}
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting && <Spinner />}
             {isDeleting ? t('layout.session.deleting', 'Deleting…') : t('layout.session.delete', 'Delete')}
           </Button>
         </DialogFooter>

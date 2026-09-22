@@ -89,7 +89,10 @@ export function Sidebar(props: SidebarProps) {
     } catch (error) {
       toast.add({
         title: t('layout.sidebar.pinFailedTitle', 'Failed to update pin'),
-        description: error instanceof Error ? error.message : t('layout.sidebar.pinFailedDescription', 'Please try again later.'),
+        description:
+          error instanceof Error
+            ? error.message
+            : t('layout.sidebar.pinFailedDescription', 'Please try again later.'),
         type: 'error',
       });
     }
@@ -97,20 +100,17 @@ export function Sidebar(props: SidebarProps) {
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
-      <div aria-label="header" className="flex min-h-17 items-center gap-2.5 px-3.5 py-2.5">
+      <div aria-label="header" className="flex min-h-17 items-center gap-2.5 px-3.5">
         <Logo size="sm" />
-        <span className="flex-1 truncate text-lg font-semibold font-serif tracking-tight">{'Dr.Octopus'}</span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Collapse sidebar"
-          onClick={props.onToggleSidebar}
-        >
+        <span className="flex-1 truncate text-lg font-semibold font-serif tracking-tight">
+          {'Dr.Octopus'}
+        </span>
+        <Button variant="ghost" size="icon-sm" aria-label="Collapse sidebar" onClick={props.onToggleSidebar}>
           <PanelLeftCloseIcon />
         </Button>
       </div>
-      <div aria-label="main" className="flex-1 flex flex-col gap-4 overflow-hidden">
-        <div className="flex flex-col gap-3 px-3.5">
+      <div aria-label="main" className="flex-1 flex flex-col gap-2 overflow-hidden">
+        <div className="flex flex-col gap-2 px-3.5">
           <div className="flex items-center justify-between text-sm font-semibold">
             <span>{t('layout.sidebar.workspace', 'Workspace')}</span>
             <Tooltip>
@@ -121,7 +121,9 @@ export function Sidebar(props: SidebarProps) {
                   </Button>
                 }
               />
-              <TooltipContent side="right">{t('layout.sidebar.createWorkspaceTooltip', 'Create new workspace')}</TooltipContent>
+              <TooltipContent side="right">
+                {t('layout.sidebar.createWorkspaceTooltip', 'Create new workspace')}
+              </TooltipContent>
             </Tooltip>
           </div>
           <Select
@@ -129,7 +131,7 @@ export function Sidebar(props: SidebarProps) {
             onValueChange={(value) => value !== null && props.onSelectWorkspace(value)}
           >
             <SelectTrigger className="w-full">
-              <FolderIcon />
+              <FolderIcon className="text-muted-foreground" />
               <SelectValue placeholder={t('layout.sidebar.workspace', 'Workspace')}>
                 {(value: string | null) => {
                   const workspace = props.workspaces.find((candidate) => candidate.id === value);
@@ -185,12 +187,14 @@ export function Sidebar(props: SidebarProps) {
           </Button>
           {props.error && (
             <Alert variant="destructive">
-              <AlertTitle className="text-xs">{t('layout.sidebar.requestFailed', 'Request failed')}</AlertTitle>
+              <AlertTitle className="text-xs">
+                {t('layout.sidebar.requestFailed', 'Request failed')}
+              </AlertTitle>
               <AlertDescription className="text-[11px] break-all">{props.error}</AlertDescription>
             </Alert>
           )}
         </div>
-        <ScrollArea className="min-h-0 flex-1 px-3.5">
+        <ScrollArea className="min-h-0 flex-1 px-3.5 pb-2">
           <div className="flex flex-col gap-2">
             {props.loading &&
               Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-14 w-full" />)}
@@ -211,7 +215,7 @@ export function Sidebar(props: SidebarProps) {
           </div>
         </ScrollArea>
       </div>
-      <div aria-label="footer" className="flex-none px-3.5 py-4 border-t">
+      <div aria-label="footer" className="flex-none px-3.5 py-2 border-t">
         <Button
           variant="ghost"
           className="w-full"
@@ -219,7 +223,9 @@ export function Sidebar(props: SidebarProps) {
           onClick={props.onOpenSettings}
         >
           <SettingsIcon data-icon="inline-start" />
-          <span className="flex-1 text-left text-sm font-medium">{t('layout.sidebar.settings', 'Settings')}</span>
+          <span className="flex-1 text-left text-sm font-medium">
+            {t('layout.sidebar.settings', 'Settings')}
+          </span>
         </Button>
       </div>
       <RestartSessionDialog action={restart} />

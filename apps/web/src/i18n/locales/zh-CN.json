@@ -1006,7 +1006,7 @@
     "knowledgeMode": {
       "apply": "应用来源设置",
       "auto": "自动匹配",
-      "autoBadge": "自动匹配来源",
+      "autoBadge": "自动匹配",
       "autoDescription": "智能体从当前工作区和全局知识库中挑选相关资料，主题不明确时会先与你确认。",
       "clearSelection": "清空选择",
       "dialogDescription": "默认由智能体匹配集合；指定来源后，检索将限定在所选范围内。",

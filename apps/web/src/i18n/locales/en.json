@@ -1029,7 +1029,7 @@
     "knowledgeMode": {
       "apply": "Apply source settings",
       "auto": "Auto-match",
-      "autoBadge": "Auto-match sources",
+      "autoBadge": "Auto-match",
       "autoDescription": "The Agent picks relevant materials from the current workspace and global knowledge bases, and confirms with you first when the topic is unclear.",
       "clearSelection": "Clear selection",
       "dialogDescription": "By default the Agent matches collections; once sources are specified, retrieval stays within the selected scope.",
