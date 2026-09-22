@@ -260,7 +260,9 @@ async function main() {
   const state = await getVersionState(config.manifest.name, config.manifest.version);
   if (options.githubOnly) {
     if (state !== 'published') throw new Error('Publish the current version to npm before --github-only.');
-    const exists = await assertGithubReleaseReady(repoRoot, config.manifest.version);
+    const exists = await assertGithubReleaseReady(repoRoot, config.manifest.version, {
+      pushMissingTag: true,
+    });
     if (!exists) await publishGithubRelease(repoRoot, config.manifest.version);
     console.log(`✓ GitHub Release v${config.manifest.version} is published.`);
     return;
@@ -274,7 +276,7 @@ async function main() {
   }
   const githubExists = options.dryRun
     ? false
-    : await assertGithubReleaseReady(repoRoot, config.manifest.version);
+    : await assertGithubReleaseReady(repoRoot, config.manifest.version, { pushMissingTag: true });
   if (!options.skipBuild) {
     console.log('→ Building release (pnpm release:build)...');
     await execute(pnpm.command, [...pnpm.args, 'run', 'release:build'], repoRoot, 'inherit', BUILD_TIMEOUT);

@@ -105,3 +105,68 @@ test('release-it dry run uses the exact existing prerelease tag without changing
   assert.equal(git('status', '--porcelain'), '');
   assert.equal(git('tag', '--list'), 'v1.2.3-beta.0');
 });
+
+test('preflight resumes a missing tag push and a second attempt is read-only', async (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'octopus-tag-retry-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+  git('init', '-b', 'main');
+  git('config', 'user.name', 'Release fixture');
+  git('config', 'user.email', 'fixture@example.invalid');
+  git('config', 'commit.gpgsign', 'false');
+  git('commit', '--allow-empty', '-m', 'release fixture');
+  git('tag', '-a', 'v1.2.3', '-m', 'Release v1.2.3');
+  git('tag', '-a', 'unrelated', '-m', 'Do not push');
+  git('config', 'push.followTags', 'true');
+  const remote = join(root, 'remote.git');
+  git('init', '--bare', remote);
+  git('remote', 'add', 'origin', remote);
+  let pushes = 0;
+  const options = fixture({
+    pushMissingTag: true,
+    run: async (_command, args) => {
+      if (args[0] === 'remote') return 'https://github.com/example/octopus.git';
+      // The bare remote is inside the fixture; ignore its untracked directory.
+      if (args[0] === 'status') return '';
+      if (args.includes('push')) pushes += 1;
+      return git(...args);
+    },
+  });
+  assert.equal(await assertGithubReleaseReady(root, '1.2.3', options), false);
+  assert.equal(await assertGithubReleaseReady(root, '1.2.3', options), false);
+  assert.equal(pushes, 1);
+  assert.equal(git('--git-dir', remote, 'rev-parse', 'v1.2.3^{}'), git('rev-parse', 'HEAD'));
+  assert.equal(git('--git-dir', remote, 'tag', '--list'), 'v1.2.3');
+});
+
+test('tag recovery refuses conflicts, API failures and unverified pushes', async () => {
+  const defaults = fixture();
+  for (const scenario of ['conflict', 'local-mismatch', 'dirty', 'api', 'push-failure', 'not-visible']) {
+    let pushes = 0;
+    const options = fixture({
+      pushMissingTag: true,
+      run: async (command, args) => {
+        if (args[0] === 'status' && scenario === 'dirty') return ' M source.ts';
+        if (args[0] === 'rev-parse' && args[1] !== 'HEAD' && scenario === 'local-mismatch') return 'other';
+        if (args[0] === 'ls-remote') return scenario === 'conflict' ? 'other\trefs/tags/v1.2.3' : '';
+        if (args.includes('push')) {
+          pushes += 1;
+          if (scenario === 'push-failure') throw new Error('network unavailable');
+          return '';
+        }
+        return defaults.run(command, args);
+      },
+      request: scenario === 'api' ? async () => ({ ok: false, status: 403 }) : defaults.request,
+    });
+    const errors = {
+      conflict: /different commit/,
+      'local-mismatch': /must point to HEAD/,
+      dirty: /Commit working-tree/,
+      api: /HTTP 403/,
+      'push-failure': /retry pnpm release:publish/,
+      'not-visible': /did not match HEAD after pushing/,
+    };
+    await assert.rejects(assertGithubReleaseReady('.', '1.2.3', options), errors[scenario]);
+    assert.equal(pushes, ['push-failure', 'not-visible'].includes(scenario) ? 1 : 0);
+  }
+});

@@ -10,12 +10,13 @@ const require = createRequire(import.meta.url);
 
 /**
  * Checks credentials, clean source, and matching local/remote tags before npm publication.
+ * Optionally resumes an interrupted tag push, without replacing existing remote tags.
  * Returns whether the GitHub release is already published so retries remain idempotent.
  */
 export async function assertGithubReleaseReady(
   root,
   version,
-  { run = execute, request = fetch, token = process.env.GITHUB_TOKEN } = {}
+  { run = execute, request = fetch, token = process.env.GITHUB_TOKEN, pushMissingTag = false } = {}
 ) {
   if (!token) throw new Error('GITHUB_TOKEN is required (repository Contents: read and write).');
   const remote = await run('git', ['remote', 'get-url', 'origin'], root);
@@ -28,17 +29,27 @@ export async function assertGithubReleaseReady(
   const head = await run('git', ['rev-parse', 'HEAD'], root);
   const tagged = await run('git', ['rev-parse', `refs/tags/${tag}^{commit}`], root);
   if (head !== tagged) throw new Error(`${tag} must point to HEAD; check out the release commit.`);
-  const refs = await run('git', ['ls-remote', 'origin', `refs/tags/${tag}`, `refs/tags/${tag}^{}`], root);
-  const entries = new Map(
-    refs
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((line) => {
-        const [sha, ref] = line.split(/\s+/);
-        return [ref, sha];
-      })
-  );
-  if ((entries.get(`refs/tags/${tag}^{}`) || entries.get(`refs/tags/${tag}`)) !== head) {
+  /**
+   * Resolves annotated and lightweight remote tags, keeping missing refs distinct from conflicts.
+   */
+  async function remoteCommit() {
+    const refs = await run('git', ['ls-remote', 'origin', `refs/tags/${tag}`, `refs/tags/${tag}^{}`], root);
+    const entries = new Map(
+      refs
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map((line) => {
+          const [sha, ref] = line.split(/\s+/);
+          return [ref, sha];
+        })
+    );
+    return entries.get(`refs/tags/${tag}^{}`) || entries.get(`refs/tags/${tag}`);
+  }
+  const remoteHead = await remoteCommit();
+  if (remoteHead && remoteHead !== head) {
+    throw new Error(`Remote ${tag} points to a different commit; resolve the conflict before publishing.`);
+  }
+  if (!remoteHead && !pushMissingTag) {
     throw new Error(`Push ${tag} to origin before publishing; its remote commit must match HEAD.`);
   }
   const api = `https://api.github.com/repos/${match[1]}/${match[2]}`;
@@ -52,10 +63,30 @@ export async function assertGithubReleaseReady(
     headers,
     signal: AbortSignal.timeout(30_000),
   });
-  if (release.status === 404) return false;
-  if (!release.ok) throw new Error(`GitHub release lookup failed (HTTP ${release.status}).`);
-  if ((await release.json()).draft) throw new Error(`Resolve the existing draft release for ${tag} first.`);
-  return true;
+  const exists = release.status !== 404;
+  if (exists) {
+    if (!release.ok) throw new Error(`GitHub release lookup failed (HTTP ${release.status}).`);
+    if ((await release.json()).draft) throw new Error(`Resolve the existing draft release for ${tag} first.`);
+  }
+  if (!remoteHead) {
+    console.log(`→ Resuming release: pushing missing ${tag} to origin...`);
+    try {
+      await run(
+        'git',
+        ['-c', 'push.followTags=false', 'push', 'origin', `refs/tags/${tag}:refs/tags/${tag}`],
+        root
+      );
+    } catch (error) {
+      throw new Error(
+        `Could not push ${tag}. Fix the Git push failure and retry pnpm release:publish.\n${error.message}`,
+        { cause: error }
+      );
+    }
+    if ((await remoteCommit()) !== head) {
+      throw new Error(`Remote ${tag} did not match HEAD after pushing; publication aborted.`);
+    }
+  }
+  return exists;
 }
 
 /**
