@@ -303,7 +303,7 @@ test('Chinese dark guidance preserves input and opens the existing Settings dial
   await expect(dialog).not.toBeVisible();
 });
 
-test('an unselected catalog opens the model menu from guidance without trapping focus', async (t) => {
+test('model guidance opens default settings or the current session model menu without losing input', async (t) => {
   const page = await browser.newPage({ locale: 'en-US' });
   t.after(() => page.close());
   await installSessionFixture(page);
@@ -321,11 +321,30 @@ test('an unselected catalog opens the model menu from guidance without trapping 
       },
     })
   );
+  await page.route('**/api/settings/default-model', (route) =>
+    route.fulfill({ json: { configured: false, available: false, effect: 'new_sessions' } })
+  );
+  await page.route('**/api/settings/default-model/candidates', (route) =>
+    route.fulfill({ json: { candidates: [] } })
+  );
   await page.goto(new URL('/workspaces/workspace-e2e', baseURL).href);
-  await page
-    .getByRole('dialog', { name: 'Choose an available model' })
-    .getByRole('button', { name: 'Choose model', exact: true })
-    .click();
+  const guidance = page.getByRole('dialog', { name: 'Choose an available model' });
+  await expect(guidance).toBeVisible();
+  await page.keyboard.press('Escape');
+  const editor = page.getByRole('textbox', { name: 'Message Dr.Octopus' });
+  await editor.fill('Keep this question while choosing a model');
+  await editor.press('Enter');
+  await guidance.getByRole('button', { name: 'Set default model', exact: true }).click();
+  await expect(page).toHaveURL(/settings\/default-model/);
+  await expect(page.getByRole('dialog', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByText('Current default model', { exact: true })).toBeVisible();
+  await expect(guidance).not.toBeVisible();
+  await page.goBack();
+  await expect(editor).toHaveText('Keep this question while choosing a model');
+  await expect(guidance).not.toBeVisible();
+  await editor.press('Enter');
+  await guidance.getByRole('button', { name: 'Choose model', exact: true }).click();
+  await expect(page).toHaveURL(/\/workspaces\/workspace-e2e$/);
   await page.getByRole('menuitem', { name: /^Model / }).hover();
   await page.getByRole('menuitemradio', { name: 'two', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Model and thinking settings' })).toHaveAttribute(
@@ -333,6 +352,7 @@ test('an unselected catalog opens the model menu from guidance without trapping 
     'two'
   );
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(editor).toHaveText('Keep this question while choosing a model');
 });
 
 for (const event of ['change', 'ready']) {

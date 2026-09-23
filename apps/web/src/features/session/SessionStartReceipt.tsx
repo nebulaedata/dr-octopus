@@ -79,7 +79,7 @@ export function SessionStartReceipt({ startup }: { startup: ReturnType<typeof us
       label={label}
       action={
         status === 'preparing' && (
-          <Button variant="ghost" size="sm" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+          <Button variant="ghost" size="xs" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
             {t('common.cancel', 'Cancel')}
           </Button>
         )

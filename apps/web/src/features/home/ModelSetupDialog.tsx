@@ -54,15 +54,34 @@ export function ModelSetupDialog({
   const primaryActionRef = useRef<HTMLButtonElement>(null);
   const token = `${issue}:${requestVersion}`;
   const open = issue !== null && dismissed !== token && !settingsOpen;
+  let title = t('home.modelSetup.title', 'Connect a model to get started');
+  let description = t(
+    'home.modelSetup.description',
+    'Add a model service so Dr.Octopus can help with your next task.'
+  );
+  if (issue === 'error') {
+    title = t('home.modelSetup.errorTitle', 'Could not load your models');
+    description = t(
+      'home.modelSetup.errorDescription',
+      'Check your connection and try again, or review your model settings.'
+    );
+  } else if (issue === 'selection') {
+    title = t('home.modelSetup.selectTitle', 'Choose an available model');
+    description = t(
+      'home.modelSetup.selectDescription',
+      'Set a default model for new sessions, or choose a model just for this session.'
+    );
+  }
   /**
    * Reuses the route-masked Settings surface while retaining the mounted home draft.
    */
   function configure(): void {
     setDismissed(token);
+    const path = issue === 'selection' ? '/settings/default-model' : '/settings/model-providers';
     void navigate({
       to: '.',
-      search: (previous) => ({ ...previous, settings: { path: '/settings/model-providers' } }),
-      mask: { to: '/settings/model-providers', search: {}, unmaskOnReload: true },
+      search: (previous) => ({ ...previous, settings: { path } }),
+      mask: { to: path, search: {}, unmaskOnReload: true },
     });
   }
   /**
@@ -90,28 +109,9 @@ export function ModelSetupDialog({
             <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <BotIcon className="size-6" aria-hidden="true" />
             </div>
-            {issue === 'error'
-              ? t('home.modelSetup.errorTitle', 'Could not load your models')
-              : issue === 'selection'
-                ? t('home.modelSetup.selectTitle', 'Choose an available model')
-                : t('home.modelSetup.title', 'Connect a model to get started')}
+            {title}
           </DialogTitle>
-          <DialogDescription className="leading-relaxed">
-            {issue === 'error'
-              ? t(
-                  'home.modelSetup.errorDescription',
-                  'Check your connection and try again, or review your model settings.'
-                )
-              : issue === 'selection'
-                ? t(
-                    'home.modelSetup.selectDescription',
-                    'Choose another model from the menu, or update your model services in Settings.'
-                  )
-                : t(
-                    'home.modelSetup.description',
-                    'Add a model service so Dr.Octopus can help with your next task.'
-                  )}
-          </DialogDescription>
+          <DialogDescription className="leading-relaxed">{description}</DialogDescription>
         </DialogHeader>
         {issue === 'empty' && (
           <div className="flex flex-col gap-4 rounded-xl bg-muted/50 p-4">
@@ -136,9 +136,16 @@ export function ModelSetupDialog({
           </div>
         )}
         {(issue === 'selection' || issue === 'error') && (
-          <Button variant="outline" size="lg" className="justify-start" onClick={configure}>
+          <Button
+            variant="outline"
+            size="lg"
+            className="justify-start"
+            onClick={issue === 'selection' ? choose : configure}
+          >
             <SquareMousePointerIcon />
-            {t('home.configureModels', 'Configure model services')}
+            {issue === 'selection'
+              ? t('home.modelSetup.choose', 'Choose model')
+              : t('home.configureModels', 'Configure model services')}
             <ArrowRightIcon className="ml-auto text-muted-foreground" data-icon="inline-end" />
           </Button>
         )}
@@ -152,9 +159,9 @@ export function ModelSetupDialog({
               {t('common.retry', 'Retry')}
             </Button>
           ) : (
-            <Button ref={primaryActionRef} onClick={issue === 'selection' ? choose : configure}>
+            <Button ref={primaryActionRef} onClick={configure}>
               {issue === 'selection'
-                ? t('home.modelSetup.choose', 'Choose model')
+                ? t('home.modelSetup.configureDefault', 'Set default model')
                 : t('home.modelSetup.configure', 'Set up a model')}
               <ArrowRightIcon data-icon="inline-end" />
             </Button>
