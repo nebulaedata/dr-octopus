@@ -17,8 +17,8 @@ import { jevSettingsQuery } from '@/queries/jev-queries';
 import { saveMemoryScreening } from '@/api/memory';
 import { useI18n } from '@/i18n/use-i18n';
 import { SettingsSectionLink } from '../layout/SettingsSectionLink';
-import type { MemoryScreeningSnapshot } from '@octopus/shared/protocol/memory';
 import { ArrowRightIcon } from 'lucide-react';
+import type { MemoryScreeningSnapshot } from '@octopus/shared/protocol/memory';
 
 /**
  * Own screening configuration here; connection setup remains in the dedicated Jev page.
