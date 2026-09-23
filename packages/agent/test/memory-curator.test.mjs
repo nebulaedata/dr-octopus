@@ -177,3 +177,23 @@ for (const malformed of ['[]\n\n---SOURCE_COPY---\n{}', 'missing-target']) {
     assert.equal(requests.length, 2, 'format repair and conflict reassessment share one model call budget');
   });
 }
+
+test('explicit empty output is reassessed once, while automatic empty output stays quiet', async () => {
+  for (const explicit of [false, true]) {
+    let calls = 0;
+    const evaluate = createPiMemoryCurator({
+      model: { id: 'fixture' },
+      modelRegistry: {
+        complete: async () => {
+          calls++;
+          return { stopReason: 'stop', content: [{ type: 'text', text: '[]' }] };
+        },
+      },
+    });
+    assert.deepEqual(
+      await evaluate({ sources: [source], existing: [], explicit }, new AbortController().signal),
+      []
+    );
+    assert.equal(calls, explicit ? 2 : 1);
+  }
+});

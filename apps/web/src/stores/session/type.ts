@@ -7,6 +7,7 @@ import type { TokenUsage } from './token-usage';
 
 import type { StoreApi } from 'zustand/vanilla';
 import type {
+  CommandAckMessage,
   ContextUsageDto,
   HostEventEnvelope,
   GoalStateDto,
@@ -117,6 +118,10 @@ export interface MessageProjection {
   thinkingStartedAt?: number;
   thinkingEndedAt?: number;
   correlationRequestId?: string;
+  /**
+   * The local command was accepted but may still be waiting for Agent settlement.
+   */
+  commandAcknowledged?: true;
   timestamp?: number;
   persistedAt?: number;
   entryId?: string;
@@ -213,6 +218,10 @@ export interface SessionActions {
    * Rolls back a transport-rejected optimistic prompt and restores its draft text.
    */
   rejectOptimisticUserMessage(requestId: string, error: string): void;
+  /**
+   * Accepts a command and, when supplied, applies its generation-fenced completion.
+   */
+  acknowledgeUserCommand(requestId: string, completion?: CommandAckMessage['completion']): void;
   /**
    * Updates the Composer draft.
    */

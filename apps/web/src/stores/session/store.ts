@@ -8,7 +8,7 @@ import { combine } from 'zustand/middleware';
 import { reduceEvent } from './reducer';
 import { applySessionHistory } from './history';
 import { projectPersistedTranscript } from './normalizer';
-import type { SessionSnapshotDto } from '@octopus/shared/protocol';
+import type { CommandAckMessage, SessionSnapshotDto } from '@octopus/shared/protocol';
 import type { MessageProjection, SessionActions, SessionProjectionState, SessionStoreApi } from './type';
 
 export type {
@@ -49,6 +49,8 @@ export function createSessionStore(sessionId: string): SessionStoreApi {
         set((state) => appendOptimisticUserMessage(state, requestId, text)),
       rejectOptimisticUserMessage: (requestId, error) =>
         set((state) => rejectOptimisticUserMessage(state, requestId, error)),
+      acknowledgeUserCommand: (requestId, completion) =>
+        set((state) => acknowledgeUserCommand(state, requestId, completion)),
       setDraft: (draft) => set({ draft }),
       setAttachments: (attachments) => set({ attachments }),
       setThinking: (thinking) => set({ thinking }),
@@ -343,6 +345,56 @@ function appendOptimisticUserMessage(
     pendingUserRequestIds: [...state.pendingUserRequestIds, requestId],
     draft: '',
     error: undefined,
+  };
+}
+
+/**
+ * Record acceptance without dropping optimistic reconciliation; idle confirmation ends its own turn.
+ */
+function acknowledgeUserCommand(
+  state: SessionProjectionState,
+  requestId: string,
+  completion?: CommandAckMessage['completion']
+): SessionProjectionState {
+  if (completion && (state.runtimeId !== completion.runtimeId || state.epoch !== completion.epoch)) {
+    return state;
+  }
+  const pendingUserRequestIds = state.pendingUserRequestIds.filter((id) => id !== requestId);
+  if (!completion) {
+    const localId = `local-${requestId}`;
+    const local = state.messagesById[localId];
+    if (!local || local.commandAcknowledged) {
+      return state;
+    }
+    return {
+      ...state,
+      messagesById: {
+        ...state.messagesById,
+        [localId]: { ...local, commandAcknowledged: true },
+      },
+    };
+  }
+  const endedAt = Date.parse(completion.timestamp);
+  if (!Number.isFinite(endedAt)) {
+    return state;
+  }
+  const turn = Object.values(state.turnsById).find(
+    (candidate) => state.messagesById[candidate.startedByMessageId]?.correlationRequestId === requestId
+  );
+  const ownsActiveTurn = turn !== undefined && state.activeTurnId === turn.id;
+  return {
+    ...state,
+    ...(turn === undefined
+      ? {}
+      : {
+          turnsById: {
+            ...state.turnsById,
+            [turn.id]: { ...turn, status: 'completed' as const, endedAt: turn.endedAt ?? endedAt },
+          },
+        }),
+    activeTurnId: ownsActiveTurn ? undefined : state.activeTurnId,
+    runtimeState: ownsActiveTurn && state.runtimeState === 'starting' ? 'idle' : state.runtimeState,
+    pendingUserRequestIds,
   };
 }
 

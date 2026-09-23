@@ -160,15 +160,12 @@ export class SessionRuntimeRegistry {
       this.#releaseCommand(message.requestId);
       return { requestId: message.requestId, sessionId: pending.sessionId, message: message.message };
     }
-    if (isCorrelatedExtensionNotification(message)) {
-      if (this.#commands.get(message.requestId)?.settleOnAck !== true) {
-        this.#releaseCommand(message.requestId);
-      }
-      return undefined;
-    }
     if (message.type === 'command.ack') {
       const pending = this.#commands.get(message.requestId);
-      if (pending?.settleOnAck === true) {
+      if (
+        pending &&
+        (pending.settleOnAck || (message.completion !== undefined && message.sessionId === pending.sessionId))
+      ) {
         this.#releaseCommand(message.requestId);
       }
       return undefined;
@@ -247,22 +244,6 @@ export class SessionRuntimeRegistry {
     this.#adapter.unsubscribeSession(sessionId);
     this.#onSessionIdle(sessionId);
   }
-}
-
-/**
- * Identifies the terminal notification emitted by an Extension slash command.
- */
-function isCorrelatedExtensionNotification(
-  message: ServerRealtimeMessage
-): message is HostEventEnvelope<{ method: 'notify' }> & { requestId: string } {
-  return (
-    message.type === 'extension.ui' &&
-    message.requestId !== undefined &&
-    typeof message.payload === 'object' &&
-    message.payload !== null &&
-    'method' in message.payload &&
-    message.payload.method === 'notify'
-  );
 }
 
 /**

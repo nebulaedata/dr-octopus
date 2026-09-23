@@ -81,3 +81,5 @@
 | [ADR-0064](./0064-web-keyboard-shortcut-registry.md) | Implemented | Web 统一快捷键注册器、双作用域派发与本机可定制绑定 |
 | [ADR-0065](./0065-draft-first-conversation-start.md) | Implemented | 草稿独立、可丢弃预热与首条消息统一提交 |
 | [ADR-0066](./0066-server-module-autoload.md) | Accepted | 一级业务入口自动加载、具名共享能力、隔离路由作用域与显式资源所有权 |
+| [ADR-0067](./0067-memory-run-lifecycle.md) | Accepted | 统一记忆触发、跨轮用户证据、显式请求结果与会话生命周期隔离 |
+| [ADR-0068](./0068-command-completion.md) | Accepted | 指令完成独立于业务输出，通过响应后状态确认与请求/运行时隔离收尾 |

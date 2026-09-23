@@ -34,7 +34,7 @@ for (const entry of ['src/extensions/memory/index.ts', 'dist/extensions/memory/i
         await handlers.get('session_start')({}, ctx);
         await handlers.get('session_start')({}, ctx);
         const deadline = Date.now() + 20000;
-        while (statuses.length < 2 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
+        while (statuses.length < 1 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
         console.log(JSON.stringify(statuses));
       } finally { await handlers.get('session_shutdown')({}, ctx); }
     `;
@@ -45,13 +45,12 @@ for (const entry of ['src/extensions/memory/index.ts', 'dist/extensions/memory/i
       { cwd: fileURLToPath(new URL('..', import.meta.url)), timeout: 30_000 }
     );
     const statuses = JSON.parse(stdout.trim());
-    assert.equal(statuses.length, 2);
+    assert.equal(statuses.length, 1, 'only the latest startup generation may publish readiness');
     assert.equal(typeof statuses[0].storeId, 'string');
     for (const status of statuses) {
       assert.equal(status.availability, 'ready');
       assert.equal(status.mode, 'auto');
       assert.equal(status.errorCode, undefined);
     }
-    assert.equal(statuses[0].storeId, statuses[1].storeId);
   });
 }

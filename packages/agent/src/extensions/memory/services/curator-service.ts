@@ -77,7 +77,7 @@ export async function* curationSteps(
       }
       return bounded;
     });
-    const proposed = yield { sources: usable, existing: existing ?? [] };
+    const proposed = yield { sources: usable, existing: existing ?? [], explicit };
     const validated = proposed.slice(0, 5).map((item) => {
       const value = memoryRememberSchema.safeParse(item);
       if (!value.success) {

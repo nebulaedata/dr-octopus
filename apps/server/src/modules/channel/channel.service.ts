@@ -9,12 +9,13 @@ import {
   MutationIdempotencyLedger,
 } from '../../infrastructure/idempotency/mutation-ledger.js';
 import { SessionRuntimeError } from '../../infrastructure/runtime/errors.js';
-import { responseSucceeded } from '../../infrastructure/runtime/utils.js';
+import { responseData, responseSucceeded } from '../../infrastructure/runtime/utils.js';
 import { projectHostVisibleUserMessage } from '../sessions/index.js';
 import { createWorkspaceReferencePromptSuffix } from './channel.utils.js';
 import { issueKnowledgeImportTicket } from '@octopus/agent';
 import type {
   ClientRealtimeMessage,
+  CommandAckMessage,
   HostEventEnvelope,
   PermissionStateDto,
   PlanModeStateDto,
@@ -30,7 +31,13 @@ import type { SessionsService } from '../sessions/index.js';
 
 type SendMessage = (message: ServerRealtimeMessage) => void;
 type SessionCommandResult =
-  { thinking?: ThinkingStateDto; permission?: PermissionStateDto; planMode?: PlanModeStateDto } | undefined;
+  | {
+      thinking?: ThinkingStateDto;
+      permission?: PermissionStateDto;
+      planMode?: PlanModeStateDto;
+      completion?: CommandAckMessage['completion'];
+    }
+  | undefined;
 
 interface ChannelConnection {
   send: SendMessage;
@@ -138,7 +145,12 @@ export class ChannelService {
    */
   public handleMessage(connectionId: string, message: ClientRealtimeMessage): Promise<void> {
     const connection = this.#requireConnection(connectionId);
-    if (message.type === 'ping' || message.type === 'session.focus') {
+    // Interactive replies unblock handlers that are themselves waiting at the head of this queue.
+    if (
+      message.type === 'ping' ||
+      message.type === 'session.focus' ||
+      message.type === 'extension.ui.response'
+    ) {
       return this.#dispatchMessage(connection, message);
     }
     const previous = connection.operations.get(message.sessionId) ?? Promise.resolve();
@@ -230,7 +242,13 @@ export class ChannelService {
           this.#userMessages.register(message);
         }
         try {
-          return await this.#executeSessionCommand(message);
+          const result = await this.#executeSessionCommand(message);
+          const completion = await this.#confirmCommandCompletion(message, subscription.runtime);
+          if (completion) {
+            this.#userMessages.cancel(message.sessionId, message.requestId);
+            return { ...result, completion };
+          }
+          return result;
         } catch (error) {
           if (correlatesUserMessage) {
             this.#userMessages.cancel(message.sessionId, message.requestId);
@@ -245,6 +263,39 @@ export class ChannelService {
       sessionId: message.sessionId,
       ...(control ?? {}),
     });
+  }
+
+  /**
+   * Confirm completion independently of an extension's output format on the acknowledged generation.
+   * Pi acknowledges ordinary prompts before generation, but extension handlers after returning.
+   * A subsequent state query distinguishes an idle handled command from inference or queued work.
+   */
+  async #confirmCommandCompletion(
+    message: ClientRealtimeMessage,
+    target: { runtimeId: string; epoch: number }
+  ): Promise<CommandAckMessage['completion']> {
+    if (message.type !== 'agent.prompt' || !message.payload.message.startsWith('/')) {
+      return undefined;
+    }
+    try {
+      const response = await this.#dependencies.sessionsService.execute(
+        message.sessionId,
+        { type: 'get_state' },
+        { runtimeId: target.runtimeId, epoch: target.epoch }
+      );
+      const state = responseData<{
+        isStreaming?: boolean;
+        isCompacting?: boolean;
+        pendingMessageCount?: number;
+      }>(response);
+      if (state?.isStreaming !== false || state.isCompacting !== false || state.pendingMessageCount !== 0) {
+        return undefined;
+      }
+      return { runtimeId: target.runtimeId, epoch: target.epoch, timestamp: new Date().toISOString() };
+    } catch {
+      // An observation failure must not reject or replay a prompt Pi has already accepted.
+      return undefined;
+    }
   }
 
   /**
@@ -459,6 +510,25 @@ export class ChannelService {
       const response = await this.#dependencies.sessionsService.execute(message.sessionId, command, message);
       if (!responseSucceeded(response)) {
         throw new SessionRuntimeError('SESSION_RUNTIME_STALE', 'Agent rejected first-message delivery.');
+      }
+      if (message.runtimeId !== undefined && message.epoch !== undefined) {
+        const completion = await this.#confirmCommandCompletion(message, {
+          runtimeId: message.runtimeId,
+          epoch: message.epoch,
+        });
+        if (completion) {
+          this.#userMessages.cancel(message.sessionId, message.requestId);
+          for (const connection of this.#connections.values()) {
+            if (connection.sessions.has(message.sessionId)) {
+              connection.send({
+                type: 'command.ack',
+                requestId: message.requestId,
+                sessionId: message.sessionId,
+                completion,
+              });
+            }
+          }
+        }
       }
     } catch (error) {
       this.#userMessages.cancel(message.sessionId, message.requestId);
@@ -777,10 +847,6 @@ export class UserMessageRequestCorrelator {
    * @returns The original envelope or an envelope enriched with its transport request identity.
    */
   public correlate(event: HostEventEnvelope): HostEventEnvelope {
-    if (event.type === 'extension.ui' && isRecord(event.payload) && event.payload['method'] === 'notify') {
-      const requestId = this.#resolveSlashCommandNotification(event.sessionId);
-      return requestId === undefined ? event : { ...event, requestId };
-    }
     if (event.type !== 'agent.event' || !isRecord(event.payload)) {
       return event;
     }
@@ -806,28 +872,6 @@ export class UserMessageRequestCorrelator {
   public clear(): void {
     this.#pendingBySession.clear();
     this.#requestByMessage.clear();
-  }
-
-  /**
-   * Completes a pending slash command when its Extension UI notification is emitted.
-   *
-   * Pi extension commands bypass the Agent message lifecycle, so their RPC notification is the only
-   * response event available for correlating and settling the browser's optimistic command row.
-   *
-   * @param sessionId - Session that emitted the Extension UI notification.
-   * @returns Originating prompt request identity when a slash command is pending.
-   */
-  #resolveSlashCommandNotification(sessionId: string): string | undefined {
-    const pending = this.#pendingBySession.get(sessionId) ?? [];
-    const command = pending.find(
-      (candidate) =>
-        candidate.type === 'agent.prompt' && !candidate.active && candidate.text.trimStart().startsWith('/')
-    );
-    if (command === undefined) {
-      return undefined;
-    }
-    this.cancel(sessionId, command.requestId);
-    return command.requestId;
   }
 
   /**

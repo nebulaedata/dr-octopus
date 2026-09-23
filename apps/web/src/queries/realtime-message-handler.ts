@@ -43,6 +43,19 @@ export function createRealtimeMessageHandler({
   const reconciling = new Set<string>();
   return (message) => {
     // Validate before observe can release the final subscription for a terminal event.
+    if (message.type === 'command.ack' && message.completion !== undefined) {
+      if (message.sessionId === undefined) {
+        return;
+      }
+      const binding = realtimeClient.getConfirmedSubscription(message.sessionId);
+      if (
+        !binding ||
+        binding.runtimeId !== message.completion.runtimeId ||
+        binding.epoch !== message.completion.epoch
+      ) {
+        return;
+      }
+    }
     if (isHostEventEnvelope(message)) {
       const binding = realtimeClient.getConfirmedSubscription(message.sessionId);
       if (!binding || binding.runtimeId !== message.runtimeId || binding.epoch !== message.epoch) {
@@ -110,6 +123,7 @@ export function createRealtimeMessageHandler({
       if (state.pendingUserRequestIds.includes(message.requestId)) {
         state.setAttachments([]);
       }
+      state.acknowledgeUserCommand(message.requestId, message.completion);
     }
     if (!isHostEventEnvelope(message)) {
       return;

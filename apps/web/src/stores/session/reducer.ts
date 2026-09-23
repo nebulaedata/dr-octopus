@@ -147,17 +147,17 @@ export function reduceEvent(
 }
 
 /**
- * Projects a fire-and-forget Extension UI notification as a completed command response.
+ * Projects an Extension UI notification without inferring command completion from output.
  *
- * Extension slash commands do not enter Pi's Agent message lifecycle. The correlated notification therefore
- * owns both the visible response and the transition out of the browser's optimistic starting state.
+ * Notifications may be progress, unrelated background work, or the final display of a command.
+ * Only the separately confirmed command acknowledgement settles its optimistic turn.
  *
  * @param state - Session projection after accepting the ordered Host event.
  * @param payload - RPC Extension UI notification payload.
  * @param requestId - Originating slash-command request identity when available.
  * @param eventTimestamp - Server timestamp for the notification.
  * @param sequence - Monotonic runtime sequence used as a fallback identity.
- * @returns Projection containing the notification response and settled optimistic command state.
+ * @returns Projection containing the notification response and its transcript position.
  */
 function projectExtensionNotification(
   state: SessionProjectionState,
@@ -171,22 +171,9 @@ function projectExtensionNotification(
   const exists = state.notificationsById[id] !== undefined;
   const timestamp = resolveTimestamp(eventTimestamp);
   const turnId = state.activeTurnId;
-  const correlatedTurn =
-    turnId === undefined
-      ? undefined
-      : state.messagesById[state.turnsById[turnId]?.startedByMessageId ?? '']?.correlationRequestId;
-  const turnState =
-    requestId !== undefined && correlatedTurn === requestId
-      ? completeActiveTurn(state, timestamp)
-      : advanceActiveTurn(state, timestamp);
   return {
     ...state,
-    ...turnState,
-    runtimeState: requestId !== undefined && state.runtimeState === 'starting' ? 'idle' : state.runtimeState,
-    pendingUserRequestIds:
-      requestId === undefined
-        ? state.pendingUserRequestIds
-        : state.pendingUserRequestIds.filter((candidate) => candidate !== requestId),
+    ...advanceActiveTurn(state, timestamp),
     notificationsById: {
       ...state.notificationsById,
       [id]: {
@@ -280,6 +267,9 @@ function reduceAgentEvent(
       ...state,
       ...completeActiveTurn(state, eventTimestamp),
       activeRetryId: undefined,
+      pendingUserRequestIds: state.pendingUserRequestIds.filter(
+        (id) => state.messagesById[`local-${id}`]?.commandAcknowledged !== true
+      ),
     };
   }
   if (type === 'compaction_start' || type === 'auto_compaction_start') {

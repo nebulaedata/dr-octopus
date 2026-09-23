@@ -81,7 +81,10 @@ export function KnowledgeSearchDialog({
         <div className="px-4 pb-4">
           <CommandInput
             aria-label="Search question"
-            placeholder={t('knowledge.searchDialog.placeholder', 'Type a question to find related knowledge…')}
+            placeholder={t(
+              'knowledge.searchDialog.placeholder',
+              'Type a question to find related knowledge…'
+            )}
             maxLength={2000}
             value={text}
             onValueChange={(value) => {
@@ -99,11 +102,17 @@ export function KnowledgeSearchDialog({
               <AlertTitle>
                 {unavailable
                   ? t('knowledge.searchDialog.unavailable', 'Search sources temporarily unavailable')
-                  : t('knowledge.searchDialog.partialUnavailable', 'Some search capabilities temporarily unavailable')}
+                  : t(
+                      'knowledge.searchDialog.partialUnavailable',
+                      'Some search capabilities temporarily unavailable'
+                    )}
               </AlertTitle>
               <AlertDescription>
                 {data.warnings.join(t('knowledge.common.listSeparator', '; ')) ||
-                  t('knowledge.searchDialog.alertFallback', 'Check the model service and source connection, then retry.')}
+                  t(
+                    'knowledge.searchDialog.alertFallback',
+                    'Check the model service and source connection, then retry.'
+                  )}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -129,7 +138,9 @@ export function KnowledgeSearchDialog({
                       <span className="min-w-0 flex-1 truncate font-medium">{hit.title}</span>
                       <Badge variant="outline">
                         {hit.locator.page
-                          ? t('knowledge.searchDialog.locatorPage', 'Page {{page}}', { page: hit.locator.page })
+                          ? t('knowledge.searchDialog.locatorPage', 'Page {{page}}', {
+                              page: hit.locator.page,
+                            })
                           : hit.locator.slide
                             ? t('knowledge.searchDialog.locatorSlide', 'Slide {{slide}}', {
                                 slide: hit.locator.slide,
@@ -182,7 +193,10 @@ export function KnowledgeSearchDialog({
                 </EmptyTitle>
                 <EmptyDescription>
                   {isSearching
-                    ? t('knowledge.searchDialog.searchingDescription', 'Matching documents in the collection; please wait.')
+                    ? t(
+                        'knowledge.searchDialog.searchingDescription',
+                        'Matching documents in the collection; please wait.'
+                      )
                     : isError
                       ? search.error?.message
                       : unavailable
@@ -191,7 +205,10 @@ export function KnowledgeSearchDialog({
                             'Modify your question to search again once the search service recovers.'
                           )
                         : isSuccess
-                          ? t('knowledge.searchDialog.noResultsDescription', 'Try a more specific question or different keywords.')
+                          ? t(
+                              'knowledge.searchDialog.noResultsDescription',
+                              'Try a more specific question or different keywords.'
+                            )
                           : t(
                               'knowledge.searchDialog.startDescription',
                               'Enter keywords or a full question to see the relevant source text directly.'
@@ -205,7 +222,10 @@ export function KnowledgeSearchDialog({
         <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-xs text-muted-foreground">
           <span>
             {hasResults
-              ? t('knowledge.searchDialog.sortedNote', 'Sorted by relevance · only the current collection is searched')
+              ? t(
+                  'knowledge.searchDialog.sortedNote',
+                  'Sorted by relevance · only the current collection is searched'
+                )
               : t('knowledge.searchDialog.scopeNote', 'Only the current collection is searched')}
           </span>
           <span className="flex items-center gap-1.5">

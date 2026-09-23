@@ -22,6 +22,12 @@ function createFixture(maxSubscriptions = 1) {
   let nextExecutionError;
   let executionGate;
   let nextSubscriptionGate;
+  let extensionReply = () => {};
+  let stateResponse = {
+    success: true,
+    command: 'get_state',
+    data: { isStreaming: false, isCompacting: false, pendingMessageCount: 0 },
+  };
   const sessionsService = {
     onEvent: (nextListener) => {
       listener = nextListener;
@@ -58,11 +64,16 @@ function createFixture(maxSubscriptions = 1) {
     execute: async (sessionId, command, expected) => {
       executions.push({ sessionId, command, expected });
       await executionGate;
+      if (command.type === 'get_state') {
+        if (stateResponse instanceof Error) throw stateResponse;
+        return stateResponse;
+      }
       if (nextExecutionError !== undefined) {
         const error = nextExecutionError;
         nextExecutionError = undefined;
         throw error;
       }
+      return { success: true, command: command.type };
     },
     executeThinkingControl: async (sessionId, command, expected) => {
       executions.push({ sessionId, command, expected });
@@ -75,7 +86,7 @@ function createFixture(maxSubscriptions = 1) {
       executions.push({ sessionId, mode, expected });
       return { mode, scope: 'runtime-generation', persisted: false };
     },
-    respondToExtensionUi: async () => undefined,
+    respondToExtensionUi: async () => extensionReply(),
   };
   const attachmentsService = {
     consume: (attachmentIds) => ({
@@ -87,6 +98,12 @@ function createFixture(maxSubscriptions = 1) {
   return {
     service,
     executions,
+    onExtensionReply: (handler) => {
+      extensionReply = handler;
+    },
+    setStateResponse: (value) => {
+      stateResponse = value;
+    },
     deferExecution: () => {
       let release;
       executionGate = new Promise((resolve) => {
@@ -510,42 +527,177 @@ test('Session channel hides Host attachment context and Pi attachment blocks fro
   fixture.service.close();
 });
 
-test('Session channel correlates an Extension notification with its slash command request', async () => {
+test('command completion is confirmed after handler acknowledgement, independently of output', async () => {
+  for (const output of ['notify', 'custom', 'silent']) {
+    const fixture = createFixture();
+    const messages = [];
+    fixture.service.connect('connection-a', (message) => messages.push(message));
+    await fixture.service.handleMessage('connection-a', {
+      type: 'session.subscribe',
+      requestId: 'subscribe-a',
+      sessionId: 'session-a',
+    });
+    const release = fixture.deferExecution();
+    const pending = fixture.service.handleMessage('connection-a', {
+      type: 'agent.prompt',
+      requestId: 'extension-request',
+      sessionId: 'session-a',
+      payload: { message: '/any-extension' },
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    if (output !== 'silent') {
+      fixture.emit({
+        type: output === 'notify' ? 'extension.ui' : 'agent.event',
+        runtimeId: 'runtime-session-a',
+        epoch: 3,
+        workspaceId: 'workspace-a',
+        sessionId: 'session-a',
+        sequence: 1,
+        timestamp: '2026-01-01T00:00:01.000Z',
+        payload:
+          output === 'notify'
+            ? { method: 'notify', message: 'Still processing' }
+            : {
+                type: 'message_end',
+                message: {
+                  role: 'custom',
+                  customType: 'unrelated-business-output',
+                  content: 'Progress',
+                  display: true,
+                },
+              },
+      });
+      assert.equal(messages.at(-1).requestId, undefined);
+    }
+    assert.ok(!messages.some((message) => message.type === 'command.ack' && message.completion));
+    release();
+    await pending;
+    const ack = messages.at(-1);
+    assert.equal(ack.type, 'command.ack');
+    assert.equal(ack.requestId, 'extension-request');
+    assert.equal(ack.completion.runtimeId, 'runtime-session-a');
+    assert.equal(ack.completion.epoch, 3);
+    assert.ok(Number.isFinite(Date.parse(ack.completion.timestamp)));
+    assert.deepEqual(fixture.executions.at(-1).expected, { runtimeId: 'runtime-session-a', epoch: 3 });
+    fixture.service.close();
+  }
+});
+
+test('accepted slash prompts with inference, compaction, queued or unknown state are not reported complete', async () => {
+  for (const data of [
+    { isStreaming: true, isCompacting: false, pendingMessageCount: 0 },
+    { isStreaming: false, isCompacting: true, pendingMessageCount: 0 },
+    { isStreaming: false, isCompacting: false, pendingMessageCount: 1 },
+    {},
+    undefined,
+  ]) {
+    const fixture = createFixture();
+    fixture.setStateResponse({ success: true, command: 'get_state', data });
+    const messages = [];
+    fixture.service.connect('connection-a', (message) => messages.push(message));
+    await fixture.service.handleMessage('connection-a', {
+      type: 'session.subscribe',
+      requestId: 's',
+      sessionId: 'session-a',
+    });
+    await fixture.service.handleMessage('connection-a', {
+      type: 'agent.prompt',
+      requestId: 'p',
+      sessionId: 'session-a',
+      payload: { message: '/template' },
+    });
+    assert.equal(messages.at(-1).type, 'command.ack');
+    assert.equal(messages.at(-1).completion, undefined);
+    fixture.service.close();
+  }
+});
+
+test('failed state observation does not reject or replay an already accepted command', async () => {
+  const fixture = createFixture();
+  fixture.setStateResponse(new Error('runtime replaced'));
+  const messages = [];
+  fixture.service.connect('connection-a', (message) => messages.push(message));
+  await fixture.service.handleMessage('connection-a', {
+    type: 'session.subscribe',
+    requestId: 's',
+    sessionId: 'session-a',
+  });
+  const command = {
+    type: 'agent.prompt',
+    requestId: 'p',
+    sessionId: 'session-a',
+    payload: { message: '/silent' },
+  };
+  await fixture.service.handleMessage('connection-a', command);
+  await fixture.service.handleMessage('connection-a', command);
+  assert.equal(messages.at(-1).type, 'command.ack');
+  assert.equal(messages.at(-1).completion, undefined);
+  assert.equal(fixture.executions.filter(({ command }) => command.type === 'prompt').length, 1);
+  fixture.service.close();
+});
+
+test('a first-message slash command publishes the same fenced completion to its subscribers', async () => {
   const fixture = createFixture();
   const messages = [];
   fixture.service.connect('connection-a', (message) => messages.push(message));
   await fixture.service.handleMessage('connection-a', {
     type: 'session.subscribe',
-    requestId: 'subscribe-a',
+    requestId: 's',
     sessionId: 'session-a',
   });
-  await fixture.service.handleMessage('connection-a', {
+  const message = {
     type: 'agent.prompt',
-    requestId: 'ctx-doctor-request',
+    requestId: 'first',
     sessionId: 'session-a',
-    payload: { message: '/ctx-doctor' },
-  });
-
-  fixture.emit({
-    type: 'extension.ui',
     runtimeId: 'runtime-session-a',
     epoch: 3,
-    workspaceId: 'workspace-a',
-    sessionId: 'session-a',
-    sequence: 1,
-    timestamp: '2026-01-01T00:00:01.000Z',
-    payload: {
-      type: 'extension_ui_request',
-      id: 'notification-a',
-      method: 'notify',
-      message: '## ctx-doctor (Pi)',
-      notifyType: 'info',
-    },
-  });
-
-  assert.equal(messages.at(-1)?.requestId, 'ctx-doctor-request');
+    payload: { message: '/silent-extension' },
+  };
+  await fixture.service.dispatchFirstMessage(message, { type: 'prompt', message: message.payload.message });
+  assert.equal(messages.at(-1).type, 'command.ack');
+  assert.equal(messages.at(-1).requestId, 'first');
+  assert.equal(messages.at(-1).completion.runtimeId, 'runtime-session-a');
   fixture.service.close();
 });
+
+test(
+  'extension UI replies unblock the command at the head of the same Session queue',
+  { timeout: 3000 },
+  async (t) => {
+    const fixture = createFixture();
+    const messages = [];
+    fixture.service.connect('connection-a', (message) => messages.push(message));
+    await fixture.service.handleMessage('connection-a', {
+      type: 'session.subscribe',
+      requestId: 's',
+      sessionId: 'session-a',
+    });
+    const release = fixture.deferExecution();
+    t.after(() => {
+      release();
+      fixture.service.close();
+    });
+    fixture.onExtensionReply(release);
+    const command = fixture.service.handleMessage('connection-a', {
+      type: 'agent.prompt',
+      requestId: 'ask',
+      sessionId: 'session-a',
+      payload: { message: '/interactive' },
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    await fixture.service.handleMessage('connection-a', {
+      type: 'extension.ui.response',
+      requestId: 'reply',
+      sessionId: 'session-a',
+      runtimeId: 'runtime-session-a',
+      epoch: 3,
+      payload: { extensionRequestId: 'dialog', confirmed: true },
+    });
+    await command;
+    assert.ok(messages.some((message) => message.requestId === 'reply' && message.type === 'command.ack'));
+    assert.ok(messages.some((message) => message.requestId === 'ask' && message.completion));
+  }
+);
 
 test('Session channel correlates steering before an earlier identical follow-up', async () => {
   const fixture = createFixture();

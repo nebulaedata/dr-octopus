@@ -7,6 +7,7 @@ import type { MemoryDocument, MemoryRemember, MemorySource } from '@octopus/shar
 export interface CuratorInput {
   sources: MemorySource[];
   existing: MemoryDocument[];
+  explicit: boolean;
 }
 export type MemoryCurator = (input: CuratorInput, signal: AbortSignal) => Promise<MemoryRemember[]>;
 export interface MemoryWriteGuard {

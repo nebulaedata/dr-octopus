@@ -86,6 +86,63 @@ test('background completion updates the projection even when observing it releas
   }
 });
 
+test('confirmed commands finish through the transport handler and stale acknowledgements cannot release them', () => {
+  const fixture = createFixture();
+  try {
+    fixture.store.getState().hydrate(fixture.snapshot);
+    fixture.store.getState().appendOptimisticUserMessage('command', '/silent-extension');
+    fixture.registry.retainCommand('session', 'command', 1);
+    const ack = { type: 'command.ack', sessionId: 'session', requestId: 'command' };
+    fixture.handle(ack);
+    assert.equal(fixture.store.getState().runtimeState, 'starting');
+    assert.deepEqual(fixture.store.getState().pendingUserRequestIds, ['command']);
+    fixture.handle({
+      ...ack,
+      completion: { runtimeId: 'old-runtime', epoch: 1, timestamp: '2026-01-01T00:00:01Z' },
+    });
+    assert.equal(fixture.getBinding().runtimeId, 'runtime');
+    assert.equal(fixture.store.getState().turnsById['turn-request-command'].status, 'running');
+    fixture.handle({
+      ...ack,
+      completion: { runtimeId: 'runtime', epoch: 1, timestamp: '2026-01-01T00:00:02Z' },
+    });
+    assert.equal(fixture.getBinding(), undefined);
+    assert.equal(fixture.store.getState().runtimeState, 'idle');
+    assert.deepEqual(fixture.store.getState().pendingUserRequestIds, []);
+    assert.equal(fixture.store.getState().turnsById['turn-request-command'].status, 'completed');
+  } finally {
+    fixture.registry.dispose();
+  }
+});
+
+test('an accepted extension that starts inference clears its pending submission on Agent settlement', () => {
+  const fixture = createFixture();
+  try {
+    fixture.store.getState().hydrate(fixture.snapshot);
+    fixture.store.getState().appendOptimisticUserMessage('command', '/generate');
+    fixture.registry.retainCommand('session', 'command', 1);
+    fixture.handle(fixture.event('running'));
+    fixture.handle({ type: 'command.ack', requestId: 'command', sessionId: 'session' });
+    assert.deepEqual(fixture.store.getState().pendingUserRequestIds, ['command']);
+    assert.equal(fixture.store.getState().turnsById['turn-request-command'].status, 'running');
+    assert.equal(fixture.getBinding().runtimeId, 'runtime');
+    fixture.handle({
+      ...fixture.event('running'),
+      type: 'agent.event',
+      sequence: 3,
+      timestamp: '2026-01-01T00:00:03Z',
+      payload: { type: 'agent_settled' },
+    });
+    fixture.handle({ ...fixture.event('idle'), sequence: 4 });
+    assert.equal(fixture.store.getState().turnsById['turn-request-command'].status, 'completed');
+    assert.equal(fixture.store.getState().runtimeState, 'idle');
+    assert.deepEqual(fixture.store.getState().pendingUserRequestIds, []);
+    assert.equal(fixture.getBinding(), undefined);
+  } finally {
+    fixture.registry.dispose();
+  }
+});
+
 test('an old generation cannot settle retention or mutate the active projection', () => {
   const fixture = createFixture();
   try {

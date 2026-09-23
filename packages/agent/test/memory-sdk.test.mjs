@@ -4,6 +4,8 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { memorySdkFixture } from './fixtures/memory-sdk-fixture.mjs';
 
 /**
@@ -152,3 +154,82 @@ for (const mode of ['tui', 'rpc']) {
     assert.deepEqual(f.errors, []);
   });
 }
+
+test('first prompt after lazy startup and a later explicit reference produce a committed receipt', async (t) => {
+  const f = await memorySdkFixture(t);
+  const session = await f.open();
+  // Do not wait for initialization; a newly opened Session must admit its first run correctly.
+  f.setCuratorOutput('[]');
+  await session.prompt('QA_MEMORY 我叫 Alex，喜欢钓鱼。');
+  assert.equal((await f.service.getStatus()).count, 0);
+  assert.ok(!session.messages.some((m) => m.customType === 'octopus-memory-outcome'));
+  f.setCuratorOutput(undefined);
+  await session.prompt('记住我');
+  assert.equal((await f.service.getStatus()).count, 1);
+  const request = curationRequests(f).at(-1);
+  const input = JSON.parse(request.messages.at(-1).content);
+  assert.equal(input.explicit, true);
+  assert.deepEqual(
+    input.sources.map((s) => s.evidence),
+    ['QA_MEMORY 我叫 Alex，喜欢钓鱼。', '记住我']
+  );
+  assert.equal(session.messages.filter((m) => m.customType === 'octopus-memory-operation').length, 1);
+});
+
+test('explicit empty requests receive a durable non-success outcome and never a save card', async (t) => {
+  const f = await memorySdkFixture(t);
+  f.setCuratorOutput('[]');
+  const session = await f.open();
+  await session.prompt('记住我');
+  assert.equal(curationRequests(f).length, 2);
+  assert.equal((await f.service.getStatus()).count, 0);
+  const outcomes = session.messages.filter((m) => m.customType === 'octopus-memory-outcome');
+  assert.equal(outcomes.length, 1);
+  assert.match(outcomes[0].content, /没有新增/);
+  assert.ok(!session.messages.some((m) => m.customType === 'octopus-memory-operation'));
+  const diagnostic = await readFile(join(f.root, 'memory', 'extension.log'), 'utf8');
+  const records = diagnostic.trim().split('\n').map(JSON.parse);
+  assert.ok(
+    records.some(
+      (entry) => entry.event === 'curator_evaluated' && entry.attempt === 2 && entry.candidateCount === 0
+    )
+  );
+  assert.ok(records.some((entry) => entry.event === 'curator_skipped' && entry.reason === 'NO_CHANGES'));
+  assert.ok(!diagnostic.includes('记住我'), 'diagnostics must not contain user evidence');
+});
+
+test('negative save intent suppresses curation, and off policy explains an explicit refusal', async (t) => {
+  const f = await memorySdkFixture(t);
+  const session = await f.open();
+  await session.prompt('QA_MEMORY 不要记住这次的临时选择。');
+  assert.equal(curationRequests(f).length, 0);
+  const status = await f.service.getStatus();
+  await f.service.setPolicy({ requestId: 'off-policy', mode: 'off', expectedRevision: status.revision });
+  await session.prompt('记住：QA_MEMORY 我喜欢中文。');
+  assert.equal(curationRequests(f).length, 0);
+  assert.match(session.messages.findLast((m) => m.customType === 'octopus-memory-outcome').content, /已关闭/);
+});
+
+test('public Pi new/resume lifecycle never curates history on startup and retains first-run memory', async (t) => {
+  const f = await memorySdkFixture(t);
+  const runtime = await f.openRuntime();
+  t.after(() => runtime.dispose());
+  assert.equal(curationRequests(f).length, 0, 'prewarming cannot curate');
+  await runtime.session.prompt('记住：QA_MEMORY 我偏好中文。');
+  const firstFile = runtime.session.sessionFile;
+  assert.equal((await f.service.getStatus()).count, 1);
+  assert.equal((await runtime.newSession()).cancelled, false);
+  assert.equal(curationRequests(f).length, 1, 'new Session startup cannot replay history');
+  await runtime.session.prompt('RECALL_MEMORY 我之前有什么偏好？');
+  const reads = runtime.session.messages.filter((m) => m.role === 'toolResult');
+  assert.deepEqual(
+    reads.map((m) => m.toolName),
+    ['memory_recall', 'memory_read']
+  );
+  const callsBeforeResume = curationRequests(f).length;
+  assert.equal((await runtime.switchSession(firstFile)).cancelled, false);
+  assert.equal(curationRequests(f).length, callsBeforeResume, 'resume is not a new user run');
+  await runtime.session.prompt('记住：QA_MEMORY 日期用 YYYY-MM-DD。');
+  assert.equal((await f.service.getStatus()).count, 1);
+  assert.equal(runtime.session.messages.filter((m) => m.customType === 'octopus-memory-operation').length, 2);
+});

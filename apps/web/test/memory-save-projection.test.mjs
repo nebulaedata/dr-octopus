@@ -67,6 +67,19 @@ test('hidden memory receipts stay absent from both live and persisted transcript
   assert.deepEqual(projectPersistedTranscript([hidden]).messages, []);
 });
 
+test('explicit no-save outcomes remain visible in live and history without becoming success cards', () => {
+  const outcome = { ...receipt, customType: 'octopus-memory-outcome', content: '本次没有新增长期记忆。' };
+  const store = createStore();
+  applyMessage(store, 1, 'message_start', outcome);
+  applyMessage(store, 2, 'message_end', outcome);
+  const live = store.getState().messagesById[outcome.id];
+  const history = projectPersistedTranscript([outcome]).messages[0];
+  assert.equal(live.content[0].text, outcome.content);
+  assert.equal(history.content[0].text, outcome.content);
+  assert.equal(projectMemorySave(live), undefined);
+  assert.equal(projectMemorySave(history), undefined);
+});
+
 test('assistant claims, unknown formats and failed messages cannot become success cards', () => {
   for (const override of [
     { role: 'assistant' },

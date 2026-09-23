@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { createServer } from 'node:http';
 import {
   createAgentSession,
+  createAgentSessionRuntime,
   DefaultResourceLoader,
   ModelRuntime,
   SessionManager,
@@ -69,7 +70,7 @@ export async function memorySdkFixture(t) {
     );
     if (curator) {
       const input = JSON.parse(request.messages.at(-1).content);
-      const source = input.sources.find((s) => s.evidence.includes('QA_MEMORY'));
+      const source = input.sources.findLast((s) => s.evidence.includes('QA_MEMORY'));
       const existing = input.existing.find((d) => d.canonicalKey === 'qa.memory.preference');
       const candidate = source
         ? [
@@ -175,9 +176,9 @@ export async function memorySdkFixture(t) {
   /**
    * Create a fresh workspace/session while sharing only global memory and model transport.
    */
-  async function open({ readOnly = false, trusted = true, mode = 'rpc' } = {}) {
-    const cwd = join(root, 'workspace-' + sessions.length);
-    await mkdir(cwd);
+  async function create({ readOnly = false, trusted = true, mode = 'rpc', target } = {}) {
+    const cwd = target?.cwd ?? join(root, 'workspace-' + sessions.length);
+    await mkdir(cwd, { recursive: true });
     const settingsManager = SettingsManager.inMemory(
       { autoCompactionEnabled: false, autoRetryEnabled: false },
       { projectTrusted: trusted }
@@ -213,7 +214,8 @@ export async function memorySdkFixture(t) {
       modelRuntime,
       model: modelRuntime.getModel('fixture', 'fixture'),
       resourceLoader,
-      sessionManager: SessionManager.inMemory(cwd),
+      sessionManager: target?.sessionManager ?? SessionManager.inMemory(cwd),
+      sessionStartEvent: target?.sessionStartEvent,
       tools: ['memory_read', 'memory_recall', 'read'],
     });
     assert.deepEqual(extensionsResult.errors, []);
@@ -227,12 +229,36 @@ export async function memorySdkFixture(t) {
       onError: (error) => errors.push(error),
     });
     sessions.push({ session, shutdown });
-    return session;
+    return {
+      session,
+      extensionsResult,
+      diagnostics: [],
+      services: { cwd, agentDir: root, settingsManager, modelRuntime, resourceLoader, diagnostics: [] },
+    };
+  }
+  /**
+   * Open an independent Session without lifecycle replacement orchestration.
+   */
+  async function open(options) {
+    return (await create(options)).session;
+  }
+  /**
+   * Use the public Pi owner for new/resume flows with isolated persisted session files.
+   */
+  async function openRuntime() {
+    const cwd = join(root, 'runtime-workspace');
+    await mkdir(cwd, { recursive: true });
+    return createAgentSessionRuntime((target) => create({ target }), {
+      cwd,
+      agentDir: root,
+      sessionManager: SessionManager.create(cwd, join(root, 'sessions')),
+    });
   }
   return {
     root,
     service,
     open,
+    openRuntime,
     requests,
     states,
     errors,

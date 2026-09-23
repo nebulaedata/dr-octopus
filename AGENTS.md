@@ -26,7 +26,7 @@ Keep this index updated when project-level `AGENTS.md` files are added, moved, o
 
 ## Code Development Standards
 
-Read and follow [Code Development Standards](docs/code-development-standards.md) for all code changes. It defines the Server module file allowlist and boundaries, frontend component entrypoints and hooks/utils placement, redundant backend interface removal, the ban on nested ternaries, and the pre-release no-compatibility policy. Its layout and abstraction rules take precedence over conflicting older guidance; all other applicable instructions and protected boundaries remain in force.
+Read and follow [Code Development Standards](docs/code-development-standards.md) for all code changes. It defines repository layout, layering, coding, lifecycle, and verification rules. Its layout and abstraction rules take precedence over conflicting older guidance; all other applicable instructions and protected boundaries remain in force.
 
 ## Protected Core Boundaries
 

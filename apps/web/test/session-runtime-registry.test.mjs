@@ -416,54 +416,103 @@ test('optimistic prompt remains visible without returning the projection to boot
   assert.deepEqual(accepted.messageIds, ['user-a']);
 });
 
-test('correlated Extension notifications render slash-command responses and settle optimistic state', () => {
+test('notifications and arbitrary custom messages remain progress until a confirmed command acknowledgement', () => {
+  for (const output of ['notify', 'custom', 'silent']) {
+    const store = createSessionStore('session-a');
+    store.getState().hydrate(createSnapshot());
+    store.getState().appendOptimisticUserMessage('command-request', '/any-extension');
+    const adapter = createSubscriptionAdapter();
+    const registry = new SessionRuntimeRegistry(adapter);
+    registry.retainCommand('session-a', 'command-request', 0);
+    try {
+      if (output !== 'silent') {
+        const event = {
+          type: output === 'notify' ? 'extension.ui' : 'agent.event',
+          runtimeId: 'runtime-a',
+          epoch: 1,
+          workspaceId: 'workspace-a',
+          sessionId: 'session-a',
+          sequence: 1,
+          timestamp: '2026-01-01T00:00:01.000Z',
+          payload:
+            output === 'notify'
+              ? { method: 'notify', id: 'progress', message: 'Working' }
+              : {
+                  type: 'message_end',
+                  message: {
+                    id: 'result',
+                    role: 'custom',
+                    customType: 'any-business-result',
+                    content: 'Done',
+                    display: true,
+                  },
+                },
+        };
+        store.getState().applyEvent(event);
+        registry.observe(event);
+      }
+      registry.observe({ type: 'command.ack', requestId: 'command-request', sessionId: 'session-a' });
+      assert.equal(store.getState().turnsById['turn-request-command-request'].status, 'running');
+      assert.equal(adapter.subscribed.has('session-a'), true);
+      const ack = {
+        type: 'command.ack',
+        requestId: 'command-request',
+        sessionId: 'session-a',
+        completion: { runtimeId: 'runtime-a', epoch: 1, timestamp: '2026-01-01T00:00:02.000Z' },
+      };
+      store.getState().acknowledgeUserCommand(ack.requestId, ack.completion);
+      registry.observe(ack);
+      const state = store.getState();
+      assert.equal(state.runtimeState, 'idle');
+      assert.equal(state.activeTurnId, undefined);
+      assert.deepEqual(state.pendingUserRequestIds, []);
+      assert.equal(state.turnsById['turn-request-command-request'].status, 'completed');
+      assert.deepEqual(adapter.transitions, ['subscribe:session-a', 'unsubscribe:session-a']);
+      if (output === 'custom') assert.equal(state.messagesById.result.content[0].text, 'Done');
+      if (output === 'notify')
+        assert.equal(state.notificationsById['extension-notify-progress'].message, 'Working');
+    } finally {
+      registry.dispose();
+    }
+  }
+});
+
+test('command completion is generation fenced, idempotent and cannot end a newer turn', () => {
   const store = createSessionStore('session-a');
   store.getState().hydrate(createSnapshot());
-  store.getState().appendOptimisticUserMessage('ctx-doctor-request', '/ctx-doctor');
+  store.getState().appendOptimisticUserMessage('old-command', '/silent');
+  const completion = { runtimeId: 'runtime-a', epoch: 1, timestamp: '2026-01-01T00:00:02.000Z' };
+  store.getState().acknowledgeUserCommand('old-command', { ...completion, epoch: 2 });
+  store.getState().acknowledgeUserCommand('old-command', { ...completion, runtimeId: 'old-runtime' });
+  assert.deepEqual(store.getState().pendingUserRequestIds, ['old-command']);
+  store.getState().appendOptimisticUserMessage('new-command', 'Another task');
+  store.getState().acknowledgeUserCommand('old-command', completion);
+  store.getState().acknowledgeUserCommand('old-command', completion);
+  assert.equal(store.getState().activeTurnId, 'turn-request-new-command');
+  assert.equal(store.getState().turnsById['turn-request-new-command'].status, 'running');
+  assert.deepEqual(store.getState().pendingUserRequestIds, ['new-command']);
+});
 
+test('unsolicited custom messages never finish a command even when carrying a request identity', () => {
+  const store = createSessionStore('session-a');
+  store.getState().hydrate(createSnapshot());
+  store.getState().appendOptimisticUserMessage('request', '/any-extension');
   store.getState().applyEvent({
-    type: 'extension.ui',
+    type: 'agent.event',
+    requestId: 'request',
     runtimeId: 'runtime-a',
     epoch: 1,
     workspaceId: 'workspace-a',
     sessionId: 'session-a',
     sequence: 1,
     timestamp: '2026-01-01T00:00:01.000Z',
-    requestId: 'ctx-doctor-request',
     payload: {
-      type: 'extension_ui_request',
-      id: 'notification-a',
-      method: 'notify',
-      message: '## ctx-doctor (Pi)',
-      notifyType: 'info',
+      type: 'message_end',
+      message: { id: 'custom', role: 'custom', customType: 'arbitrary', content: 'Progress' },
     },
   });
-
-  const state = store.getState();
-  assert.equal(state.runtimeState, 'idle');
-  assert.deepEqual(state.pendingUserRequestIds, []);
-  assert.deepEqual(state.messageIds, ['local-ctx-doctor-request']);
-  assert.deepEqual(state.transcriptItems, [
-    {
-      type: 'message',
-      id: 'local-ctx-doctor-request',
-      turnId: 'turn-request-ctx-doctor-request',
-    },
-    {
-      type: 'notification',
-      id: 'extension-notify-notification-a',
-      turnId: 'turn-request-ctx-doctor-request',
-    },
-  ]);
-  assert.equal(state.turnsById['turn-request-ctx-doctor-request'].status, 'completed');
-  assert.equal(getLastItemIndexByTurn(state.transcriptItems).get('turn-request-ctx-doctor-request'), 1);
-  assert.deepEqual(state.notificationsById['extension-notify-notification-a'], {
-    id: 'extension-notify-notification-a',
-    message: '## ctx-doctor (Pi)',
-    notifyType: 'info',
-    requestId: 'ctx-doctor-request',
-    timestamp: Date.parse('2026-01-01T00:00:01.000Z'),
-  });
+  assert.equal(store.getState().turnsById['turn-request-request'].status, 'running');
+  assert.deepEqual(store.getState().pendingUserRequestIds, ['request']);
 });
 
 test('standalone control notifications render after the preceding completed Turn marker', () => {
@@ -543,27 +592,6 @@ test('notifications emitted inside an active Turn remain before its duration mar
   assert.equal(state.transcriptItems[1].turnId, turnId);
   assert.equal(getLastItemIndexByTurn(state.transcriptItems).get(turnId), 1);
   assert.equal(state.turnsById[turnId].status, 'running');
-});
-
-test('correlated Extension notifications release retained slash-command subscriptions', () => {
-  const adapter = createSubscriptionAdapter();
-  const registry = new SessionRuntimeRegistry(adapter);
-  registry.retainCommand('session-a', 'ctx-doctor-request', 0);
-
-  registry.observe({
-    type: 'extension.ui',
-    runtimeId: 'runtime-a',
-    epoch: 1,
-    workspaceId: 'workspace-a',
-    sessionId: 'session-a',
-    sequence: 1,
-    timestamp: '2026-01-01T00:00:01.000Z',
-    requestId: 'ctx-doctor-request',
-    payload: { method: 'notify' },
-  });
-
-  assert.deepEqual(adapter.transitions, ['subscribe:session-a', 'unsubscribe:session-a']);
-  registry.dispose();
 });
 
 test('an older warm bootstrap snapshot cannot overwrite newer streamed output', () => {

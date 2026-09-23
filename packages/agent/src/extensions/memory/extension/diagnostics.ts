@@ -8,6 +8,16 @@ import { join } from 'node:path';
  * Rotate before the log grows without bound; one backup generation is enough for diagnostics.
  */
 const MAX_BYTES = 256 * 1024;
+export interface MemoryDiagnosticDetails {
+  sessionId?: string;
+  trigger?: string;
+  sourceCount?: number;
+  model?: string;
+  attempt?: number;
+  candidateCount?: number;
+  receiptCount?: number;
+  reason?: string;
+}
 /**
  * Extract a stable public diagnostic; the innermost cause holds the specific original code
  * (for example SQLITE_CANTOPEN) while the outer MemoryError only says STORE_UNAVAILABLE.
@@ -35,7 +45,7 @@ export function createMemoryDiagnostics(directory: string) {
   /**
    * Record one diagnostic event, swallowing every filesystem failure.
    */
-  return function log(event: string, error?: unknown): void {
+  return function log(event: string, error?: unknown, details?: MemoryDiagnosticDetails): void {
     try {
       try {
         if (statSync(file).size > MAX_BYTES) {
@@ -47,6 +57,7 @@ export function createMemoryDiagnostics(directory: string) {
       const line = JSON.stringify({
         ts: new Date().toISOString(),
         event,
+        ...details,
         ...(error === undefined ? {} : describe(error)),
       });
       appendFileSync(file, line + '\n', 'utf8');

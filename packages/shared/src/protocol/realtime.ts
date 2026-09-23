@@ -61,6 +61,11 @@ export interface CommandAckMessage {
   thinking?: ThinkingStateDto;
   permission?: PermissionStateDto;
   planMode?: PlanModeStateDto;
+  /**
+   * Present only after an accepted prompt is observed idle with no compaction or queued messages.
+   * Plain acknowledgements remain acceptance, not completion.
+   */
+  completion?: { runtimeId: string; epoch: number; timestamp: string };
 }
 
 export interface ProtocolErrorMessage {
