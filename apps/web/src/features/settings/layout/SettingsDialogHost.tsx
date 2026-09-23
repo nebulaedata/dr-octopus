@@ -24,6 +24,7 @@ import { SchedulerSettingsPage } from '../schedules/SchedulerSettingsPage';
 import { KnowledgeSettingsPage } from '../knowledge/KnowledgeSettingsPage';
 import { LanguageSettingsPage } from '../language/LanguageSettingsPage';
 import { MemorySettingsPage } from '../memory/MemorySettingsPage';
+import { JevSettingsPage } from '../JevSettingsPage';
 import { ShortcutsSettingsPage } from '../shortcuts/ShortcutsSettingsPage';
 import { useI18n } from '@/i18n/use-i18n';
 import type { ReactNode } from 'react';
@@ -124,6 +125,8 @@ function SettingsDialogPage({
       return <SchedulerSettingsPage />;
     case '/settings/knowledge':
       return <KnowledgeSettingsPage />;
+    case '/settings/jev':
+      return <JevSettingsPage />;
     case '/settings/memory':
       return <MemorySettingsPage />;
     case '/settings/appearance/language':

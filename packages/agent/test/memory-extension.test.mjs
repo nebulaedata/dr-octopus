@@ -30,7 +30,7 @@ async function fixture(t, mode = 'rpc', options = {}) {
     getActiveTools: () => [...tools.keys()],
     sendMessage: (message, options) => messages.push({ message, options }),
   };
-  createMemoryExtension({ dataRoot: root, ...options })(pi);
+  createMemoryExtension({ dataRoot: root, agentDir: root, ...options })(pi);
   const start = events.get('session_start');
   events.set('session_start', async (...args) => {
     const count = statuses.length;

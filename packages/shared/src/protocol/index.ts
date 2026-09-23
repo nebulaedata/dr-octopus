@@ -28,3 +28,4 @@ export * from './permission-config.js';
 export * from './background-tasks.js';
 
 export * from './conversation-start.js';
+export * from './jev.js';

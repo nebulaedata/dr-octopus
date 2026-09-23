@@ -9,7 +9,7 @@ import { registerMemoryEvents } from '../dist/extensions/memory/extension/events
 /**
  * Hold only external timing under test control while exercising production lifecycle handlers.
  */
-function fixture(overrides = {}, readOnly = false) {
+function fixture(overrides = {}, readOnly = false, screen) {
   const events = new Map();
   const messages = [],
     statuses = [],
@@ -46,19 +46,19 @@ function fixture(overrides = {}, readOnly = false) {
     ui: { setStatus: (_key, value) => statuses.push(JSON.parse(value)) },
     sessionManager: { getSessionId: () => 'session', getBranch: () => branch },
   };
-  registerMemoryEvents(pi, service, readOnly, (...args) => logs.push(args));
+  registerMemoryEvents(pi, service, readOnly, (...args) => logs.push(args), screen);
   return { events, messages, statuses, logs, branch, evaluations, ctx, status };
 }
 
 /**
  * Start one accepted user run with a controlled main-model terminal result.
  */
-async function run(f, stopReason = 'stop') {
+async function run(f, stopReason = 'stop', text = '记住我') {
   await f.events.get('before_agent_start')({ systemPrompt: 'base' }, f.ctx);
   f.branch.push({
     id: 'user-' + f.branch.length,
     type: 'message',
-    message: { role: 'user', content: '记住我' },
+    message: { role: 'user', content: text },
   });
   f.events.get('agent_end')({ messages: [{ role: 'assistant', stopReason }] }, f.ctx);
   await f.events.get('agent_settled')({}, f.ctx);
@@ -136,4 +136,27 @@ test('a late curation response cannot publish into a replacement Session', async
   await Promise.resolve();
   assert.deepEqual(f.messages, []);
   assert.ok(f.logs.some(([event]) => event === 'curator_cancelled'));
+});
+
+test('optional screening applies only to automatic curation and never overrides explicit saves', async () => {
+  for (const [mode, text, expectedScreens, expectedCurations] of [
+    ['auto', '你好', 1, 0],
+    ['auto', '记住我', 0, 1],
+    ['manual', '你好', 0, 0],
+    ['manual', '记住我', 0, 1],
+    ['off', '你好', 0, 0],
+  ]) {
+    let screens = 0;
+    const f = fixture({}, false, async () => {
+      screens++;
+      return { skip: true, reason: 'JEV_NO_MEMORY_CANDIDATE' };
+    });
+    f.status.mode = mode;
+    await run(f, 'stop', text);
+    assert.equal(screens, expectedScreens);
+    assert.equal(f.evaluations.length, expectedCurations);
+  }
+  const f = fixture({}, false, async () => ({ skip: false, reason: 'JEV_TIMEOUT' }));
+  await run(f, 'stop', '我喜欢钓鱼');
+  assert.equal(f.evaluations.length, 1);
 });

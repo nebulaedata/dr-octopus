@@ -11,6 +11,7 @@ import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-a
 import type { MemoryService } from '../services/memory-service.js';
 import type { MemorySource, MemoryStatus } from '../definitions/types.js';
 import type { MemoryBudget } from './tools.js';
+import type { MemoryScreenResult } from '../lib/jev-screen.js';
 const CONTEXT = 'octopus-memory-context';
 const skill = readFileSync(new URL('../skills/memory/SKILL.md', import.meta.url), 'utf8').replace(
   /^---[\s\S]*?---\s*/u,
@@ -23,7 +24,8 @@ export function registerMemoryEvents(
   pi: ExtensionAPI,
   service: MemoryService,
   readOnly: boolean,
-  log: (event: string, error?: unknown, details?: MemoryDiagnosticDetails) => void = () => {}
+  log: (event: string, error?: unknown, details?: MemoryDiagnosticDetails) => void = () => {},
+  screen?: (sources: MemorySource[], signal: AbortSignal) => Promise<MemoryScreenResult>
 ) {
   let budget: MemoryBudget = { calls: 0, pages: 0, searches: 0, bytes: 0 };
   let closed = false;
@@ -251,7 +253,7 @@ export function registerMemoryEvents(
     }
     controller = new AbortController();
     const active = controller;
-    const timeout = setTimeout(() => active.abort(), 10000);
+    let timeout = setTimeout(() => active.abort(), 10000);
     const signal = active.signal;
     running = (async () => {
       let status: MemoryStatus | undefined;
@@ -268,6 +270,32 @@ export function registerMemoryEvents(
           return;
         }
         publishMemoryStatus(ctx, status, 'running');
+        if (!explicit && status.mode === 'auto' && screen) {
+          const screened = await screen(run.sources, signal);
+          signal.throwIfAborted();
+          if (closed || current !== generation) {
+            return;
+          }
+          if (screened.reason !== 'DISABLED') {
+            log('jev_memory_screened', undefined, { ...diagnostic, reason: screened.reason });
+            // The optional screen must not consume the existing curator's model budget.
+            clearTimeout(timeout);
+            timeout = setTimeout(() => active.abort(), 10000);
+          }
+          if (screened.skip) {
+            const observed = await service.getStatus();
+            signal.throwIfAborted();
+            if (!closed && current === generation) {
+              publishMemoryStatus(ctx, observed, 'skipped');
+            }
+            return;
+          }
+        }
+        if (!allowed() || !ctx.isProjectTrusted()) {
+          publishMemoryStatus(ctx, status, 'skipped');
+          outcome('NOT_ELIGIBLE', '本次未保存长期记忆：会话权限已变化。');
+          return;
+        }
         log('curator_started', undefined, diagnostic);
         const operation = service.evaluateRun(
           run.sources,

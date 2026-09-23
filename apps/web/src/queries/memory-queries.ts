@@ -3,7 +3,13 @@
  * @description Global query identity and refresh behavior for memory across TUI and Web mutations.
  */
 import { queryOptions } from '@tanstack/react-query';
-import { getMemoryStatus, getMemoryIndexes, getMemoryDocument, memoryService } from '@/api/memory';
+import {
+  getMemoryScreening,
+  getMemoryStatus,
+  getMemoryIndexes,
+  getMemoryDocument,
+  memoryService,
+} from '@/api/memory';
 import type { MemoryRef } from '@octopus/shared/protocol/memory';
 export const memoryQueryKey = ['memory'] as const;
 /**
@@ -39,4 +45,14 @@ export const memoryDocumentQuery = (ref: MemoryRef) =>
     queryKey: [...memoryQueryKey, 'document', ref.storeId, ref.indexId],
     queryFn: ({ signal }) => getMemoryDocument(ref, signal),
     retry: false,
+  });
+
+/**
+ * Keep screening edits stable while other memory status queries update.
+ */
+export const memoryScreeningQuery = () =>
+  queryOptions({
+    queryKey: [...memoryQueryKey, 'screening'],
+    queryFn: ({ signal }) => getMemoryScreening(signal),
+    refetchOnWindowFocus: false,
   });

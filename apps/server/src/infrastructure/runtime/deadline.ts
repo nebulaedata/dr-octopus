@@ -23,16 +23,9 @@ export async function waitForRuntime<T>(
   now: () => number,
   label: string
 ): Promise<T> {
-  if (options.signal?.aborted) {
-    throw cancelled(label);
-  }
-  const deadlineTimeout = options.deadlineAt === undefined ? defaultTimeoutMs : options.deadlineAt - now();
-  const timeoutMs = Math.min(defaultTimeoutMs, deadlineTimeout);
-  if (timeoutMs <= 0) {
-    throw timedOut(label);
-  }
   return new Promise<T>((resolve, reject) => {
     let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined = undefined;
     const finish = (callback: () => void): void => {
       if (settled) {
         return;
@@ -43,9 +36,7 @@ export async function waitForRuntime<T>(
       callback();
     };
     const onAbort = (): void => finish(() => reject(cancelled(label)));
-    const timeout = setTimeout(() => finish(() => reject(timedOut(label))), timeoutMs);
-    timeout.unref?.();
-    options.signal?.addEventListener('abort', onAbort, { once: true });
+    // Observe work even when this caller has already left; shared RPC work may reject later.
     void work.then(
       (value) => finish(() => resolve(value)),
       (error: unknown) =>
@@ -53,6 +44,19 @@ export async function waitForRuntime<T>(
           reject(error instanceof Error ? error : new Error('Session runtime work failed.', { cause: error }))
         )
     );
+    if (options.signal?.aborted) {
+      onAbort();
+      return;
+    }
+    const deadlineTimeout = options.deadlineAt === undefined ? defaultTimeoutMs : options.deadlineAt - now();
+    const timeoutMs = Math.min(defaultTimeoutMs, deadlineTimeout);
+    if (timeoutMs <= 0) {
+      finish(() => reject(timedOut(label)));
+      return;
+    }
+    timeout = setTimeout(() => finish(() => reject(timedOut(label))), timeoutMs);
+    timeout.unref?.();
+    options.signal?.addEventListener('abort', onAbort, { once: true });
   });
 }
 

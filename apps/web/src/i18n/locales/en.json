@@ -475,6 +475,21 @@
       "reading": "Reading memory mode…",
       "refresh": "Refresh settings",
       "saving": "Saving memory mode…",
+      "screening": {
+        "connection": "Configure Jev model and API key",
+        "description": "Disabled by default. In auto mode, eligible user text is sent to TypeSafe to skip unnecessary curation. Explicit save requests bypass screening.",
+        "enabled": "Use Jev for automatic memory",
+        "invalid": "Use a timeout of 250–5000 ms and a threshold of 0.95–1.",
+        "keyRequired": "Configure a Jev API key before using screening.",
+        "loading": "Loading screening settings…",
+        "save": "Save screening settings",
+        "saved": "Memory screening settings saved",
+        "saving": "Saving…",
+        "threshold": "Minimum skip probability",
+        "thresholdHelp": "Only high-probability skip decisions suppress curation. Uncertain results or failures continue normal curation; this threshold does not guarantee against missed facts.",
+        "timeout": "Screening timeout (ms)",
+        "title": "Automatic memory screening"
+      },
       "startHint": "Start the memory service to view and configure the memory mode.",
       "title": "Memory"
     }
@@ -1501,6 +1516,32 @@
       "navigationTitle": "Settings navigation",
       "titleFallback": "Settings"
     },
+    "jev": {
+      "apiKey": "API Key",
+      "description": "TypeSafe model configuration.",
+      "invalid": "Enter a valid Jev model ID.",
+      "keyConfiguredPlaceholder": "*************** (configured)",
+      "keyFailed": "Could not save the API key.",
+      "keyHelp": "Saved as TYPESAFE_API_KEY. Restart running agents after changes.",
+      "keyOverridden": "The launch environment overrides this key.",
+      "keyPlaceholder": "Enter an API Key",
+      "keySaved": "Agent environment updated",
+      "loading": "Loading Jev settings…",
+      "model": "Model",
+      "modelHelp": "Version IDs stay fixed; aliases track releases.",
+      "modelsKeyRequired": "Save an API key to load models.",
+      "modelsLoading": "Loading models…",
+      "modelsRetry": "Retry loading models",
+      "probeSuccess": "Connected to {{model}} ({{ms}} ms).",
+      "removeKey": "Remove key",
+      "save": "Save settings",
+      "saved": "Jev settings saved",
+      "saveKey": "Save API key",
+      "saving": "Saving…",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "title": "Jev"
+    },
     "knowledge": {
       "model": {
         "apiKeyEmptyPlaceholder": "Leave empty for local services",
@@ -1688,6 +1729,10 @@
         "appearance": "Appearance",
         "basics": "Basics",
         "extensions": "Extensions"
+      },
+      "jev": {
+        "description": "Configure the Jev model and API key.",
+        "label": "Jev"
       },
       "knowledge": {
         "description": "Manage the knowledge service, model configuration, sharing, and remote mounts.",

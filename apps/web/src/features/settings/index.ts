@@ -3,6 +3,7 @@
  * @description Exposes Settings route surfaces while keeping internal feature modules encapsulated.
  */
 
+export { JevSettingsPage } from './JevSettingsPage';
 export { DefaultModelPage } from './default-model/DefaultModelPage';
 export { EnvironmentPage } from './environment/EnvironmentPage';
 export { McpServersPage } from './mcp-servers/McpServersPage';

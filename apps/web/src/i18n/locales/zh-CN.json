@@ -467,6 +467,21 @@
       "reading": "正在读取记忆模式…",
       "refresh": "刷新设置",
       "saving": "正在保存记忆模式…",
+      "screening": {
+        "connection": "配置 Jev 模型和 API Key",
+        "description": "默认关闭。自动模式下将符合条件的用户原文发送到 TypeSafe，跳过无需整理的回合；明确保存请求不经过筛选。",
+        "enabled": "开启 Jev 前置判断",
+        "invalid": "超时需为 250–5000 毫秒，阈值需为 0.95–1。",
+        "keyRequired": "请先配置 Jev API Key，再使用前置判断。",
+        "loading": "正在加载前置判断配置…",
+        "save": "保存前置判断配置",
+        "saved": "已保存记忆前置判断配置",
+        "saving": "正在保存…",
+        "threshold": "跳过整理的最低概率",
+        "thresholdHelp": "仅高概率的 skip 结果会跳过整理；不确定或请求失败时继续正常整理。此阈值不能保证绝不漏记。",
+        "timeout": "前置判断超时（毫秒）",
+        "title": "自动记忆前置判断"
+      },
       "startHint": "启动记忆服务后，即可查看和配置记忆模式。",
       "title": "记忆"
     }
@@ -1456,6 +1471,32 @@
       "navigationTitle": "设置导航",
       "titleFallback": "设置"
     },
+    "jev": {
+      "apiKey": "API Key",
+      "description": "TypeSafe 模型配置。",
+      "invalid": "请输入有效的 Jev 模型 ID。",
+      "keyConfiguredPlaceholder": "***************（已配置）",
+      "keyFailed": "无法保存 API Key。",
+      "keyHelp": "保存至 TYPESAFE_API_KEY，重启智能体后生效。",
+      "keyOverridden": "启动环境变量优先于此处配置。",
+      "keyPlaceholder": "请输入 API Key",
+      "keySaved": "已更新 Agent 环境配置",
+      "loading": "正在加载 Jev 配置…",
+      "model": "模型",
+      "modelHelp": "固定版本保持稳定；别名随版本更新。",
+      "modelsKeyRequired": "保存 API Key 后加载模型。",
+      "modelsLoading": "正在加载模型…",
+      "modelsRetry": "重试加载模型",
+      "probeSuccess": "已连接 {{model}}（{{ms}} 毫秒）。",
+      "removeKey": "移除密钥",
+      "save": "保存配置",
+      "saved": "已保存 Jev 配置",
+      "saveKey": "保存 API Key",
+      "saving": "正在保存…",
+      "test": "测试连接",
+      "testing": "测试中…",
+      "title": "Jev"
+    },
     "knowledge": {
       "model": {
         "apiKeyEmptyPlaceholder": "本地服务可留空",
@@ -1641,6 +1682,10 @@
         "appearance": "外观",
         "basics": "基础",
         "extensions": "扩展"
+      },
+      "jev": {
+        "description": "配置 Jev 模型和 API Key。",
+        "label": "Jev"
       },
       "knowledge": {
         "description": "管理知识库服务、模型配置、共享和远程挂载。",

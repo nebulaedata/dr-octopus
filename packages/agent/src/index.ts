@@ -13,3 +13,6 @@ export * from './extensions/scheduler/sdk/index.js';
 export * from './extensions/knowledge/sdk/index.js';
 
 export * from './extensions/memory/sdk/index.js';
+export { JevSettingsStore, JevError } from './lib/jev/settings.js';
+export { evaluateJevChoice, listJevModels } from './lib/jev/client.js';
+export type { JevChoiceQuestion, JevChoiceResult } from './lib/jev/client.js';

@@ -76,6 +76,8 @@ export function createServer(options: CreateServerOptions = {}): FastifyInstance
   const allowOrigin = (origin: string) => config.corsOrigins.includes(origin);
 
   const server = Fastify({
+    // Cold module loading and resource recovery have no fixed startup deadline.
+    pluginTimeout: 0,
     loggerInstance: logging.logger,
     bodyLimit: config.httpBodyLimitBytes,
   });
@@ -140,8 +142,8 @@ export function createServer(options: CreateServerOptions = {}): FastifyInstance
   });
 
   // Application Modules
-  server.register(async (scope) => {
-    await scope.register(businessModulesPlugin, {
+  server.register((scope, _options, done) => {
+    scope.register(businessModulesPlugin, {
       config,
       storagePaths,
       allowOrigin,
@@ -156,6 +158,7 @@ export function createServer(options: CreateServerOptions = {}): FastifyInstance
         maxWebSocketMessageBytes: 512 * 1024,
       },
     });
+    done();
   });
 
   if (config.webRoot) {

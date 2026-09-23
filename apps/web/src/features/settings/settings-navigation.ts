@@ -97,6 +97,16 @@ export function getSettingsNavigation(t: Translate): SettingsNavigationGroup[] {
           pageType: 'complete',
         },
         {
+          label: t('settings.nav.jev.label', 'Jev'),
+          description: t(
+            'settings.nav.jev.description',
+            'Configure the Jev model and API key.'
+          ),
+          path: '/settings/jev',
+          icon: SparklesIcon,
+          pageType: 'complete',
+        },
+        {
           label: t('settings.nav.schedules.label', 'Scheduled tasks'),
           description: t(
             'settings.nav.schedules.description',

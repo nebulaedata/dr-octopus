@@ -24,3 +24,5 @@ export {
 } from './lifecycle.js';
 
 export { subscribeMemoryChanges } from './changes.js';
+
+export { MemoryScreeningSettingsStore } from '../lib/screening-settings.js';

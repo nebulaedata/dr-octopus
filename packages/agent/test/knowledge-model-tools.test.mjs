@@ -255,7 +255,7 @@ test('OCR reads external absolute and relative local paths while rejecting non-i
 
 test('standalone model tools remain absent from the public knowledge MCP registrations', async () => {
   const source = await readFile(
-    new URL('../../../apps/server/src/modules/knowledge/knowledge-mcp.controller.ts', import.meta.url),
+    new URL('../../../apps/server/src/modules/knowledge-sharing/knowledge-sharing.service.ts', import.meta.url),
     'utf8'
   );
   assert.deepEqual(

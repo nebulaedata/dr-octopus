@@ -5,6 +5,8 @@
 import { request } from '@/utils/request';
 import { t } from '@/i18n/translate';
 import type {
+  MemoryScreeningSnapshot,
+  MemoryScreeningUpdate,
   MemoryStatus,
   MemoryPage,
   MemoryReadResult,
@@ -57,7 +59,9 @@ export async function getMemoryDocument(ref: MemoryRef, signal?: AbortSignal): P
     });
     const item = part.items[0];
     if (!item?.document) {
-      throw new Error(t('api.memory.deletedOrSuperseded', 'The memory was deleted or superseded; refresh the directory.'));
+      throw new Error(
+        t('api.memory.deletedOrSuperseded', 'The memory was deleted or superseded; refresh the directory.')
+      );
     }
     document = document ? { ...document, bodyMd: document.bodyMd + item.document.bodyMd } : item.document;
     if (part.complete) {
@@ -87,4 +91,17 @@ export function forgetMemory(data: MemoryForget): Promise<MemoryReceipt> {
  */
 export function setMemoryPolicy(data: MemoryPolicy): Promise<MemoryReceipt> {
   return request({ url: '/memory/policy', method: 'POST', data });
+}
+
+/**
+ * Read optional automatic-memory screening independently of daemon availability.
+ */
+export function getMemoryScreening(signal?: AbortSignal): Promise<MemoryScreeningSnapshot> {
+  return request({ url: '/memory/screening', signal });
+}
+/**
+ * Persist memory-owned screening settings without changing Jev connection configuration.
+ */
+export function saveMemoryScreening(data: MemoryScreeningUpdate): Promise<MemoryScreeningSnapshot> {
+  return request({ url: '/memory/screening', method: 'PUT', data });
 }

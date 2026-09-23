@@ -6,12 +6,14 @@ import {
   createMemoryService,
   getMemoryServiceStatus,
   MemoryError,
+  MemoryScreeningSettingsStore,
   restartMemoryService,
   startMemoryService,
   stopMemoryService,
 } from '@octopus/agent';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import type {
+  MemoryScreeningUpdate,
   MemoryForget,
   MemoryPolicy,
   MemoryRead,
@@ -32,12 +34,14 @@ export class MemoryService {
   rebuildFts() {
     return this.call(() => this.memory.rebuildFts());
   }
+  private readonly screening;
   private readonly memory;
   /**
    * Own a lazy SDK instance; reads never initialize storage or spawn an Agent.
    */
   constructor(private readonly options: { dataRoot?: string } = {}) {
     this.memory = createMemoryService(options);
+    this.screening = new MemoryScreeningSettingsStore(options.dataRoot);
   }
   /**
    * Releases the lazy SDK client when its owning module closes.
@@ -70,9 +74,13 @@ export class MemoryService {
           statusCode = 404;
         } else if (error.code === 'READ_ONLY') {
           statusCode = 403;
-        } else if (error.code.includes('CONFLICT') || error.code === 'CURSOR_STALE') {
+        } else if (
+          error.code === 'MEMORY_SCREENING_BUSY' ||
+          error.code.includes('CONFLICT') ||
+          error.code === 'CURSOR_STALE'
+        ) {
           statusCode = 409;
-        } else if (error.code === 'INVALID_INPUT') {
+        } else if (error.code === 'INVALID_INPUT' || error.code === 'MEMORY_SCREENING_INVALID') {
           statusCode = 400;
         }
         throw new ApplicationError(error.code, error.message, {
@@ -82,6 +90,18 @@ export class MemoryService {
       }
       throw error;
     }
+  }
+  /**
+   * Read optional screening policy without starting the memory daemon.
+   */
+  screeningSettings() {
+    return this.call(() => this.screening.get());
+  }
+  /**
+   * Save the memory-owned screening policy with revision conflict protection.
+   */
+  updateScreening(input: MemoryScreeningUpdate) {
+    return this.call(() => this.screening.update(input));
   }
   /**
    * Observe global policy and store availability.

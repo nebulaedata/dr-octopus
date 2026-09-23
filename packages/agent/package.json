@@ -51,6 +51,7 @@
     "@octopus/document-processing": "workspace:*",
     "@octopus/env-loader": "workspace:*",
     "@octopus/shared": "workspace:*",
+    "@typesafe-ai/sdk": "0.6.0",
     "better-sqlite3": "^13.0.3",
     "croner": "10.0.1",
     "drizzle-orm": "^0.45.2",

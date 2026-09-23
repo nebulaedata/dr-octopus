@@ -11,6 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from '@octopus/ui/components/toggle-grou
 import { setMemoryPolicy, memoryService } from '@/api/memory';
 import { memoryQueryKey, memoryStatusQuery, memoryServiceQuery } from '@/queries/memory-queries';
 import { useI18n } from '@/i18n/use-i18n';
+import { MemoryScreeningCard } from './MemoryScreeningCard';
 import { MemoryServiceCard } from './MemoryServiceCard';
 import { SettingContainer } from '../layout/SettingContainer';
 import { CircleXIcon, HandIcon, LoaderPinwheelIcon } from 'lucide-react';
@@ -142,6 +143,7 @@ export function MemorySettingsPage() {
           </AlertDescription>
         </Alert>
       )}
+      <MemoryScreeningCard />
     </SettingContainer>
   );
 }

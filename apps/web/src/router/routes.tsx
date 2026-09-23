@@ -390,3 +390,18 @@ export function ShortcutsSettingsRoute() {
     </Suspense>
   );
 }
+
+const LazyJevSettingsPage = lazy(() =>
+  import('../features/settings').then((module) => ({ default: module.JevSettingsPage }))
+);
+/**
+ * Render Jev settings through the shared feature entrypoint.
+ */
+export function JevSettingsRoute() {
+  const { t } = useI18n();
+  return (
+    <Suspense fallback={<LoadingFallback message={t('settings.jev.loading', 'Loading Jev settings…')} />}>
+      <LazyJevSettingsPage />
+    </Suspense>
+  );
+}

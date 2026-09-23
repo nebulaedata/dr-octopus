@@ -5,7 +5,7 @@
 import autoload from '@fastify/autoload';
 import fp from 'fastify-plugin';
 import { fileURLToPath } from 'node:url';
-import type { FastifyPluginAsync } from 'fastify';
+import type { FastifyPluginCallback } from 'fastify';
 import type { ServerConfig } from '../infrastructure/config/utils.js';
 import type { ServerPaths } from '../infrastructure/config/server-paths.js';
 import type { ServerControl } from '../infrastructure/lifecycle/control.js';
@@ -21,10 +21,11 @@ export interface BusinessModulesOptions {
 }
 
 /**
- * Discovers immediate module entrypoints without treating implementations or workers as plugins.
+ * Queue discovery without awaiting descendants inside this registration-only wrapper.
+ * Fastify still waits for every child before readiness and applies the Host's timeout policy.
  */
-const registerBusinessModules: FastifyPluginAsync<BusinessModulesOptions> = async (server, options) => {
-  await server.register(autoload, {
+const registerBusinessModules: FastifyPluginCallback<BusinessModulesOptions> = (server, options, done) => {
+  server.register(autoload, {
     dir: options.directory ?? fileURLToPath(new URL('../modules/', import.meta.url)),
     forceESM: true,
     maxDepth: 1,
@@ -35,6 +36,7 @@ const registerBusinessModules: FastifyPluginAsync<BusinessModulesOptions> = asyn
     matchFilter: /^\/[^/]+\/index\.(?:ts|js)$/,
     options,
   });
+  done();
 };
 
 export const businessModulesPlugin = fp(registerBusinessModules, {

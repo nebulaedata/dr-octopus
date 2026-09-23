@@ -3,6 +3,8 @@
  * @description Global memory management using the same Agent SDK as TUI and RPC.
  * - GET /api/memory/export
  * - POST /api/memory/rebuild
+ * - GET /api/memory/screening
+ * - PUT /api/memory/screening
  * - GET /api/memory/status
  * - GET /api/memory/indexes
  * - POST /api/memory/read
@@ -16,7 +18,13 @@
  */
 import { Readable } from 'node:stream';
 import { registerErrorMessages } from '../../infrastructure/i18n/error-catalog.js';
-import type { MemoryForget, MemoryPolicy, MemoryRead, MemoryRemember } from '@octopus/shared/protocol/memory';
+import type {
+  MemoryScreeningUpdate,
+  MemoryForget,
+  MemoryPolicy,
+  MemoryRead,
+  MemoryRemember,
+} from '@octopus/shared/protocol/memory';
 import type { FastifyInstance } from 'fastify';
 import type { ErrorMessageCatalog } from '../../infrastructure/i18n/error-catalog.js';
 import type { MemoryService } from './memory.service.js';
@@ -25,6 +33,14 @@ import type { MemoryService } from './memory.service.js';
  * Register within the existing Host API authority; no Workspace parameter grants additional access.
  */
 export function registerMemoryController(server: FastifyInstance, service: MemoryService) {
+  server.get('/memory/screening', (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return service.screeningSettings();
+  });
+  server.put<{ Body: MemoryScreeningUpdate }>('/memory/screening', (request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return service.updateScreening(request.body);
+  });
   server.get('/memory/service/status', () => service.lifecycle('status'));
   for (const action of ['start', 'stop', 'restart'] as const) {
     server.post(`/memory/service/${action}`, () => service.lifecycle(action));
@@ -54,6 +70,19 @@ export function registerMemoryController(server: FastifyInstance, service: Memor
  * Memory-domain message variants keyed by stable error code.
  */
 export const memoryErrorMessages: ErrorMessageCatalog = {
+  MEMORY_SCREENING_INVALID: { en: 'Invalid memory screening settings.', 'zh-CN': '记忆前置判断配置无效。' },
+  MEMORY_SCREENING_IO: {
+    en: 'Could not read or save memory screening settings.',
+    'zh-CN': '无法读取或保存记忆前置判断配置。',
+  },
+  MEMORY_SCREENING_CONFLICT: {
+    en: 'Memory screening settings changed. Reopen settings before saving.',
+    'zh-CN': '记忆前置判断配置已变更，请重新打开设置后保存。',
+  },
+  MEMORY_SCREENING_BUSY: {
+    en: 'Memory screening settings are being saved. Try again.',
+    'zh-CN': '记忆前置判断配置正在保存，请稍后重试。',
+  },
   BUDGET_EXHAUSTED: [
     { en: 'The memory budget for this turn is exhausted.', 'zh-CN': '本轮记忆预算已用尽。' },
     {

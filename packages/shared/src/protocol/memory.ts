@@ -160,3 +160,22 @@ export interface MemoryServiceStatus {
   controlRevision?: number;
   checks?: { name: string; status: 'pass' | 'warn' | 'fail'; reason?: string }[];
 }
+
+/**
+ * Automatic screening is a memory policy; Jev owns only connection configuration.
+ */
+export const memoryScreeningSettingsSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    timeoutMs: z.number().int().min(250).max(5000).default(1500),
+    skipThreshold: z.number().min(0.95).max(1).default(0.95),
+  })
+  .strict();
+export const memoryScreeningUpdateSchema = memoryScreeningSettingsSchema
+  .extend({
+    revision: z.string().min(1).max(100),
+  })
+  .strict();
+export type MemoryScreeningSettings = z.infer<typeof memoryScreeningSettingsSchema>;
+export type MemoryScreeningSnapshot = MemoryScreeningSettings & { revision: string };
+export type MemoryScreeningUpdate = z.infer<typeof memoryScreeningUpdateSchema>;

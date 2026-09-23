@@ -23,6 +23,7 @@ import {
   SchedulesRoute,
   MemoryRoute,
   MemorySettingsRoute,
+  JevSettingsRoute,
   SchedulerSettingsRoute,
   SettingsLayoutRoute,
   SettingsPlaceholderRoute,
@@ -220,6 +221,11 @@ const environmentRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   component: EnvironmentRoute,
 });
+const jevSettingsRoute = createRoute({
+  path: 'jev',
+  getParentRoute: () => settingsLayoutRoute,
+  component: JevSettingsRoute,
+});
 const serverSettingsRoute = createRoute({
   path: 'server',
   getParentRoute: () => settingsLayoutRoute,
@@ -249,6 +255,7 @@ const routeTree = rootRoute.addChildren([
       schedulerSettingsRoute,
       knowledgeSettingsRoute,
       memorySettingsRoute,
+      jevSettingsRoute,
       languageSettingsRoute,
       shortcutsSettingsRoute,
       environmentRoute,

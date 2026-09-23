@@ -196,7 +196,7 @@ export async function memorySdkFixture(t) {
         {
           name: 'octopus-memory',
           hidden: true,
-          factory: createMemoryExtension({ dataRoot: root, readOnly }),
+          factory: createMemoryExtension({ dataRoot: root, agentDir: root, readOnly }),
         },
       ],
     });

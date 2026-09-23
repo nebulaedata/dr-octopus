@@ -11,6 +11,7 @@ export const settingsPaths = [
   '/settings/mcp',
   '/settings/knowledge',
   '/settings/memory',
+  '/settings/jev',
   '/settings/schedules',
   '/settings/appearance/theme',
   '/settings/appearance/language',
