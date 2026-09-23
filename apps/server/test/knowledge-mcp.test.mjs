@@ -11,7 +11,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import Fastify from 'fastify';
 import { createKnowledgeClient, startKnowledgeService, stopKnowledgeService } from '@octopus/agent';
-import { registerKnowledgeMcpController } from '../dist/modules/knowledge/knowledge-mcp.controller.js';
+import { createKnowledgeSharingClient } from '../dist/modules/knowledge-sharing/knowledge-sharing.service.js';
+import { registerKnowledgeMcpController } from '../dist/modules/knowledge-sharing/knowledge-sharing.controller.js';
 
 test(
   'two instances mount only local published global collections and revoke remote access',
@@ -57,7 +58,7 @@ test(
     });
     const publication = await a.call('sharing.save', config);
     assert.ok(publication.token);
-    registerKnowledgeMcpController(server, first);
+    registerKnowledgeMcpController(server, createKnowledgeSharingClient(first));
     const address = await server.listen({ host: '127.0.0.1', port: 0 });
     const url = address + '/mcp/knowledge';
     await writeFile(

@@ -4,12 +4,12 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderErrorMessage } from '../dist/lib/i18n/error-catalog.js';
-import { registerKnowledgeErrorMessages } from '../dist/modules/knowledge/knowledge.i18n.js';
-import { registerMemoryErrorMessages } from '../dist/modules/memory/memory.i18n.js';
-import { registerSessionErrorMessages } from '../dist/modules/sessions/sessions.i18n.js';
-import { registerSettingsErrorMessages } from '../dist/modules/settings/settings.i18n.js';
-import { registerAttachmentErrorMessages } from '../dist/modules/attachments/attachments.i18n.js';
+import { renderErrorMessage } from '../dist/infrastructure/i18n/error-catalog.js';
+import { registerKnowledgeErrorMessages } from '../dist/modules/knowledge/knowledge.controller.js';
+import { registerMemoryErrorMessages } from '../dist/modules/memory/memory.controller.js';
+import { registerSessionErrorMessages } from '../dist/modules/sessions/sessions.controller.js';
+import { registerSettingsErrorMessages } from '../dist/modules/model-settings/model-settings.controller.js';
+import { registerAttachmentErrorMessages } from '../dist/modules/attachments/attachments.controller.js';
 import { collectThrownPairs } from './error-message-sources.mjs';
 
 registerKnowledgeErrorMessages();

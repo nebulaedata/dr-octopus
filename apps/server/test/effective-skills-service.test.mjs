@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { EffectiveSkillsService } from '../dist/modules/skills/effective-skills.service.js';
+import { EffectiveSkillsService } from '../dist/modules/effective-skills/effective-skills.service.js';
 
 const serviceServer = Fastify();
 test.after(() => serviceServer.close());
@@ -102,7 +102,7 @@ test('live Runtime catalog is authoritative and preserves source ownership', asy
         });
       },
     };
-    const service = new EffectiveSkillsService(serviceServer, {
+    const service = new EffectiveSkillsService({
       workspaceService: fixture.workspaceService,
       runtime,
       agentDir: fixture.agentDir,
@@ -137,7 +137,7 @@ test('dormant catalog uses Pi resource discovery and includes the managed Worksp
       '---\nname: workspace-skill\ndescription: Workspace skill.\n---\n\nInstructions.\n',
       'utf8'
     );
-    const service = new EffectiveSkillsService(serviceServer, {
+    const service = new EffectiveSkillsService({
       workspaceService: fixture.workspaceService,
       runtime: {
         getBinding() {
@@ -172,7 +172,7 @@ test('cross-Workspace Runtime identities are rejected before RPC execution', asy
   const fixture = await createFixture();
   try {
     let executed = false;
-    const service = new EffectiveSkillsService(serviceServer, {
+    const service = new EffectiveSkillsService({
       workspaceService: fixture.workspaceService,
       runtime: {
         getBinding() {

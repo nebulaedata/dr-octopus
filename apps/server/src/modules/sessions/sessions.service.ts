@@ -3,7 +3,9 @@
  * @description 统一编排 Session Repository、Workspace 权限、Pi runtime 命令、快照与离线派生
  */
 
+import { isThinkingLevel } from '@octopus/shared/protocol';
 import { randomUUID } from 'node:crypto';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import {
   PiSessionRepository,
   RuntimeArtifacts,
@@ -14,18 +16,11 @@ import {
   projectPlanModeState,
   projectThinkingState,
   responseData,
-} from '../../lib/runtime/index.js';
+} from '../../infrastructure/runtime/index.js';
+import { isRecord } from '../../utils/value-utils.js';
 import { normalizeSessionTitle, toRuntimeDto } from './sessions.utils.js';
-import { createSessionCommandCatalog } from './session-command-catalog.js';
-import { SessionDraftsService } from './session-drafts.service.js';
-import { SessionsRepository } from './sessions.repository.js';
-import { MessageFeedbackRepository } from './message-feedback.repository.js';
-import { ApplicationError } from '../../lib/errors/application-error.js';
-import { isRecord } from '../../utils/index.js';
-import { isThinkingLevel } from '@octopus/shared/protocol';
-import { projectHostVisibleUserMessage } from '../channel/host-user-message-projection.js';
-import type { KnowledgeModeConfig } from '@octopus/shared/protocol/knowledge';
-import type { RestartSessionBody } from '@octopus/shared/protocol';
+import type { MessageFeedbackRepository } from './sessions.repository.js';
+import type { SessionsRepository } from './sessions.repository.js';
 import type {
   RpcExtensionUIResponse,
   RpcSessionState,
@@ -33,40 +28,57 @@ import type {
   SessionStats,
 } from '@earendil-works/pi-coding-agent';
 import type {
-  DeleteSessionOptionsDto,
   CommandCatalogDto,
   CommandDto,
+  DeleteSessionOptionsDto,
   HostEventEnvelope,
   MessageFeedbackDto,
   ModelDto,
   PermissionMode,
   PermissionStateDto,
   PlanModeStateDto,
+  RestartSessionBody,
   RuntimeWorkMode,
-  SessionDto,
   SessionBootstrapDto,
+  SessionDto,
+  SessionHistoryDto,
   SessionPreferencesDto,
   SessionRuntimeDto,
   SessionSnapshotDto,
-  SessionHistoryDto,
   ThinkingLevel,
   ThinkingStateDto,
 } from '@octopus/shared/protocol';
+import type { MessageAttachmentDto } from '@octopus/shared/protocol/attachments';
+import type { KnowledgeModeConfig } from '@octopus/shared/protocol/knowledge';
+
 import type {
   ManagedSessionCommand,
   RuntimeGenerationTarget,
-  SessionRuntimeOperation,
   SessionRuntimeCoordinator,
+  SessionRuntimeOperation,
   SessionRuntimeRequestOptions,
-} from '../../lib/runtime/index.js';
-import type { SessionsServiceOptions } from './sessions.types.js';
-import type { MessageAttachmentDto } from '@octopus/shared/protocol/attachments';
-import type { FastifyInstance } from 'fastify';
+} from '../../infrastructure/runtime/index.js';
+import type { SessionNotificationsRepository } from './sessions.repository.js';
+import type { WorkspaceService } from '@octopus/agent';
 
 /**
  * Exposes Session use cases shared by HTTP and realtime transport Adapters.
  */
 export class SessionsService {
+  readonly notifications: Pick<
+    SessionNotificationsRepository,
+    | 'registerResult'
+    | 'findRun'
+    | 'runReceipts'
+    | 'taskReceipts'
+    | 'has'
+    | 'publish'
+    | 'markRead'
+    | 'markAllRead'
+    | 'list'
+    | 'unreadCount'
+    | 'removeRun'
+  >;
   readonly #drafts: SessionDraftsService;
   readonly #refreshConfiguration: () => Promise<unknown>;
   readonly #runtime: SessionRuntimeCoordinator;
@@ -79,19 +91,14 @@ export class SessionsService {
   readonly #createSessionId: () => string;
   readonly #messageEntryCache = new Map<string, { cursor?: string; entries: SessionEntry[] }>();
   readonly #listMessageAttachments: (sessionId: string) => Map<string, MessageAttachmentDto[]>;
-
   /**
-   * @param server Fastify instance exposing application plugins.
-   * @param options 服务依赖
+   * Receives the aggregate's repositories and runtime explicitly.
    */
-  public constructor(
-    protected readonly server: FastifyInstance,
-    options: SessionsServiceOptions
-  ) {
-    this.#runtime = options.runtime ?? server.sessionRuntime;
+  public constructor(options: SessionsServiceDependencies) {
+    this.#runtime = options.runtime;
     this.#refreshConfiguration = () => options.refreshConfiguration?.() ?? Promise.resolve();
-    this.#sessions = options.sessionsRepository ?? new SessionsRepository(server.database);
-    this.#feedback = options.messageFeedbackRepository ?? new MessageFeedbackRepository(server.database);
+    this.#sessions = options.sessionsRepository;
+    this.#feedback = options.messageFeedbackRepository;
     this.#workspaces = options.workspaceService;
     this.#createSessionId = options.createSessionId ?? randomUUID;
     this.#drafts = new SessionDraftsService({
@@ -114,7 +121,7 @@ export class SessionsService {
         return this.#createSession(workspaceId, 'New session', draftId);
       },
       remove: async (sessionId) => this.deleteSession(sessionId, { deleteFiles: true }),
-      onError: (error) => this.server.log?.warn({ err: error }, 'Could not reclaim prepared Session'),
+      onError: (error) => options.onDraftError(error),
     });
     this.#listMessageAttachments = options.listMessageAttachments ?? (() => new Map());
     this.#events = new RuntimeEventProjection(this.#runtime, {
@@ -133,6 +140,20 @@ export class SessionsService {
       piSessions: options.piSessionsRepository ?? new PiSessionRepository(),
       execute: async (sessionId, command) => this.#commands.execute(sessionId, command),
     });
+
+    this.notifications = {
+      registerResult: (...args) => options.notificationsRepository.registerResult(...args),
+      findRun: (...args) => options.notificationsRepository.findRun(...args),
+      runReceipts: (...args) => options.notificationsRepository.runReceipts(...args),
+      taskReceipts: (...args) => options.notificationsRepository.taskReceipts(...args),
+      has: (...args) => options.notificationsRepository.has(...args),
+      publish: (...args) => options.notificationsRepository.publish(...args),
+      markRead: (...args) => options.notificationsRepository.markRead(...args),
+      markAllRead: (...args) => options.notificationsRepository.markAllRead(...args),
+      list: (...args) => options.notificationsRepository.list(...args),
+      unreadCount: (...args) => options.notificationsRepository.unreadCount(...args),
+      removeRun: (...args) => options.notificationsRepository.removeRun(...args),
+    };
   }
 
   /**
@@ -1110,9 +1131,10 @@ export class SessionsService {
     const row = this.#requireSessionRow(sessionId);
     const plan = projectPlanModeState(this.#artifacts.getBranch(row.agentSessionPath), available);
     const knowledge = this.#events.getKnowledgeMode(sessionId);
-    return knowledge
-      ? { ...plan, knowledge, ...(knowledge.enabled ? { workMode: 'knowledge' as const } : {}) }
-      : plan;
+    if (!knowledge) {
+      return plan;
+    }
+    return { ...plan, knowledge, ...(knowledge.enabled ? { workMode: 'knowledge' as const } : {}) };
   }
 
   /**
@@ -1173,3 +1195,433 @@ export class SessionsService {
       : undefined;
   }
 }
+
+export interface SessionDraftsServiceOptions {
+  repository: SessionsRepository;
+  runtime: SessionRuntimeCoordinator;
+  /**
+   * Creates or reactivates the exact requested draft through the existing serialized coordinator.
+   */
+  prepare(workspaceId: string, draftId: string): Promise<SessionDto>;
+  /**
+   * Stops an owned draft and removes its Session artifacts.
+   */
+  remove(sessionId: string): Promise<unknown>;
+  /**
+   * Reports bounded background cleanup failures to the Host logger.
+   */
+  onError(error: unknown): void;
+}
+
+/**
+ * Keeps per-browser drafts distinct while sharing repeated requests for one draft identity.
+ */
+export class SessionDraftsService {
+  readonly #pending = new Map<string, { workspaceId: string; result: Promise<SessionDto> }>();
+  readonly #retiring = new Set<string>();
+  readonly #timer: NodeJS.Timeout;
+  #cleanup: Promise<void> | undefined;
+  #closed = false;
+
+  /**
+   * Starts unreferenced maintenance; live subscriptions protect drafts from idle reclamation.
+   */
+  public constructor(private readonly options: SessionDraftsServiceOptions) {
+    this.#timer = setInterval(() => {
+      void this.reap().catch((error) => options.onError(error));
+    }, 60_000);
+    this.#timer.unref();
+  }
+
+  /**
+   * Shares one in-flight warmup per workspace and validated opaque browser draft ID.
+   */
+  public prepare(workspaceId: string, draftId: string): Promise<SessionDto> {
+    this.assertAvailable(draftId);
+    if (this.#closed) {
+      throw new ApplicationError('SESSION_DRAFT_CLOSED', 'Session preparation is unavailable.', {
+        statusCode: 503,
+      });
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(draftId)) {
+      throw new ApplicationError('INVALID_SESSION_DRAFT', 'A valid draft identity is required.', {
+        statusCode: 400,
+      });
+    }
+    if (
+      this.options.repository.get(draftId) === undefined &&
+      this.options.runtime
+        .getDiagnostics()
+        .slots.some((slot) => slot.sessionId === draftId && slot.canonicalSessionPath !== undefined) &&
+      !this.#pending.has(draftId)
+    ) {
+      throw new ApplicationError('SESSION_DRAFT_EXPIRED', 'Prepare a new conversation and try again.', {
+        statusCode: 409,
+      });
+    }
+    const key = draftId;
+    const pending = this.#pending.get(key);
+    if (pending !== undefined) {
+      if (pending.workspaceId !== workspaceId) {
+        throw new ApplicationError('SESSION_DRAFT_CONFLICT', 'Draft belongs to another workspace.', {
+          statusCode: 409,
+        });
+      }
+      return pending.result;
+    }
+    if (
+      this.options.repository.get(draftId) === undefined &&
+      this.#pending.size + this.options.repository.listDrafts().length >= 64
+    ) {
+      throw new ApplicationError(
+        'SESSION_DRAFT_CAPACITY',
+        'Too many prepared conversations. Try again later.',
+        { statusCode: 429 }
+      );
+    }
+    const preparation = this.options.prepare(workspaceId, draftId).finally(() => this.#pending.delete(key));
+    this.#pending.set(key, { workspaceId, result: preparation });
+    return preparation;
+  }
+
+  /**
+   * Reclaims drafts unused for fifteen minutes, retaining any active subscription or runtime operation.
+   */
+  public reap(now = Date.now()): Promise<void> {
+    if (this.#cleanup !== undefined) {
+      return this.#cleanup;
+    }
+    const cleanup = this.#reap(now).finally(() => {
+      this.#cleanup = undefined;
+    });
+    this.#cleanup = cleanup;
+    return cleanup;
+  }
+
+  /**
+   * Checks interest again before removal so a connected Composer keeps its warmed runtime and metadata.
+   */
+  async #reap(now: number): Promise<void> {
+    for (const row of this.options.repository.listDrafts()) {
+      if (now - Date.parse(row.lastActiveAt ?? row.createdAt) < 15 * 60_000) {
+        continue;
+      }
+      const slot = this.options.runtime
+        .getDiagnostics()
+        .slots.find((candidate) => candidate.sessionId === row.id);
+      if (
+        slot !== undefined &&
+        (slot.demandCount > 0 || slot.state === 'activating' || slot.state === 'draining')
+      ) {
+        continue;
+      }
+      if (!this.options.repository.get(row.id)?.isDraft) {
+        continue;
+      }
+      this.#retiring.add(row.id);
+      try {
+        await this.options.remove(row.id);
+      } finally {
+        this.#retiring.delete(row.id);
+      }
+    }
+  }
+
+  /**
+   * Stops maintenance immediately, including when tests dispose services without closing a full Host.
+   */
+  public dispose(): void {
+    this.#closed = true;
+    clearInterval(this.#timer);
+  }
+
+  /**
+   * Rejects promotion or reuse once cleanup has claimed the unpublished runtime.
+   */
+  public assertAvailable(sessionId: string): void {
+    if (this.#retiring.has(sessionId) || this.#closed) {
+      throw new ApplicationError('SESSION_DRAFT_EXPIRED', 'Prepare a new conversation and try again.', {
+        statusCode: 409,
+      });
+    }
+  }
+
+  /**
+   * Waits for accepted preparations and removes remaining unpublished artifacts before Host shutdown.
+   */
+  public async close(): Promise<void> {
+    this.dispose();
+    await Promise.allSettled([...this.#pending.values()].map((pending) => pending.result));
+    await this.#cleanup;
+    for (const row of this.options.repository.listDrafts()) {
+      await this.options.remove(row.id);
+    }
+  }
+}
+
+/**
+ * Skip focused Sessions without recording them; publish unseen final settlements with notice deduplication.
+ */
+export function subscribeSessionCompletionNotices(
+  sessions: SessionsService,
+  notices: SessionsService['notifications'],
+  onError: (error: unknown) => void,
+  isSessionFocused: (sessionId: string) => boolean = () => false
+): () => void {
+  return sessions.onEvent((event) => {
+    if (
+      event.type !== 'agent.event' ||
+      !event.payload ||
+      typeof event.payload !== 'object' ||
+      !('type' in event.payload) ||
+      event.payload.type !== 'agent_settled'
+    ) {
+      return;
+    }
+    try {
+      const session = sessions.getSession(event.sessionId);
+      if (session.execution || isSessionFocused(session.id)) {
+        return;
+      }
+      const transcript = sessions.getEntries(session.id);
+      const entries = new Map(transcript.entries.map((candidate) => [candidate.id, candidate]));
+      let entry = transcript.leafId ? entries.get(transcript.leafId) : undefined;
+      while (entry && !(entry.type === 'message' && entry.message.role === 'assistant')) {
+        entry = entry.parentId ? entries.get(entry.parentId) : undefined;
+      }
+      if (!entry || entry.type !== 'message' || entry.message.role !== 'assistant') {
+        return;
+      }
+      const message = entry.message;
+      let status: 'failed' | 'cancelled' | 'succeeded';
+      if (message.stopReason === 'error') {
+        status = 'failed';
+      } else {
+        if (message.stopReason === 'aborted') {
+          status = 'cancelled';
+        } else {
+          status = 'succeeded';
+        }
+      }
+      const summary =
+        message.content
+          .filter((part) => part.type === 'text')
+          .map((part) => part.text)
+          .join('\n')
+          .slice(0, 500) ||
+        message.errorMessage ||
+        (status === 'succeeded' ? '回复已完成' : '执行已结束，请查看会话详情');
+      notices.publish({
+        eventKey: `reply:${session.id}:${entry.id}`,
+        workspaceId: session.workspaceId,
+        sessionId: session.id,
+        title: session.title,
+        summary,
+        status,
+        createdAt: event.timestamp,
+      });
+    } catch (error) {
+      onError(error);
+    }
+  });
+}
+
+interface RuntimeCommand {
+  name: string;
+  description?: string;
+  source: 'extension' | 'prompt' | 'skill';
+}
+
+const HOST_COMMANDS: readonly CommandDto[] = [
+  {
+    name: 'compact',
+    description: 'Compact the current session context',
+    source: 'host',
+    execution: 'realtime',
+    enabled: true,
+  },
+  {
+    name: 'model',
+    description: 'Select the active model',
+    source: 'host',
+    execution: 'client',
+    enabled: true,
+  },
+  {
+    name: 'new',
+    description: 'Create a new session',
+    source: 'host',
+    execution: 'http',
+    enabled: true,
+  },
+  {
+    name: 'fork',
+    description: 'Fork the current conversation',
+    source: 'host',
+    execution: 'http',
+    enabled: true,
+  },
+  {
+    name: 'clone',
+    description: 'Clone the current session',
+    source: 'host',
+    execution: 'http',
+    enabled: true,
+  },
+  {
+    name: 'name',
+    description: 'Rename the current session',
+    source: 'host',
+    execution: 'client',
+    enabled: true,
+  },
+  {
+    name: 'export',
+    description: 'Export the current session as HTML',
+    source: 'host',
+    execution: 'http',
+    enabled: true,
+  },
+  {
+    name: 'settings',
+    description: 'Open Web settings',
+    source: 'host',
+    execution: 'client',
+    enabled: true,
+  },
+  {
+    // TODO: Enable when the Web keyboard-shortcuts dialog is implemented.
+    name: 'hotkeys',
+    description: 'Show Web keyboard shortcuts (coming soon)',
+    source: 'host',
+    execution: 'client',
+    enabled: false,
+    disabledReason: 'The Web hotkeys guide is not available yet.',
+  },
+];
+
+/**
+ * Combines Host-owned commands with Pi commands while reserving names for supported Web behavior.
+ *
+ * @param runtimeCommands Commands returned by Pi RPC get_commands.
+ * @returns Stable browser command catalog with one owner per invocation name.
+ */
+export function createSessionCommandCatalog(runtimeCommands: readonly RuntimeCommand[]): CommandCatalogDto {
+  const commands = HOST_COMMANDS.map((command) => ({ ...command }));
+  const reservedNames = new Set(commands.map((command) => command.name));
+  for (const command of runtimeCommands) {
+    if (reservedNames.has(command.name)) {
+      continue;
+    }
+    reservedNames.add(command.name);
+    commands.push({
+      name: command.name,
+      ...(command.description === undefined ? {} : { description: command.description }),
+      source: command.source,
+      execution: 'prompt',
+      enabled: true,
+    });
+  }
+  return { commands };
+}
+
+export interface SessionsServiceOptions {
+  runtime?: SessionRuntimeCoordinator;
+  /**
+   * Reconciles effective configuration before activating or sending new work.
+   */
+  refreshConfiguration?(): Promise<unknown>;
+  sessionsRepository?: SessionsRepository;
+  messageFeedbackRepository?: MessageFeedbackRepository;
+  workspaceService: WorkspaceService;
+  piSessionsRepository?: PiSessionRepository;
+  createSessionId?: () => string;
+  listMessageAttachments?: (sessionId: string) => Map<string, MessageAttachmentDto[]>;
+}
+
+const HOST_CONTEXT_REQUEST_MARKER =
+  /\r?\n<host_(attachment|workspace_reference)_request id="[^"\r\n]{1,1024}" \/>[\s\S]*$/u;
+
+interface ProjectedHostText {
+  text: string;
+  hasHostContext: boolean;
+  hasHostAttachmentContext: boolean;
+}
+
+/**
+ * Removes Host-only context from a text block.
+ *
+ * @param text Text persisted by Pi after Host context adaptation.
+ * @returns User-authored text and whether private Host context was present.
+ */
+function projectText(text: string): ProjectedHostText {
+  const match = HOST_CONTEXT_REQUEST_MARKER.exec(text);
+  if (match === null) {
+    return { text, hasHostContext: false, hasHostAttachmentContext: false };
+  }
+  return {
+    text: text.slice(0, match.index),
+    hasHostContext: true,
+    hasHostAttachmentContext: match[1] === 'attachment' || text.includes('\n<host_attachment_request id="'),
+  };
+}
+
+/**
+ * Produces the authoritative user-message shape exposed to Web clients.
+ *
+ * Pi persists model-facing Host context so crash recovery remains deterministic. This projection
+ * hides that private suffix and suppresses Pi image/file blocks when Host attachment cards own them.
+ *
+ * @param message Arbitrary Pi message value.
+ * @param hasAuthoritativeAttachments Whether Host message bindings own attachment presentation.
+ * @returns The original value for non-user messages, otherwise a safe Host-visible projection.
+ */
+export function projectHostVisibleUserMessage(
+  message: unknown,
+  hasAuthoritativeAttachments = false
+): unknown {
+  if (!isRecord(message) || message['role'] !== 'user') {
+    return message;
+  }
+  const content = message['content'];
+  if (typeof content === 'string') {
+    const projected = projectText(content);
+    return projected.hasHostContext ? { ...message, content: projected.text } : message;
+  }
+  if (!Array.isArray(content)) {
+    return message;
+  }
+
+  const blocks: unknown[] = content;
+  let hasHostAttachmentContext = false;
+  const projectedBlocks = blocks.map((block) => {
+    if (!isRecord(block) || block['type'] !== 'text' || typeof block['text'] !== 'string') {
+      return block;
+    }
+    const projected = projectText(block['text']);
+    hasHostAttachmentContext ||= projected.hasHostAttachmentContext;
+    return projected.hasHostContext ? { ...block, text: projected.text } : block;
+  });
+  const hasHostContext = projectedBlocks.some((block, index) => block !== blocks[index]);
+  if (!hasHostContext && !hasAuthoritativeAttachments) {
+    return message;
+  }
+  const ownsAttachmentPresentation = hasHostAttachmentContext || hasAuthoritativeAttachments;
+  const visibleBlocks = ownsAttachmentPresentation
+    ? projectedBlocks.filter(
+        (block) => !isRecord(block) || (block['type'] !== 'image' && block['type'] !== 'file')
+      )
+    : projectedBlocks;
+  return { ...message, content: visibleBlocks };
+}
+
+export type SessionsServiceDependencies = SessionsServiceOptions & {
+  runtime: SessionRuntimeCoordinator;
+  sessionsRepository: SessionsRepository;
+  messageFeedbackRepository: MessageFeedbackRepository;
+  notificationsRepository: SessionNotificationsRepository;
+  /**
+   * Reports draft reclamation failures through the owning Host logger.
+   */
+  onDraftError(error: unknown): void;
+};

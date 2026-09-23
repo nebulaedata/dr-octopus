@@ -5,9 +5,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
-import { stopSession } from '../dist/lib/runtime/stop-session.js';
-import { RuntimeCommands } from '../dist/lib/runtime/commands.js';
-import { ManagedRuntimeState } from '../dist/lib/runtime/managed-state.js';
+import { stopSession } from '../dist/infrastructure/runtime/stop-session.js';
+import { RuntimeCommands } from '../dist/infrastructure/runtime/commands.js';
+import { ManagedRuntimeState } from '../dist/infrastructure/runtime/managed-state.js';
 
 test('background initialization failure still stops the subagent fleet before reporting failure', async () => {
   for (const failure of ['invalid-snapshot', 'unavailable-control', 'rejected-begin']) {

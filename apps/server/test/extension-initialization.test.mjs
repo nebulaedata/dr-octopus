@@ -8,7 +8,7 @@ import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { initializeExtensions } from '../dist/lib/startup/extension-initialization.js';
+import { initializeExtensions } from '../dist/infrastructure/startup/extension-initialization.js';
 
 test('Cancelling startup closes the owned installer process', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'octopus-cancel-extensions-'));

@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { RpivQuestionnaireAdapter } from '../src/lib/runtime/rpiv-questionnaire-adapter.ts';
+import { RpivQuestionnaireAdapter } from '../src/infrastructure/runtime/rpiv-questionnaire-adapter.ts';
 
 const questions = [
   {

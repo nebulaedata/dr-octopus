@@ -4,9 +4,9 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { RuntimeCommands } from '../dist/lib/runtime/commands.js';
-import { RuntimeEventProjection } from '../dist/lib/runtime/event-projection.js';
-import { decodeClientMessage } from '../dist/modules/channel/message.decoder.js';
+import { RuntimeCommands } from '../dist/infrastructure/runtime/commands.js';
+import { RuntimeEventProjection } from '../dist/infrastructure/runtime/event-projection.js';
+import { decodeClientMessage } from '../dist/modules/channel/channel.dto.js';
 
 test('ordinary control exits the current workflow, forwards config and verifies Agent projection', async () => {
   let state = { available: true, workMode: 'plan', phase: 'planning', awaitingAction: false };

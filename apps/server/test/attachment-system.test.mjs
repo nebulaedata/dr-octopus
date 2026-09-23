@@ -16,15 +16,16 @@ import Fastify from 'fastify';
 import {
   createAttachmentCapabilityResolver,
   DEFAULT_ATTACHMENT_POLICY,
-} from '../dist/lib/attachment-capability/index.js';
-import { LocalFileBlobStore } from '../dist/lib/attachment-storage/local-file-blob-store.js';
-import { AttachmentBackupService } from '../dist/lib/attachment-storage/attachment-backup-service.js';
+} from '../dist/infrastructure/attachment-capability/index.js';
+import { LocalFileBlobStore } from '../dist/infrastructure/attachment-storage/local-file-blob-store.js';
+import { AttachmentBackupService } from '../dist/infrastructure/attachment-storage/attachment-backup-service.js';
 import { createDatabase } from '../dist/db/client.js';
-import { AttachmentJobsRepository } from '../dist/modules/attachments/attachment-jobs.repository.js';
+import { AttachmentJobsRepository } from '../dist/modules/attachments/attachments.repository.js';
 import { AttachmentsRepository } from '../dist/modules/attachments/attachments.repository.js';
-import { AttachmentsService } from '../dist/modules/attachments/attachments.service.js';
-import { AgentAttachmentAdapter } from '../dist/modules/attachments/agent-attachment-adapter.js';
-import { WorkspaceAttachmentCache } from '../dist/modules/attachments/workspace-attachment-cache.js';
+import { createAttachmentsService } from '../dist/modules/attachments/index.js';
+import { AttachmentDeliveryService } from '../dist/modules/attachment-delivery/attachment-delivery.service.js';
+import { WorkspaceAttachmentCache } from '../dist/modules/attachment-delivery/attachment-delivery.repository.js';
+import { SqliteTusDataStore } from '../dist/modules/attachments/attachments.repository.js';
 import { registerAttachmentsController } from '../dist/modules/attachments/attachments.controller.js';
 import {
   ProcessorSupervisor,
@@ -407,7 +408,7 @@ test('deleting a leased processor attachment discards late outputs before public
       };
     },
   };
-  const service = new AttachmentsService(server, {
+  const service = createAttachmentsService(server.database, server.log, {
     dataRoot: join(root, 'attachments'),
     backupRoot: join(root, 'backups'),
     repository,
@@ -745,7 +746,7 @@ test('startup recovery replays a crash after atomic rename but before SQLite pub
       };
     },
   };
-  const service = new AttachmentsService(server, {
+  const service = createAttachmentsService(server.database, server.log, {
     dataRoot: join(root, 'attachments'),
     backupRoot: join(root, 'backups'),
     repository,
@@ -851,7 +852,13 @@ test('Agent attachment adaptation escapes extracted text before entering Host pr
       chunks: [],
       presentationKind: 'file',
     });
-    const adapter = new AgentAttachmentAdapter(repository, blobs);
+    const adapter = new AttachmentDeliveryService(
+      {
+        getDeliveryRecord: repository.getRecord.bind(repository),
+        getDeliveryDerivative: repository.getDerivative.bind(repository),
+      },
+      blobs
+    );
     const result = await adapter.resolve([repository.require('workspace-a', id)], {
       sessionId: 'session-a',
       workspaceCwd: root,
@@ -1020,25 +1027,30 @@ test('tus create, offset resume, finish processing, Range read, CAS, and tombsto
   const database = createDatabase(':memory:');
   const server = Fastify();
   server.decorate('database', database);
-  const attachments = new AttachmentsService(server, {
+  const attachments = createAttachmentsService(server.database, server.log, {
     maxBytes: 500 * 1024 * 1024,
     dataRoot: join(root, 'attachments'),
     backupRoot: join(root, 'backups'),
   });
   await server.register(
     async (scope) => {
-      registerAttachmentsController(scope, attachments, {
-        async resolve(selector) {
-          return {
-            id: selector.id,
-            kind: 'project',
-            name: 'Workspace',
-            cwd: root,
-            createdAt: new Date(0).toISOString(),
-            updatedAt: new Date(0).toISOString(),
-          };
+      registerAttachmentsController(
+        scope,
+        attachments,
+        {
+          async resolve(selector) {
+            return {
+              id: selector.id,
+              kind: 'project',
+              name: 'Workspace',
+              cwd: root,
+              createdAt: new Date(0).toISOString(),
+              updatedAt: new Date(0).toISOString(),
+            };
+          },
         },
-      });
+        new SqliteTusDataStore(attachments.repository, attachments.blobStore)
+      );
     },
     { prefix: '/api' }
   );

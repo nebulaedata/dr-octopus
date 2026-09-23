@@ -7,8 +7,8 @@ import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createDatabase } from '../dist/db/client.js';
-import { ConversationStartRepository } from '../dist/modules/sessions/conversation-start.repository.js';
-import { ConversationStartService } from '../dist/modules/sessions/conversation-start.service.js';
+import { ConversationStartRepository } from '../dist/modules/conversation-start/conversation-start.repository.js';
+import { ConversationStartService } from '../dist/modules/conversation-start/conversation-start.service.js';
 
 /**
  * Creates isolated persistent ownership with an observable deterministic RPC boundary.

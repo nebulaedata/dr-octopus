@@ -10,9 +10,9 @@ import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { createPiSettingsStore } from '../dist/lib/pi-settings/index.js';
-import { SettingsService } from '../dist/modules/settings/settings.service.js';
-import { registerLocalProviderController } from '../dist/modules/settings/local-provider.controller.js';
+import { createPiSettingsStore } from '../dist/infrastructure/pi-settings/index.js';
+import { SettingsService } from '../dist/modules/model-settings/model-settings.service.js';
+import { registerLocalProviderController } from '../dist/modules/model-settings/model-settings.controller.js';
 
 for (const runtime of ['ollama', 'vllm', 'lmstudio']) {
   test(`${runtime}: create, discover, save and reload a named provider without changing defaults`, async (t) => {
@@ -47,13 +47,14 @@ for (const runtime of ['ollama', 'vllm', 'lmstudio']) {
     );
     const store = createPiSettingsStore({ agentDir });
     const service = new SettingsService(store);
-    t.after(() => service.close());
     const created = await service.createLocalProvider({ name: `My ${runtime}`, runtime });
     assert.equal(created.name, `My ${runtime}`);
     assert.equal(created.modelCount, 0);
     assert.equal(created.auth.configured, false);
     assert.equal(created.local.runtime, runtime);
-    const draft = (await createPiSettingsStore({ agentDir }).listProviders()).find((provider) => provider.id === created.providerId);
+    const draft = (await createPiSettingsStore({ agentDir }).listProviders()).find(
+      (provider) => provider.id === created.providerId
+    );
     assert.equal(draft.name, created.name);
     assert.equal(draft.models.length, 0);
     const before = await store.getDefaultModel();
@@ -85,10 +86,19 @@ for (const runtime of ['ollama', 'vllm', 'lmstudio']) {
     assert.equal((await service.getProvider(created.providerKey)).modelCount, 1);
     const persisted = await readFile(join(agentDir, 'models.json'), 'utf8');
     mode = 'empty';
-    assert.deepEqual(await service.detectLocalProvider(created.providerKey, baseUrl), { reachable: true, models: [] });
+    assert.deepEqual(await service.detectLocalProvider(created.providerKey, baseUrl), {
+      reachable: true,
+      models: [],
+    });
     mode = 'offline';
-    assert.deepEqual(await service.detectLocalProvider(created.providerKey, baseUrl), { reachable: false, models: [] });
-    await assert.rejects(service.configureLocalProvider(created.providerKey, { baseUrl, modelId: 'test-model' }), { code: 'LOCAL_RUNTIME_OFFLINE' });
+    assert.deepEqual(await service.detectLocalProvider(created.providerKey, baseUrl), {
+      reachable: false,
+      models: [],
+    });
+    await assert.rejects(
+      service.configureLocalProvider(created.providerKey, { baseUrl, modelId: 'test-model' }),
+      { code: 'LOCAL_RUNTIME_OFFLINE' }
+    );
     assert.equal(await readFile(join(agentDir, 'models.json'), 'utf8'), persisted);
   });
 }

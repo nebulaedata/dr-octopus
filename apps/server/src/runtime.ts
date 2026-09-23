@@ -3,13 +3,34 @@
  * @description Exposes the Server lifecycle independently of command-line and process management policies.
  */
 import { createServer } from './app.js';
-import { loadServerConfig } from './lib/config/config.js';
-import { initializeServer } from './lib/startup/initialize-server.js';
-import type { ServerConfig } from './lib/config/utils.js';
-import type { ServerRuntime, ServerStatus } from './runtime-types.js';
-import type { ServerControl } from './lib/lifecycle/control.js';
+import { loadServerConfig } from './infrastructure/config/config.js';
+import { initializeServer } from './infrastructure/startup/initialize-server.js';
+import type { ServerConfig } from './infrastructure/config/utils.js';
+import type { ServerControl } from './infrastructure/lifecycle/control.js';
 
-export type { ServerRuntime, ServerStatus } from './runtime-types.js';
+export interface ServerStatus {
+  state: 'starting' | 'running' | 'stopping' | 'stopped' | 'failed';
+  phase: 'bootstrap' | 'infra' | 'extensions' | 'listen' | 'ready';
+  address?: string;
+  dataDir: string;
+  fileLogging: { enabled: boolean; state: string; directory: string };
+  warnings: string[];
+}
+
+export interface ServerRuntime {
+  /**
+   * Initializes resources and listens once. Rejects on failure or cancellation; failure closes resources.
+   */
+  start(): Promise<void>;
+  /**
+   * Cancels startup, waits for initialization to settle, and closes owned resources exactly once.
+   */
+  close(): Promise<void>;
+  /**
+   * Returns a detached diagnostic snapshot without exposing mutable lifecycle state.
+   */
+  getStatus(): ServerStatus;
+}
 
 /**
  * Creates a service without listening, acquiring process locks, or installing signal handlers.

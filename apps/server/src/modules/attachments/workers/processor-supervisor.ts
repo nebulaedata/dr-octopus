@@ -2,16 +2,15 @@
  * @author root
  * @description Supervises one-job Node child processors with IPC V1 validation, watchdogs, and parent-side artifact verification.
  */
-
-import { createHash, randomUUID } from 'node:crypto';
+import { ArtifactManifestV1Schema, ProcessorMessageV1Schema } from '@octopus/shared/protocol/attachments';
 import { fork } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { lstat, mkdir, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { ArtifactManifestV1Schema, ProcessorMessageV1Schema } from '@octopus/shared/protocol/attachments';
-import { ATTACHMENT_PROCESSOR } from '../processor-identity.js';
+import { ATTACHMENT_PROCESSOR } from '../attachments.utils.js';
 import type {
   ArtifactManifestV1,
   ProcessorLimitsV1,

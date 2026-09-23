@@ -21,7 +21,7 @@
 | [ADR-0015](./0015-effective-skills-catalog.md)                              | Accepted | 分离受管 Skills 与有效目录；活跃 Runtime 为权威，未运行 Workspace 使用 Pi Loader 预解析                   |
 | [ADR-0016](./0016-stable-session-runtime-slots.md)                          | Accepted | 使用稳定 Slot 消除激活空窗，由 Fastify 插件统一 Runtime 生命周期，并以 readiness 门禁 Composer            |
 | [ADR-0017](./0017-fastify-database-lifecycle-plugin.md)                     | Accepted | 由 Fastify 插件统一数据库生命周期，保持业务模块显式注入，并以真实依赖探针发布 readiness                   |
-| [ADR-0018](./0018-fastify-instance-service-context.md)                      | Accepted | 所有 Module Service 统一以 Fastify 实例为首参数，并直接解析共享 plugin decorators                         |
+| [ADR-0018](./0018-fastify-instance-service-context.md)                      | Superseded | 由 ADR-0066 的模块入口显式注入替代完整 Fastify Service 上下文 |
 | [ADR-0019](./0019-pi-authoritative-thinking-controls.md)                    | Accepted | Pi runtime 权威提供 thinking 当前值与模型可用等级，Web 通过 snapshot、ACK 和事件同步                      |
 | [ADR-0020](./0020-single-authority-permission-gate.md)                      | Accepted | 内置 Permission Gate 作为唯一审批权威，发布基线排除旧权限包，并以精确工具规则配置 auto                    |
 | [ADR-0021](./0021-host-owned-attachment-lifecycle.md)                       | Accepted | SQLite + 本地 Blob 独立持有附件；固定格式准入、实施契约、双阶段 shadcn 回显与 Pi text/image/manifest 适配 |
@@ -80,3 +80,4 @@
 | [ADR-0063](./0063-explicit-knowledge-model-access.md) | Accepted | 将本地模型调用能力与知识库写权限拆分 |
 | [ADR-0064](./0064-web-keyboard-shortcut-registry.md) | Implemented | Web 统一快捷键注册器、双作用域派发与本机可定制绑定 |
 | [ADR-0065](./0065-draft-first-conversation-start.md) | Implemented | 草稿独立、可丢弃预热与首条消息统一提交 |
+| [ADR-0066](./0066-server-module-autoload.md) | Accepted | 一级业务入口自动加载、具名共享能力、隔离路由作用域与显式资源所有权 |

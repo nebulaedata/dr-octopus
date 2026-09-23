@@ -2,14 +2,14 @@
  * @author Codex
  * @description Extracts existing PDF text and content coverage evidence without rendering page images.
  */
-import { pdfResourceOptions } from './pdf-resources.js';
-import { inspectPdfPageImages } from './pdf-page-images.js';
 import { assessDocumentCoverage } from '@octopus/document-processing';
+import { inspectPdfPageImages } from './pdf-page-images.js';
+import { pdfResourceOptions } from './pdf-resources.js';
 import type { PdfPageEvidence } from '@octopus/document-processing';
 import type {
+  ArtifactManifestV1,
   ProcessorLimitsV1,
   StructuredDocumentV1,
-  ArtifactManifestV1,
 } from '@octopus/shared/protocol/attachments';
 
 /**

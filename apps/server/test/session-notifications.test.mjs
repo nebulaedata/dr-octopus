@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createDatabase } from '../dist/db/client.js';
 import { sessions } from '../dist/db/schema.js';
-import { SessionNotificationsRepository } from '../dist/modules/sessions/session-notifications.repository.js';
+import { SessionNotificationsRepository } from '../dist/modules/sessions/sessions.repository.js';
 
 /**
  * Seed dormant catalog rows without allocating an Agent runtime.
@@ -104,7 +104,7 @@ test('notification API pages tied timestamps without overlap and permits returni
   const { database, repository, notice } = fixture();
   const { default: Fastify } = await import('fastify');
   const { registerSessionNotificationsController } =
-    await import('../dist/modules/sessions/session-notifications.controller.js');
+    await import('../dist/modules/sessions/sessions.controller.js');
   const server = Fastify();
   registerSessionNotificationsController(server, repository, {});
   try {
@@ -178,8 +178,7 @@ test('mark all read covers workspaces and source pointers without acknowledging 
 });
 
 test('focused settlements leave no record and can notify if repeated after losing focus', async () => {
-  const { subscribeSessionCompletionNotices } =
-    await import('../dist/modules/sessions/session-completion-notices.js');
+  const { subscribeSessionCompletionNotices } = await import('../dist/modules/sessions/sessions.service.js');
   const { database } = fixture();
   const changes = [];
   const repository = new SessionNotificationsRepository(database, (id) => changes.push(id));

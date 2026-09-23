@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { projectBackgroundTasks } from '@octopus/shared/protocol';
-import { stopSession } from '../../dist/lib/runtime/stop-session.js';
+import { stopSession } from '../../dist/infrastructure/runtime/stop-session.js';
 
 /**
  * Waits on observable facts with bounded latency and diagnostics from the isolated runtime.

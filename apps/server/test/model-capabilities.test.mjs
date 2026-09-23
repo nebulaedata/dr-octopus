@@ -10,13 +10,13 @@ import test from 'node:test';
 import Fastify from 'fastify';
 import { ModelRuntime } from '@earendil-works/pi-coding-agent';
 import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
-import { createPiSettingsStore } from '../dist/lib/pi-settings/index.js';
+import { createPiSettingsStore } from '../dist/infrastructure/pi-settings/index.js';
 import {
   saveLocalProvider,
   saveModelCapabilities,
-} from '../dist/lib/pi-settings/local-provider-repository.js';
-import { SettingsService } from '../dist/modules/settings/settings.service.js';
-import { registerSettingsController } from '../dist/modules/settings/settings.controller.js';
+} from '../dist/infrastructure/pi-settings/local-provider-repository.js';
+import { SettingsService } from '../dist/modules/model-settings/model-settings.service.js';
+import { registerSettingsController } from '../dist/modules/model-settings/model-settings.controller.js';
 
 test('custom model capability edits survive reload and unlock Pi thinking levels', async (t) => {
   const agentDir = await mkdtemp(join(tmpdir(), 'octopus-capabilities-'));

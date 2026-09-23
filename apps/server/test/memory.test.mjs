@@ -11,12 +11,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MemoryService } from '../dist/modules/memory/memory.service.js';
 import { registerMemoryController } from '../dist/modules/memory/memory.controller.js';
-import { projectMemoryState } from '../dist/lib/runtime/memory-state-projection.js';
-import { RuntimeEventProjection } from '../dist/lib/runtime/event-projection.js';
+import { projectMemoryState } from '../dist/infrastructure/runtime/memory-state-projection.js';
+import { RuntimeEventProjection } from '../dist/infrastructure/runtime/event-projection.js';
 test('HTTP reads are lazy and explicit writes use the same global store with optimistic concurrency', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'memory-http-'));
   const server = Fastify();
-  server.register(async (api) => registerMemoryController(api, new MemoryService(api, { dataRoot: root })), {
+  const service = new MemoryService({ dataRoot: root });
+  server.addHook('onClose', () => service.close());
+  server.register(async (api) => registerMemoryController(api, service), {
     prefix: '/api',
   });
   t.after(async () => {

@@ -5,7 +5,10 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { MutationIdempotencyLedger, mutationFingerprint } from '../dist/lib/idempotency/mutation-ledger.js';
+import {
+  MutationIdempotencyLedger,
+  mutationFingerprint,
+} from '../dist/infrastructure/idempotency/mutation-ledger.js';
 
 test('mutation ledger single-flights pending work and replays its settled result', async () => {
   const ledger = new MutationIdempotencyLedger();

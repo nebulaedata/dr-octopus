@@ -8,8 +8,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { PermissionSettingsService } from '../dist/modules/settings/permission-settings.service.js';
-import { registerPermissionSettingsController } from '../dist/modules/settings/permission-settings.controller.js';
+import { PermissionSettingsService } from '../dist/modules/permission-settings/permission-settings.service.js';
+import { registerPermissionSettingsController } from '../dist/modules/permission-settings/permission-settings.controller.js';
 
 test('permission Settings supports registered workspace overlays and rejects stale or malformed writes', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'octopus-permission-http-'));

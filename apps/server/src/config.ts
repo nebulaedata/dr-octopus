@@ -12,10 +12,10 @@ export {
   resolveAttachmentLimitBytes,
   resolveMaxActiveRuntimes,
   resolveMaxActiveRuntimesPerWorkspace,
-} from './lib/config/utils.js';
-export type { ServerConfig } from './lib/config/utils.js';
+} from './infrastructure/config/utils.js';
+export type { ServerConfig } from './infrastructure/config/utils.js';
 export {
   createServerEnvironmentStore,
   serverEnvironmentDefaults,
   initializeServerEnvironment,
-} from './lib/config/environment.js';
+} from './infrastructure/config/environment.js';

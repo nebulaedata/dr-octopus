@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
+import { createHealthService } from '../dist/modules/health/index.js';
 import { registerHealthController } from '../dist/modules/health/health.controller.js';
 
 const limits = {
@@ -21,7 +22,7 @@ const limits = {
 test('Health readiness succeeds only when both live dependency probes succeed', async () => {
   const server = Fastify();
   decorateHealthDependencies(server);
-  registerHealthController(server, limits);
+  registerHealthController(server, limits, createHealthService(server));
 
   const response = await server.inject({ method: 'GET', url: '/ready' });
   assert.equal(response.statusCode, 200);
@@ -39,7 +40,7 @@ test('Health readiness returns 503 and isolates a failed dependency probe', asyn
   decorateHealthDependencies(server, {
     queryError: new Error('private database failure'),
   });
-  registerHealthController(server, limits);
+  registerHealthController(server, limits, createHealthService(server));
 
   const health = await server.inject({ method: 'GET', url: '/health' });
   const readiness = await server.inject({ method: 'GET', url: '/ready' });
@@ -99,7 +100,7 @@ test('Health readiness fails only when degraded file logging is required', async
   decorateHealthDependencies(server, {
     loggingHealth: { state: 'degraded', required: true, errorCode: 'TEST_FAILURE' },
   });
-  registerHealthController(server, limits);
+  registerHealthController(server, limits, createHealthService(server));
 
   const response = await server.inject({ method: 'GET', url: '/ready' });
   assert.equal(response.statusCode, 503);

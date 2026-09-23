@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { RuntimeEventProjection } from '../dist/lib/runtime/event-projection.js';
+import { RuntimeEventProjection } from '../dist/infrastructure/runtime/event-projection.js';
 
 /**
  * Creates a minimal runtime event source for projection tests.

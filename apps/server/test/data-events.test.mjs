@@ -9,10 +9,10 @@ import Fastify from 'fastify';
 import { DataEventsService } from '../dist/modules/data-events/data-events.service.js';
 import { registerDataEventsController } from '../dist/modules/data-events/data-events.controller.js';
 import { SessionsRepository } from '../dist/modules/sessions/sessions.repository.js';
-import { SessionNotificationsRepository } from '../dist/modules/sessions/session-notifications.repository.js';
+import { SessionNotificationsRepository } from '../dist/modules/sessions/sessions.repository.js';
 import { createDatabase } from '../dist/db/client.js';
 import { EventEmitter } from 'node:events';
-import { ScheduledResultsService } from '../dist/modules/scheduled-tasks/scheduled-results.service.js';
+import { ScheduledResultSynchronization } from '../dist/modules/scheduled-tasks/scheduled-tasks.service.js';
 
 /**
  * Seed a valid dormant Session without creating a model runtime.
@@ -178,7 +178,7 @@ test('Scheduler invalidation during an active reconciliation retains exactly one
         : Promise.resolve({ state: 'stopped' });
     },
   };
-  const results = new ScheduledResultsService(scheduler, {}, {}, {}, '.', (error) => {
+  const results = new ScheduledResultSynchronization(scheduler, {}, {}, {}, '.', (error) => {
     throw error;
   });
   results.requestSync();

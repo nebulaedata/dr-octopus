@@ -4,9 +4,12 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ApplicationError } from '../dist/lib/errors/application-error.js';
-import { toPublicError } from '../dist/lib/errors/public-error.js';
-import { attachmentErrorMessages, registerAttachmentErrorMessages } from '../dist/modules/attachments/attachments.i18n.js';
+import { ApplicationError } from '../dist/infrastructure/errors/application-error.js';
+import { toPublicError } from '../dist/infrastructure/errors/public-error.js';
+import {
+  attachmentErrorMessages,
+  registerAttachmentErrorMessages,
+} from '../dist/modules/attachments/attachments.controller.js';
 import { collectThrownMessages } from './error-message-sources.mjs';
 
 registerAttachmentErrorMessages();
@@ -27,7 +30,11 @@ test('site variants keep the source message verbatim in zh-CN and exist in sourc
     const variants = Array.isArray(entry) ? entry : [entry];
     for (const variant of variants) {
       if (variant.match === undefined) continue;
-      assert.equal(variant['zh-CN'], variant.match, `${code} site variant must preserve its source message in zh-CN`);
+      assert.equal(
+        variant['zh-CN'],
+        variant.match,
+        `${code} site variant must preserve its source message in zh-CN`
+      );
       assert.ok(
         sourceMessages.has(variant.match),
         `${code} site variant match does not exist in source (drift): ${variant.match}`

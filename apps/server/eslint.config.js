@@ -49,6 +49,7 @@ export default defineConfig([
         },
       ],
       curly: ['error', 'all'],
+      'no-nested-ternary': 'error',
       eqeqeq: ['error', 'always'],
       'no-console': 'off',
     },
@@ -66,7 +67,7 @@ export default defineConfig([
         {
           patterns: [
             {
-              group: ['**/lib/runtime/**', '@octopus/agent/rpc', '@octopus/agent/rpc/**'],
+              group: ['**/infrastructure/runtime/**', '@octopus/agent/rpc', '@octopus/agent/rpc/**'],
               message: 'Controller 必须调用业务 Service，禁止直接依赖 Session Runtime 或 Agent RPC。',
             },
           ],

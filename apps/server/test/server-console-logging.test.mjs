@@ -10,7 +10,7 @@ import test from 'node:test';
  * Exercises the real Pino destination in an isolated process with deterministic terminal detection.
  */
 function renderLog(tty, pretty) {
-  const moduleUrl = new URL('../dist/lib/logging/server-log-options.js', import.meta.url).href;
+  const moduleUrl = new URL('../dist/infrastructure/logging/server-log-options.js', import.meta.url).href;
   const result = spawnSync(
     process.execPath,
     [

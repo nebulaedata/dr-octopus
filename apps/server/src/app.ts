@@ -5,24 +5,24 @@
 
 import Fastify from 'fastify';
 import { randomUUID } from 'node:crypto';
-import { ConfigurationQueue } from './lib/lifecycle/control.js';
+import { ConfigurationQueue } from './infrastructure/lifecycle/control.js';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
-import { toPublicError } from './lib/errors/public-error.js';
-import { negotiateLocale } from './lib/i18n/negotiate-locale.js';
-import { createServerLoggerRuntime } from './lib/logging/server-logger.js';
-import { registerApplicationModules } from './modules/index.js';
-import { isAllowedOrigin } from './modules/channel/channel.utils.js';
-import { controlError } from './lib/lifecycle/control.js';
-import { loadServerConfig } from './lib/config/config.js';
+import { toPublicError } from './infrastructure/errors/public-error.js';
+import { negotiateLocale } from './infrastructure/i18n/negotiate-locale.js';
+import { createServerLoggerRuntime } from './infrastructure/logging/server-logger.js';
+import { businessModulesPlugin } from './plugins/business-modules.plugin.js';
+import { isAllowedOrigin } from './utils/http-origin.js';
+import { controlError } from './infrastructure/lifecycle/control.js';
+import { loadServerConfig } from './infrastructure/config/config.js';
 import { databasePlugin } from './plugins/database.plugin.js';
 import { sessionRuntimePlugin } from './plugins/session-runtime.plugin.js';
 import { registerWebAssets } from './plugins/web-assets.plugin.js';
 import type { FastifyInstance } from 'fastify';
-import type { ServerControl } from './lib/lifecycle/control.js';
-import type { ServerConfig } from './lib/config/utils.js';
-import type { SessionRuntimeCoordinator } from './lib/runtime/index.js';
-import type { ServerPaths } from './lib/config/server-paths.js';
+import type { ServerControl } from './infrastructure/lifecycle/control.js';
+import type { ServerConfig } from './infrastructure/config/utils.js';
+import type { SessionRuntimeCoordinator } from './infrastructure/runtime/index.js';
+import type { ServerPaths } from './infrastructure/config/server-paths.js';
 
 export interface CreateServerOptions {
   control?: ServerControl;
@@ -140,11 +140,22 @@ export function createServer(options: CreateServerOptions = {}): FastifyInstance
   });
 
   // Application Modules
-  server.register(registerApplicationModules, {
-    config,
-    storagePaths,
-    allowOrigin,
-    control,
+  server.register(async (scope) => {
+    await scope.register(businessModulesPlugin, {
+      config,
+      storagePaths,
+      allowOrigin,
+      control,
+      capabilityLimits: {
+        maxAttachmentBytes: config.attachmentLimitBytes,
+        maxAttachmentsPerMessage: 10,
+        maxAttachmentMessageBytes: config.attachmentLimitBytes * 10,
+        tusChunkBytes: 8 * 1024 * 1024,
+        maxPromptCharacters: 100_000,
+        maxSubscriptionsPerConnection: 32,
+        maxWebSocketMessageBytes: 512 * 1024,
+      },
+    });
   });
 
   if (config.webRoot) {

@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { SessionsService } from '../dist/modules/sessions/sessions.service.js';
+import { createSessionsService } from '../dist/modules/sessions/index.js';
 import { registerSessionsController } from '../dist/modules/sessions/sessions.controller.js';
 
 test('history reads only the current branch and keeps entry metadata without activating Pi', () => {
@@ -24,7 +24,7 @@ test('history reads only the current branch and keeps entry metadata without act
       message: { role: 'assistant', content: [{ type: 'text', text: 'answer' }] },
     },
   ];
-  const service = new SessionsService(
+  const service = createSessionsService(
     {},
     {
       runtime: { onEvent: () => () => {}, activateExisting: () => assert.fail('history must not activate') },

@@ -8,7 +8,10 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { ManagedSkillsStore, ManagedSkillsStoreError } from '../dist/lib/pi-skills/managed-skills-store.js';
+import {
+  ManagedSkillsStore,
+  ManagedSkillsStoreError,
+} from '../dist/infrastructure/pi-skills/managed-skills-store.js';
 
 /**
  * Creates an isolated Skills root and removes it after the supplied test operation.

@@ -21,7 +21,7 @@ def run(url):
         page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
         page.goto(url + "/schedules", wait_until="domcontentloaded")
         expect(page.get_by_role("button", name=re.compile(r"^Initial session\b"))).to_be_visible(timeout=60000)
-        expect(page.get_by_role("region", name="任务列表")).to_be_visible(timeout=60000)
+        expect(page.get_by_role("region", name="Task list")).to_be_visible(timeout=60000)
         assert "/schedules" in page.url
         assert page.title()
         assert page.locator("vite-error-overlay").count() == 0
@@ -35,13 +35,13 @@ def run(url):
 
         notice = page.request.post(url + "/e2e/notice").json()
         for target in [page, second]:
-            expect(target.get_by_role("button", name="通知，1 条未读", exact=True)).to_be_visible()
-        page.get_by_role("button", name="通知，1 条未读", exact=True).click()
+            expect(target.get_by_role("button", name="Notifications, 1 unread", exact=True)).to_be_visible()
+        page.get_by_role("button", name="Notifications, 1 unread", exact=True).click()
         expect(page.get_by_text("Pushed notice", exact=True)).to_be_visible()
         page.keyboard.press("Escape")
         page.request.post(url + "/api/workspaces/w/sessions/seed/read", data={"version": notice["version"]})
         for target in [page, second]:
-            expect(target.get_by_role("button", name="通知，0 条未读", exact=True)).to_be_visible()
+            expect(target.get_by_role("button", name="Notifications, 0 unread", exact=True)).to_be_visible()
 
         page.request.post(url + "/e2e/task")
         for target in [page, second]:

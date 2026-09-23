@@ -5,14 +5,14 @@
 <h1 align="center">Dr.Octopus</h1>
 
 <p align="center">
-  <strong>Local-first · Workspace-scoped · TUI &amp; Web</strong><br />
+  <strong>Local-first · Workspace-scoped · TUI &amp; Web · Knowledge-base · Cron · Memory</strong><br />
   A general-purpose agent system built on Pi.
 </p>
 
 <p align="center">
-  <a href="https://github.com/nebulaedata/dr-octopus/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-3b82f6?style=flat-square" alt="License: MIT" /></a>
-  <a href="https://github.com/earendil-works/pi"><img src="https://img.shields.io/badge/built_with-Pi-ef4444?style=flat-square" alt="Built with Pi" /></a>
-  <a href="https://pnpm.io/"><img src="https://img.shields.io/badge/pnpm-11.18.0-f69220?style=flat-square&amp;logo=pnpm&amp;logoColor=white" alt="pnpm 11.18.0" /></a>
+  <a href="https://github.com/nebulaedata/dr-octopus/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-3b82f6" alt="License: MIT" /></a>
+  <a href="https://github.com/earendil-works/pi"><img src="https://img.shields.io/badge/built_with-Pi-ef4444" alt="Built with Pi" /></a>
+  <a href="https://pnpm.io/"><img src="https://img.shields.io/badge/pnpm-11.18.0-f69220?logo=pnpm&amp;logoColor=white" alt="pnpm 11.18.0" /></a>
 </p>
 
 <p align="center">

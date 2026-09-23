@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { SessionsService } from '../dist/modules/sessions/sessions.service.js';
+import { createSessionsService } from '../dist/modules/sessions/index.js';
 import { createDatabase } from '../dist/db/client.js';
 import { SessionsRepository } from '../dist/modules/sessions/sessions.repository.js';
 
@@ -107,7 +107,7 @@ test('Web titles stay catalog-only while Pi mutations project runtime preference
       runtimeCloseCount += 1;
     },
   };
-  const service = new SessionsService(serviceServer, {
+  const service = createSessionsService(serviceServer, {
     runtime: coordinator,
     sessionsRepository: sessions,
     workspaceService: { resolve: async () => ({}) },
@@ -165,7 +165,7 @@ test('Session snapshot reads one runtime generation under one operation lease', 
   };
   const commands = [];
   let operationCount = 0;
-  const service = new SessionsService(serviceServer, {
+  const service = createSessionsService(serviceServer, {
     runtime: {
       getBindingBySessionId: () => binding,
       getControl: () => ({ restartRequired: false, changedConfigRoutes: [], restart: { status: 'idle' } }),

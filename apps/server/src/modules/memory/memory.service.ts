@@ -4,20 +4,19 @@
  */
 import {
   createMemoryService,
-  MemoryError,
   getMemoryServiceStatus,
+  MemoryError,
+  restartMemoryService,
   startMemoryService,
   stopMemoryService,
-  restartMemoryService,
 } from '@octopus/agent';
-import { ApplicationError } from '../../lib/errors/application-error.js';
-import type { FastifyInstance } from 'fastify';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import type {
-  MemoryRecall,
-  MemoryRead,
-  MemoryRemember,
   MemoryForget,
   MemoryPolicy,
+  MemoryRead,
+  MemoryRecall,
+  MemoryRemember,
 } from '@octopus/shared/protocol/memory';
 
 export class MemoryService {
@@ -37,12 +36,14 @@ export class MemoryService {
   /**
    * Own a lazy SDK instance; reads never initialize storage or spawn an Agent.
    */
-  constructor(
-    server: FastifyInstance,
-    private readonly options: { dataRoot?: string } = {}
-  ) {
+  constructor(private readonly options: { dataRoot?: string } = {}) {
     this.memory = createMemoryService(options);
-    server.addHook('onClose', () => this.memory.dispose());
+  }
+  /**
+   * Releases the lazy SDK client when its owning module closes.
+   */
+  close(): Promise<void> {
+    return this.memory.dispose();
   }
   /**
    * Observe without starting, or explicitly control the Agent-owned global daemon.
@@ -64,17 +65,18 @@ export class MemoryService {
       return await work();
     } catch (error) {
       if (error instanceof MemoryError) {
+        let statusCode = 503;
+        if (error.code === 'NOT_FOUND') {
+          statusCode = 404;
+        } else if (error.code === 'READ_ONLY') {
+          statusCode = 403;
+        } else if (error.code.includes('CONFLICT') || error.code === 'CURSOR_STALE') {
+          statusCode = 409;
+        } else if (error.code === 'INVALID_INPUT') {
+          statusCode = 400;
+        }
         throw new ApplicationError(error.code, error.message, {
-          statusCode:
-            error.code === 'NOT_FOUND'
-              ? 404
-              : error.code === 'READ_ONLY'
-                ? 403
-                : error.code.includes('CONFLICT') || error.code === 'CURSOR_STALE'
-                  ? 409
-                  : error.code === 'INVALID_INPUT'
-                    ? 400
-                    : 503,
+          statusCode,
           retryable: error.code === 'STORE_UNAVAILABLE',
         });
       }

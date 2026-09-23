@@ -5,7 +5,10 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRuntimePermissionState, setRuntimePermissionMode } from '../dist/lib/runtime/index.js';
+import {
+  createRuntimePermissionState,
+  setRuntimePermissionMode,
+} from '../dist/infrastructure/runtime/index.js';
 
 test('permission runtime adapter executes the registered slash command over Pi RPC', async () => {
   const requests = [];

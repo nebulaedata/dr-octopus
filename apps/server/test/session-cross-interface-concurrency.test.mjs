@@ -13,13 +13,13 @@ import test from 'node:test';
 import websocket from '@fastify/websocket';
 import Fastify from 'fastify';
 import WebSocket from 'ws';
-import { SessionRuntimeCoordinator } from '../dist/lib/runtime/index.js';
+import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/index.js';
 import { createDatabase } from '../dist/db/client.js';
-import { AttachmentsService } from '../dist/modules/attachments/attachments.service.js';
+import { createAttachmentsService } from '../dist/modules/attachments/index.js';
 import { ChannelService } from '../dist/modules/channel/channel.service.js';
 import { registerChannelController } from '../dist/modules/channel/channel.controller.js';
 import { SessionsRepository } from '../dist/modules/sessions/sessions.repository.js';
-import { SessionsService } from '../dist/modules/sessions/sessions.service.js';
+import { createSessionsService } from '../dist/modules/sessions/index.js';
 import { registerSessionsController } from '../dist/modules/sessions/sessions.controller.js';
 
 const rpcFixturePath = fileURLToPath(new URL('./fixtures/mock-rpc-entry.mjs', import.meta.url));
@@ -67,7 +67,7 @@ async function createFixture() {
   });
   const server = Fastify();
   server.decorate('database', database);
-  const sessions = new SessionsService(server, {
+  const sessions = createSessionsService(server, {
     runtime,
     sessionsRepository: repository,
     messageFeedbackRepository: {
@@ -81,10 +81,12 @@ async function createFixture() {
       },
     },
   });
-  const attachments = new AttachmentsService(server, { maxBytes: 1024, ttlMs: 60_000 });
+  const attachments = createAttachmentsService(server.database, server.log, {
+    maxBytes: 1024,
+    ttlMs: 60_000,
+  });
   await attachments.ready();
   const channel = new ChannelService(
-    server,
     {
       sessionsService: sessions,
       attachmentsService: attachments,

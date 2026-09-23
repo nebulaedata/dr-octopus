@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { projectExecutionMessage } from '../dist/modules/scheduled-tasks/execution-message-projection.js';
+import { projectExecutionMessage } from '../dist/modules/scheduled-tasks/scheduled-tasks.utils.js';
 
 test('mixed assistant content preserves reply and multiple tool-call boundaries', () => {
   const items = projectExecutionMessage('message', 'assistant', [

@@ -5,9 +5,9 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { toPublicError } from '../dist/lib/errors/public-error.js';
-import { SessionRuntimeError } from '../dist/lib/runtime/index.js';
-import { decodeClientMessage } from '../dist/modules/channel/message.decoder.js';
+import { toPublicError } from '../dist/infrastructure/errors/public-error.js';
+import { SessionRuntimeError } from '../dist/infrastructure/runtime/index.js';
+import { decodeClientMessage } from '../dist/modules/channel/channel.dto.js';
 
 test('Session channel decoder rejects unknown and structurally invalid commands', () => {
   assert.throws(() => decodeClientMessage('{'));

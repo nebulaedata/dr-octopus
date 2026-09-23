@@ -13,8 +13,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
-import { stopSession } from '../../dist/lib/runtime/stop-session.js';
-import { projectSubagentFleetPayload } from '../../dist/lib/runtime/subagent-fleet-projection.js';
+import { stopSession } from '../../dist/infrastructure/runtime/stop-session.js';
+import { projectSubagentFleetPayload } from '../../dist/infrastructure/runtime/subagent-fleet-projection.js';
 import { isCancellationMessage } from '@octopus/shared/utils';
 
 /**
@@ -308,7 +308,11 @@ test(
     const result = await stopSession({ execute }, { readFleet: () => fleet, timeoutMs: 25_000 });
     assert.equal(result.success, true);
     await until(() => activeChildren === 0, 'child model connections closed', 10_000);
-    await until(() => pids.every((pid) => !processExists(pid)), 'both detached runner processes exited', 10_000);
+    await until(
+      () => pids.every((pid) => !processExists(pid)),
+      'both detached runner processes exited',
+      10_000
+    );
     assert.ok(
       parentRequests <= 4,
       `cancellation may only add stop-notification wake turns, got ${parentRequests} parent requests`

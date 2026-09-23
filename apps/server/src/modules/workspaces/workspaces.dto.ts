@@ -2,7 +2,6 @@
  * @author Codex
  * @description Defines request data contracts accepted by Workspace HTTP endpoints.
  */
-
 import type { WorkspaceFileEntryKind } from './workspaces.service.js';
 
 export interface WorkspaceRouteParams {

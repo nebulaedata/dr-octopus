@@ -2,14 +2,13 @@
  * @author Codex
  * @description Orchestrates Global and Workspace scope Pi Skill lifecycle use cases over the filesystem read model.
  */
-
 import { randomUUID } from 'node:crypto';
 import { mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { CONFIG_DIR_NAME, getAgentDir, parseFrontmatter } from '@earendil-works/pi-coding-agent';
-import { ApplicationError } from '../../lib/errors/application-error.js';
-import { ManagedSkillsStore } from '../../lib/pi-skills/managed-skills-store.js';
-import { prepareUploadedSkill } from './skills.upload.js';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
+import { ManagedSkillsStore } from '../../infrastructure/pi-skills/managed-skills-store.js';
+import { prepareUploadedSkill } from './skills.utils.js';
 import {
   assertValidSkillBody,
   assertValidSkillDescription,
@@ -20,10 +19,12 @@ import {
   resolveSkillDir,
   withManagedSkillsStoreErrors,
 } from './skills.utils.js';
-import type { PiSkillInventory, ResolvedPiSkill } from '../../lib/pi-skills/managed-skills-store.js';
+import type {
+  PiSkillInventory,
+  ResolvedPiSkill,
+} from '../../infrastructure/pi-skills/managed-skills-store.js';
 import type { SkillCatalogDto, SkillDetailDto, SkillDto } from '@octopus/shared/protocol';
 import type { WorkspaceService } from '@octopus/agent';
-import type { FastifyInstance } from 'fastify';
 
 export type SkillScope = { kind: 'global' } | { kind: 'workspace'; workspaceId: string };
 
@@ -61,13 +62,9 @@ export class SkillsService {
   readonly #workspaceService?: Pick<WorkspaceService, 'resolve'>;
 
   /**
-   * @param server Fastify instance exposing application plugins.
    * @param options Supplies the Global Skills root and the Workspace directory resolver.
    */
-  public constructor(
-    protected readonly server: FastifyInstance,
-    options: SkillsServiceOptions = {}
-  ) {
+  public constructor(options: SkillsServiceOptions = {}) {
     this.#globalRoot = options.skillsRoot ?? join(getAgentDir(), 'skills');
     this.#workspaceService = options.workspaceService;
   }

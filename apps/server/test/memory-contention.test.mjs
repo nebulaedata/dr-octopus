@@ -16,7 +16,8 @@ import { registerMemoryController } from '../dist/modules/memory/memory.controll
 test('a competing memory writer does not stall unrelated HTTP requests and retry succeeds', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'memory-contention-'));
   const server = Fastify();
-  const service = new MemoryService(server, { dataRoot: root });
+  const service = new MemoryService({ dataRoot: root });
+  server.addHook('onClose', () => service.close());
   let releaseChild = async () => {};
   registerMemoryController(server, service);
   server.get('/health', () => ({ ok: true }));

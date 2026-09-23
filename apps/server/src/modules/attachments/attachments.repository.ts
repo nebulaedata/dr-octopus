@@ -3,11 +3,12 @@
  * @description Persists attachment resources, tus offsets, CAS transitions, idempotency operations, and message bindings in SQLite.
  */
 
-import { createHash, randomUUID } from 'node:crypto';
 import { AttachmentResourceSchema, MessageAttachmentSchema } from '@octopus/shared/protocol/attachments';
-import { mergeDocumentCoverage, readDocumentCoverage } from './attachment-coverage.js';
-import { ApplicationError } from '../../lib/errors/application-error.js';
-import type { AttachmentCapabilityResolution } from '../../lib/attachment-capability/index.js';
+import { createHash, randomUUID } from 'node:crypto';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
+import { mergeDocumentCoverage, readDocumentCoverage } from './attachments.utils.js';
+import { ATTACHMENT_PROCESSOR } from './attachments.utils.js';
+import { DataStore, Upload } from '@tus/server';
 import type {
   ArtifactManifestV1,
   AttachmentResourceDto,
@@ -16,6 +17,9 @@ import type {
   NormalizedChunkV1,
 } from '@octopus/shared/protocol/attachments';
 import type { OctopusDatabase } from '../../db/client.js';
+import type { AttachmentCapabilityResolution } from '../../infrastructure/attachment-capability/index.js';
+import type { Readable } from 'node:stream';
+import type { LocalFileBlobStore } from '../../infrastructure/attachment-storage/local-file-blob-store.js';
 
 interface AttachmentRecord {
   id: string;
@@ -449,12 +453,12 @@ export class AttachmentsRepository {
     }
     const now = new Date().toISOString();
     const placeholders = from.map(() => '?').join(',');
-    const retention =
-      update.status === 'rejected'
-        ? new Date(Date.now() + 30 * 24 * 60 * 60_000).toISOString()
-        : update.status === 'failed' || update.status === 'ready'
-          ? new Date(Date.now() + 7 * 24 * 60 * 60_000).toISOString()
-          : null;
+    let retention: string | null = null;
+    if (update.status === 'rejected') {
+      retention = new Date(Date.now() + 30 * 24 * 60 * 60_000).toISOString();
+    } else if (update.status === 'failed' || update.status === 'ready') {
+      retention = new Date(Date.now() + 7 * 24 * 60 * 60_000).toISOString();
+    }
     const result = this.#sqlite
       .prepare(
         `UPDATE attachments SET status=?,detected_mime=COALESCE(?,detected_mime),classification=COALESCE(?,classification),presentation_kind=COALESCE(?,presentation_kind),failure_code=?,failure_retryable=?,policy_version=COALESCE(?,policy_version),rule_version=COALESCE(?,rule_version),evidence_json=COALESCE(?,evidence_json),ready_at=CASE WHEN ?='ready' THEN ? ELSE ready_at END,deleted_at=CASE WHEN ?='deleted' THEN ? ELSE deleted_at END,expires_at=COALESCE(?,expires_at),revision=revision+1,updated_at=? WHERE id=? AND revision=? AND status IN (${placeholders})`
@@ -1055,18 +1059,20 @@ export class AttachmentsRepository {
     const result = new Map<string, MessageAttachmentDto[]>();
     for (const row of rows) {
       const stored = MessageAttachmentSchema.parse(JSON.parse(row.presentation_json));
-      const projection =
-        row.status === 'ready'
-          ? stored
-          : {
-              ...stored,
-              availability: row.status === 'deleted' ? ('deleted' as const) : ('unavailable' as const),
-              previewKind: undefined,
-              previewLanguage: undefined,
-              previewUrl: undefined,
-              contentUrl: undefined,
-              capabilities: { canPreview: false, canPlay: false, canDownload: false },
-            };
+      let projection: MessageAttachmentDto;
+      if (row.status === 'ready') {
+        projection = stored;
+      } else {
+        projection = {
+          ...stored,
+          availability: row.status === 'deleted' ? ('deleted' as const) : ('unavailable' as const),
+          previewKind: undefined,
+          previewLanguage: undefined,
+          previewUrl: undefined,
+          contentUrl: undefined,
+          capabilities: { canPreview: false, canPlay: false, canDownload: false },
+        };
+      }
       result.set(row.entry_id, [...(result.get(row.entry_id) ?? []), projection]);
     }
     return result;
@@ -1102,6 +1108,30 @@ export class AttachmentsRepository {
   #record(id: string): AttachmentRecord | undefined {
     return this.#sqlite.prepare('SELECT * FROM attachments WHERE id=?').get(id) as
       AttachmentRecord | undefined;
+  }
+  /**
+   * findPublishedBlob using the existing Blob ownership query.
+   */
+  findPublishedBlob(sha256: string) {
+    return this.#sqlite
+      .prepare("SELECT storage_key FROM blobs WHERE sha256=? AND state='published'")
+      .get(sha256);
+  }
+  /**
+   * countBlobReferences using the existing Blob ownership query.
+   */
+  countBlobReferences(sha256: string) {
+    return this.#sqlite
+      .prepare(
+        `SELECT (SELECT count(*) FROM attachments WHERE blob_sha256=? AND status!='deleted') + (SELECT count(*) FROM attachment_derivatives WHERE sha256=?) + (SELECT count(*) FROM backup_blob_pins WHERE blob_sha256=?) AS count`
+      )
+      .get(sha256, sha256, sha256);
+  }
+  /**
+   * removeBlobRecord using the existing Blob ownership query.
+   */
+  removeBlobRecord(sha256: string) {
+    return this.#sqlite.prepare('DELETE FROM blobs WHERE sha256=?').run(sha256);
   }
 }
 
@@ -1306,4 +1336,397 @@ function notFound(): ApplicationError {
  */
 function blobKey(sha256: string): string {
   return `blobs/sha256/${sha256.slice(0, 2)}/${sha256.slice(2, 4)}/${sha256}`;
+}
+
+export interface AttachmentJob {
+  id: string;
+  attachmentId: string;
+  jobType: 'process' | 'cleanup';
+  input: Record<string, unknown>;
+  attempts: number;
+  maxAttempts: number;
+}
+
+/**
+ * Owns the local durable queue without exposing SQLite to child processors.
+ */
+export class AttachmentJobsRepository {
+  readonly #sqlite: OctopusDatabase['sqlite'];
+
+  /**
+   * @param database Process-owned SQLite control plane.
+   */
+  public constructor(database: OctopusDatabase) {
+    this.#sqlite = database.sqlite;
+  }
+
+  /**
+   * Enqueues a processor job exactly once for an attachment and source revision.
+   */
+  public enqueue(attachmentId: string, input: Record<string, unknown>): string {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    this.#sqlite
+      .prepare(
+        `INSERT INTO attachment_jobs(id,attachment_id,job_type,processor_id,processor_version,input_json,status,attempts,max_attempts,available_at,created_at,updated_at) VALUES(?,?,'process',?,?,?,'pending',0,3,?,?,?)`
+      )
+      .run(
+        id,
+        attachmentId,
+        ATTACHMENT_PROCESSOR.id,
+        ATTACHMENT_PROCESSOR.version,
+        JSON.stringify(input),
+        now,
+        now,
+        now
+      );
+    return id;
+  }
+
+  /**
+   * Enqueues idempotent physical cleanup after the logical deletion tombstone commits.
+   */
+  public enqueueCleanup(attachmentId: string): string {
+    const existing = this.#sqlite
+      .prepare(
+        `SELECT id FROM attachment_jobs
+         WHERE attachment_id=? AND job_type='cleanup' AND status IN ('pending','running','succeeded')
+         ORDER BY created_at DESC LIMIT 1`
+      )
+      .get(attachmentId) as { id: string } | undefined;
+    if (existing !== undefined) {
+      return existing.id;
+    }
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    this.#sqlite
+      .prepare(
+        `INSERT INTO attachment_jobs(
+           id,attachment_id,job_type,input_json,status,attempts,max_attempts,
+           available_at,created_at,updated_at
+         ) VALUES(?,?,'cleanup','{}','pending',0,4,?,?,?)`
+      )
+      .run(id, attachmentId, now, now, now);
+    return id;
+  }
+
+  /**
+   * Requeues the completed placeholder job used while a legal hold deferred physical cleanup.
+   *
+   * @param attachmentId Attachment whose held delete operation returned to cleanup-pending.
+   * @returns Durable cleanup job identity.
+   */
+  public resumeCleanup(attachmentId: string): string {
+    const existing = this.#sqlite
+      .prepare(
+        `SELECT id,status FROM attachment_jobs
+         WHERE attachment_id=? AND job_type='cleanup'
+         ORDER BY created_at DESC LIMIT 1`
+      )
+      .get(attachmentId) as { id: string; status: string } | undefined;
+    if (existing === undefined) {
+      return this.enqueueCleanup(attachmentId);
+    }
+    if (existing.status === 'pending' || existing.status === 'running') {
+      return existing.id;
+    }
+    const now = new Date().toISOString();
+    this.#sqlite
+      .prepare(
+        `UPDATE attachment_jobs
+         SET status='pending',attempts=0,available_at=?,lease_owner=NULL,lease_expires_at=NULL,
+             last_error_code=NULL,result_json=NULL,updated_at=?
+         WHERE id=?`
+      )
+      .run(now, now, existing.id);
+    return existing.id;
+  }
+
+  /**
+   * Claims one pending or expired-lease job using a 30-second fenced lease.
+   */
+  public claim(owner: string): AttachmentJob | undefined {
+    return this.#sqlite
+      .transaction(() => {
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const row = this.#sqlite
+          .prepare(
+            `SELECT id,attachment_id,job_type,input_json,attempts,max_attempts FROM attachment_jobs WHERE attempts < max_attempts AND ((status='pending' AND available_at<=?) OR (status='running' AND lease_expires_at<=?)) ORDER BY available_at,created_at LIMIT 1`
+          )
+          .get(nowIso, nowIso) as
+          | {
+              id: string;
+              attachment_id: string;
+              job_type: 'process' | 'cleanup';
+              input_json: string;
+              attempts: number;
+              max_attempts: number;
+            }
+          | undefined;
+        if (row === undefined) {
+          return undefined;
+        }
+        const lease = new Date(now.getTime() + 30_000).toISOString();
+        const changed = this.#sqlite
+          .prepare(
+            `UPDATE attachment_jobs SET status='running',attempts=attempts+1,lease_owner=?,lease_expires_at=?,updated_at=? WHERE id=? AND attempts=?`
+          )
+          .run(owner, lease, nowIso, row.id, row.attempts);
+        if (changed.changes !== 1) {
+          return undefined;
+        }
+        return {
+          id: row.id,
+          attachmentId: row.attachment_id,
+          jobType: row.job_type,
+          input: JSON.parse(row.input_json) as Record<string, unknown>,
+          attempts: row.attempts + 1,
+          maxAttempts: row.max_attempts,
+        };
+      })
+      .immediate();
+  }
+
+  /**
+   * Returns the next known retry or abandoned-lease deadline; active local jobs wake the pump on completion.
+   */
+  public nextWake(owner: string): number | undefined {
+    const row = this.#sqlite
+      .prepare(
+        `SELECT MIN(CASE WHEN status='pending' THEN available_at ELSE lease_expires_at END) AS deadline
+      FROM attachment_jobs WHERE attempts < max_attempts AND (status='pending' OR (status='running' AND lease_owner<>?))`
+      )
+      .get(owner) as { deadline: string | null };
+    return row.deadline === null ? undefined : Date.parse(row.deadline);
+  }
+
+  /**
+   * Extends the lease held by an active parent-side job runner.
+   */
+  public heartbeat(id: string, owner: string): void {
+    const now = new Date();
+    this.#sqlite
+      .prepare(
+        `UPDATE attachment_jobs SET lease_expires_at=?,updated_at=? WHERE id=? AND status='running' AND lease_owner=?`
+      )
+      .run(new Date(now.getTime() + 30_000).toISOString(), now.toISOString(), id, owner);
+  }
+  /**
+   * Marks a verified job result as durable success.
+   */
+  public succeed(id: string, owner: string, result: unknown): void {
+    this.#sqlite
+      .prepare(
+        `UPDATE attachment_jobs SET status='succeeded',lease_owner=NULL,lease_expires_at=NULL,result_json=?,updated_at=? WHERE id=? AND status='running' AND lease_owner=?`
+      )
+      .run(JSON.stringify(result), new Date().toISOString(), id, owner);
+  }
+  /**
+   * Applies retry backoff or terminal failure according to stable retryability and attempts.
+   */
+  public fail(job: AttachmentJob, owner: string, code: string, retryable: boolean): void {
+    const terminal = !retryable || job.attempts >= job.maxAttempts;
+    const delays = [60_000, 5 * 60_000, 30 * 60_000, 6 * 60 * 60_000] as const;
+    const delay = delays[Math.min(job.attempts - 1, delays.length - 1)] ?? delays[0];
+    const now = new Date();
+    this.#sqlite
+      .prepare(
+        `UPDATE attachment_jobs
+         SET status=?,available_at=?,lease_owner=NULL,lease_expires_at=NULL,last_error_code=?,updated_at=?
+         WHERE id=? AND status='running' AND lease_owner=?`
+      )
+      .run(
+        terminal ? 'failed' : 'pending',
+        new Date(now.getTime() + delay).toISOString(),
+        code,
+        now.toISOString(),
+        job.id,
+        owner
+      );
+  }
+  /**
+   * Cancels queued or leased processor work when its attachment becomes deleted.
+   */
+  public cancelForAttachment(attachmentId: string): void {
+    this.#sqlite
+      .prepare(
+        `UPDATE attachment_jobs
+         SET status='cancelled',lease_owner=NULL,lease_expires_at=NULL,updated_at=?
+         WHERE attachment_id=? AND job_type='process' AND status IN ('pending','running')`
+      )
+      .run(new Date().toISOString(), attachmentId);
+  }
+}
+
+const UPLOAD_RETENTION_MS = 24 * 60 * 60_000;
+
+/**
+ * Implements tus creation, termination, expiration, and sequential append without making tus its persistence authority.
+ */
+export class SqliteTusDataStore extends DataStore {
+  public override extensions = ['creation', 'termination', 'expiration'];
+
+  /**
+   * @param repository SQLite attachment and offset repository.
+   * @param blobs Managed staging and Blob filesystem.
+   */
+  public constructor(
+    private readonly repository: AttachmentsRepository,
+    private readonly blobs: LocalFileBlobStore
+  ) {
+    super();
+  }
+
+  /**
+   * Creates a durable upload record from metadata validated by the tus server hook.
+   */
+  public override async create(file: Upload): Promise<Upload> {
+    const metadata = file.metadata ?? {};
+    const size = file.size;
+    if (size === undefined) {
+      throw invalid('Deferred upload length is not supported.');
+    }
+    const workspaceId = metadata['octopusWorkspaceId'];
+    const idempotencyKey = metadata['octopusIdempotencyKey'];
+    const ownerId = metadata['octopusOwnerId'];
+    const filename = metadata['filename'];
+    if (
+      workspaceId === null ||
+      workspaceId === undefined ||
+      idempotencyKey === null ||
+      idempotencyKey === undefined ||
+      ownerId === null ||
+      ownerId === undefined ||
+      filename === null ||
+      filename === undefined
+    ) {
+      throw invalid('Upload metadata is incomplete.');
+    }
+    const stagingKey = await this.blobs.createStaging();
+    const expiresAt = new Date(Date.now() + UPLOAD_RETENTION_MS).toISOString();
+    const dto = this.repository.createUpload({
+      id: file.id,
+      workspaceId,
+      ownerId,
+      name: filename,
+      ...(metadata['declaredMediaType'] === null || metadata['declaredMediaType'] === undefined
+        ? {}
+        : { declaredMediaType: metadata['declaredMediaType'] }),
+      uploadLength: size,
+      stagingKey,
+      expiresAt,
+      idempotencyKey,
+    });
+    return new Upload({
+      id: dto.id,
+      size,
+      offset: 0,
+      metadata: publicMetadata(metadata),
+      creation_date: dto.createdAt,
+    });
+  }
+
+  /**
+   * Removes only an unfinished staging upload.
+   */
+  public override async remove(id: string): Promise<void> {
+    const stagingKey = this.repository.terminateUpload(id);
+    if (stagingKey !== undefined) {
+      await this.blobs.delete(stagingKey);
+    }
+  }
+
+  /**
+   * Appends a bounded request stream at the authoritative exact offset.
+   */
+  public override async write(source: Readable, id: string, offset: number): Promise<number> {
+    const upload = this.repository.getUpload(id);
+    if (upload === undefined) {
+      throw missingUpload(this.repository, id);
+    }
+    if (upload.uploadOffset !== offset) {
+      throw new ApplicationError(
+        'UPLOAD_OFFSET_CONFLICT',
+        'Upload offset does not match the Server offset.',
+        { statusCode: 409, retryable: true }
+      );
+    }
+    const nextOffset = await this.blobs.append(upload.stagingKey, source, offset);
+    if (nextOffset > upload.uploadLength) {
+      throw new ApplicationError(
+        'ATTACHMENT_SIZE_LIMIT_EXCEEDED',
+        'Upload chunk exceeded the declared length.',
+        { statusCode: 413 }
+      );
+    }
+    this.repository.updateUploadOffset(id, offset, nextOffset);
+    return nextOffset;
+  }
+
+  /**
+   * Returns the SQLite offset used by HEAD and PATCH preconditions.
+   */
+  public override getUpload(id: string): Promise<Upload> {
+    const upload = this.repository.getUpload(id);
+    if (upload === undefined) {
+      throw missingUpload(this.repository, id);
+    }
+    return Promise.resolve(
+      new Upload({
+        id,
+        size: upload.uploadLength,
+        offset: upload.uploadOffset,
+        metadata: upload.metadata,
+        creation_date: new Date(Date.parse(upload.expiresAt) - UPLOAD_RETENTION_MS).toISOString(),
+      })
+    );
+  }
+
+  /**
+   * Rejects the unsupported deferred-length extension.
+   */
+  public override declareUploadLength(): Promise<void> {
+    return Promise.reject(invalid('Deferred upload length is not supported.'));
+  }
+
+  /**
+   * Deletes expired staging uploads using the same tombstone path as explicit termination.
+   */
+  public override async deleteExpired(): Promise<number> {
+    const ids = this.repository.listExpiredUploadIds(new Date().toISOString());
+    for (const id of ids) {
+      await this.remove(id);
+    }
+    return ids.length;
+  }
+
+  /**
+   * Returns the fixed unfinished-upload retention used by tus expiration headers.
+   */
+  public override getExpiration(): number {
+    return UPLOAD_RETENTION_MS;
+  }
+}
+
+/**
+ * Removes Host-only metadata before returning an Upload projection.
+ */
+function publicMetadata(metadata: Record<string, string | null>): Record<string, string | null> {
+  return { filename: metadata['filename'] ?? null, declaredMediaType: metadata['declaredMediaType'] ?? null };
+}
+/**
+ * Creates a safe invalid-request domain error.
+ */
+function invalid(message: string): ApplicationError {
+  return new ApplicationError('ATTACHMENT_REQUEST_INVALID', message, { statusCode: 400, retryable: false });
+}
+
+/**
+ * Maps expired tus identities separately from unauthorized or unknown resources.
+ */
+function missingUpload(repository: AttachmentsRepository, id: string): ApplicationError {
+  return repository.isExpiredUpload(id)
+    ? new ApplicationError('UPLOAD_EXPIRED', 'Upload session expired.', { statusCode: 410, retryable: true })
+    : new ApplicationError('ATTACHMENT_NOT_FOUND', 'Upload was not found.', { statusCode: 404 });
 }

@@ -22,7 +22,7 @@
 | apps/server/src/lib/config/server-setting-fields.ts            | 本页字段名单、类型与标准序列化                          |
 | apps/server/src/lib/config/environment.ts                      | 保留启动环境、准备/应用冻结环境及恢复，纯读取无副作用   |
 | apps/server/src/lib/lifecycle/                                 | 宿主协调器、操作去重、关闭状态；与 Fastify 生命周期分离 |
-| apps/server/src/runtime.ts / runtime-types.ts                  | 注入宿主控制能力，公开资源排空/关闭契约                 |
+| apps/server/src/runtime.ts                                     | 注入宿主控制能力，公开资源排空/关闭契约                 |
 | apps/server/src/host.ts                                        | 导出通用协调器；package exports 增加 ./host             |
 | apps/cli/src/gateway/entry.ts / apps/server/src/index.ts       | 复用协调器，适配信号、Gateway 状态、退出期限            |
 | apps/web/src/features/settings/server/                         | 页面与字段映射，使用现有设置布局和 API/Query 层         |

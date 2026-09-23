@@ -5,20 +5,21 @@
  * - GET /api/health
  * - GET /api/ready
  */
-
 import { OCTOPUS_PROTOCOL_VERSION } from '@octopus/shared/protocol';
-import { HealthService } from './health.service.js';
-import type { FastifyInstance } from 'fastify';
+import type { HealthService } from './health.service.js';
 import type { OctopusCapabilities } from '@octopus/shared/protocol';
+import type { FastifyInstance } from 'fastify';
 
 export type CapabilityLimits = OctopusCapabilities['limits'];
 
 /**
  * Registers process health, readiness, and negotiated Server capabilities.
  */
-export function registerHealthController(server: FastifyInstance, limits: CapabilityLimits): void {
-  const healthService = new HealthService(server);
-
+export function registerHealthController(
+  server: FastifyInstance,
+  limits: CapabilityLimits,
+  healthService: HealthService
+): void {
   server.get('/capabilities', () => {
     const capabilities: OctopusCapabilities = {
       protocolVersion: OCTOPUS_PROTOCOL_VERSION,

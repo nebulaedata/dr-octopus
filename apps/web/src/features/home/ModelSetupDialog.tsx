@@ -4,7 +4,14 @@
  */
 import { useRef, useState } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { ArrowRightIcon, BotIcon, CloudIcon, LaptopIcon, RefreshCwIcon } from 'lucide-react';
+import {
+  ArrowRightIcon,
+  BotIcon,
+  CloudIcon,
+  LaptopIcon,
+  RefreshCwIcon,
+  SquareMousePointerIcon,
+} from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -129,9 +136,10 @@ export function ModelSetupDialog({
           </div>
         )}
         {(issue === 'selection' || issue === 'error') && (
-          <Button variant="outline" className="justify-start" onClick={configure}>
+          <Button variant="outline" size="lg" className="justify-start" onClick={configure}>
+            <SquareMousePointerIcon />
             {t('home.configureModels', 'Configure model services')}
-            <ArrowRightIcon className="ml-auto" data-icon="inline-end" />
+            <ArrowRightIcon className="ml-auto text-muted-foreground" data-icon="inline-end" />
           </Button>
         )}
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">

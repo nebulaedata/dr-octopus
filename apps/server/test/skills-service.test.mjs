@@ -22,7 +22,7 @@ test.after(() => serviceServer.close());
  */
 async function createFixture() {
   const skillsRoot = await mkdtemp(join(tmpdir(), 'octopus-skills-'));
-  const service = new SkillsService(serviceServer, { skillsRoot });
+  const service = new SkillsService({ skillsRoot });
   return {
     service,
     skillsRoot,
@@ -41,7 +41,7 @@ async function createWorkspaceFixture() {
   const workspaceCwd = join(root, 'workspace-cwd');
   await mkdir(workspaceCwd, { recursive: true });
   const workspaceSkillsRoot = join(workspaceCwd, '.dr-octopus', 'skills');
-  const service = new SkillsService(serviceServer, {
+  const service = new SkillsService({
     skillsRoot,
     workspaceService: {
       async resolve(selector) {
@@ -322,7 +322,7 @@ test('workspace scope propagates Workspace resolution failures and reports missi
     await cleanup();
   }
 
-  const unscoped = new SkillsService(serviceServer, {
+  const unscoped = new SkillsService({
     skillsRoot: join(tmpdir(), 'octopus-no-resolver'),
   });
   await assert.rejects(

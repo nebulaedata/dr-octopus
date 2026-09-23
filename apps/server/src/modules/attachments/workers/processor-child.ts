@@ -2,20 +2,19 @@
  * @author root
  * @description Executes exactly one bounded attachment processing task in an isolated Node child and returns IPC V1 artifacts.
  */
-
-import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
-import process from 'node:process';
+import { DocumentProcessingError } from '@octopus/document-processing';
 import {
   ArtifactManifestV1Schema,
   ProcessorStartV1Schema,
   StructuredDocumentV1Schema,
 } from '@octopus/shared/protocol/attachments';
+import { createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
+import process from 'node:process';
 import { extractDocument } from './document-extractor.js';
 import { processPdf } from './pdf-processor.js';
-import { DocumentProcessingError } from '@octopus/document-processing';
 import type {
   ArtifactManifestV1,
   ProcessorMessageV1,

@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import test from 'node:test';
-import { registerMcpSettingsController } from '../dist/modules/settings/mcp-settings.controller.js';
+import { registerMcpSettingsController } from '../dist/modules/mcp-settings/mcp-settings.controller.js';
 
 test('POST connectivity probe is not captured by the MCP Server detail route', async () => {
   const server = Fastify();

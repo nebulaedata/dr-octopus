@@ -2,7 +2,7 @@
  * @author Codex
  * @description Adapts common streamed document sections and archive outcomes to bounded attachment artifacts.
  */
-import { expandArchiveFile, parseDocumentFile, DocumentProcessingError } from '@octopus/document-processing';
+import { DocumentProcessingError, expandArchiveFile, parseDocumentFile } from '@octopus/document-processing';
 import type { ParsedSection } from '@octopus/document-processing';
 import type { StructuredDocumentV1 } from '@octopus/shared/protocol/attachments';
 
@@ -110,7 +110,9 @@ export async function extractDocument(
       document.coverage.processing.text = 'truncated';
       document.coverage.assessmentStatus = 'partial';
       document.coverage.textCoverage = 'partial';
-      if (!document.coverage.limits.includes('text')) {document.coverage.limits.push('text');}
+      if (!document.coverage.limits.includes('text')) {
+        document.coverage.limits.push('text');
+      }
     }
   }
   return document;

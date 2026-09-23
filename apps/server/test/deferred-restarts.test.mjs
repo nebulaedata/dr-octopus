@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DeferredRestarts } from '../dist/lib/runtime/deferred-restarts.js';
+import { DeferredRestarts } from '../dist/infrastructure/runtime/deferred-restarts.js';
 
 /** Flushes accepted microtasks without advancing a business timer. */
 const settled = () => new Promise((resolve) => setImmediate(resolve));

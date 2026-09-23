@@ -2,33 +2,32 @@
  * @author root
  * @description Orchestrates durable uploads, admission, processor jobs, derivatives, content reads, prompt reservations, and recovery.
  */
-
-import { randomUUID } from 'node:crypto';
-import { mkdtempSync } from 'node:fs';
-import { readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { NormalizedChunkV1Schema } from '@octopus/shared/protocol/attachments';
-import { ApplicationError } from '../../lib/errors/application-error.js';
-import { LocalFileBlobStore } from '../../lib/attachment-storage/local-file-blob-store.js';
+import { randomUUID } from 'node:crypto';
+
+import { readFile, rm } from 'node:fs/promises';
+
 import {
   createAttachmentCapabilityResolver,
   DEFAULT_ATTACHMENT_POLICY,
-} from '../../lib/attachment-capability/index.js';
-import { AttachmentJobsRepository } from './attachment-jobs.repository.js';
-import { AttachmentsRepository } from './attachments.repository.js';
-import { collectAttachmentEvidence } from './format-evidence.js';
-import { ProcessorSupervisor } from './workers/processor-supervisor.js';
-import { AgentAttachmentAdapter } from './agent-attachment-adapter.js';
-import { AttachmentBackupService } from '../../lib/attachment-storage/attachment-backup-service.js';
-import { DEFAULT_MAX_ATTACHMENT_BYTES } from '../../lib/config/defaults.js';
+} from '../../infrastructure/attachment-capability/index.js';
+import { LocalFileBlobStore } from '../../infrastructure/attachment-storage/local-file-blob-store.js';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
+
+import { collectAttachmentEvidence } from './attachments.utils.js';
+
+import type { AttachmentBackupService } from '../../infrastructure/attachment-storage/attachment-backup-service.js';
+import type { AttachmentJobsRepository } from './attachments.repository.js';
+import type { AttachmentsRepository } from './attachments.repository.js';
+import type { ProcessorSupervisor } from './workers/processor-supervisor.js';
 import type {
   AttachmentResourceDto,
   MessageAttachmentDto,
   ProcessorLimitsV1,
 } from '@octopus/shared/protocol/attachments';
-import type { AttachmentJob } from './attachment-jobs.repository.js';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyBaseLogger } from 'fastify';
+
+import type { AttachmentJob } from './attachments.repository.js';
 
 const PROCESSOR_LIMITS: ProcessorLimitsV1 = {
   wallTimeMs: 120_000,
@@ -62,7 +61,6 @@ export class AttachmentsService {
   readonly #blobs: LocalFileBlobStore;
   readonly #jobs: AttachmentJobsRepository;
   readonly #supervisor: ProcessorSupervisor;
-  readonly #adapter: AgentAttachmentAdapter;
   readonly #backups: AttachmentBackupService;
   readonly #owner = randomUUID();
   readonly #ready: Promise<void>;
@@ -76,42 +74,49 @@ export class AttachmentsService {
   #ephemeralRoot?: string;
   #gate: Promise<void> = Promise.resolve();
   public readonly maxBytes: number;
-
   /**
-   * @param server Fastify instance exposing the sole process database.
-   * @param options Limits and replaceable infrastructure ports for deterministic tests.
+   * Uses resources owned and assembled by the module entrypoint.
    */
-  public constructor(
-    protected readonly server: FastifyInstance,
-    options: AttachmentsServiceOptions = {}
-  ) {
+  public constructor(private readonly resources: AttachmentsResources) {
     this.#onChanged = () => {
       try {
-        options.onChanged?.();
+        resources.onChanged?.();
       } catch {
-        /* Observer failures cannot roll back worker commits. */
+        /* Committed work cannot be rolled back by observers. */
       }
     };
-    this.maxBytes = options.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES;
-    const memoryBacked = server.database.sqlite.name === ':memory:';
-    if (memoryBacked && options.dataRoot === undefined) {
-      this.#ephemeralRoot = mkdtempSync(join(tmpdir(), 'octopus-attachments-'));
-    }
-    if (!memoryBacked && options.dataRoot === undefined) {
-      throw new Error('Persistent attachment dataRoot must be injected by the Server composition root.');
-    }
-    const defaultRoot = options.dataRoot ?? join(this.#ephemeralRoot ?? tmpdir(), 'attachments');
-    this.#repository = options.repository ?? new AttachmentsRepository(server.database);
-    this.#blobs = options.blobStore ?? new LocalFileBlobStore(defaultRoot);
-    this.#jobs = options.jobsRepository ?? new AttachmentJobsRepository(server.database);
-    this.#supervisor = options.supervisor ?? new ProcessorSupervisor(defaultRoot);
-    this.#adapter = new AgentAttachmentAdapter(this.#repository, this.#blobs);
-    this.#backups = new AttachmentBackupService(
-      server.database,
-      this.#blobs,
-      options.backupRoot ?? join(this.#ephemeralRoot ?? tmpdir(), 'backups')
-    );
+    this.maxBytes = resources.maxBytes;
+    this.#ephemeralRoot = resources.ephemeralRoot;
+    this.#repository = resources.repository;
+    this.#blobs = resources.blobs;
+    this.#jobs = resources.jobs;
+    this.#supervisor = resources.supervisor;
+    this.#backups = resources.backups;
     this.#ready = this.#initialize();
+  }
+  /**
+   * Exposes the immutable source metadata needed by attachment delivery.
+   */
+  getDeliveryRecord(id: string): ReturnType<AttachmentsRepository['getRecord']> {
+    return this.#repository.getRecord(id);
+  }
+  /**
+   * Looks up one published derivative for a delivery operation.
+   */
+  getDeliveryDerivative(...args: Parameters<AttachmentsRepository['getDerivative']>) {
+    return this.#repository.getDerivative(...args);
+  }
+  /**
+   * Searches only the admitted attachment list using the existing bounded query.
+   */
+  searchDeliveryChunks(...args: Parameters<AttachmentsRepository['searchChunks']>) {
+    return this.#repository.searchChunks(...args);
+  }
+  /**
+   * Records a completed Agent delivery under the attachment aggregate.
+   */
+  auditAgentDelivery(...args: Parameters<AttachmentsRepository['auditAgentDelivery']>) {
+    return this.#repository.auditAgentDelivery(...args);
   }
 
   /**
@@ -212,7 +217,10 @@ export class AttachmentsService {
       });
     }
     if (capacity.usedRatio >= 0.8 || capacity.availableBytes - uploadLength < 5 * 1024 ** 3) {
-      this.server.log.warn({ usedRatio: capacity.usedRatio }, 'Attachment storage warning watermark reached');
+      this.resources.log.warn(
+        { usedRatio: capacity.usedRatio },
+        'Attachment storage warning watermark reached'
+      );
     }
   }
 
@@ -355,7 +363,7 @@ export class AttachmentsService {
           await this.#finalizeUpload(operation.attachmentId);
         }
       } catch (error) {
-        this.server.log.error(
+        this.resources.log.error(
           { attachmentId: operation.attachmentId, code: safeErrorCode(error) },
           'Attachment upload recovery failed'
         );
@@ -371,7 +379,7 @@ export class AttachmentsService {
     for (const blob of catalogued) {
       if (!(await this.#blobs.exists(blob.storageKey))) {
         this.#repository.markBlobUnavailable(blob.sha256);
-        this.server.log.error(
+        this.resources.log.error(
           { sha256: blob.sha256 },
           'Attachment Blob is missing during startup reconciliation'
         );
@@ -394,7 +402,7 @@ export class AttachmentsService {
       }
     }
     if (removed > 0) {
-      this.server.log.info({ removed }, 'Attachment orphan reconciliation removed managed files');
+      this.resources.log.info({ removed }, 'Attachment orphan reconciliation removed managed files');
     }
   }
 
@@ -476,9 +484,7 @@ export class AttachmentsService {
         retryable: true,
       });
     }
-    const blob = this.server.database.sqlite
-      .prepare("SELECT storage_key FROM blobs WHERE sha256=? AND state='published'")
-      .get(row.blob_sha256) as { storage_key: string } | undefined;
+    const blob = this.#repository.findPublishedBlob(row.blob_sha256) as { storage_key: string } | undefined;
     if (blob === undefined) {
       throw new ApplicationError('ATTACHMENT_NOT_FOUND', 'Attachment content is unavailable.', {
         statusCode: 404,
@@ -496,9 +502,7 @@ export class AttachmentsService {
     if (dto.status !== 'ready' || !row?.blob_sha256) {
       throw new ApplicationError('ATTACHMENT_NOT_READY', '附件原文尚未准备好', { statusCode: 423 });
     }
-    const blob = this.server.database.sqlite
-      .prepare("SELECT storage_key FROM blobs WHERE sha256=? AND state='published'")
-      .get(row.blob_sha256) as { storage_key: string } | undefined;
+    const blob = this.#repository.findPublishedBlob(row.blob_sha256) as { storage_key: string } | undefined;
     if (!blob) {
       throw new ApplicationError('ATTACHMENT_NOT_FOUND', '附件原文不可用', { statusCode: 404 });
     }
@@ -643,78 +647,6 @@ export class AttachmentsService {
     void this.#drainJobs();
     return dto;
   }
-  /**
-   * Resolves a reserved ready list to Pi's public text/image contract and managed global files.
-   */
-  public async resolveForAgent(
-    items: readonly AttachmentResourceDto[],
-    input: {
-      modelInputs: ReadonlySet<'text' | 'image'>;
-      maxInlineCharacters: number;
-      provider?: string;
-      modelId?: string;
-      sessionId: string;
-      workspaceCwd: string;
-      requestId: string;
-      queryText: string;
-    }
-  ) {
-    for (const item of items) {
-      const row = this.#repository.getRecord(item.id);
-      if (row?.evidence_json === null || row?.evidence_json === undefined) {
-        throw new ApplicationError('ATTACHMENT_PROCESSING_FAILED', 'Attachment evidence is unavailable.', {
-          statusCode: 422,
-        });
-      }
-      const evidence = JSON.parse(row.evidence_json) as Parameters<
-        ReturnType<typeof createAttachmentCapabilityResolver>['resolve']
-      >[0];
-      const resolution = createAttachmentCapabilityResolver().resolve(evidence, {
-        processors: new Set([
-          'image-optimize',
-          'pdf-text-extract',
-          'office-text-extract',
-          'archive-text-extract',
-          'spreadsheet-structure-extract',
-          'full-text-index',
-        ]),
-        retrieval: new Set(['structured-file-read', 'lexical-search']),
-        tools: new Set(['read-file']),
-        agent: {
-          modelInputs: input.modelInputs,
-          maxContextCharacters: input.maxInlineCharacters,
-        },
-        policy: { ...DEFAULT_ATTACHMENT_POLICY, maxAttachmentBytes: this.maxBytes },
-      });
-      if (resolution.decision !== 'allow') {
-        throw new ApplicationError(
-          'ATTACHMENT_TYPE_UNSUPPORTED',
-          'Attachment cannot be delivered to the active model.',
-          { statusCode: 422 }
-        );
-      }
-    }
-    const adapted = await this.#adapter.resolve(items, input);
-    const searchQuery = ftsQuery(input.queryText);
-    if (searchQuery !== '') {
-      const hits = this.#repository.searchChunks(
-        items.map((item) => item.id),
-        searchQuery,
-        8
-      );
-      if (hits.length > 0) {
-        adapted.promptSuffix += `\n<attachment_search_hits trust="untrusted-user-content">\n${hits.map((hit) => `  <hit attachment_id="${hit.attachmentId}" locator="${escapeAttribute(JSON.stringify(hit.locator))}">${escapeText(hit.text.slice(0, 1_000))}</hit>`).join('\n')}\n</attachment_search_hits>`;
-      }
-    }
-    this.#repository.auditAgentDelivery({
-      attachmentIds: items.map((item) => item.id),
-      ...(input.provider === undefined ? {} : { provider: input.provider }),
-      ...(input.modelId === undefined ? {} : { modelId: input.modelId }),
-      sessionId: input.sessionId,
-      requestId: input.requestId,
-    });
-    return adapted;
-  }
 
   /**
    * Claims available leases until the configured process-wide concurrency is full.
@@ -800,7 +732,7 @@ export class AttachmentsService {
           : 'PROCESSOR_CRASHED';
       const retryable =
         typeof error === 'object' && error !== null && 'retryable' in error ? Boolean(error.retryable) : true;
-      this.server.log.warn(
+      this.resources.log.warn(
         { err: error, attachmentId: job.attachmentId, jobId: job.id, code, attempt: job.attempts },
         'Attachment job attempt failed'
       );
@@ -884,9 +816,9 @@ export class AttachmentsService {
     }
     try {
       await this.createBackup();
-      this.server.log.info('Attachment local backup verified');
+      this.resources.log.info('Attachment local backup verified');
     } catch (error) {
-      this.server.log.error({ code: safeErrorCode(error) }, 'Attachment local backup failed');
+      this.resources.log.error({ code: safeErrorCode(error) }, 'Attachment local backup failed');
     }
   }
 
@@ -911,17 +843,13 @@ export class AttachmentsService {
    * Deletes an original Blob only after attachment, derivative, and backup pin references reach zero.
    */
   async #deleteBlobIfUnreferenced(sha256: string): Promise<void> {
-    const references = this.server.database.sqlite
-      .prepare(
-        `SELECT (SELECT count(*) FROM attachments WHERE blob_sha256=? AND status!='deleted') + (SELECT count(*) FROM attachment_derivatives WHERE sha256=?) + (SELECT count(*) FROM backup_blob_pins WHERE blob_sha256=?) AS count`
-      )
-      .get(sha256, sha256, sha256) as { count: number };
+    const references = this.#repository.countBlobReferences(sha256) as { count: number };
     if (references.count !== 0) {
       return;
     }
     const storageKey = `blobs/sha256/${sha256.slice(0, 2)}/${sha256.slice(2, 4)}/${sha256}`;
     await this.#blobs.delete(storageKey);
-    this.server.database.sqlite.prepare('DELETE FROM blobs WHERE sha256=?').run(sha256);
+    this.#repository.removeBlobRecord(sha256);
   }
 }
 
@@ -986,33 +914,17 @@ function safeErrorCode(error: unknown): string {
   return 'ATTACHMENT_RECOVERY_FAILED';
 }
 
-/**
- * Converts user prose into a bounded literal-token FTS5 query.
- */
-function ftsQuery(value: string): string {
-  return [
-    ...new Set(
-      value
-        .normalize('NFKC')
-        .toLowerCase()
-        .match(/[\p{L}\p{N}_-]{2,32}/gu) ?? []
-    ),
-  ]
-    .slice(0, 8)
-    .map((token) => `"${token.replaceAll('"', '""')}"`)
-    .join(' OR ');
-}
-
-/**
- * Escapes an untrusted value used in XML-like prompt attributes.
- */
-function escapeAttribute(value: string): string {
-  return escapeText(value).replaceAll('"', '&quot;');
-}
-
-/**
- * Escapes untrusted extracted content so it cannot close Host prompt boundaries.
- */
-function escapeText(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+export interface AttachmentsResources {
+  log: FastifyBaseLogger;
+  repository: AttachmentsRepository;
+  blobs: LocalFileBlobStore;
+  jobs: AttachmentJobsRepository;
+  supervisor: ProcessorSupervisor;
+  backups: AttachmentBackupService;
+  maxBytes: number;
+  ephemeralRoot?: string;
+  /**
+   * Reports committed attachment changes.
+   */
+  onChanged?(): void;
 }

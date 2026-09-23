@@ -11,11 +11,11 @@ import test from 'node:test';
 import { strToU8, zipSync } from 'fflate';
 import { ProcessorSupervisor } from '../dist/modules/attachments/workers/processor-supervisor.js';
 import { extractDocument } from '../dist/modules/attachments/workers/document-extractor.js';
-import { collectAttachmentEvidence } from '../dist/modules/attachments/format-evidence.js';
+import { collectAttachmentEvidence } from '../dist/modules/attachments/attachments.utils.js';
 import {
   createAttachmentCapabilityResolver,
   DEFAULT_ATTACHMENT_POLICY,
-} from '../dist/lib/attachment-capability/index.js';
+} from '../dist/infrastructure/attachment-capability/index.js';
 
 const limits = {
   wallTimeMs: 120_000,

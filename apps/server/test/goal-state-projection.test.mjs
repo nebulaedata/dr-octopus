@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { projectGoalState } from '../src/lib/runtime/goal-state-projection.ts';
+import { projectGoalState } from '../src/infrastructure/runtime/goal-state-projection.ts';
 
 const goal = {
   id: 'goal-1',

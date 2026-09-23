@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createSessionCommandCatalog } from '../dist/modules/sessions/session-command-catalog.js';
+import { createSessionCommandCatalog } from '../dist/modules/sessions/sessions.service.js';
 
 test('command catalog exposes supported Host commands and only pending Web placeholders', () => {
   const catalog = createSessionCommandCatalog([]);

@@ -3,7 +3,7 @@
  * @description Streams business invalidations with bounded buffering and explicit connection cleanup.
  * GET /api/data/events
  */
-import { isAllowedOrigin } from '../channel/channel.utils.js';
+import { isAllowedOrigin } from '../../utils/http-origin.js';
 import type { FastifyInstance } from 'fastify';
 import type { DataEventsService } from './data-events.service.js';
 

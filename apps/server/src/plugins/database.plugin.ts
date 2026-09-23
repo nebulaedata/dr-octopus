@@ -62,3 +62,15 @@ export const databasePlugin = fp(registerDatabase, {
   name: 'database',
   fastify: '5.x',
 });
+
+/**
+ * Probes the current shared SQLite connection without creating another one.
+ */
+export function isDatabaseReady(database: OctopusDatabase): boolean {
+  const { sqlite } = database;
+  if (!sqlite.open) {
+    return false;
+  }
+  sqlite.prepare('SELECT 1').get();
+  return true;
+}

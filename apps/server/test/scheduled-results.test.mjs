@@ -12,10 +12,10 @@ import Fastify from 'fastify';
 import { SessionManager } from '@earendil-works/pi-coding-agent';
 import { createDatabase } from '../dist/db/client.js';
 import { sessions as table } from '../dist/db/schema.js';
-import { SessionsService } from '../dist/modules/sessions/sessions.service.js';
-import { SessionNotificationsRepository } from '../dist/modules/sessions/session-notifications.repository.js';
-import { ScheduledResultsService } from '../dist/modules/scheduled-tasks/scheduled-results.service.js';
-import { ApplicationError } from '../dist/lib/errors/application-error.js';
+import { createSessionsService } from '../dist/modules/sessions/index.js';
+import { SessionNotificationsRepository } from '../dist/modules/sessions/sessions.repository.js';
+import { ScheduledResultSynchronization } from '../dist/modules/scheduled-tasks/scheduled-tasks.service.js';
+import { ApplicationError } from '../dist/infrastructure/errors/application-error.js';
 
 /**
  * Create an isolated Host and Pi execution file; fail immediately if any runtime is allocated.
@@ -38,7 +38,7 @@ async function fixture(t, withSession = true) {
     reserveExisting: () => assert.fail('reserved runtime'),
     withExisting: () => assert.fail('leased runtime'),
   };
-  const sessions = new SessionsService(server, { workspaceService: workspaces, runtime });
+  const sessions = createSessionsService(server, { workspaceService: workspaces, runtime });
   const notices = new SessionNotificationsRepository(database);
   const manager = SessionManager.create(root, root);
   if (withSession)
@@ -101,9 +101,16 @@ async function fixture(t, withSession = true) {
     history: async () => ({ items: [result.run] }),
   };
   const create = () =>
-    new ScheduledResultsService(scheduler, sessions, notices, workspaces, join(root, 'reports'), (error) => {
-      throw error;
-    });
+    new ScheduledResultSynchronization(
+      scheduler,
+      sessions,
+      notices,
+      workspaces,
+      join(root, 'reports'),
+      (error) => {
+        throw error;
+      }
+    );
   const results = create();
   t.after(async () => {
     await results.close();

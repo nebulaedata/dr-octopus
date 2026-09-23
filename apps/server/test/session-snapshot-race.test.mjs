@@ -6,8 +6,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { SessionRuntimeOperation } from '../dist/lib/runtime/operation.js';
-import { SessionsService } from '../dist/modules/sessions/sessions.service.js';
+import { SessionRuntimeOperation } from '../dist/infrastructure/runtime/operation.js';
+import { createSessionsService } from '../dist/modules/sessions/index.js';
 
 /**
  * Pauses resource loading after the operation has captured its initial runtime binding.
@@ -74,7 +74,7 @@ function createFixture(initialState) {
     agentSessionPath: binding.sessionPath,
     preferences: { thinkingLevel: 'off' },
   };
-  const service = new SessionsService(server, {
+  const service = createSessionsService(server, {
     runtime,
     workspaceService: { resolve: async () => ({ id: binding.workspaceId, cwd: '/tmp' }) },
     sessionsRepository: { get: () => session, getRow: () => session },

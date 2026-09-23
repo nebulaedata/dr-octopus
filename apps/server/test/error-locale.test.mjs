@@ -4,10 +4,10 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { negotiateLocale } from '../dist/lib/i18n/negotiate-locale.js';
-import { registerErrorMessages, renderErrorMessage } from '../dist/lib/i18n/error-catalog.js';
-import { ApplicationError } from '../dist/lib/errors/application-error.js';
-import { toPublicError } from '../dist/lib/errors/public-error.js';
+import { negotiateLocale } from '../dist/infrastructure/i18n/negotiate-locale.js';
+import { registerErrorMessages, renderErrorMessage } from '../dist/infrastructure/i18n/error-catalog.js';
+import { ApplicationError } from '../dist/infrastructure/errors/application-error.js';
+import { toPublicError } from '../dist/infrastructure/errors/public-error.js';
 
 test('negotiateLocale picks the supported locale with the highest quality weight', () => {
   assert.equal(negotiateLocale(undefined), 'en');

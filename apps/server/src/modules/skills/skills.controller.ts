@@ -15,7 +15,6 @@
  * - POST /api/workspaces/:workspaceId/skills/upload
  * - GET /api/workspaces/:workspaceId/effective-skills
  */
-
 import type { FastifyInstance } from 'fastify';
 import type {
   CreateSkillInput,
@@ -24,10 +23,8 @@ import type {
   UpdateSkillInput,
   UploadSkillInput,
 } from './skills.service.js';
-import type { EffectiveSkillsService } from './effective-skills.service.js';
 import type {
   CreateSkillBody,
-  EffectiveSkillsQuery,
   SkillRouteParams,
   UpdateSkillBody,
   UploadSkillBody,
@@ -44,11 +41,7 @@ const MAX_SKILL_UPLOAD_REQUEST_BYTES = 24 * 1024 * 1024;
  * @param service Managed Skill application behavior.
  * @param effectiveSkillsService Read-only effective Skill catalog behavior.
  */
-export function registerSkillsController(
-  server: FastifyInstance,
-  service: SkillsService,
-  effectiveSkillsService: EffectiveSkillsService
-): void {
+export function registerSkillsController(server: FastifyInstance, service: SkillsService): void {
   const globalScope: SkillScope = { kind: 'global' };
   const workspaceScope = (params: WorkspaceSkillsRouteParams): SkillScope => ({
     kind: 'workspace',
@@ -133,12 +126,6 @@ export function registerSkillsController(
       reply.status(201);
       return { skill };
     }
-  );
-
-  server.get<{ Params: WorkspaceSkillsRouteParams; Querystring: EffectiveSkillsQuery }>(
-    '/workspaces/:workspaceId/effective-skills',
-    async (request) =>
-      effectiveSkillsService.list(request.params.workspaceId, request.query.runtimeId?.trim() || undefined)
   );
 }
 

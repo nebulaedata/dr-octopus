@@ -5,8 +5,8 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PiCredentialSynchronizationError } from '../dist/lib/pi-settings/index.js';
-import { ProviderAuthSessionManager } from '../dist/modules/settings/provider-auth-session-manager.js';
+import { PiCredentialSynchronizationError } from '../dist/infrastructure/pi-settings/index.js';
+import { ProviderAuthSessionManager } from '../dist/modules/provider-auth/provider-auth.service.js';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const PROMPT_ID = '22222222-2222-4222-8222-222222222222';

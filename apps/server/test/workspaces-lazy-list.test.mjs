@@ -31,7 +31,7 @@ test('listing reads only the requested directory and never probes child director
     mock.mock.restore();
     syncBuiltinESMExports();
   });
-  const service = new WorkspacesService({}, { workspaceBackend: { resolve: async () => ({ cwd: root }) } });
+  const service = new WorkspacesService({ workspaceBackend: { resolve: async () => ({ cwd: root }) } });
   assert.deepEqual(await service.listEntries('workspace', ''), [
     { name: 'empty', path: 'empty', type: 'directory' },
     { name: 'src', path: 'src', type: 'directory' },

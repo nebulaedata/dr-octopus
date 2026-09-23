@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PlanModeQuestionnaireAdapter } from '../src/lib/runtime/plan-mode-questionnaire-adapter.ts';
+import { PlanModeQuestionnaireAdapter } from '../src/infrastructure/runtime/plan-mode-questionnaire-adapter.ts';
 
 const questions = [
   {
@@ -102,9 +102,7 @@ test('tracks the Other editor step without projecting unrelated editors', () => 
   const adapter = new PlanModeQuestionnaireAdapter();
   startFlow(adapter);
   const options = ['1. Focused', '2. Complete', 'Other'];
-  adapter.project(
-    hostEvent('extension-ui', { id: 'dialog-1', method: 'select', options })
-  );
+  adapter.project(hostEvent('extension-ui', { id: 'dialog-1', method: 'select', options }));
   adapter.resolve('session-1', {
     type: 'extension_ui_response',
     id: 'dialog-1',

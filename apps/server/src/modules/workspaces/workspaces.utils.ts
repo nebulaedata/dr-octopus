@@ -2,11 +2,8 @@
  * @author Codex
  * @description Encapsulates safe Workspace-relative path resolution and filesystem error translation.
  */
-
-import { readdir } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
-import { ApplicationError } from '../../lib/errors/application-error.js';
-import type { Dirent } from 'node:fs';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import type { WorkspaceDescriptor } from '@octopus/agent';
 import type { WorkspaceDto } from '@octopus/shared/protocol';
 
@@ -27,29 +24,6 @@ export function toWorkspaceDto(workspace: WorkspaceDescriptor): WorkspaceDto {
     createdAt: workspace.createdAt,
     updatedAt: workspace.updatedAt,
   };
-}
-
-/**
- * Reads a directory while translating infrastructure failures into stable application errors.
- *
- * @param absoluteDir Verified absolute directory path.
- * @returns Directory entries including their filesystem kinds.
- */
-export async function readDirectorySafely(absoluteDir: string): Promise<Dirent[]> {
-  try {
-    return await readdir(absoluteDir, { withFileTypes: true });
-  } catch (error) {
-    if (hasErrorCode(error, 'ENOENT')) {
-      throw new ApplicationError('WORKSPACE_FILE_NOT_FOUND', 'Workspace directory was not found.', {
-        statusCode: 404,
-        cause: error,
-      });
-    }
-    throw new ApplicationError('WORKSPACE_FILE_LIST_FAILED', 'Unable to read Workspace directory.', {
-      statusCode: 500,
-      cause: error,
-    });
-  }
 }
 
 /**

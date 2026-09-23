@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { access, writeFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import test from 'node:test';
-import { RuntimeArtifacts } from '../dist/lib/runtime/artifacts.js';
+import { RuntimeArtifacts } from '../dist/infrastructure/runtime/artifacts.js';
 
 test('exports standalone HTML through an absolute temporary path and removes it after reading', async () => {
   let generatedPath;

@@ -3,17 +3,17 @@
  * @description Host authorization and error translation over the independent knowledge daemon client.
  */
 import {
-  createKnowledgeClient,
-  KnowledgeError,
   checkKnowledgeServiceHealth,
+  createKnowledgeClient,
   getKnowledgeServiceStatus,
+  KnowledgeError,
+  restartKnowledgeService,
   startKnowledgeService,
   stopKnowledgeService,
-  restartKnowledgeService,
 } from '@octopus/agent';
-import { ApplicationError } from '../../lib/errors/application-error.js';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import type { KnowledgeOperations } from '@octopus/agent';
-import type { WorkspacesService } from '../workspaces/workspaces.service.js';
+import type { WorkspacesService } from '../workspaces/index.js';
 
 export class KnowledgeService {
   /**
@@ -96,17 +96,18 @@ export class KnowledgeService {
  */
 function translate(error: unknown): unknown {
   if (error instanceof KnowledgeError) {
+    let statusCode = 400;
+    if (error.code === 'NOT_FOUND') {
+      statusCode = 404;
+    } else if (error.code === 'FORBIDDEN') {
+      statusCode = 403;
+    } else if (error.code.includes('CONFLICT')) {
+      statusCode = 409;
+    } else if (error.retryable) {
+      statusCode = 503;
+    }
     return new ApplicationError(error.code, error.message, {
-      statusCode:
-        error.code === 'NOT_FOUND'
-          ? 404
-          : error.code === 'FORBIDDEN'
-            ? 403
-            : error.code.includes('CONFLICT')
-              ? 409
-              : error.retryable
-                ? 503
-                : 400,
+      statusCode,
       retryable: error.retryable,
     });
   }

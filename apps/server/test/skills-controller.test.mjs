@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import test from 'node:test';
+import { registerEffectiveSkillsController } from '../dist/modules/effective-skills/effective-skills.controller.js';
 import { registerSkillsController } from '../dist/modules/skills/skills.controller.js';
 
 const GLOBAL = { kind: 'global' };
@@ -28,7 +29,8 @@ function registerSkillsApi(server, service) {
   };
   server.register(
     function skillsApi(apiServer, _options, done) {
-      registerSkillsController(apiServer, service, effectiveSkillsService);
+      registerSkillsController(apiServer, service);
+      registerEffectiveSkillsController(apiServer, effectiveSkillsService);
       done();
     },
     { prefix: '/api' }

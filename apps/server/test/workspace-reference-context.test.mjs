@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { createWorkspaceReferencePromptSuffix } from '../dist/modules/channel/workspace-reference-context.js';
+import { createWorkspaceReferencePromptSuffix } from '../dist/modules/channel/channel.utils.js';
 import { WorkspacesService } from '../dist/modules/workspaces/workspaces.service.js';
 
 test('Workspace references remain relative, normalized, ordered, and duplicate-free', async () => {
@@ -17,7 +17,7 @@ test('Workspace references remain relative, normalized, ordered, and duplicate-f
   const server = Fastify();
   await mkdir(join(root, 'src'));
   await writeFile(join(root, 'src', 'a.ts'), 'export {};');
-  const service = new WorkspacesService(server, {
+  const service = new WorkspacesService({
     workspaceBackend: {
       resolve: async () => ({ id: 'workspace-a', cwd: root }),
     },
@@ -47,7 +47,7 @@ test('Workspace reference resolution rejects stale, absolute, traversal, and mis
   const root = await mkdtemp(join(tmpdir(), 'octopus-workspace-reference-invalid-'));
   const server = Fastify();
   await mkdir(join(root, 'folder'));
-  const service = new WorkspacesService(server, {
+  const service = new WorkspacesService({
     workspaceBackend: {
       resolve: async () => ({ id: 'workspace-a', cwd: root }),
     },

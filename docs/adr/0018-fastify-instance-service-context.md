@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-0066](./0066-server-module-autoload.md)。以下保留历史决策；业务 Service 改为由模块入口显式注入资源，不再持有完整 Fastify 实例。
 
 ## Context
 

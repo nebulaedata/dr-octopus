@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mergeTaskPage, mergeSortedPage } from '../dist/modules/scheduled-tasks/merged-task-page.js';
+import { mergeTaskPage, mergeSortedPage } from '../dist/modules/scheduled-tasks/scheduled-tasks.utils.js';
 
 test('history merges instants across timezone encodings and retains workspace identity', async () => {
   const newer = { id: 'a', workspaceId: 'a', scheduledFor: '2026-09-06T08:00:00Z' };

@@ -58,7 +58,7 @@ test('Server file values reach process and children while launch overrides and r
     import { join } from 'node:path';
     import { execFileSync } from 'node:child_process';
     import { initializeServerEnvironment, createServerEnvironmentStore } from './dist/config.js';
-    import { EnvironmentSettingsService } from './dist/modules/settings/environment-settings.service.js';
+    import { EnvironmentSettingsService } from './dist/modules/environment-settings/environment-settings.service.js';
     const path = join(process.env.SERVER_DATA_DIR, 'environment.json');
     const save = (value) => writeFileSync(path, JSON.stringify(value));
     save({ SERVER_PORT: '4400', HTTPS_PROXY: 'http://user:secret@127.0.0.1:7890' });

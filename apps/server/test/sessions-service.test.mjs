@@ -6,8 +6,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { SessionsService } from '../dist/modules/sessions/sessions.service.js';
-import { projectHostVisibleUserMessage } from '../dist/modules/channel/host-user-message-projection.js';
+import { createSessionsService } from '../dist/modules/sessions/index.js';
+import { projectHostVisibleUserMessage } from '../dist/modules/sessions/sessions.service.js';
 
 /**
  * Builds a SessionsService with injectable doubles for entryId-enrichment tests.
@@ -50,7 +50,7 @@ function createService(options = {}) {
     readMetadata: options.readMetadata ?? (() => ({ sessionId: 'agent-session', cwd: '/tmp' })),
   };
 
-  const service = new SessionsService(server, {
+  const service = createSessionsService(server, {
     workspaceService: { resolve: async () => ({ id: 'workspace-a', cwd: '/tmp' }) },
     runtime,
     sessionsRepository,

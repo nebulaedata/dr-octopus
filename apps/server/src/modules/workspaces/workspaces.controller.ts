@@ -11,7 +11,6 @@
  * - PUT /api/workspaces/:workspaceId/files/content
  * - GET /api/workspaces/:workspaceId/files/download
  */
-
 import { createReadStream } from 'node:fs';
 import { toWorkspaceDto } from './workspaces.utils.js';
 import type { FastifyInstance } from 'fastify';

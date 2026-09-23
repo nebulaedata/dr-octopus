@@ -4,19 +4,19 @@
  */
 import { randomUUID } from 'node:crypto';
 import { EnvironmentError } from '@octopus/env-loader';
-import { loadServerConfig } from './lib/config/config.js';
-import { applyServerEnvironment, prepareServerEnvironment } from './lib/config/environment.js';
-import { ConfigurationQueue, controlError } from './lib/lifecycle/control.js';
-import { RestartHistory, within } from './lib/lifecycle/operations.js';
-import { isLoopbackHost } from './lib/config/server-setting-fields.js';
-import type { ServerHostOptions } from './lib/lifecycle/host-options.js';
-import type { ServerControl } from './lib/lifecycle/control.js';
-import type { ServerEnvironmentSnapshot } from './lib/config/environment.js';
-import type { ServerRuntime, ServerStatus } from './runtime-types.js';
-import type { ServerConfig } from './lib/config/utils.js';
+import { loadServerConfig } from './infrastructure/config/config.js';
+import { applyServerEnvironment, prepareServerEnvironment } from './infrastructure/config/environment.js';
+import { ConfigurationQueue, controlError } from './infrastructure/lifecycle/control.js';
+import { RestartHistory, within } from './infrastructure/lifecycle/operations.js';
+import { isLoopbackHost } from './infrastructure/config/server-setting-fields.js';
+import type { ServerHostOptions } from './infrastructure/lifecycle/host-options.js';
+import type { ServerControl } from './infrastructure/lifecycle/control.js';
+import type { ServerEnvironmentSnapshot } from './infrastructure/config/environment.js';
+import type { ServerRuntime, ServerStatus } from './runtime.js';
+import type { ServerConfig } from './infrastructure/config/utils.js';
 import type { RestartOperationDto, RestartServerBody } from '@octopus/shared/protocol';
 
-export type { ServerHostOptions } from './lib/lifecycle/host-options.js';
+export type { ServerHostOptions } from './infrastructure/lifecycle/host-options.js';
 
 /**
  * Provides a process-policy-free owner shared by standalone Server and CLI Gateway.
@@ -76,8 +76,21 @@ export function createServerHost(options: ServerHostOptions = {}) {
           );
         }
       },
-      state: () =>
-        stopRequested ? 'stopping' : state === 'failed' ? 'failed' : active ? 'restarting' : 'running',
+      state: () => {
+        if (stopRequested) {
+          return 'stopping';
+        } else {
+          if (state === 'failed') {
+            return 'failed';
+          } else {
+            if (active) {
+              return 'restarting';
+            } else {
+              return 'running';
+            }
+          }
+        }
+      },
       restart: accept,
       operation: (operationId) => history.get(operationId),
       subscribe: (listener) => {
@@ -248,12 +261,7 @@ export function createServerHost(options: ServerHostOptions = {}) {
         completedAt: null,
         error: null,
         access: {
-          kind:
-            isLoopbackHost(config.host) && !isLoopbackHost(current.config.host)
-              ? 'local_only'
-              : config.port !== current.config.port
-                ? 'port_changed'
-                : 'same_origin',
+          kind: restartOriginKind(config, current.config),
           port: config.port,
           loopbackUrl: `http://127.0.0.1:${config.port}`,
         },
@@ -338,4 +346,22 @@ export function createServerHost(options: ServerHostOptions = {}) {
       };
     },
   };
+}
+
+/**
+ * Preserves the ordered restartOriginKind selection rules.
+ */
+function restartOriginKind(
+  config: ServerConfig,
+  previous: ServerConfig
+): 'local_only' | 'port_changed' | 'same_origin' {
+  if (isLoopbackHost(config.host) && !isLoopbackHost(previous.host)) {
+    return 'local_only';
+  } else {
+    if (config.port !== previous.port) {
+      return 'port_changed';
+    } else {
+      return 'same_origin';
+    }
+  }
 }

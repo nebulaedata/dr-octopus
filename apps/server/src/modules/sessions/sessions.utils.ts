@@ -2,11 +2,10 @@
  * @author Codex
  * @description Centralizes current Session DTO projection and user metadata normalization.
  */
-
 import { isThinkingLevel } from '@octopus/shared/protocol';
-import type { SessionRow } from '../../db/schema.js';
-import type { SessionRuntimeBinding } from '../../lib/runtime/index.js';
 import type { SessionDto, SessionPreferencesDto, SessionRuntimeDto } from '@octopus/shared/protocol';
+import type { SessionRow } from '../../db/schema.js';
+import type { SessionRuntimeBinding } from '../../infrastructure/runtime/index.js';
 
 /**
  * Projects one catalog record onto the current shared Session contract.

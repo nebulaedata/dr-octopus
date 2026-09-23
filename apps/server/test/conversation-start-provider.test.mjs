@@ -14,13 +14,13 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import Fastify from 'fastify';
 import { createDatabase } from '../dist/db/client.js';
-import { SessionRuntimeCoordinator } from '../dist/lib/runtime/coordinator.js';
-import { SessionsService } from '../dist/modules/sessions/sessions.service.js';
+import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/coordinator.js';
+import { createSessionsService } from '../dist/modules/sessions/index.js';
 import { ChannelService } from '../dist/modules/channel/channel.service.js';
-import { ConversationStartService } from '../dist/modules/sessions/conversation-start.service.js';
-import { ConversationStartRepository } from '../dist/modules/sessions/conversation-start.repository.js';
-import { SettingsService } from '../dist/modules/settings/settings.service.js';
-import { createPiSettingsStore } from '../dist/lib/pi-settings/index.js';
+import { ConversationStartService } from '../dist/modules/conversation-start/conversation-start.service.js';
+import { ConversationStartRepository } from '../dist/modules/conversation-start/conversation-start.repository.js';
+import { SettingsService } from '../dist/modules/model-settings/model-settings.service.js';
+import { createPiSettingsStore } from '../dist/infrastructure/pi-settings/index.js';
 
 for (const knowledge of [undefined, { collectionIds: ['selected-source'] }]) {
   test(
@@ -126,14 +126,13 @@ for (const knowledge of [undefined, { collectionIds: ['selected-source'] }]) {
           },
         },
       });
-      const sessions = new SessionsService(server, {
+      const sessions = createSessionsService(server, {
         runtime,
         workspaceService: { resolve: async () => workspace },
         messageFeedbackRepository: { listBySession: () => [] },
       });
       const attachments = { releasePrompt() {} };
       const channel = new ChannelService(
-        server,
         {
           sessionsService: sessions,
           attachmentsService: attachments,
@@ -279,7 +278,6 @@ for (const knowledge of [undefined, { collectionIds: ['selected-source'] }]) {
         channel.close();
         sessions.dispose();
         await runtime.close();
-        await settings.close();
         await server.close();
         database.sqlite.close();
         provider.closeAllConnections();

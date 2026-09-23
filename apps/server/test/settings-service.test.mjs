@@ -5,7 +5,8 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { SettingsService } from '../dist/modules/settings/settings.service.js';
+import { ProviderAuthService } from '../dist/modules/provider-auth/provider-auth.service.js';
+import { SettingsService } from '../dist/modules/model-settings/model-settings.service.js';
 
 test('model commits notify before a refresh failure is returned; unchanged and failed saves do not notify', async () => {
   const fixture = createPiSettingsFixture();
@@ -39,7 +40,7 @@ test('model commits notify before a refresh failure is returned; unchanged and f
     assert.equal(commits, 1);
     assert.equal(defaultCommits, 1, 'default updates notify drafts without staling established runtimes');
   } finally {
-    await service.close();
+    // Model-only configuration owns no authentication sessions.
   }
 });
 
@@ -142,7 +143,8 @@ test('SettingsService resets only credentials stored by the application', async 
   const catalog = await service.listProviders();
   const providerKey = catalog.providers[0].providerKey;
 
-  const result = await service.resetProviderAuth(providerKey);
+  const authentication = new ProviderAuthService(service, fixture.piSettings);
+  const result = await authentication.resetProviderAuth(providerKey);
   assert.deepEqual(fixture.logoutWrites, ['provider-a']);
   assert.deepEqual(result, {
     credentialRemoved: true,
@@ -155,7 +157,7 @@ test('SettingsService resets only credentials stored by the application', async 
     methods: ['api_key'],
     source: 'environment',
   };
-  await assert.rejects(service.resetProviderAuth(providerKey), (error) => {
+  await assert.rejects(authentication.resetProviderAuth(providerKey), (error) => {
     assert.equal(error.code, 'MODEL_PROVIDER_AUTH_RESET_UNSUPPORTED');
     assert.equal(error.statusCode, 422);
     return true;

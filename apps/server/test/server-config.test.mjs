@@ -7,8 +7,8 @@ import assert from 'node:assert/strict';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { loadServerConfig } from '../dist/lib/config/config.js';
-import { DEFAULT_HTTP_BODY_LIMIT_BYTES } from '../dist/lib/config/utils.js';
+import { loadServerConfig } from '../dist/infrastructure/config/config.js';
+import { DEFAULT_HTTP_BODY_LIMIT_BYTES } from '../dist/infrastructure/config/utils.js';
 
 test('Server configuration maps the documented environment names', () => {
   const dataDir = join(tmpdir(), 'dr-octopus-server-config', 'server');

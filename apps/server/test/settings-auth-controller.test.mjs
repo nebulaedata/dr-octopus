@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
-import { registerSettingsController } from '../dist/modules/settings/settings.controller.js';
+import { registerProviderAuthController } from '../dist/modules/provider-auth/provider-auth.controller.js';
 
 const IDEMPOTENCY_KEY = '33333333-3333-4333-8333-333333333333';
 const RESET_IDEMPOTENCY_KEY = '44444444-4444-4444-8444-444444444444';
@@ -54,7 +54,7 @@ function createSettingsService() {
 test('authentication routes enforce mutation identity and return asynchronous snapshots', async () => {
   const server = Fastify();
   const service = createSettingsService();
-  registerSettingsController(server, service);
+  registerProviderAuthController(server, service);
   try {
     const missingKey = await server.inject({
       method: 'POST',

@@ -15,10 +15,10 @@ import { assessDocumentCoverage } from '@octopus/document-processing';
 const assessPdfPages = (pages, pageCount) =>
   assessDocumentCoverage({ format: 'pdf', pages, pageCount, truncated: false });
 import { ProcessorSupervisor } from '../dist/modules/attachments/workers/processor-supervisor.js';
-import { LocalFileBlobStore } from '../dist/lib/attachment-storage/local-file-blob-store.js';
+import { LocalFileBlobStore } from '../dist/infrastructure/attachment-storage/local-file-blob-store.js';
 import { createDatabase } from '../dist/db/client.js';
 import { AttachmentsRepository } from '../dist/modules/attachments/attachments.repository.js';
-import { AgentAttachmentAdapter } from '../dist/modules/attachments/agent-attachment-adapter.js';
+import { AttachmentDeliveryService } from '../dist/modules/attachment-delivery/attachment-delivery.service.js';
 
 test('Sparse and repeated watermark text does not hide image-based PDF pages', () => {
   const pages = Array.from({ length: 4 }, (_, index) => ({
@@ -111,7 +111,13 @@ test(
     assert.equal('ocr' in dto.coverage.processing, false);
     assert.equal(dto.coverage.textCoverage, 'partial');
     assert.ok(dto.coverage.findings.some((finding) => finding.code === 'SCAN_LIKELY'));
-    const delivered = await new AgentAttachmentAdapter(repository, blobs).resolve([dto], {
+    const delivered = await new AttachmentDeliveryService(
+      {
+        getDeliveryRecord: repository.getRecord.bind(repository),
+        getDeliveryDerivative: repository.getDerivative.bind(repository),
+      },
+      blobs
+    ).resolve([dto], {
       sessionId: 'sample-session',
       workspaceCwd: root,
       modelInputs: new Set(['text']),

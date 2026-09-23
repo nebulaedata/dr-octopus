@@ -8,7 +8,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { createPiSettingsStore } from '../dist/lib/pi-settings/index.js';
+import { createPiSettingsStore } from '../dist/infrastructure/pi-settings/index.js';
 
 test('Pi ModelRuntime persists and removes an API Key through the Server interaction port', async () => {
   const agentDir = await mkdtemp(join(tmpdir(), 'octopus-settings-auth-'));

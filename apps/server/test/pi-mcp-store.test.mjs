@@ -8,7 +8,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
-import { createPiMcpStore } from '../dist/lib/pi-mcp/index.js';
+import { createPiMcpStore } from '../dist/infrastructure/pi-mcp/index.js';
 
 /** Creates a synchronous adapter double backed by the store's explicit Agent directory. */
 function createAdapter() {

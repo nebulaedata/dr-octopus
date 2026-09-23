@@ -3,58 +3,15 @@
  * @description Encapsulates Session channel transport policy, error projection, and bounded WebSocket writes.
  */
 
-import { isIP } from 'node:net';
-import { toPublicError } from '../../lib/errors/public-error.js';
-import { DEFAULT_LOCALE } from '../../lib/i18n/negotiate-locale.js';
-import type { WebSocket } from 'ws';
-import type { PublicLocale } from '../../lib/i18n/negotiate-locale.js';
+import { toPublicError } from '../../infrastructure/errors/public-error.js';
+import { DEFAULT_LOCALE } from '../../infrastructure/i18n/negotiate-locale.js';
 import type { ProtocolErrorMessage, ServerRealtimeMessage } from '@octopus/shared/protocol';
+import type { WebSocket } from 'ws';
+import type { PublicLocale } from '../../infrastructure/i18n/negotiate-locale.js';
+import type { WorkspaceReferenceDto } from '@octopus/shared/protocol';
 
 const SLOW_CONSUMER_BYTES = 1024 * 1024;
 const CLOSE_CONSUMER_BYTES = 4 * SLOW_CONSUMER_BYTES;
-
-/**
- * Validates Host before Origin so DNS rebinding cannot create a trusted same-origin request.
- *
- * @param origin Origin supplied by the WebSocket handshake.
- * @param allowOrigin Configured origin allow-list or predicate.
- * @param request Request authority; custom domains require an explicitly allowed origin.
- * @returns Whether the transport may accept the connection.
- */
-export function isAllowedOrigin(
-  origin: string | undefined,
-  allowOrigin: string[] | ((origin: string) => boolean),
-  request?: { headers: { host?: string }; protocol?: string }
-): boolean {
-  const allowed =
-    typeof allowOrigin === 'function' ? allowOrigin : (value: string) => allowOrigin.includes(value);
-  if (request?.headers.host) {
-    try {
-      const target = new URL(`${request.protocol ?? 'http'}://${request.headers.host}`);
-      const hostname = target.hostname.replace(/^\[|\]$/g, '');
-      if (
-        !['http:', 'https:'].includes(target.protocol) ||
-        target.username ||
-        target.password ||
-        target.pathname !== '/' ||
-        target.search ||
-        target.hash ||
-        (hostname !== 'localhost' &&
-          !isIP(hostname) &&
-          !allowed(target.origin) &&
-          !allowed(new URL(`https://${request.headers.host}`).origin))
-      ) {
-        return false;
-      }
-      if (origin === target.origin) {
-        return true;
-      }
-    } catch {
-      return false;
-    }
-  }
-  return origin === undefined || allowed(origin);
-}
 
 /**
  * Best-effort extracts request identity from invalid input for protocol error correlation.
@@ -114,4 +71,40 @@ export function sendChannelError(
     retryable: projected.retryable,
   };
   sendChannelMessage(socket, message);
+}
+
+/**
+ * Creates the model-facing suffix persisted by Pi for deterministic Session recovery.
+ *
+ * @param requestId Request identity used to recognize Host-owned prompt context.
+ * @param references Server-validated Workspace-relative references.
+ * @returns An empty string when no references exist, otherwise an escaped private prompt suffix.
+ */
+export function createWorkspaceReferencePromptSuffix(
+  requestId: string,
+  references: readonly WorkspaceReferenceDto[]
+): string {
+  if (references.length === 0) {
+    return '';
+  }
+  const entries = references
+    .map(
+      (reference) => `  <reference kind="${reference.kind}" path="${escapeXmlAttribute(reference.path)}" />`
+    )
+    .join('\n');
+  return `\n<host_workspace_reference_request id="${escapeXmlAttribute(requestId)}" />\n<host_workspace_references version="1" trust="untrusted-user-selected-paths">\n${entries}\n</host_workspace_references>`;
+}
+
+/**
+ * Escapes untrusted path and request metadata used in XML-like prompt attributes.
+ *
+ * @param value Raw attribute value.
+ * @returns Attribute-safe text that cannot create additional prompt elements.
+ */
+function escapeXmlAttribute(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
 }

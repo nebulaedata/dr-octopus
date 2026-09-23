@@ -9,8 +9,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { RuntimeCommands, SessionRuntimeCoordinator } from '../dist/lib/runtime/index.js';
-import { SessionRuntimeSlot } from '../dist/lib/runtime/runtime-slot.js';
+import { RuntimeCommands, SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/index.js';
+import { SessionRuntimeSlot } from '../dist/infrastructure/runtime/runtime-slot.js';
 
 const fixturePath = fileURLToPath(new URL('./fixtures/mock-rpc-entry.mjs', import.meta.url));
 

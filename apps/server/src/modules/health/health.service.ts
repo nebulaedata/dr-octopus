@@ -2,8 +2,20 @@
  * @author Codex
  * @description Evaluates process readiness from the database and Session Runtime plugin dependencies.
  */
-
-import type { FastifyInstance } from 'fastify';
+export interface HealthProbes {
+  /**
+   * Checks the shared database connection.
+   */
+  database(this: void): boolean;
+  /**
+   * Checks runtime request admission.
+   */
+  runtime(this: void): boolean;
+  /**
+   * Returns current logging health without changing logger state.
+   */
+  logging(this: void): { state: 'disabled' | 'healthy' | 'degraded'; required: boolean };
+}
 
 export interface HealthReadiness {
   status: 'ready' | 'not-ready';
@@ -19,15 +31,15 @@ export class HealthService {
   /**
    * @param server Fastify instance exposing application plugins.
    */
-  public constructor(protected readonly server: FastifyInstance) {}
+  public constructor(private readonly probes: HealthProbes) {}
 
   /**
    * Returns a failure-isolated snapshot of all dependencies required to accept requests.
    */
   public getReadiness(): HealthReadiness {
-    const databaseReady = runReadinessProbe(() => this.probeDatabase());
-    const agentManagerReady = runReadinessProbe(() => this.server.sessionRuntime.isAcceptingRequests());
-    const fileLogging = this.server.logging.getHealth();
+    const databaseReady = runReadinessProbe(this.probes.database);
+    const agentManagerReady = runReadinessProbe(this.probes.runtime);
+    const fileLogging = this.probes.logging();
     const fileLoggingReady = fileLogging.state !== 'degraded' || !fileLogging.required;
     const ready = databaseReady && agentManagerReady && fileLoggingReady;
 
@@ -37,18 +49,6 @@ export class HealthService {
       agentManager: agentManagerReady ? 'ready' : 'unavailable',
       fileLogging: fileLogging.state,
     };
-  }
-
-  /**
-   * Executes a live SQLite round trip so readiness reflects the current connection state.
-   */
-  private probeDatabase(): boolean {
-    const { sqlite } = this.server.database;
-    if (!sqlite.open) {
-      return false;
-    }
-    sqlite.prepare('SELECT 1').get();
-    return true;
   }
 }
 

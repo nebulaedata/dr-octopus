@@ -24,6 +24,10 @@ Use the table below as an on-demand index, not a reading checklist. Read only th
 
 Keep this index updated when project-level `AGENTS.md` files are added, moved, or removed.
 
+## Code Development Standards
+
+Read and follow [Code Development Standards](docs/code-development-standards.md) for all code changes. It defines the Server module file allowlist and boundaries, frontend component entrypoints and hooks/utils placement, redundant backend interface removal, the ban on nested ternaries, and the pre-release no-compatibility policy. Its layout and abstraction rules take precedence over conflicting older guidance; all other applicable instructions and protected boundaries remain in force.
+
 ## Protected Core Boundaries
 
 - `packages/agent` is the shared, general-purpose Agent core. Before creating, editing, moving, or deleting anything under it, obtain explicit user confirmation for the proposed Agent change. Read-only inspection is allowed; requests concerning other areas do not imply authorization.
@@ -48,7 +52,7 @@ Tests use `node:test`, are named `*.test.mjs`, and keep fixtures deterministic. 
 ## Module Design
 
 - Keep modules cohesive and dependency flow unidirectional. Separate entrypoints/controllers, service/domain logic, and repositories/infrastructure.
-- Prefer files under 300 lines when cohesive splitting improves clarity. Move complex helpers and private sub-components into focused modules rather than creating inline dumps.
+- Treat 300 lines only as a prompt to review cohesion, readability, and dependencies, never as a file-size limit or a reason to split. Cohesive files may remain intact without exception approval. Split only when it clarifies an independent responsibility or reduces coupling; file length alone must not fail lint, CI, review, or acceptance.
 - Hide internal state and expose complete contracts covering inputs, outputs, invariants, ordering, and defaults. Translate infrastructure failures into domain errors at the owning boundary.
 - Minimize sibling coupling; use a clear orchestration/glue layer or events when they materially reduce coupling.
 - When moving files, remove only directories made empty by the current change and preserve unrelated empty directories.

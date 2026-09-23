@@ -83,11 +83,7 @@ function createFixture(maxSubscriptions = 1) {
       images: attachmentIds.map((id) => ({ type: 'image', data: id, mimeType: 'image/png' })),
     }),
   };
-  const service = new ChannelService(
-    serviceServer,
-    { sessionsService, attachmentsService },
-    { maxSubscriptions }
-  );
+  const service = new ChannelService({ sessionsService, attachmentsService }, { maxSubscriptions });
   return {
     service,
     executions,
@@ -212,7 +208,6 @@ test('Session channel resolves and forwards the authoritative Workspace cwd for 
   const executions = [];
   const resolutionInputs = [];
   const service = new ChannelService(
-    serviceServer,
     {
       sessionsService: {
         onEvent: () => () => undefined,
@@ -235,6 +230,9 @@ test('Session channel resolves and forwards the authoritative Workspace cwd for 
       },
       attachmentsService: {
         reservePrompt: () => [{ id: 'attachment-a' }],
+        releasePrompt: () => undefined,
+      },
+      attachmentDeliveryService: {
         resolveForAgent: async (_items, input) => {
           resolutionInputs.push(input);
           return { promptSuffix: '<attachments />', images: [] };
@@ -653,7 +651,7 @@ test('Session channel executes a duplicate mutation request identity exactly onc
 });
 
 test('focus is connection scoped, validated, immediate during commands and cleared on disconnect', async () => {
-  const { decodeClientMessage } = await import('../dist/modules/channel/message.decoder.js');
+  const { decodeClientMessage } = await import('../dist/modules/channel/channel.dto.js');
   assert.equal(
     decodeClientMessage(JSON.stringify({ type: 'session.focus', requestId: 'f', sessionId: null })).sessionId,
     null

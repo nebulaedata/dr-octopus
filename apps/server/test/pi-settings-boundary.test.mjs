@@ -9,8 +9,11 @@ import test from 'node:test';
 
 const agentSourceIndexUrl = new URL('../../../packages/agent/src/index.ts', import.meta.url);
 const agentSettingsDirectoryUrl = new URL('../../../packages/agent/src/settings/', import.meta.url);
-const serverCompositionRootUrl = new URL('../src/modules/index.ts', import.meta.url);
-const settingsServiceUrl = new URL('../src/modules/settings/settings.service.ts', import.meta.url);
+const serverCompositionRootUrl = new URL('../src/modules/model-settings/index.ts', import.meta.url);
+const settingsServiceUrl = new URL(
+  '../src/modules/model-settings/model-settings.service.ts',
+  import.meta.url
+);
 
 test('Pi settings ownership remains inside the Server host boundary', () => {
   const agentSourceIndex = readFileSync(agentSourceIndexUrl, 'utf8');
@@ -20,5 +23,5 @@ test('Pi settings ownership remains inside the Server host boundary', () => {
   assert.equal(existsSync(agentSettingsDirectoryUrl), false);
   assert.doesNotMatch(agentSourceIndex, /settings\/index/u);
   assert.match(serverCompositionRoot, /createPiSettingsStore/u);
-  assert.match(settingsService, /\.\.\/\.\.\/lib\/pi-settings\/index\.js/u);
+  assert.match(settingsService, /\.\.\/\.\.\/infrastructure\/pi-settings\/index\.js/u);
 });

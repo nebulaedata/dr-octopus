@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { projectSubagentFleetPayload } from '../src/lib/runtime/subagent-fleet-projection.ts';
+import { projectSubagentFleetPayload } from '../src/infrastructure/runtime/subagent-fleet-projection.ts';
 
 const snapshot = {
   kind: 'pi-subagents.async-status-snapshot',

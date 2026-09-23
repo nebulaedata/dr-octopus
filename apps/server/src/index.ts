@@ -2,7 +2,7 @@
  * @author Codex
  * @description Runs the standalone Server and adapts OS signals and development watcher shutdown requests.
  */
-import { initializeServerEnvironment } from './lib/config/environment.js';
+import { initializeServerEnvironment } from './infrastructure/config/environment.js';
 
 initializeServerEnvironment();
 const { createServerHost } = await import('./host.js');

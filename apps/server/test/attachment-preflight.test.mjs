@@ -11,11 +11,11 @@ import { createRequire } from 'node:module';
 import test from 'node:test';
 import sharp from 'sharp';
 import { zipSync } from 'fflate';
-import { inspectAttachment } from '../dist/lib/attachment-preflight/index.js';
+import { inspectAttachment } from '../dist/infrastructure/attachment-preflight/index.js';
 import {
   createAttachmentCapabilityResolver,
   DEFAULT_ATTACHMENT_POLICY,
-} from '../dist/lib/attachment-capability/index.js';
+} from '../dist/infrastructure/attachment-capability/index.js';
 
 const { PDFDocument, PDFName, PDFString } = createRequire(import.meta.url)('@cantoo/pdf-lib');
 

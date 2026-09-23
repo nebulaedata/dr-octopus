@@ -29,7 +29,6 @@ test('Channel validates and projects Workspace references for prompt, steer, and
     execute: async (sessionId, command) => executions.push({ sessionId, command }),
   };
   const service = new ChannelService(
-    server,
     {
       sessionsService,
       attachmentsService: {},

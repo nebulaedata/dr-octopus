@@ -11,8 +11,8 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import test from 'node:test';
-import { EnvironmentSettingsService } from '../dist/modules/settings/environment-settings.service.js';
-import { registerEnvironmentSettingsController } from '../dist/modules/settings/environment-settings.controller.js';
+import { EnvironmentSettingsService } from '../dist/modules/environment-settings/environment-settings.service.js';
+import { registerEnvironmentSettingsController } from '../dist/modules/environment-settings/environment-settings.controller.js';
 
 test('environment Settings supports independent scopes, stale edit rejection and secret-preserving patches', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'octopus-env-settings-'));
@@ -92,7 +92,7 @@ test('environment Settings supports independent scopes, stale edit rejection and
     [
       '--input-type=module',
       '--eval',
-      "const {loadServerConfig}=await import('./dist/lib/config/config.js');const config=loadServerConfig();console.log(JSON.stringify({port:config.port,polluted:process.env.SERVER_PORT}));",
+      "const {loadServerConfig}=await import('./dist/infrastructure/config/config.js');const config=loadServerConfig();console.log(JSON.stringify({port:config.port,polluted:process.env.SERVER_PORT}));",
     ],
     { cwd, env }
   );

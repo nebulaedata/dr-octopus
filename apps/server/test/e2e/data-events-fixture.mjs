@@ -12,10 +12,10 @@ import { createDatabase } from '../../dist/db/client.js';
 import { DataEventsService } from '../../dist/modules/data-events/data-events.service.js';
 import { registerDataEventsController } from '../../dist/modules/data-events/data-events.controller.js';
 import { SessionsRepository } from '../../dist/modules/sessions/sessions.repository.js';
-import { SessionsService } from '../../dist/modules/sessions/sessions.service.js';
-import { SessionNotificationsRepository } from '../../dist/modules/sessions/session-notifications.repository.js';
+import { createSessionsService } from '../../dist/modules/sessions/index.js';
+import { SessionNotificationsRepository } from '../../dist/modules/sessions/sessions.repository.js';
 import { registerSessionsController } from '../../dist/modules/sessions/sessions.controller.js';
-import { registerSessionNotificationsController } from '../../dist/modules/sessions/session-notifications.controller.js';
+import { registerSessionNotificationsController } from '../../dist/modules/sessions/sessions.controller.js';
 import { registerScheduledTasksController } from '../../dist/modules/scheduled-tasks/scheduled-tasks.controller.js';
 import { ScheduledTasksService } from '../../dist/modules/scheduled-tasks/scheduled-tasks.service.js';
 import {
@@ -51,11 +51,12 @@ export async function createFixture() {
   );
   app.decorate('database', database);
   const runtime = {
+    getControl: () => ({ restartRequired: false, changedConfigRoutes: [], restart: { status: 'idle' } }),
     onEvent: () => () => {},
     getBindingBySessionId: () => undefined,
     activateExisting: () => assert.fail('E2E must not allocate model runtimes'),
   };
-  const sessions = new SessionsService(app, {
+  const sessions = createSessionsService(app, {
     runtime,
     workspaceService: workspaces,
     sessionsRepository: repository,

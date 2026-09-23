@@ -9,12 +9,12 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
-import { ServerConfiguration } from '../dist/modules/settings/server-configuration.js';
-import { ServerSettingsService } from '../dist/modules/settings/server-settings.service.js';
-import { registerServerSettingsController } from '../dist/modules/settings/server-settings.controller.js';
-import { ConfigurationQueue } from '../dist/lib/lifecycle/control.js';
-import { loadServerConfig } from '../dist/lib/config/config.js';
-import { isAllowedOrigin } from '../dist/modules/channel/channel.utils.js';
+import { ServerConfiguration } from '../dist/modules/server-settings/server-settings.service.js';
+import { ServerSettingsService } from '../dist/modules/server-settings/server-settings.service.js';
+import { registerServerSettingsController } from '../dist/modules/server-settings/server-settings.controller.js';
+import { ConfigurationQueue } from '../dist/infrastructure/lifecycle/control.js';
+import { loadServerConfig } from '../dist/infrastructure/config/config.js';
+import { isAllowedOrigin } from '../dist/utils/http-origin.js';
 
 test('both editors share confirmation, conflict checks and unchanged storage', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'octopus-server-settings-'));

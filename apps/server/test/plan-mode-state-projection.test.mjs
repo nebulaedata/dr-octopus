@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { projectPlanModeState } from '../dist/lib/runtime/plan-mode-state-projection.js';
+import { projectPlanModeState } from '../dist/infrastructure/runtime/plan-mode-state-projection.js';
 
 test('projects unavailable and enabled planning states without leaking the plan body', () => {
   assert.deepEqual(projectPlanModeState([], false), {

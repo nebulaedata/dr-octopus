@@ -3,15 +3,14 @@
  * @description Adapts the Session channel application service to Fastify WebSocket transport.
  * - GET /ws
  */
-
 import { randomUUID } from 'node:crypto';
+import { negotiateLocale } from '../../infrastructure/i18n/negotiate-locale.js';
 import { extractRequestId, sendChannelError, sendChannelMessage } from './channel.utils.js';
-import { decodeClientMessage } from './message.decoder.js';
-import { negotiateLocale } from '../../lib/i18n/negotiate-locale.js';
-import type { ChannelService } from './channel.service.js';
+import { decodeClientMessage } from './channel.dto.js';
 import type { FastifyInstance } from 'fastify';
-import type { PublicLocale } from '../../lib/i18n/negotiate-locale.js';
 import type { WebSocket } from 'ws';
+import type { PublicLocale } from '../../infrastructure/i18n/negotiate-locale.js';
+import type { ChannelService } from './channel.service.js';
 
 /**
  * Registers the Session channel endpoint and owns every WebSocket transport lifecycle concern.
@@ -26,13 +25,7 @@ export function registerChannelController(server: FastifyInstance, service: Chan
     locales.set(connectionId, negotiateLocale(request.headers['accept-language']));
     service.connect(connectionId, (message) => sendChannelMessage(socket, message));
     socket.on('message', (raw: Buffer) => {
-      void routeMessage(
-        service,
-        connectionId,
-        socket,
-        raw.toString('utf8'),
-        locales.get(connectionId)
-      );
+      void routeMessage(service, connectionId, socket, raw.toString('utf8'), locales.get(connectionId));
     });
     socket.once('close', () => {
       sockets.delete(connectionId);

@@ -7,8 +7,8 @@ import test from 'node:test';
 import { mkdtemp, writeFile, rm, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ModelConfigMonitor } from '../dist/modules/settings/model-config-monitor.js';
-import { RuntimeConfigChanges } from '../dist/lib/runtime-config/runtime-config-changes.js';
+import { ModelConfigMonitor } from '../dist/modules/model-settings/model-settings.service.js';
+import { RuntimeConfigChanges } from '../dist/infrastructure/runtime-config/runtime-config-changes.js';
 
 test('model/auth changes stale instances, default changes only notify, and fingerprints survive Host restart', async () => {
   const agentDir = await mkdtemp(join(tmpdir(), 'octopus-config-monitor-'));

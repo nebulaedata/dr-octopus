@@ -10,14 +10,15 @@ import { join } from 'node:path';
 import test from 'node:test';
 import Fastify from 'fastify';
 import { createDatabase } from '../dist/db/client.js';
-import { KnowledgeUploadStore } from '../dist/modules/knowledge/knowledge-upload-store.js';
-import { registerKnowledgeUploads } from '../dist/modules/knowledge/knowledge-upload.controller.js';
+import { KnowledgeUploadsRepository } from '../dist/modules/knowledge-uploads/knowledge-uploads.repository.js';
+import { KnowledgeUploadStore } from '../dist/modules/knowledge-uploads/knowledge-uploads.service.js';
+import { registerKnowledgeUploads } from '../dist/modules/knowledge-uploads/knowledge-uploads.controller.js';
 
 test('knowledge tus preserves acknowledged offsets and enforces workspace ownership', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'octopus-knowledge-tus-'));
   const database = createDatabase(join(root, 'server.db'));
   let copies = 0;
-  const store = new KnowledgeUploadStore(database, join(root, 'uploads'), {
+  const store = new KnowledgeUploadStore(new KnowledgeUploadsRepository(database), join(root, 'uploads'), {
     upload: async (_scope, bytes) => {
       copies++;
       assert.equal(bytes.toString(), 'original');

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/server-db-migrations-copy.mjs",
+    "build": "node scripts/server-build-clean.mjs && tsc -p tsconfig.build.json && node scripts/server-db-migrations-copy.mjs",
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
     "dev": "pnpm --filter @octopus/agent build && node scripts/dev-watch.mjs --env-file-if-exists=../../.env",
@@ -19,6 +19,7 @@
     "@cantoo/pdf-lib": "^2.11.0",
     "@earendil-works/pi-ai": "0.85.1",
     "@earendil-works/pi-coding-agent": "0.85.1",
+    "@fastify/autoload": "^6.5.0",
     "@fastify/cors": "^11.3.0",
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/vite": "10.0.0",

@@ -4,9 +4,9 @@
  */
 
 import fp from 'fastify-plugin';
-import { SessionRuntimeCoordinator } from '../lib/runtime/index.js';
+import { SessionRuntimeCoordinator } from '../infrastructure/runtime/index.js';
 import type { FastifyPluginCallback } from 'fastify';
-import type { SessionRuntimeLimits } from '../lib/runtime/index.js';
+import type { SessionRuntimeLimits } from '../infrastructure/runtime/index.js';
 
 export interface SessionRuntimePluginOptions {
   runtime?: SessionRuntimeCoordinator;

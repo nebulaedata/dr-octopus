@@ -2,22 +2,15 @@
  * @author Codex
  * @description Owns Workspace lifecycle and safe filesystem operations behind one application Interface.
  */
-
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from './workspaces.repository.js';
 import { basename, dirname, posix } from 'node:path';
 import { ZipArchive } from 'archiver';
-import { ApplicationError } from '../../lib/errors/application-error.js';
-import {
-  hasErrorCode,
-  normalizeRelativePath,
-  readDirectorySafely,
-  resolveWithinRoot,
-} from './workspaces.utils.js';
-import { resolveWorkspaceReferenceSelection } from './workspace-reference-resolver.js';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
+import { hasErrorCode, normalizeRelativePath, resolveWithinRoot } from './workspaces.utils.js';
+import { readDirectorySafely, resolveWorkspaceReferenceSelection } from './workspaces.repository.js';
 import type { Readable } from 'node:stream';
 import type { FileTreeEntryDto, WorkspaceReferenceDto } from '@octopus/shared/protocol';
 import type { WorkspaceDescriptor, WorkspaceSelector, WorkspaceService } from '@octopus/agent';
-import type { FastifyInstance } from 'fastify';
 
 const MAX_EDITABLE_FILE_BYTES = 2 * 1024 * 1024;
 
@@ -38,13 +31,9 @@ export class WorkspacesService {
   readonly #workspaceBackend: WorkspaceService;
 
   /**
-   * @param server Fastify instance exposing application plugins.
    * @param options Supplies the authoritative Workspace backend.
    */
-  public constructor(
-    protected readonly server: FastifyInstance,
-    options: WorkspacesServiceOptions
-  ) {
+  public constructor(options: WorkspacesServiceOptions) {
     this.#workspaceBackend = options.workspaceBackend;
   }
 
@@ -361,11 +350,15 @@ export class WorkspacesService {
    */
   async #readDirectory(absoluteDir: string, relativeDir: string): Promise<FileTreeEntryDto[]> {
     const dirents = await readDirectorySafely(absoluteDir);
-    const sorted = dirents
-      .slice()
-      .sort((a, b) =>
-        a.isDirectory() === b.isDirectory() ? a.name.localeCompare(b.name) : a.isDirectory() ? -1 : 1
-      );
+    const sorted = dirents.slice().sort((a, b) => {
+      if (a.isDirectory() === b.isDirectory()) {
+        return a.name.localeCompare(b.name);
+      }
+      if (a.isDirectory()) {
+        return -1;
+      }
+      return 1;
+    });
     return sorted.map((dirent) => ({
       name: dirent.name,
       path: relativeDir ? posix.join(relativeDir, dirent.name) : dirent.name,

@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { SessionManager } from '@earendil-works/pi-coding-agent';
-import { PiSessionRepository } from '../dist/lib/runtime/index.js';
+import { PiSessionRepository } from '../dist/infrastructure/runtime/index.js';
 
 test('Pi Session repository reads history and derives a dormant fork without mutating the source', async () => {
   const root = await mkdtemp(join(tmpdir(), 'octopus-pi-session-repository-'));

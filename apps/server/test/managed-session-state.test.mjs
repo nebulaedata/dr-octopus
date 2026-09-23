@@ -4,8 +4,8 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ManagedSessionRuntime } from '../dist/lib/runtime/managed-session.js';
-import { stopSession } from '../dist/lib/runtime/stop-session.js';
+import { ManagedSessionRuntime } from '../dist/infrastructure/runtime/managed-session.js';
+import { stopSession } from '../dist/infrastructure/runtime/stop-session.js';
 
 test('stop polling publishes idle before a delayed settled event and does not duplicate transitions', async () => {
   let onEvent;

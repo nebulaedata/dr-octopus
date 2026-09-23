@@ -8,13 +8,13 @@ import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { RuntimeConfigChanges } from '../dist/lib/runtime-config/runtime-config-changes.js';
-import { createModelConfigChanges } from '../dist/modules/settings/model-config-changes.js';
-import { SessionRuntimeCoordinator } from '../dist/lib/runtime/coordinator.js';
-import { SessionLifecycleControl } from '../dist/lib/runtime/session-lifecycle-control.js';
-import { saveLocalProvider } from '../dist/lib/pi-settings/local-provider-repository.js';
-import { SessionRuntimeDirectory } from '../dist/lib/runtime/runtime-directory.js';
-import { SessionRuntimeRetirement } from '../dist/lib/runtime/retirement.js';
+import { RuntimeConfigChanges } from '../dist/infrastructure/runtime-config/runtime-config-changes.js';
+import { createModelConfigChanges } from '../dist/modules/model-settings/model-settings.service.js';
+import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/coordinator.js';
+import { SessionLifecycleControl } from '../dist/infrastructure/runtime/session-lifecycle-control.js';
+import { saveLocalProvider } from '../dist/infrastructure/pi-settings/local-provider-repository.js';
+import { SessionRuntimeDirectory } from '../dist/infrastructure/runtime/runtime-directory.js';
+import { SessionRuntimeRetirement } from '../dist/infrastructure/runtime/retirement.js';
 
 test('only enabled model commits change the baseline; failed observers cannot interrupt commits', () => {
   const changes = new RuntimeConfigChanges();

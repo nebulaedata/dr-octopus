@@ -11,10 +11,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import Fastify from 'fastify';
 import test from 'node:test';
 import { createServerHost } from '../dist/host.js';
-import { createServerEnvironmentStore } from '../dist/lib/config/environment.js';
-import { ServerConfiguration } from '../dist/modules/settings/server-configuration.js';
-import { ServerSettingsService } from '../dist/modules/settings/server-settings.service.js';
-import { registerServerSettingsController } from '../dist/modules/settings/server-settings.controller.js';
+import { createServerEnvironmentStore } from '../dist/infrastructure/config/environment.js';
+import { ServerConfiguration } from '../dist/modules/server-settings/server-settings.service.js';
+import { ServerSettingsService } from '../dist/modules/server-settings/server-settings.service.js';
+import { registerServerSettingsController } from '../dist/modules/server-settings/server-settings.controller.js';
 
 test(
   'HTTP returns 202 before close and the replacement serves the same operation record',

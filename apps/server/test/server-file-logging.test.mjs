@@ -11,13 +11,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { pruneServerLogFiles } from '../dist/lib/logging/log-retention.js';
-import { closeFileLogging } from '../dist/lib/logging/file-log-lifecycle.js';
-import { acquireFileLogLease } from '../dist/lib/logging/file-log-lease.js';
+import { pruneServerLogFiles } from '../dist/infrastructure/logging/log-retention.js';
+import { closeFileLogging } from '../dist/infrastructure/logging/file-log-lifecycle.js';
+import { acquireFileLogLease } from '../dist/infrastructure/logging/file-log-lease.js';
 import {
   createServerLoggerRuntime,
   ServerFileLoggingInitializationError,
-} from '../dist/lib/logging/server-logger-runtime.js';
+} from '../dist/infrastructure/logging/server-logger-runtime.js';
 
 const temporaryRoots = [];
 
@@ -300,7 +300,7 @@ function createExitedProcessId() {
 /**
  * Produces a complete validated-equivalent file logging policy for focused unit tests.
  *
- * @param {Partial<import('../dist/lib/config/utils.js').ServerFileLoggingConfig>} [overrides]
+ * @param {Partial<import('../dist/infrastructure/config/utils.js').ServerFileLoggingConfig>} [overrides]
  */
 function createFileLoggingConfig(overrides = {}) {
   return {

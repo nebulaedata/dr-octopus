@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { McpConnectivityProbe } from '../dist/lib/pi-mcp/connectivity-probe.js';
+import { McpConnectivityProbe } from '../dist/infrastructure/pi-mcp/connectivity-probe.js';
 
 test('MCP connectivity probe preserves catalog order and isolates failures', async () => {
   const calls = [];

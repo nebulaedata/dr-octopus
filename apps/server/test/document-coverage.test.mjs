@@ -13,8 +13,8 @@ import { ProcessorSupervisor } from '../dist/modules/attachments/workers/process
 import {
   mergeDocumentCoverage,
   readDocumentCoverage,
-} from '../dist/modules/attachments/attachment-coverage.js';
-import { attachmentDeliveryPrompt } from '../dist/modules/attachments/agent-attachment-prompt.js';
+} from '../dist/modules/attachments/attachments.utils.js';
+import { attachmentDeliveryPrompt } from '../dist/modules/attachment-delivery/attachment-delivery.utils.js';
 
 test('Office artifacts, persistence and Agent prompts share one bounded coverage contract', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'octopus-office-coverage-'));

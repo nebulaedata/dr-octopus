@@ -17,7 +17,9 @@ const config = {
   paths: { dataDir: 'unused', logsRoot: 'unused' },
   fileLogging: { enabled: false },
 };
-mock.module('../../dist/lib/config/config.js', { namedExports: { loadServerConfig: () => config } });
+mock.module('../../dist/infrastructure/config/config.js', {
+  namedExports: { loadServerConfig: () => config },
+});
 mock.module('@octopus/agent', {
   namedExports: {
     isBundledInfraInstalled: async () => {
@@ -29,7 +31,7 @@ mock.module('@octopus/agent', {
     },
   },
 });
-mock.module('../../dist/lib/startup/extension-initialization.js', {
+mock.module('../../dist/infrastructure/startup/extension-initialization.js', {
   namedExports: {
     initializeExtensions: (...args) => install(...args),
   },

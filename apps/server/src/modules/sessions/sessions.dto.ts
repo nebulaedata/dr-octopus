@@ -2,7 +2,6 @@
  * @author Codex
  * @description Defines request data contracts accepted by Session HTTP endpoints.
  */
-
 import type { DeleteSessionOptionsDto, SessionPreferencesDto } from '@octopus/shared/protocol';
 
 export interface WorkspaceParams {

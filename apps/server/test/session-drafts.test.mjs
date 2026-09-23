@@ -12,10 +12,10 @@ import test from 'node:test';
 import Fastify from 'fastify';
 import { createDatabase } from '../dist/db/client.js';
 import { SessionsRepository } from '../dist/modules/sessions/sessions.repository.js';
-import { SessionsService } from '../dist/modules/sessions/sessions.service.js';
-import { SessionDraftsService } from '../dist/modules/sessions/session-drafts.service.js';
-import { registerSessionDraftsController } from '../dist/modules/sessions/session-drafts.controller.js';
-import { SessionRuntimeCoordinator } from '../dist/lib/runtime/index.js';
+import { createSessionsService } from '../dist/modules/sessions/index.js';
+import { SessionDraftsService } from '../dist/modules/sessions/sessions.service.js';
+import { registerSessionDraftsController } from '../dist/modules/sessions/sessions.controller.js';
+import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/index.js';
 
 /**
  * Creates deterministic unpublished metadata with the same repository contract as production.
@@ -157,7 +157,7 @@ test('HTTP prepare and first prompt reuse one real RPC child and never publish a
       },
     },
   });
-  const sessions = new SessionsService(server, {
+  const sessions = createSessionsService(server, {
     runtime,
     sessionsRepository: repository,
     workspaceService: { resolve: async () => workspace },

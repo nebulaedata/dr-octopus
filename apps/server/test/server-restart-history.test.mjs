@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { RestartHistory } from '../dist/lib/lifecycle/operations.js';
+import { RestartHistory } from '../dist/infrastructure/lifecycle/operations.js';
 
 test('history refuses overflow until terminal TTL expires and preserves active operations', (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: 1_000_000 });

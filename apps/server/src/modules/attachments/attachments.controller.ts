@@ -14,21 +14,23 @@
  * - DELETE /api/workspaces/:workspaceId/attachments/:id
  */
 
-import { randomUUID } from 'node:crypto';
-import { Server as TusServer } from '@tus/server';
 import {
   AttachmentErrorResponseJsonSchema,
   AttachmentListResponseJsonSchema,
   AttachmentMutationRequestJsonSchema,
   AttachmentResourceJsonSchema,
 } from '@octopus/shared/protocol/attachments';
-import { ApplicationError } from '../../lib/errors/application-error.js';
-import { toPublicError } from '../../lib/errors/public-error.js';
-import { negotiateLocale } from '../../lib/i18n/negotiate-locale.js';
-import { SqliteTusDataStore } from './sqlite-tus-datastore.js';
-import type { AttachmentsService } from './attachments.service.js';
-import type { WorkspacesService } from '../workspaces/workspaces.service.js';
+import { Server as TusServer } from '@tus/server';
+import { randomUUID } from 'node:crypto';
+import { ApplicationError } from '../../infrastructure/errors/application-error.js';
+import { toPublicError } from '../../infrastructure/errors/public-error.js';
+import { negotiateLocale } from '../../infrastructure/i18n/negotiate-locale.js';
+import { registerErrorMessages } from '../../infrastructure/i18n/error-catalog.js';
+import type { DataStore } from '@tus/server';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { WorkspacesService } from '../workspaces/index.js';
+import type { AttachmentsService } from './attachments.service.js';
+import type { ErrorMessageCatalog } from '../../infrastructure/i18n/error-catalog.js';
 
 interface WorkspaceParams {
   workspaceId: string;
@@ -64,7 +66,8 @@ const attachmentErrors = {
 export function registerAttachmentsController(
   server: FastifyInstance,
   attachments: AttachmentsService,
-  workspaces: WorkspacesService
+  workspaces: WorkspacesService,
+  datastore: DataStore
 ): void {
   if (!server.hasContentTypeParser('application/offset+octet-stream')) {
     server.addContentTypeParser('application/offset+octet-stream', (_request, _payload, done) => done(null));
@@ -81,7 +84,6 @@ export function registerAttachmentsController(
       },
     });
   });
-  const datastore = new SqliteTusDataStore(attachments.repository, attachments.blobStore);
   const tus = new TusServer({
     path: '/api/workspaces',
     datastore,
@@ -406,4 +408,33 @@ function requireIfMatch(value: string | string[] | undefined, id: string, revisi
       { statusCode: 409, retryable: true }
     );
   }
+}
+
+/**
+ * Attachment-domain message variants keyed by stable error code.
+ */
+export const attachmentErrorMessages: ErrorMessageCatalog = {
+  ATTACHMENT_NOT_FOUND: [
+    { en: 'The attachment was not found.', 'zh-CN': '附件不存在或已被删除。' },
+    {
+      match: '附件原文不可用',
+      en: 'The attachment content is unavailable.',
+      'zh-CN': '附件原文不可用',
+    },
+  ],
+  ATTACHMENT_NOT_READY: [
+    { en: 'The attachment is not ready yet.', 'zh-CN': '附件尚未准备好。' },
+    {
+      match: '附件原文尚未准备好',
+      en: 'The attachment content is not ready yet.',
+      'zh-CN': '附件原文尚未准备好',
+    },
+  ],
+};
+
+/**
+ * Merges the attachment-domain catalog into the shared error-message registry at Server boot.
+ */
+export function registerAttachmentErrorMessages(): void {
+  registerErrorMessages('attachments', attachmentErrorMessages);
 }
