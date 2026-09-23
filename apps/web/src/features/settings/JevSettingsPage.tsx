@@ -158,7 +158,10 @@ function JevSettingsForm({ settings }: { settings: JevSettingsSnapshot }) {
                       </Alert>
                     )}
                     <FieldDescription>
-                      {t('settings.jev.modelHelp', 'Version IDs stay fixed; aliases track releases.')}
+                      {t(
+                        'settings.jev.modelHelp',
+                        'Besides specific versions, select jev-latest to automatically use the latest version.'
+                      )}
                     </FieldDescription>
                   </Field>
                 );
@@ -296,7 +299,7 @@ function JevCredentialForm({ settings }: { settings: JevSettingsSnapshot }) {
                   <FieldDescription>
                     {t(
                       'settings.jev.keyHelp',
-                      'Saved as TYPESAFE_API_KEY. Restart running agents after changes.'
+                      'Used to connect to Jev. Save the key to test the connection.'
                     )}
                   </FieldDescription>
                 </Field>
