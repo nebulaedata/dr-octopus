@@ -3,7 +3,7 @@
  * @description Orchestrates Lexical drafting, Workspace references, commands, attachments, Agent controls, and realtime prompt routing.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useMemoizedFn } from 'ahooks';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -44,6 +44,7 @@ import { ExtensionDialogHost } from './ExtensionDialogHost';
 import { useComposerReferences } from './hooks/use-composer-references';
 import { registerAttachmentUploadTask, unregisterAttachmentUploadTask } from '@/stores/session';
 import { toWorkspaceReferences } from '@/features/session/utils/workspace-reference-payload';
+import type { Ref } from 'react';
 import type { WorkspaceReferenceDto, DraftControls } from '@octopus/shared/protocol';
 import type { KnowledgeModeState, KnowledgeModeConfig } from '@octopus/shared/protocol/knowledge';
 import type { CommandDto, ModelDto, SessionDto, ThinkingLevel } from '@octopus/shared/protocol';
@@ -54,7 +55,15 @@ import type { RunningMessageMode } from './RunningMessageControls';
 import type { AgentWorkMode } from './WorkModeSelect';
 import type { ComposerAttachmentViewModel, SessionStoreApi } from '@/stores/session';
 
+export interface ComposerHandle {
+  /**
+   * Replaces the message text and focuses the editor without submitting or changing attachments.
+   */
+  fillDraft(text: string): void;
+}
+
 export interface ComposerProps {
+  ref?: Ref<ComposerHandle>;
   initialDraft?: ComposerDraft;
   followDefaultModel?: boolean;
   modelMenuOpen?: boolean;
@@ -114,6 +123,7 @@ export interface ComposerProps {
  * Routes settled prompts and running steer/follow-up messages through the realtime interface.
  */
 export function Composer({
+  ref,
   commands,
   submitDisabled = false,
   connecting = false,
@@ -505,6 +515,19 @@ export function Composer({
     store.getState().setDraft(nextDraft.text);
     onDraftChange?.(nextDraft);
   });
+
+  useImperativeHandle(ref, () => ({
+    /**
+     * Keeps the durable draft and submit snapshot aligned with an explicit external text replacement.
+     */
+    fillDraft(text: string): void {
+      if (interactionDisabled) {
+        return;
+      }
+      handleDraftChange({ text, references: [] });
+      editorRef.current?.focus();
+    },
+  }));
 
   /**
    * Routes Lexical's alternate Enter gesture to the running follow-up queue.

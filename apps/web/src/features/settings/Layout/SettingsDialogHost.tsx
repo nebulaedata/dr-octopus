@@ -26,6 +26,7 @@ import { LanguageSettingsPage } from '../language/LanguageSettingsPage';
 import { MemorySettingsPage } from '../memory/MemorySettingsPage';
 import { JevSettingsPage } from '../JevSettingsPage';
 import { ShortcutsSettingsPage } from '../shortcuts/ShortcutsSettingsPage';
+import { SnippetsSettingsPage } from '../snippets/SnippetsSettingsPage';
 import { useI18n } from '@/i18n/use-i18n';
 import type { ReactNode } from 'react';
 import type { SettingsModalLocation, SettingsPath } from '@/router/settings-modal';
@@ -133,6 +134,8 @@ function SettingsDialogPage({
       return <LanguageSettingsPage />;
     case '/settings/appearance/shortcuts':
       return <ShortcutsSettingsPage />;
+    case '/settings/appearance/snippets':
+      return <SnippetsSettingsPage />;
     default:
       return <SettingsPlaceholderPage pathname={location.path satisfies SettingsPath} />;
   }

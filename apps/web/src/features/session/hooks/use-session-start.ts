@@ -38,6 +38,11 @@ export function useSessionStart(workspaceId: string, sessionId: string, missing 
       if (draft.submission?.submissionId !== data.submissionId) {
         continue;
       }
+      if (draft.submission.draftId !== id) {
+        // A quick phrase owns a separate request draft; retain the untouched composer and attachments.
+        drafts.submission(id, undefined);
+        continue;
+      }
       drafts.accepted(id, draft.submission.draftVersion);
       if (draft.version === draft.submission.draftVersion) {
         if (useWorkbenchHome.getState().draftIds[workspaceId] === id) {

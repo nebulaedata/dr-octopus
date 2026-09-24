@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/nebulaedata/dr-octopus/main/apps/web/public/logo-256.png" alt="Dr.Octopus logo" width="144" height="144" />
+  <img src="https://raw.githubusercontent.com/nebulaedata/dr-octopus/main/apps/web/public/brand/logo-256.png" alt="Dr.Octopus logo" width="144" height="144" />
 </p>
 
 <h1 align="center">Dr.Octopus</h1>

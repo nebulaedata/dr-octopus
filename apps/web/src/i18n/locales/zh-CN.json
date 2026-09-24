@@ -68,6 +68,10 @@
     },
     "readyTitle": "我是 Dr.Octopus，今天想做点什么呢？",
     "separateDraft": "保留输入并另建会话",
+    "snippets": {
+      "fill": "点击填充",
+      "send": "点击即发送"
+    },
     "statusUnavailable": "暂时无法确认提交状态，请重试查询同一请求。"
   },
   "knowledge": {
@@ -1728,7 +1732,7 @@
         "label": "快捷键"
       },
       "snippets": {
-        "description": "快捷短语配置尚未开放。",
+        "description": "配置最多 4 条快捷短语及其智能体模式。",
         "label": "快捷短语"
       },
       "theme": {
@@ -2223,6 +2227,26 @@
       "resetAllTitle": "恢复全部默认快捷键？",
       "searchPlaceholder": "搜索快捷键",
       "title": "快捷键"
+    },
+    "snippets": {
+      "action": "点击行为",
+      "add": "添加短语",
+      "cardTitle": "卡片标题",
+      "count_other": "{{count}} / 4 条短语",
+      "description": "在本机保存最多 4 条快捷短语，选择绑定的智能体模式，并设置点击时直接发送或填充输入框。",
+      "empty": "常用问答，一键开始",
+      "emptyDescription": "添加常用的提问或任务，并选择智能体的处理模式。",
+      "fill": "填充",
+      "message": "发送内容",
+      "messagePlaceholder": "你希望智能体帮你完成什么？",
+      "messageRequired": "请输入要发送的内容。",
+      "number": "短语 {{number}}",
+      "remove": "删除短语",
+      "saved": "快捷短语已保存",
+      "send": "发送",
+      "title": "快捷短语",
+      "titlePlaceholder": "例如：帮我规划今天的工作",
+      "titleRequired": "请输入卡片标题。"
     }
   },
   "skills": {

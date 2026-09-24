@@ -22,7 +22,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       <MarkdownRenderTheme />
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>{children}</TooltipProvider>
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} buttonPosition="top-left" />}
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />}
       </QueryClientProvider>
     </ThemeProvider>
   );

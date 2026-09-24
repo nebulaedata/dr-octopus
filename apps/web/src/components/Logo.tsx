@@ -1,6 +1,6 @@
 /**
  * @author Codex
- * @description Renders the application logo inside a polished, dimensional accent container with light and shadow.
+ * @description Renders the 3D application logo at compact navigation sizes.
  */
 
 export interface LogoProps {
@@ -13,12 +13,12 @@ export interface LogoProps {
   size?: 'xs' | 'sm' | 'lg';
   /**
    * Source URL for the logo image.
-   * @default `${import.meta.env.BASE_URL}logo-256.png`
+   * @default `${import.meta.env.BASE_URL}brand/logo-128.png`
    */
   imgSrc?: string;
   /**
    * Accessible text description of the logo.
-   * @default 'logo'
+   * @default 'Dr.Octopus logo'
    */
   alt?: string;
 }
@@ -29,38 +29,19 @@ const logoSizeClasses: Record<NonNullable<LogoProps['size']>, { container: strin
   lg: { container: 'size-11', image: 'size-10' },
 };
 
-const DEFAULT_LOGO_SRC = `${import.meta.env.BASE_URL}logo-256.png`;
+const DEFAULT_LOGO_SRC = `${import.meta.env.BASE_URL}brand/logo-128.png`;
 
 /**
- * Displays the application logo with a glassy, light-aware accent backing and subtle depth.
- * The image itself is left untouched; all visual flair lives on the surrounding container.
+ * Displays the 3D logo without adding highlights over the artwork.
  */
-export function Logo({ size = 'sm', imgSrc = DEFAULT_LOGO_SRC, alt = 'logo' }: LogoProps) {
+export function Logo({ size = 'sm', imgSrc = DEFAULT_LOGO_SRC, alt = 'Dr.Octopus logo' }: LogoProps) {
   const classes = logoSizeClasses[size];
 
   return (
     <span
-      className={`
-        group relative grid shrink-0 place-items-center overflow-hidden
-        rounded-2xl bg-linear-to-br from-accent via-accent to-accent/75
-        shadow-[0_12px_40px_-12px_hsl(var(--accent)/0.4),0_4px_12px_-4px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.05)]
-        ring-1 ring-white/15 ring-inset
-        transition-all duration-500 ease-out
-        hover:scale-[1.03] hover:-translate-y-0.5
-        hover:shadow-[0_20px_50px_-16px_hsl(var(--accent)/0.5),0_8px_20px_-6px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-1px_0_rgba(0,0,0,0.05)]
-        ${classes.container}
-      `}
+      className={`group grid shrink-0 place-items-center rounded-xl bg-accent/70 shadow-sm ring-1 ring-border/50 transition-transform duration-200 hover:-translate-y-0.5 ${classes.container}`}
     >
-      {/* Glossy top light source. */}
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/30 via-white/10 to-transparent" />
-
-      {/* Grounding bottom reflection. */}
-      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-black/10 to-transparent" />
-
-      {/* Sweeping light ray that glides across the container on hover. */}
-      <span className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-in-out group-hover:translate-x-full" />
-
-      <img className={`relative z-10 object-contain ${classes.image}`} src={imgSrc} alt={alt} />
+      <img className={`object-contain ${classes.image}`} src={imgSrc} alt={alt} draggable={false} />
     </span>
   );
 }

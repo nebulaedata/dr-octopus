@@ -6,7 +6,7 @@ export { AttachmentDiagnostics } from './AttachmentDiagnostics';
 export { BackgroundTasksPanel } from './BackgroundTasksPanel';
 export { CompactionMarker } from './CompactionMarker';
 export { Composer } from './Composer';
-export type { ComposerProps } from './Composer';
+export type { ComposerHandle, ComposerProps } from './Composer';
 export { ComposerAttachments } from './ComposerAttachments';
 export type { ComposerAttachmentsProps } from './ComposerAttachments';
 export { ContextUsageIndicator } from './ContextUsageIndicator';

@@ -28,6 +28,7 @@ import {
   SettingsLayoutRoute,
   SettingsPlaceholderRoute,
   ShortcutsSettingsRoute,
+  SnippetsSettingsRoute,
   SkillsRoute,
   WorkbenchLayoutRoute,
   WorkspaceRoute,
@@ -169,7 +170,6 @@ const mcpServersRoute = createRoute({
 
 const placeholderSettingsPaths = [
   'appearance/theme',
-  'appearance/snippets',
   'about/version',
   'about/company',
   'about/licenses',
@@ -193,6 +193,11 @@ const languageSettingsRoute = createRoute({
   path: 'appearance/language',
   getParentRoute: () => settingsLayoutRoute,
   component: LanguageSettingsRoute,
+});
+const snippetsSettingsRoute = createRoute({
+  path: 'appearance/snippets',
+  getParentRoute: () => settingsLayoutRoute,
+  component: SnippetsSettingsRoute,
 });
 const shortcutsSettingsRoute = createRoute({
   path: 'appearance/shortcuts',
@@ -258,6 +263,7 @@ const routeTree = rootRoute.addChildren([
       jevSettingsRoute,
       languageSettingsRoute,
       shortcutsSettingsRoute,
+      snippetsSettingsRoute,
       environmentRoute,
       serverSettingsRoute,
       permissionsRoute,

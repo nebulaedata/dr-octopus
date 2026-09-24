@@ -1,6 +1,6 @@
 /**
  * @author Codex
- * @description Animates the original Dr.Octopus artwork with expressive eyes, water interactions, and a prop-controlled loading state using native SVG.
+ * @description Animates the eyeless 3D Dr.Octopus artwork with expressive eyes, water interactions, and loading feedback.
  */
 import { useId } from 'react';
 import { useOctopusLogoMotion } from './use-octopus-logo-motion';
@@ -19,10 +19,10 @@ export interface OctopusLogoProps {
   loading?: boolean;
 }
 
-const ORIGINAL_LOGO_SRC = `${import.meta.env.BASE_URL}logo-256.png`;
+const MASCOT_SRC = `${import.meta.env.BASE_URL}brand/logo-animated-base-256.png`;
 
 /**
- * Displays the mascot with pointer-following eyes and an optional loading loop.
+ * Displays the 3D mascot with blinking, pointer-following eyes, and reaction motion.
  */
 export function OctopusLogo({ className, label = 'Dr.Octopus', loading = false }: OctopusLogoProps) {
   const waveClipId = useId();
@@ -57,6 +57,15 @@ export function OctopusLogo({ className, label = 'Dr.Octopus', loading = false }
     >
       <title>{loading ? `${label}, loading` : label}</title>
       <defs>
+        <radialGradient id={`${waveClipId}-eye-white`} cx="38%" cy="29%" r="73%">
+          <stop stopColor="#fff" />
+          <stop offset="0.7" stopColor="#fffaf4" />
+          <stop offset="1" stopColor="#e8c9ba" />
+        </radialGradient>
+        <radialGradient id={`${waveClipId}-pupil`} cx="35%" cy="28%" r="70%">
+          <stop stopColor="#38313a" />
+          <stop offset="1" stopColor="#14121c" />
+        </radialGradient>
         <clipPath id={waveClipId}>
           <ellipse cx="64" cy="113" rx="64" ry="12" />
         </clipPath>
@@ -123,37 +132,31 @@ export function OctopusLogo({ className, label = 'Dr.Octopus', loading = false }
                 />
               )}
               <g transform="translate(-64 -110)">
-                <image
-                  href={ORIGINAL_LOGO_SRC}
-                  width="128"
-                  height="128"
-                  preserveAspectRatio="xMidYMid meet"
-                />
-
-                <g fill="#fb472b">
-                  <ellipse cx="49.75" cy="46.5" rx="8" ry="8" />
-                  <ellipse cx="78" cy="46.5" rx="8" ry="8" />
-                </g>
-                <g transform="translate(0 46.5)">
-                  <g>
-                    <animateTransform
-                      attributeName="transform"
-                      type="scale"
-                      values="1 1;1 1;1 0.08;1 1;1 1;1 0.08;1 1;1 1;1 0.08;1 1;1 1;1 0.08;1 1;1 1"
-                      keyTimes="0;0.144;0.15;0.157;0.477;0.483;0.49;0.811;0.817;0.824;0.838;0.844;0.851;1"
-                      keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"
-                      calcMode="spline"
-                      dur="12.6s"
-                      repeatCount="indefinite"
-                    />
-                    <g transform="translate(0 -46.5)">
-                      <ellipse cx="49.75" cy="46.5" fill="#fff" rx="7" ry="7.3" />
-                      <ellipse cx="78" cy="46.5" fill="#fff" rx="7" ry="7.3" />
-                      <g ref={pupilsRef}>
-                        <circle cx="49.75" cy="46.5" fill="#171717" r="4.7" />
-                        <circle cx="78" cy="46.5" fill="#171717" r="4.7" />
-                        <circle cx="48.25" cy="44.8" fill="#fff" r="1.4" />
-                        <circle cx="76.5" cy="44.8" fill="#fff" r="1.4" />
+                <image href={MASCOT_SRC} width="128" height="128" preserveAspectRatio="xMidYMid meet" />
+                <g aria-hidden="true" pointerEvents="none">
+                  <g transform="translate(0 48.5)">
+                    <g>
+                      <animateTransform
+                        attributeName="transform"
+                        type="scale"
+                        values="1 1;1 1;1 0.08;1 1;1 1;1 0.08;1 1;1 1;1 0.08;1 1;1 1;1 0.08;1 1;1 1"
+                        keyTimes="0;0.144;0.15;0.157;0.477;0.483;0.49;0.811;0.817;0.824;0.838;0.844;0.851;1"
+                        keySplines="0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1;0.42 0 0.58 1"
+                        calcMode="spline"
+                        dur="12.6s"
+                        repeatCount="indefinite"
+                      />
+                      <g transform="translate(0 -48.5)">
+                        <ellipse cx="49.5" cy="49" fill="#9f2638" opacity="0.45" rx="7.7" ry="7.8" />
+                        <ellipse cx="78.5" cy="49" fill="#9f2638" opacity="0.45" rx="7.7" ry="7.8" />
+                        <ellipse cx="49.5" cy="48.5" fill={`url(#${waveClipId}-eye-white)`} rx="7" ry="7.2" />
+                        <ellipse cx="78.5" cy="48.5" fill={`url(#${waveClipId}-eye-white)`} rx="7" ry="7.2" />
+                        <g ref={pupilsRef} data-testid="octopus-pupils">
+                          <circle cx="49.5" cy="48.5" fill={`url(#${waveClipId}-pupil)`} r="4.7" />
+                          <circle cx="78.5" cy="48.5" fill={`url(#${waveClipId}-pupil)`} r="4.7" />
+                          <circle cx="48" cy="46.8" fill="#fff" r="1.35" />
+                          <circle cx="77" cy="46.8" fill="#fff" r="1.35" />
+                        </g>
                       </g>
                     </g>
                   </g>

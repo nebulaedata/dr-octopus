@@ -28,10 +28,11 @@ The imported skill sources are also recorded in skills-lock.json.
 ## Icons and artwork
 
 The maintainer identifies [iconfont](https://www.iconfont.cn/) as the download
-source for model/provider icons and project logos, including
-apps/web/public/assets/llm/, favicon.png, logo-128.png and logo-256.png.
-These assets are excluded from the project's MIT grant. Their respective authors
-and trademark owners retain their rights; use does not imply endorsement.
+source for model/provider icons and the former project logo. The current 3D
+artwork in apps/web/public/brand/ was created using the former logo as a shape
+and facial reference. These assets are excluded from the project's MIT grant.
+Their respective authors and trademark owners retain their rights; use does not
+imply endorsement.
 
 Specific icon-set/item links, authors and redistribution terms have not yet been
 provided. A platform download source alone does not establish redistribution

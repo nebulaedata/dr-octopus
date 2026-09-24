@@ -1,22 +1,22 @@
 /**
  * @author Codex
- * @description Coordinates loading playback, pointer tracking, and transient feedback on the mascot's native SVG timeline.
+ * @description Coordinates eye tracking, loading playback, and transient feedback on the mascot's native SVG timeline.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 
 /**
- * Points both pupils toward one viewport coordinate while keeping them inside the eye whites.
+ * Points both pupils toward a viewport coordinate while keeping them inside the eye whites.
  *
  * @param logo SVG mascot defining the pointer coordinate space.
  * @param pupils Eye group receiving the SVG translation.
- * @param clientX Horizontal pointer coordinate in the viewport.
- * @param clientY Vertical pointer coordinate in the viewport.
+ * @param clientX Horizontal viewport coordinate.
+ * @param clientY Vertical viewport coordinate.
  */
 function pointPupilsAt(logo: SVGSVGElement, pupils: SVGGElement, clientX: number, clientY: number): void {
   const bounds = logo.getBoundingClientRect();
   const deltaX = clientX - (bounds.left + bounds.width / 2);
-  const deltaY = clientY - (bounds.top + bounds.height * (46.5 / 128));
+  const deltaY = clientY - (bounds.top + bounds.height * (48.5 / 128));
   const distance = Math.hypot(deltaX, deltaY);
   const strength = Math.min(1, distance / 160);
   const directionX = distance === 0 ? 0 : deltaX / distance;
@@ -58,7 +58,7 @@ export function useOctopusLogoMotion(loading = false) {
     }
 
     /**
-     * Keeps the original animation regardless of system motion preferences, pausing only idle mouse hover.
+     * Keeps mascot animation running, pausing only idle mouse hover.
      */
     function syncPlayback(): void {
       if (logo === null) {
@@ -94,9 +94,9 @@ export function useOctopusLogoMotion(loading = false) {
         input.consumedInput = input.lastInput;
         setIsContinuing(true);
         /**
-         * Selects inputinterval130 in the existing condition order.
+         * Selects the reaction pace from the recent typing interval.
          */
-        function selectBlinkDuration() {
+        function selectReactionDuration() {
           if (input.interval < 130) {
             return 0.44 as const;
           } else if (input.interval < 260) {
@@ -105,7 +105,7 @@ export function useOctopusLogoMotion(loading = false) {
             return 0.72 as const;
           }
         }
-        setReactionDuration(selectBlinkDuration());
+        setReactionDuration(selectReactionDuration());
         setReactionStart(logo.getCurrentTime());
       } else {
         setReactionStart(null);
@@ -134,7 +134,7 @@ export function useOctopusLogoMotion(loading = false) {
     let pointerY = window.innerHeight / 2;
 
     /**
-     * Applies the latest pointer sample once per animation frame.
+     * Applies the latest pointer position once per animation frame.
      */
     function renderPupilDirection(): void {
       frame = undefined;
@@ -144,14 +144,13 @@ export function useOctopusLogoMotion(loading = false) {
     }
 
     /**
-     * Schedules a pupil update without causing a React render.
+     * Tracks pointer movement without triggering a React render.
      */
     function handlePointerMove(event: globalThis.PointerEvent): void {
       pointerX = event.clientX;
       pointerY = event.clientY;
       frame ??= window.requestAnimationFrame(renderPupilDirection);
     }
-
     /**
      * Observes text and IME activity without modifying editor events, selections, or composition contents.
      */

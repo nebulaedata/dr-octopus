@@ -62,6 +62,20 @@ test('idle SVG floats and resumes after mouse leave regardless of system motion 
   await page.goto(new URL('/workspaces/workspace-e2e', baseURL).href);
   const logo = page.getByRole('button', { name: 'Dr.Octopus, click to splash', exact: true });
   await expect(logo).toBeVisible();
+  const mascotImage = logo.locator('image');
+  await expect(mascotImage).toHaveAttribute('href', /brand\/logo-animated-base-256\.png$/);
+  const mascotUrl = await mascotImage.getAttribute('href');
+  expect((await page.request.get(new URL(mascotUrl, baseURL).href)).status()).toBe(200);
+  const pupils = logo.getByTestId('octopus-pupils');
+  await expect(pupils).toBeAttached();
+  await expect(logo.locator('animateTransform[dur="12.6s"]')).toBeAttached();
+  await page.mouse.move(0, 0);
+  await expect.poll(() => pupils.getAttribute('transform')).toMatch(/^translate\(/);
+  const leftGaze = await pupils.getAttribute('transform');
+  await page.mouse.move(1200, 0);
+  await expect.poll(() => pupils.getAttribute('transform')).not.toBe(leftGaze);
+  const faviconUrl = await page.locator('link[rel="icon"][type="image/x-icon"]').getAttribute('href');
+  expect((await page.request.get(new URL(faviconUrl, baseURL).href)).status()).toBe(200);
   const initial = await logo.evaluate((svg) => svg.getCurrentTime());
   await expect.poll(() => logo.evaluate((svg) => svg.getCurrentTime())).toBeGreaterThan(initial + 0.1);
   const initialTransform = await logo.locator('image').evaluate((image) => image.getCTM().f);
@@ -77,6 +91,17 @@ test('idle SVG floats and resumes after mouse leave regardless of system motion 
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await expect.poll(() => logo.evaluate((svg) => svg.animationsPaused())).toBe(false);
   await page.screenshot({ path: '.playwright-artifacts/logo-playback.png' });
+  const blinkScale = await logo.evaluate((svg) => {
+    const pupilGroup = svg.querySelector('[data-testid="octopus-pupils"]');
+    svg.pauseAnimations();
+    svg.setCurrentTime(0);
+    const open = Math.hypot(pupilGroup.getCTM().c, pupilGroup.getCTM().d);
+    svg.setCurrentTime(12.6 * 0.15);
+    const closed = Math.hypot(pupilGroup.getCTM().c, pupilGroup.getCTM().d);
+    svg.unpauseAnimations();
+    return { open, closed };
+  });
+  expect(blinkScale.closed).toBeLessThan(blinkScale.open * 0.2);
 });
 
 test('reduced motion at startup preserves floating, splash and typing reactions on touch devices', async (t) => {

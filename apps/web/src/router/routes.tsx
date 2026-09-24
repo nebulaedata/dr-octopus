@@ -121,6 +121,20 @@ export function KnowledgeSettingsRoute() {
 const LazySettingsPlaceholderPage = lazy(() =>
   loadSettingsModule().then((module) => ({ default: module.SettingsPlaceholderPage }))
 );
+const LazySnippetsSettingsPage = lazy(() =>
+  loadSettingsModule().then((module) => ({ default: module.SnippetsSettingsPage }))
+);
+
+/**
+ * Renders the same quick phrase editor for canonical URLs and settings dialogs.
+ */
+export function SnippetsSettingsRoute() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <LazySnippetsSettingsPage />
+    </Suspense>
+  );
+}
 
 /**
  * 渲染仅供工作台页面共享的布局出口。

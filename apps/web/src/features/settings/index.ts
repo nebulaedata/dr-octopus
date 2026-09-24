@@ -77,3 +77,4 @@ export { ServerSettingsPage } from './server/ServerSettingsPage';
 export { ShortcutRecorder } from './shortcuts/ShortcutRecorder';
 export type { ShortcutRecorderProps } from './shortcuts/ShortcutRecorder';
 export { ShortcutsSettingsPage } from './shortcuts/ShortcutsSettingsPage';
+export { SnippetsSettingsPage } from './snippets/SnippetsSettingsPage';

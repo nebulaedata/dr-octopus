@@ -151,10 +151,13 @@ function getSettingsNavigation(t: Translate): SettingsNavigationGroup[] {
         },
         {
           label: t('settings.nav.snippets.label', 'Snippets'),
-          description: t('settings.nav.snippets.description', 'Snippet configuration is not available yet.'),
+          description: t(
+            'settings.nav.snippets.description',
+            'Configure up to 4 quick phrases and their Agent modes.'
+          ),
           path: '/settings/appearance/snippets',
           icon: MessageSquareTextIcon,
-          pageType: 'placeholder',
+          pageType: 'complete',
         },
       ],
     },

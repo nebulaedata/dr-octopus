@@ -2,16 +2,18 @@
  * @author Codex
  * @description Presents process-independent drafting, model selection and recoverable first-message submission.
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@octopus/ui/components/button';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
 import { OctopusLogo } from '@/components/OctopusLogo';
 import { Composer } from '@/features/session';
 import { ModelSetupDialog } from './ModelSetupDialog';
+import { HomeSnippets } from './HomeSnippets';
 import { useHomeDrafts } from '@/stores/home-drafts';
 import { useWorkbenchHome } from '@/stores/workbench-home';
 import { useI18n } from '@/i18n/use-i18n';
 import { useHomeDraft } from '@/features/home/hooks/use-home-draft';
+import type { ComposerHandle } from '@/features/session';
 
 /**
  * Retains the existing local draft identity without prewarming a process.
@@ -42,6 +44,7 @@ function HomeDraft({
 }) {
   const { t } = useI18n();
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const composerRef = useRef<ComposerHandle>(null);
   const {
     draft,
     error,
@@ -54,6 +57,7 @@ function HomeDraft({
     session,
     initialDraft,
     submit,
+    submitSnippet,
     post,
     separateDraft,
     conflict,
@@ -95,6 +99,7 @@ function HomeDraft({
           onChooseModel={() => setModelMenuOpen(true)}
         />
         <Composer
+          ref={composerRef}
           variant="home"
           session={session}
           commands={[]}
@@ -116,6 +121,17 @@ function HomeDraft({
               .select(id, { mode: 'explicit', provider: provider!, modelId: model.join('/') });
           }}
           onFirstSubmit={submit}
+        />
+        <HomeSnippets
+          disabled={pending}
+          onActivate={(snippet) => {
+            if (snippet.action === 'fill') {
+              useHomeDrafts.getState().controls(id, { workMode: snippet.workMode, knowledge: undefined });
+              composerRef.current?.fillDraft(snippet.message);
+            } else {
+              void submitSnippet(snippet);
+            }
+          }}
         />
         {(error || operation.data?.error || operation.isError) && (
           <Alert variant="destructive" className="mt-3">

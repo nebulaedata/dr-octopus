@@ -110,7 +110,10 @@ export function ProviderCatalog(props: ProviderCatalogProps) {
                 <EmptyDescription>
                   {search.length > 0
                     ? t('settings.providers.noMatchDescription', 'Try another name or Provider ID.')
-                    : t('settings.providers.emptyDescription', 'Use the button below to add a local model provider.')}
+                    : t(
+                        'settings.providers.emptyDescription',
+                        'Use the button below to add a local model provider.'
+                      )}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -126,12 +129,14 @@ export function ProviderCatalog(props: ProviderCatalogProps) {
               aria-current={provider.providerKey === props.selectedProviderKey ? 'page' : undefined}
               onClick={() => props.onSelect(provider.providerKey)}
             >
-              <Avatar>
+              <Avatar className="after:border-0 dark:bg-white">
                 <AvatarImage
                   src={getProviderAvatarSrc(provider)}
                   alt={t('settings.providers.avatarAlt', '{{name}} avatar', { name: provider.name })}
                 />
-                <AvatarFallback>{provider.name.slice(0, 1).toLocaleUpperCase()}</AvatarFallback>
+                <AvatarFallback className="font-geist font-semibold">
+                  {provider.name.slice(0, 1).toLocaleUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-medium" title={provider.name}>

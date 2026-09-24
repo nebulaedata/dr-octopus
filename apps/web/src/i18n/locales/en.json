@@ -69,6 +69,10 @@
     },
     "readyTitle": "I'm Dr.Octopus — what would you like to do today?",
     "separateDraft": "Keep input in a separate conversation",
+    "snippets": {
+      "fill": "Click to fill",
+      "send": "Click to send"
+    },
     "statusUnavailable": "Submission status is unavailable. Retry to check the same request."
   },
   "knowledge": {
@@ -2272,6 +2276,27 @@
       "resetAllTitle": "Reset all shortcuts?",
       "searchPlaceholder": "Search shortcuts",
       "title": "Keyboard shortcuts"
+    },
+    "snippets": {
+      "action": "On click",
+      "add": "Add phrase",
+      "cardTitle": "Card title",
+      "count_one": "{{count}} / 4 phrases",
+      "count_other": "{{count}} / 4 phrases",
+      "description": "Save up to 4 phrases on this device. Click a home card to send its message in the selected Agent mode.",
+      "empty": "Your next conversation, one click away",
+      "emptyDescription": "Add a frequently used request and choose how your Agent should handle it.",
+      "fill": "Fill",
+      "message": "Message",
+      "messagePlaceholder": "What would you like your Agent to do?",
+      "messageRequired": "Enter a message to send.",
+      "number": "Phrase {{number}}",
+      "remove": "Remove phrase",
+      "saved": "Quick phrases saved",
+      "send": "Send",
+      "title": "Quick phrases",
+      "titlePlaceholder": "For example: Plan my day",
+      "titleRequired": "Enter a card title."
     }
   },
   "skills": {

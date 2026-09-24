@@ -15,6 +15,7 @@ import { sessionStores, persistAttachmentDraft } from '@/stores/session';
 import { conversationStartReceiptOptions } from '@/queries/conversation-start-queries';
 import { useI18n } from '@/i18n/use-i18n';
 import type { SessionDto, WorkspaceReferenceDto, ConversationStartInput } from '@octopus/shared/protocol';
+import type { Snippet } from '@/stores/snippets';
 
 /**
  * Preserves editing and request identity while exposing semantic recovery operations to the page.
@@ -94,7 +95,8 @@ export function useHomeDraft(workspaceId: string, id: string, onSeparate: (id: s
   async function submit(
     message: string,
     attachmentIds: string[],
-    workspaceReferences: WorkspaceReferenceDto[]
+    workspaceReferences: WorkspaceReferenceDto[],
+    snippet?: Snippet
   ) {
     if (!selected || catalog.isError) {
       requestModelSetup();
@@ -106,17 +108,30 @@ export function useHomeDraft(workspaceId: string, id: string, onSeparate: (id: s
         ? current.submission
         : {
             submissionId: uuidv4(),
-            draftId: id,
+            draftId: snippet ? uuidv4() : id,
             draftVersion: current.version,
             message,
             attachmentIds,
             workspaceReferences,
             selection: current.selection,
-            controls: current.controls,
+            controls: snippet
+              ? { ...current.controls, workMode: snippet.workMode, knowledge: undefined }
+              : current.controls,
           };
     store.getState().setError(undefined);
     useHomeDrafts.getState().submission(id, request);
     await post(request, !current.submission || ['failed', 'cancelled'].includes(status ?? ''));
+  }
+  /**
+   * Uses an independent draft identity so quick starts never consume the composer's saved input or attachments.
+   * Existing in-flight submissions retain their identity and cannot be replaced by a second card click.
+   */
+  async function submitSnippet(snippet: Snippet) {
+    const current = useHomeDrafts.getState().drafts[id];
+    if (current?.submission && !['failed', 'cancelled'].includes(status ?? '')) {
+      return;
+    }
+    await submit(snippet.message, [], [], snippet);
   }
   /**
    * Adopts the winning operation when another tab submitted the identical draft first.
@@ -188,6 +203,7 @@ export function useHomeDraft(workspaceId: string, id: string, onSeparate: (id: s
     session,
     initialDraft,
     submit,
+    submitSnippet,
     post,
     separateDraft,
     conflict,
