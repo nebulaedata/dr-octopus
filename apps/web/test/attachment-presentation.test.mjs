@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { MessageAttachmentSchema } from '@octopus/shared/protocol/attachments';
+import ts from 'typescript';
 
 test('accepts the explicit Markdown preview mode and rejects renderer guesses outside the wire contract', () => {
   const attachment = {
@@ -83,7 +84,35 @@ test('Composer and Conversation share the wheel-enabled horizontal area without 
 
   assert.match(area, /useEventListener\('wheel'/u);
   assert.match(area, /event\.preventDefault\(\)/u);
-  assert.ok(area.indexOf('event.preventDefault()') < area.indexOf('const multiplier'));
+  const source = ts.createSourceFile(
+    'HorizontalArea.tsx',
+    area,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  );
+  let preventPosition;
+  let multiplierPosition;
+  /**
+   * Checks wheel ownership before scaling independently of const/let or formatting.
+   */
+  function visit(node) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === 'preventDefault'
+    ) {
+      preventPosition = node.getStart(source);
+    }
+    if (ts.isVariableDeclaration(node) && node.name.getText(source) === 'multiplier') {
+      multiplierPosition = node.getStart(source);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  assert.ok(
+    preventPosition !== undefined && multiplierPosition !== undefined && preventPosition < multiplierPosition
+  );
   assert.match(area, /aria-label="Scroll left"/u);
   assert.match(area, /aria-label="Scroll right"/u);
   assert.doesNotMatch(area, /ScrollBar/u);

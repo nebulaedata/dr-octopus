@@ -3,7 +3,7 @@
  * @description Reserves the implemented-scope Extension page without exposing unsupported mutations.
  */
 
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { BoxesIcon } from 'lucide-react';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
 import { useI18n } from '@/i18n/use-i18n';

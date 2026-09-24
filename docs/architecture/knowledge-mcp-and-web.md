@@ -198,7 +198,7 @@ PATCH/DELETE/reindex 使用 If-Match 或明确 expectedRevision；HTTP 412 表�
 
 页面文案使用“等待索引 / 正在识别扫描页 / 可问答 / 部分内容可问答 / 需要重试”。LanceDB、generation、OCR worker 等实现术语只放技术详情；用户首屏主要看文档是否可用和如何修复。
 
-React 使用已有 TanStack Router/Query/Form，必要客户端状态才用现有 Zustand 模式；进度和目录属于 server state，不另建双份 store。一般页面采用 Page + PageHero，会话模式和引用展示复用 session feature。工具 renderer 仅呈现 versioned details，实施前遵守现有 tool-renderers/README.md。
+React 使用已有 TanStack Router/Query/Form，必要客户端状态才用现有 Zustand 模式；进度和目录属于 server state，不另建双份 store。一般页面采用 Page + PageHero，会话模式和引用展示复用 session feature。工具 renderer 仅呈现 versioned details，实施前遵守 [Tool Renderer Development](./web-tool-renderers.md)。
 
 知识问答复用普通 Session draft、agent.prompt 和 agent.set-work-mode。Agent 管理配置，Server 不新增问答运行时或独立 QA HTTP/WS 协议，完整约定见[普通 Session 问答模式](./knowledge-session-mode.md)。
 

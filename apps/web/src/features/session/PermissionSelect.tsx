@@ -17,7 +17,7 @@ import {
 import { Kbd } from '@octopus/ui/components/kbd';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
-import type { PermissionMode } from './composer-types';
+import type { PermissionMode } from '@octopus/shared/protocol';
 import type { Translate } from '@/i18n/use-i18n';
 
 /**

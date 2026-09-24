@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 test('collapsed right panel keeps its disabled separator in the resizable layout flow', () => {
-  const layout = readFileSync(new URL('../src/features/layout/index.tsx', import.meta.url), 'utf8');
+  const layout = readFileSync(new URL('../src/features/layout/Layout.tsx', import.meta.url), 'utf8');
 
   assert.match(
     layout,

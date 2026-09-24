@@ -115,7 +115,7 @@ apps/web/src/features/memory/MemoryPage.tsx      # 全局记忆页面，实施�
 apps/web/src/features/layout/Header.tsx         # 复用现有“记忆”菜单
 apps/web/src/router/index.ts                    # 注册 /memory
 apps/web/src/router/routes.tsx                  # MemoryRoute 页面适配
-apps/web/src/features/session/tool-renderers/CustomToolRenderers/
+apps/web/src/features/session/ToolRenderers/CustomToolRenderers/
 ```
 
 - 默认导出是接收 `ExtensionAPI` 的 factory；命名工厂 `createMemoryExtension` 支持注入服务与可信 memory 存储路径配置。

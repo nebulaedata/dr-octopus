@@ -22,7 +22,7 @@ import { toast } from '@octopus/ui/components/toast';
 import { updateEnvironmentSettings } from '@/api/environment';
 import { useI18n } from '@/i18n/use-i18n';
 import { ApiRequestError } from '@/utils/request';
-import { environmentErrorMessage } from './environment-labels';
+import { environmentErrorMessage } from '@/features/settings/utils/environment-labels';
 import type { EnvironmentEntryDto, EnvironmentSettingsDto } from '@octopus/shared/protocol';
 
 interface EnvironmentEditorProps {
@@ -202,7 +202,10 @@ export function EnvironmentEditor({ snapshot, entry, onClose }: EnvironmentEdito
                     aria-invalid={field.state.meta.errors.length > 0}
                     placeholder={
                       sensitive && entry?.hasStoredValue
-                        ? t('settings.environment.replaceValuePlaceholder', 'The existing value is hidden; enter a new value')
+                        ? t(
+                            'settings.environment.replaceValuePlaceholder',
+                            'The existing value is hidden; enter a new value'
+                          )
                         : t('settings.environment.valuePlaceholder', 'Enter a value')
                     }
                   />

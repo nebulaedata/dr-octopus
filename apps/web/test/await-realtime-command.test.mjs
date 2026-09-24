@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { awaitRealtimeCommand } from '../src/utils/await-realtime-command.ts';
+import { awaitRealtimeCommand } from "../src/lib/runtime/await-realtime-command.ts";
 
 /**
  * Supplies a deterministic observable transport without browser globals.

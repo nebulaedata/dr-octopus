@@ -4,8 +4,8 @@
  */
 import { useStore } from 'zustand';
 import { sessionStores } from '@/stores/session';
-import { BackgroundTasksView } from './background-tasks/BackgroundTasksView';
-import { useBackgroundTaskControl } from './background-tasks/use-background-task-control';
+import { BackgroundTasksView } from './BackgroundTasks/BackgroundTasksView';
+import { useBackgroundTaskControl } from '@/features/session/hooks/use-background-task-control';
 
 /**
  * Keeps runtime ownership outside presentation; closing the drawer never stops background work.

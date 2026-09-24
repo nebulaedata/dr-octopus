@@ -19,7 +19,7 @@ import {
   updateMcpServer,
   updateMcpServerActivation,
 } from '../api/settings';
-import { queryKeys } from './query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import type { McpServerCatalogDto, McpServerConnectivityDto } from '@octopus/shared/protocol';
 
 export const modelProvidersQueryOptions = queryOptions({

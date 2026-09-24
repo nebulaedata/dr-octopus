@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRealtimeMessageHandler } from '../src/queries/realtime-message-handler.ts';
+import { createRealtimeMessageHandler } from '../src/queries/utils/realtime-message-handler.ts';
 import { SessionRuntimeRegistry } from '../src/lib/runtime/session-runtime-registry.ts';
 import { createSessionStore } from '../src/stores/session/store.ts';
 

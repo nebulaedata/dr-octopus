@@ -4,8 +4,7 @@
  */
 
 import { createSessionStore } from './store';
-import type { SessionStoreApi } from './store';
-import type { SessionStoreRegistryOptions } from './type';
+import type { SessionStoreApi, SessionStoreRegistryOptions } from './type';
 
 export class SessionStoreRegistry {
   readonly #stores = new Map<string, SessionStoreApi>();

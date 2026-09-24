@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { isDirectToolsEnabled, resolveDirectTools } from './mcp-direct-tools';
+import { isDirectToolsEnabled, resolveDirectTools } from '@/features/settings/utils/mcp-direct-tools';
 import { useForm } from '@tanstack/react-form';
 import { CircleHelpIcon } from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
@@ -42,18 +42,25 @@ interface FormValues {
 /** Produces stable form defaults for creation or detail editing. */
 function defaults(server?: McpServerDetailDto): FormValues {
   const connection = server?.connection;
+  /**
+   * Selects target in the existing condition order.
+   */
+  function selectTarget() {
+    if (connection?.type === 'http') {
+      return connection.url;
+    } else if (connection?.type === 'socket') {
+      return connection.socket;
+    } else if (connection?.type === 'stdio') {
+      return connection.command;
+    } else {
+      return '' as const;
+    }
+  }
   return {
     name: server?.name ?? '',
     description: server?.description ?? '',
     transport: connection?.type === 'http' || connection?.type === 'socket' ? connection.type : 'stdio',
-    target:
-      connection?.type === 'http'
-        ? connection.url
-        : connection?.type === 'socket'
-          ? connection.socket
-          : connection?.type === 'stdio'
-            ? connection.command
-            : '',
+    target: selectTarget(),
     args: connection?.type === 'stdio' ? connection.args.join('\n') : '',
     exposeResources: server?.exposeResources ?? true,
     directTools: isDirectToolsEnabled(server?.directTools),
@@ -69,23 +76,23 @@ function configuration(value: FormValues, server?: McpServerDetailDto): McpServe
       .split('\n')
       .map((item) => item.trim())
       .filter(Boolean);
-  const connection =
-    value.transport === 'stdio'
-      ? ({
-          type: 'stdio',
-          command: value.target,
-          args: lines(value.args),
-          ...(server?.connection.type === 'stdio' && server.connection.cwd
-            ? { cwd: server.connection.cwd }
-            : {}),
-        } as const)
-      : value.transport === 'http'
-        ? ({
-            type: 'http',
-            url: value.target,
-            transport: server?.connection.type === 'http' ? server.connection.transport : 'auto',
-          } as const)
-        : ({ type: 'socket', socket: value.target } as const);
+  let connection;
+  if (value.transport === 'stdio') {
+    connection = {
+      type: 'stdio',
+      command: value.target,
+      args: lines(value.args),
+      ...(server?.connection.type === 'stdio' && server.connection.cwd ? { cwd: server.connection.cwd } : {}),
+    } as const;
+  } else if (value.transport === 'http') {
+    connection = {
+      type: 'http',
+      url: value.target,
+      transport: server?.connection.type === 'http' ? server.connection.transport : 'auto',
+    } as const;
+  } else {
+    connection = { type: 'socket', socket: value.target } as const;
+  }
   return {
     description: value.description.trim(),
     connection,
@@ -158,7 +165,7 @@ export function McpServerForm({ server, pending, onSubmit }: McpServerFormProps)
           )
         : t(
             'settings.mcp.directToolsDescription',
-            'Registers each of this server\'s MCP tools directly into the Agent tool list without retrieval through the mcp proxy first. More tools consume more context.'
+            "Registers each of this server's MCP tools directly into the Agent tool list without retrieval through the mcp proxy first. More tools consume more context."
           ),
   }));
   return (
@@ -200,7 +207,10 @@ export function McpServerForm({ server, pending, onSubmit }: McpServerFormProps)
                 value={field.state.value}
                 maxLength={512}
                 rows={2}
-                placeholder={t('settings.mcp.descriptionPlaceholder', 'Briefly describe what this MCP server does')}
+                placeholder={t(
+                  'settings.mcp.descriptionPlaceholder',
+                  'Briefly describe what this MCP server does'
+                )}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
               />
@@ -250,7 +260,10 @@ export function McpServerForm({ server, pending, onSubmit }: McpServerFormProps)
               </FieldLabel>
               <Input value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
               <FieldDescription className="text-xs">
-                {t('settings.mcp.targetDescription', 'stdio takes a command, HTTP a URL, and Socket a socket address.')}
+                {t(
+                  'settings.mcp.targetDescription',
+                  'stdio takes a command, HTTP a URL, and Socket a socket address.'
+                )}
               </FieldDescription>
               <FieldError errors={field.state.meta.errors.map((message) => ({ message }))} />
             </Field>
@@ -287,12 +300,7 @@ export function McpServerForm({ server, pending, onSubmit }: McpServerFormProps)
                   <Tooltip>
                     <TooltipTrigger
                       render={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          aria-label={`${label} help`}
-                        >
+                        <Button type="button" variant="ghost" size="icon-xs" aria-label={`${label} help`}>
                           <CircleHelpIcon />
                         </Button>
                       }
@@ -336,7 +344,9 @@ export function McpServerForm({ server, pending, onSubmit }: McpServerFormProps)
         ))}
         <Button type="submit" disabled={pending}>
           {pending ? <Spinner data-icon="inline-start" /> : null}
-          {server ? t('settings.mcp.saveChanges', 'Save changes') : t('settings.mcp.createServer', 'Create server')}
+          {server
+            ? t('settings.mcp.saveChanges', 'Save changes')
+            : t('settings.mcp.createServer', 'Create server')}
         </Button>
       </FieldGroup>
     </form>

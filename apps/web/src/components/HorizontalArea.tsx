@@ -94,12 +94,14 @@ export function HorizontalArea({ children, className, fit = false, ...props }: H
       return;
     }
     event.preventDefault();
-    const multiplier =
-      event.deltaMode === WheelEvent.DOM_DELTA_LINE
-        ? 16
-        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-          ? viewport.clientWidth
-          : 1;
+    let multiplier: number;
+    if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+      multiplier = 16;
+    } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+      multiplier = viewport.clientWidth;
+    } else {
+      multiplier = 1;
+    }
     const rawDelta = Math.abs(event.deltaX) >= Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     const maximum = viewport.scrollWidth - viewport.clientWidth;
     viewport.scrollLeft = Math.min(maximum, Math.max(0, viewport.scrollLeft + rawDelta * multiplier));

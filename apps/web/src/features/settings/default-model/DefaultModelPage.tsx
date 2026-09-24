@@ -3,7 +3,7 @@
  * @description Provides a TanStack Form for selecting the Pi global default model.
  */
 
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { useEffect } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';

@@ -22,9 +22,21 @@ export function SubagentStatusBadge({
   const warning = state === 'paused' || state === 'partial';
   const active = state === 'running' || state === 'queued' || state === 'pending';
   const complete = state === 'complete' || state === 'completed';
+  /**
+   * Selects variant in the existing condition order.
+   */
+  function selectVariant() {
+    if (failed) {
+      return 'destructive' as const;
+    } else if (warning) {
+      return 'warning' as const;
+    } else {
+      return 'secondary' as const;
+    }
+  }
   return (
     <Badge
-      variant={failed ? 'destructive' : warning ? 'warning' : 'secondary'}
+      variant={selectVariant()}
       className={cn(active && 'bg-primary/10 text-primary', complete && 'bg-success/10 text-success')}
     >
       {children}

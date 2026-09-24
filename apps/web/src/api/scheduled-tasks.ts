@@ -155,13 +155,41 @@ export function mutateScheduledTask(
   input: ScheduleMutationInput
 ): Promise<ScheduledMutation> {
   const base = `/workspaces/${encodeURIComponent(workspaceId)}`;
-  const path = `${base}/scheduled-tasks/${encodeURIComponent(input.taskId!)}${input.operation === 'run-now' ? '/runs' : input.operation === 'cancel' ? '/cancel' : ['archive', 'restore', 'purge', 'authorize', 'revoke-authorization'].includes(input.operation) ? `/${input.operation}` : ''}`;
+  /**
+   * Selects path in the existing condition order.
+   */
+  function selectPath() {
+    if (input.operation === 'run-now') {
+      return '/runs' as const;
+    } else if (input.operation === 'cancel') {
+      return '/cancel' as const;
+    } else if (
+      ['archive', 'restore', 'purge', 'authorize', 'revoke-authorization'].includes(input.operation)
+    ) {
+      return `/${input.operation}`;
+    } else {
+      return '' as const;
+    }
+  }
+  const path = `${base}/scheduled-tasks/${encodeURIComponent(input.taskId!)}${selectPath()}`;
+  /**
+   * Selects method in the existing condition order.
+   */
+  function selectMethod() {
+    if (input.operation === 'delete') {
+      return 'DELETE' as const;
+    } else if (input.operation === 'update') {
+      return 'PATCH' as const;
+    } else {
+      return 'POST' as const;
+    }
+  }
   return request({
     url: path,
     timeout: ['authorize', 'revoke-authorization', 'restore', 'purge'].includes(input.operation)
       ? 65_000
       : 20_000,
-    method: input.operation === 'delete' ? 'DELETE' : input.operation === 'update' ? 'PATCH' : 'POST',
+    method: selectMethod(),
     headers: {
       'Idempotency-Key': input.key,
       ...(input.revision ? { 'If-Match': `"${input.revision}"` } : {}),

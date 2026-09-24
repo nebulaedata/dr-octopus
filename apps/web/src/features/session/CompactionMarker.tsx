@@ -26,33 +26,41 @@ export function CompactionMarker({ compactionId, sessionId }: { compactionId: st
   }
   const active = compaction.status === 'running';
   const automatic = compaction.reason !== 'manual';
-  const label =
-    compaction.status === 'error'
-      ? (compaction.errorMessage ?? 'Compaction failed')
-      : compaction.status === 'aborted'
-        ? 'Compaction cancelled'
-        : active
-          ? automatic
-            ? 'Automatically compacting context'
-            : 'Compacting context'
-          : automatic
-            ? 'Context automatically compacted'
-            : 'Context compacted';
+  let label: string;
+  if (compaction.status === 'error') {
+    label = compaction.errorMessage ?? 'Compaction failed';
+  } else if (compaction.status === 'aborted') {
+    label = 'Compaction cancelled';
+  } else if (active) {
+    if (automatic) {
+      label = 'Automatically compacting context';
+    } else {
+      label = 'Compacting context';
+    }
+  } else if (automatic) {
+    label = 'Context automatically compacted';
+  } else {
+    label = 'Context compacted';
+  }
+  /**
+   * Selects marker icon content in the existing condition order.
+   */
+  function renderMarkerIconContent() {
+    if (active) {
+      return <Spinner />;
+    } else if (compaction.status === 'error' || compaction.status === 'aborted') {
+      return <CircleAlertIcon />;
+    } else {
+      return <CheckIcon />;
+    }
+  }
   return (
     <Marker
       role="status"
       className={cn('my-2', active && 'shimmer', compaction.status === 'error' && 'text-destructive')}
       variant="separator"
     >
-      <MarkerIcon>
-        {active ? (
-          <Spinner />
-        ) : compaction.status === 'error' || compaction.status === 'aborted' ? (
-          <CircleAlertIcon />
-        ) : (
-          <CheckIcon />
-        )}
-      </MarkerIcon>
+      <MarkerIcon>{renderMarkerIconContent()}</MarkerIcon>
       <MarkerContent className="text-xs">
         <span className="sr-only">{automatic ? 'Automatic compaction: ' : 'Compaction: '}</span>
         {label}

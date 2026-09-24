@@ -15,7 +15,7 @@ import { Button } from '@octopus/ui/components/button';
 import { Spinner } from '@octopus/ui/components/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/tooltip';
 import { getAttachmentCapabilities, startAttachmentUpload } from '@/api/attachments';
-import { queryKeys } from '@/queries/query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import { useDeriveSession } from '@/queries/session-queries';
 import { useRenameSession } from '@/queries/workbench-queries';
 import { useRealtimeCommand } from '@/hooks/use-realtime';
@@ -24,18 +24,13 @@ import { useWorkbenchHome } from '@/stores/workbench-home';
 import { persistAttachmentDraft, restoreAttachmentDraft, sessionStores } from '@/stores/session';
 import { Upload } from '@/components/Upload';
 import { download } from '@/utils/common';
-import { realtimeClient } from '@/utils/realtime-client';
-import { awaitRealtimeCommand } from '@/utils/await-realtime-command';
+import { realtimeClient } from '@/lib/runtime/realtime-client';
+import { awaitRealtimeCommand } from '@/lib/runtime/await-realtime-command';
 import { getSessionExportUrl } from '@/api/sessions';
 import { AgentComposerEditor } from '@/components/AgentComposerEditor';
-import {
-  comboMatches,
-  ShortcutKeyRegister,
-  toAriaKeyShortcuts,
-  useShortcut,
-  useShortcutBinding,
-} from '@/lib/shortcuts';
-import { toComposerAttachment } from './attachment-projection';
+import { comboMatches, ShortcutKeyRegister, toAriaKeyShortcuts } from '@/lib/shortcuts';
+import { useShortcut, useShortcutBinding } from '@/hooks/use-shortcut';
+import { toComposerAttachment } from '@/features/session/utils/attachment-projection';
 import { ComposerAttachments } from './ComposerAttachments';
 import { RunningMessageControls } from './RunningMessageControls';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
@@ -47,8 +42,8 @@ import { RenameSessionDialog } from './RenameSessionDialog';
 import { PlanModeExitDialog } from './PlanModeExitDialog';
 import { ExtensionDialogHost } from './ExtensionDialogHost';
 import { useComposerReferences } from './hooks/use-composer-references';
-import { registerAttachmentUploadTask, unregisterAttachmentUploadTask } from './attachment-upload-tasks';
-import { toWorkspaceReferences } from './workspace-reference-payload';
+import { registerAttachmentUploadTask, unregisterAttachmentUploadTask } from '@/stores/session';
+import { toWorkspaceReferences } from '@/features/session/utils/workspace-reference-payload';
 import type { WorkspaceReferenceDto, DraftControls } from '@octopus/shared/protocol';
 import type { KnowledgeModeState, KnowledgeModeConfig } from '@octopus/shared/protocol/knowledge';
 import type { CommandDto, ModelDto, SessionDto, ThinkingLevel } from '@octopus/shared/protocol';
@@ -56,7 +51,7 @@ import type { PermissionMode } from '@octopus/shared/protocol';
 import type { AgentComposerEditorHandle } from '@/components/AgentComposerEditor';
 import type { ComposerCommand, ComposerDraft } from '@/components/AgentComposerEditor/types';
 import type { RunningMessageMode } from './RunningMessageControls';
-import type { AgentWorkMode } from './composer-types';
+import type { AgentWorkMode } from './WorkModeSelect';
 import type { ComposerAttachmentViewModel, SessionStoreApi } from '@/stores/session';
 
 export interface ComposerProps {
@@ -166,19 +161,27 @@ export function Composer({
   const navigate = useNavigate();
   const sendBinding = useShortcutBinding(ShortcutKeyRegister.SEND_MESSAGE);
   const newlineBinding = useShortcutBinding(ShortcutKeyRegister.INSERT_NEWLINE);
-  const sendButtonTitle =
-    sendBinding !== null && newlineBinding !== null
-      ? t('session.composer.submitAndNewlineHint', '{{send}} to submit, {{newline}} for a new line', {
-          send: sendBinding.replaceAll('+', ' + '),
-          newline: newlineBinding.replaceAll('+', ' + '),
-        })
-      : sendBinding !== null
-        ? t('session.composer.submitHint', '{{send}} to submit', { send: sendBinding.replaceAll('+', ' + ') })
-        : newlineBinding !== null
-          ? t('session.composer.newlineHint', '{{newline}} for a new line', {
-              newline: newlineBinding.replaceAll('+', ' + '),
-            })
-          : undefined;
+  let sendButtonTitle: string | undefined;
+  if (sendBinding !== null && newlineBinding !== null) {
+    sendButtonTitle = t(
+      'session.composer.submitAndNewlineHint',
+      '{{send}} to submit, {{newline}} for a new line',
+      {
+        send: sendBinding.replaceAll('+', ' + '),
+        newline: newlineBinding.replaceAll('+', ' + '),
+      }
+    );
+  } else if (sendBinding !== null) {
+    sendButtonTitle = t('session.composer.submitHint', '{{send}} to submit', {
+      send: sendBinding.replaceAll('+', ' + '),
+    });
+  } else if (newlineBinding !== null) {
+    sendButtonTitle = t('session.composer.newlineHint', '{{newline}} for a new line', {
+      newline: newlineBinding.replaceAll('+', ' + '),
+    });
+  } else {
+    sendButtonTitle = undefined;
+  }
   const keyShortcutsHint = [
     sendBinding === null ? null : toAriaKeyShortcuts(sendBinding),
     sendBinding === null || sendBinding.includes('Alt+') ? null : `Alt+${toAriaKeyShortcuts(sendBinding)}`,
@@ -721,25 +724,47 @@ export function Composer({
     )
     .map((command) => {
       const blockedByRun = running && ['compact', 'model', 'fork', 'clone'].includes(command.name);
+      /**
+       * Selects blocked by run in the existing condition order.
+       */
+      function selectBlockedByRun() {
+        if (blockedByRun) {
+          return {
+            disabledReason: t(
+              'session.composer.unavailableWhileRunning',
+              'Unavailable while the Agent is running.'
+            ),
+          };
+        } else if (command.disabledReason === undefined) {
+          return {};
+        } else {
+          return { disabledReason: command.disabledReason };
+        }
+      }
       return {
         name: command.name,
         ...(command.description === undefined ? {} : { description: command.description }),
         group: command.source,
         execution: command.execution,
         enabled: command.enabled && !blockedByRun && !interactionDisabled,
-        ...(blockedByRun
-          ? {
-              disabledReason: t(
-                'session.composer.unavailableWhileRunning',
-                'Unavailable while the Agent is running.'
-              ),
-            }
-          : command.disabledReason === undefined
-            ? {}
-            : { disabledReason: command.disabledReason }),
+        ...selectBlockedByRun(),
       };
     });
 
+  /**
+   * Selects thinking levels in the existing condition order.
+   */
+  function selectThinkingLevels() {
+    if (onFirstSubmit) {
+      return (
+        models.find((model) => `${model.provider}/${model.id}` === modelValue)?.thinkingLevels ?? ['off']
+      );
+    } else if (controlsLoaded) {
+      return thinking.availableLevels;
+    } else {
+      return [];
+    }
+  }
   return (
     <div
       className={
@@ -875,14 +900,7 @@ export function Composer({
               modelValue={modelValue}
               followDefault={followDefaultModel}
               onFollowDefault={onFollowDefaultModel}
-              thinkingLevels={
-                onFirstSubmit
-                  ? (models.find((model) => `${model.provider}/${model.id}` === modelValue)
-                      ?.thinkingLevels ?? ['off'])
-                  : controlsLoaded
-                    ? thinking.availableLevels
-                    : []
-              }
+              thinkingLevels={selectThinkingLevels()}
               thinkingValue={draftControls?.thinkingLevel ?? thinking.level}
               onModelValueChange={handleModelChange}
               onThinkingValueChange={handleThinkingChange}

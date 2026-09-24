@@ -3,7 +3,7 @@
  * @description Displays the terminal realtime state after bounded reconnect attempts are exhausted.
  */
 
-import { MAX_REALTIME_RECONNECT_ATTEMPTS } from '@/utils/realtime-client';
+import { MAX_REALTIME_RECONNECT_ATTEMPTS } from '@/lib/runtime/realtime-client';
 import { CircleXIcon } from 'lucide-react';
 import { useI18n } from '@/i18n/use-i18n';
 

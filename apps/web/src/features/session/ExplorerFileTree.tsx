@@ -43,7 +43,7 @@ import { cn } from '@octopus/ui/lib/utils';
 import { FileEditorDialog } from './FileEditorDialog';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
 import type { FileTreeEntryType } from '@octopus/shared/protocol';
-import type { WorkspaceFileTreeState } from '@/stores/file-explorer/type';
+import type { WorkspaceFileTreeState } from '@/stores/file-explorer';
 
 export interface ExplorerFileTreeProps {
   workspaceId: string;
@@ -127,7 +127,10 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
             <span>
               {/timeout|timed out|超时/i.test(workspace.rootError)
                 ? t('session.explorer.loadTimeout', 'Loading timed out. Please try again later.')
-                : t('session.explorer.loadFailedDescription', 'Unable to fetch workspace files. Please try again.')}
+                : t(
+                    'session.explorer.loadFailedDescription',
+                    'Unable to fetch workspace files. Please try again.'
+                  )}
             </span>
             <Button
               variant="outline"
@@ -140,7 +143,9 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
               ) : (
                 <RefreshCwIcon data-icon="inline-start" />
               )}
-              {workspace.rootLoading ? t('session.explorer.retrying', 'Retrying…') : t('common.retry', 'Retry')}
+              {workspace.rootLoading
+                ? t('session.explorer.retrying', 'Retrying…')
+                : t('common.retry', 'Retry')}
             </Button>
           </AlertDescription>
         </Alert>
@@ -444,7 +449,9 @@ function CreateEntryRow({ depth, type, onSubmit, onCancel }: CreateEntryRowProps
     try {
       await onSubmit(name);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('session.explorer.createFailed', 'Failed to create entry.'));
+      setError(
+        err instanceof Error ? err.message : t('session.explorer.createFailed', 'Failed to create entry.')
+      );
       setSubmitting(false);
     }
   }
@@ -610,6 +617,53 @@ function FileTreeEntryItem({
     );
   }
 
+  /**
+   * Selects renderdiv content in the existing condition order.
+   */
+  function renderContent() {
+    if (node.error !== undefined) {
+      return (
+        <div className="p-2" style={{ paddingLeft: `${(depth + 1) * 14 + 8}px` }}>
+          <Alert variant="destructive" aria-busy={node.loading}>
+            <AlertCircleIcon />
+            <AlertTitle>{t('session.explorer.dirLoadFailedTitle', 'Failed to load directory')}</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              <span>
+                {t(
+                  'session.explorer.dirLoadFailedDescription',
+                  'Unable to read this directory. Please try again.'
+                )}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={node.loading}
+                onClick={() => void expandDirectory(workspaceId, path)}
+              >
+                {node.loading ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <RefreshCwIcon data-icon="inline-start" />
+                )}
+                {node.loading ? t('session.explorer.retrying', 'Retrying…') : t('common.retry', 'Retry')}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
+    } else if (node.loaded && node.childPaths?.length === 0) {
+      return (
+        <p
+          className="py-1 text-xs text-muted-foreground"
+          style={{ paddingLeft: `${(depth + 1) * 14 + 8}px` }}
+        >
+          {t('session.explorer.emptyDirectory', 'This directory is empty')}
+        </p>
+      );
+    } else {
+      return null;
+    }
+  }
   return (
     <Collapsible
       open={isExpanded}
@@ -642,42 +696,7 @@ function FileTreeEntryItem({
       <CollapsibleContent keepMounted={false}>
         {isExpanded ? (
           <div className="flex flex-col gap-0.5">
-            {node.error !== undefined ? (
-              <div className="p-2" style={{ paddingLeft: `${(depth + 1) * 14 + 8}px` }}>
-                <Alert variant="destructive" aria-busy={node.loading}>
-                  <AlertCircleIcon />
-                  <AlertTitle>{t('session.explorer.dirLoadFailedTitle', 'Failed to load directory')}</AlertTitle>
-                  <AlertDescription className="flex flex-col items-start gap-2">
-                    <span>
-                      {t(
-                        'session.explorer.dirLoadFailedDescription',
-                        'Unable to read this directory. Please try again.'
-                      )}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={node.loading}
-                      onClick={() => void expandDirectory(workspaceId, path)}
-                    >
-                      {node.loading ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <RefreshCwIcon data-icon="inline-start" />
-                      )}
-                      {node.loading ? t('session.explorer.retrying', 'Retrying…') : t('common.retry', 'Retry')}
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              </div>
-            ) : node.loaded && node.childPaths?.length === 0 ? (
-              <p
-                className="py-1 text-xs text-muted-foreground"
-                style={{ paddingLeft: `${(depth + 1) * 14 + 8}px` }}
-              >
-                {t('session.explorer.emptyDirectory', 'This directory is empty')}
-              </p>
-            ) : null}
+            {renderContent()}
             {creating?.parentPath === path && (
               <CreateEntryRow
                 depth={depth + 1}

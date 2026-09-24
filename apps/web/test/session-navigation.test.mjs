@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getSiblingSession } from '../src/features/layout/session-navigation.ts';
+import { getSiblingSession } from '../src/features/layout/utils/session-navigation.ts';
 
 const sessions = [{ id: 'pinned' }, { id: 'recent' }, { id: 'older' }];
 

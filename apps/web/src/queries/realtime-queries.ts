@@ -6,11 +6,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { sessionStores } from '../stores/session';
-import { realtimeClient } from '../utils/realtime-client';
+import { realtimeClient } from '@/lib/runtime/realtime-client';
 import { browserSessionRuntime } from '../lib/runtime/session-runtime';
-import { queryKeys } from './query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import { sessionBootstrapQueryOptions } from './session-queries';
-import { createRealtimeMessageHandler } from './realtime-message-handler';
+import { createRealtimeMessageHandler } from '@/queries/utils/realtime-message-handler';
 import type { SessionProjectionState } from '../stores/session';
 import type { SessionDto } from '@octopus/shared/protocol';
 

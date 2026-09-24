@@ -56,6 +56,62 @@ export function KnowledgeSearchDialog({
   const hits = data?.hits ?? [];
   const hasResults = isSuccess && hits.length > 0;
   const unavailable = data?.coverage === 'unavailable';
+  /**
+   * Selects empty description content in the existing condition order.
+   */
+  function renderEmptyDescriptionContent() {
+    if (isSearching) {
+      return t(
+        'knowledge.searchDialog.searchingDescription',
+        'Matching documents in the collection; please wait.'
+      );
+    } else if (isError) {
+      return search.error?.message;
+    } else if (unavailable) {
+      return t(
+        'knowledge.searchDialog.unavailableDescription',
+        'Modify your question to search again once the search service recovers.'
+      );
+    } else if (isSuccess) {
+      return t(
+        'knowledge.searchDialog.noResultsDescription',
+        'Try a more specific question or different keywords.'
+      );
+    } else {
+      return t(
+        'knowledge.searchDialog.startDescription',
+        'Enter keywords or a full question to see the relevant source text directly.'
+      );
+    }
+  }
+  /**
+   * Selects empty title content in the existing condition order.
+   */
+  function renderEmptyTitleContent() {
+    if (isSearching) {
+      return t('knowledge.searchDialog.searching', 'Searching for related knowledge…');
+    } else if (isError) {
+      return t('knowledge.searchDialog.errorTitle', 'Search temporarily failed');
+    } else if (unavailable) {
+      return t('knowledge.searchDialog.unavailableTitle', 'Search temporarily unavailable');
+    } else if (isSuccess) {
+      return t('knowledge.searchDialog.noResults', 'No related knowledge found');
+    } else {
+      return t('knowledge.searchDialog.startTitle', 'Start with a question');
+    }
+  }
+  /**
+   * Selects empty media content in the existing condition order.
+   */
+  function renderEmptyMediaContent() {
+    if (isSearching) {
+      return <Spinner />;
+    } else if (isError || unavailable || isSuccess) {
+      return <SearchXIcon />;
+    } else {
+      return <BookOpenIcon />;
+    }
+  }
   return (
     <DialogContent className="top-[12vh] flex max-h-[80dvh] translate-y-0 flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
       <DialogHeader className="gap-3 px-5 pt-5 pb-4 pr-12">
@@ -123,97 +179,65 @@ export function KnowledgeSearchDialog({
               })}
               className="p-2"
             >
-              {hits.map((hit) => (
-                <CommandItem
-                  key={hit.citationId}
-                  value={hit.citationId}
-                  onSelect={() => setExpandedId(expandedId === hit.citationId ? undefined : hit.citationId)}
-                  className="items-start gap-3 px-3 py-3"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <FileTextIcon />
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate font-medium">{hit.title}</span>
-                      <Badge variant="outline">
-                        {hit.locator.page
-                          ? t('knowledge.searchDialog.locatorPage', 'Page {{page}}', {
-                              page: hit.locator.page,
-                            })
-                          : hit.locator.slide
-                            ? t('knowledge.searchDialog.locatorSlide', 'Slide {{slide}}', {
-                                slide: hit.locator.slide,
-                              })
-                            : (hit.locator.sheet ?? t('knowledge.searchDialog.locatorBody', 'Main text'))}
-                      </Badge>
-                    </div>
-                    <p
-                      className={cn(
-                        'text-sm leading-6 whitespace-pre-wrap text-muted-foreground wrap-break-word',
-                        expandedId !== hit.citationId && 'line-clamp-2'
-                      )}
-                    >
-                      {hit.text}
-                    </p>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      {expandedId === hit.citationId
-                        ? t('knowledge.searchDialog.collapse', 'Collapse text')
-                        : t('knowledge.searchDialog.expand', 'Expand text')}
-                      <ChevronDownIcon
-                        className={cn('size-3', expandedId === hit.citationId && 'rotate-180')}
-                      />
+              {hits.map((hit) => {
+                /**
+                 * Selects badge content in the existing condition order.
+                 */
+                function renderBadgeContent() {
+                  if (hit.locator.page) {
+                    return t('knowledge.searchDialog.locatorPage', 'Page {{page}}', {
+                      page: hit.locator.page,
+                    });
+                  } else if (hit.locator.slide) {
+                    return t('knowledge.searchDialog.locatorSlide', 'Slide {{slide}}', {
+                      slide: hit.locator.slide,
+                    });
+                  } else {
+                    return hit.locator.sheet ?? t('knowledge.searchDialog.locatorBody', 'Main text');
+                  }
+                }
+                return (
+                  <CommandItem
+                    key={hit.citationId}
+                    value={hit.citationId}
+                    onSelect={() => setExpandedId(expandedId === hit.citationId ? undefined : hit.citationId)}
+                    className="items-start gap-3 px-3 py-3"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <FileTextIcon />
                     </span>
-                  </div>
-                </CommandItem>
-              ))}
+                    <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate font-medium">{hit.title}</span>
+                        <Badge variant="outline">{renderBadgeContent()}</Badge>
+                      </div>
+                      <p
+                        className={cn(
+                          'text-sm leading-6 whitespace-pre-wrap text-muted-foreground wrap-break-word',
+                          expandedId !== hit.citationId && 'line-clamp-2'
+                        )}
+                      >
+                        {hit.text}
+                      </p>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        {expandedId === hit.citationId
+                          ? t('knowledge.searchDialog.collapse', 'Collapse text')
+                          : t('knowledge.searchDialog.expand', 'Expand text')}
+                        <ChevronDownIcon
+                          className={cn('size-3', expandedId === hit.citationId && 'rotate-180')}
+                        />
+                      </span>
+                    </div>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           ) : (
             <Empty className="min-h-52 border-0 px-6 py-8" role="status">
               <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  {isSearching ? (
-                    <Spinner />
-                  ) : isError || unavailable || isSuccess ? (
-                    <SearchXIcon />
-                  ) : (
-                    <BookOpenIcon />
-                  )}
-                </EmptyMedia>
-                <EmptyTitle>
-                  {isSearching
-                    ? t('knowledge.searchDialog.searching', 'Searching for related knowledge…')
-                    : isError
-                      ? t('knowledge.searchDialog.errorTitle', 'Search temporarily failed')
-                      : unavailable
-                        ? t('knowledge.searchDialog.unavailableTitle', 'Search temporarily unavailable')
-                        : isSuccess
-                          ? t('knowledge.searchDialog.noResults', 'No related knowledge found')
-                          : t('knowledge.searchDialog.startTitle', 'Start with a question')}
-                </EmptyTitle>
-                <EmptyDescription>
-                  {isSearching
-                    ? t(
-                        'knowledge.searchDialog.searchingDescription',
-                        'Matching documents in the collection; please wait.'
-                      )
-                    : isError
-                      ? search.error?.message
-                      : unavailable
-                        ? t(
-                            'knowledge.searchDialog.unavailableDescription',
-                            'Modify your question to search again once the search service recovers.'
-                          )
-                        : isSuccess
-                          ? t(
-                              'knowledge.searchDialog.noResultsDescription',
-                              'Try a more specific question or different keywords.'
-                            )
-                          : t(
-                              'knowledge.searchDialog.startDescription',
-                              'Enter keywords or a full question to see the relevant source text directly.'
-                            )}
-                </EmptyDescription>
+                <EmptyMedia variant="icon">{renderEmptyMediaContent()}</EmptyMedia>
+                <EmptyTitle>{renderEmptyTitleContent()}</EmptyTitle>
+                <EmptyDescription>{renderEmptyDescriptionContent()}</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}

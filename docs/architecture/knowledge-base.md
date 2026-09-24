@@ -43,7 +43,7 @@
 | `apps/server/src/lib/runtime/`                                             | Coordinator、Slot、ManagedSessionRuntime 绑定 RPC Process、epoch、lease        | 保留执行逻辑；知识问答另设模块，在会话入口分流                          |
 | `apps/server/src/modules/sessions/`                                        | SQLite 保存会话目录，Pi JSONL 保存消息；目前没有知识库 kind                    | 增加默认值为 `agent` 的不可变 kind 与知识问答扩展记录                   |
 | `apps/web/src/features/session/Composer.tsx`                               | knowledge 分支直接返回，尚无运行协议                                           | 选择 knowledge 创建新类型会话，不能发送 `agent.set-work-mode=knowledge` |
-| `apps/web/src/features/home/AgentHomePage.tsx`、`stores/workbench-home.ts` | 首页挂载即预热 Agent，草稿按 workspace 缓存                                    | 同一 Composer 切换模式，保留普通草稿与预热                              |
+| `apps/web/src/features/home/AgentHomePage.tsx`、`stores/workbench-home/store.ts` | 首页挂载即预热 Agent，草稿按 workspace 缓存                                    | 同一 Composer 切换模式，保留普通草稿与预热                              |
 | `apps/server/src/modules/attachments/`                                     | 上传、Blob、worker、结构化文档和工作区附件工件已经存在                         | 复用安全准入和解析，导入知识库后独立持有原文                            |
 | `attachments/workers/processor-child.ts`                                   | PDF 抽取文本；完全无文本时生成有限页图片，没有 OCR                             | 增加逐页 OCR 策略；现有附件预览不等于完整入库结果                       |
 | `packages/shared/src/protocol/attachments/document.ts`                     | 已有结构化文本和 page/sheet/slide/line 定位                                    | 为知识库补充段落、单元格和来源路径，不把内部实现塞进公共附件 DTO        |

@@ -3,7 +3,7 @@
  * @description Minimal line mini-map of user questions inside the conversation area.
  */
 
-import { copyTextWithFeedback } from '@/lib/copy-text-with-feedback';
+import { copyTextWithFeedback } from '@/utils/copy-text-with-feedback';
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { CheckIcon, CopyIcon } from 'lucide-react';
@@ -14,7 +14,7 @@ import { sessionStores } from '@/stores/session';
 import { cn } from '@octopus/ui/lib/utils';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { useI18n } from '@/i18n/use-i18n';
-import { makePopoverMarkdown, makeTooltipLabel } from './mini-map-utils';
+import { makePopoverMarkdown, makeTooltipLabel } from '@/features/session/utils/mini-map-utils';
 import type { MessageProjection } from '@/stores/session';
 
 export interface ConversationMiniMapProps {
@@ -238,9 +238,7 @@ function CopyPreviewButton({ text }: CopyPreviewButtonProps) {
         }
       />
       <TooltipContent>
-        {copied
-          ? t('session.messageToolbar.copied', 'Copied')
-          : t('session.miniMap.copyTitle', 'Copy title')}
+        {copied ? t('session.messageToolbar.copied', 'Copied') : t('session.miniMap.copyTitle', 'Copy title')}
       </TooltipContent>
     </Tooltip>
   );
@@ -263,16 +261,28 @@ function LineAnchor({ index, message, isActive, hoveredIndex, onHover, onActivat
   const tooltip = makeTooltipLabel(message);
   const distance = hoveredIndex === null ? Infinity : Math.abs(index - hoveredIndex);
 
-  const lineWidthClass = distance === 0 ? 'w-9' : distance === 1 ? 'w-7' : distance === 2 ? 'w-6' : 'w-5';
+  let lineWidthClass: 'w-9' | 'w-7' | 'w-6' | 'w-5';
+  if (distance === 0) {
+    lineWidthClass = 'w-9';
+  } else if (distance === 1) {
+    lineWidthClass = 'w-7';
+  } else if (distance === 2) {
+    lineWidthClass = 'w-6';
+  } else {
+    lineWidthClass = 'w-5';
+  }
 
-  const lineOpacityClass =
-    distance === 0
-      ? 'bg-muted-foreground/80'
-      : distance === 1
-        ? 'bg-muted-foreground/60'
-        : distance === 2
-          ? 'bg-muted-foreground/45'
-          : 'bg-muted-foreground/30';
+  let lineOpacityClass:
+    'bg-muted-foreground/80' | 'bg-muted-foreground/60' | 'bg-muted-foreground/45' | 'bg-muted-foreground/30';
+  if (distance === 0) {
+    lineOpacityClass = 'bg-muted-foreground/80';
+  } else if (distance === 1) {
+    lineOpacityClass = 'bg-muted-foreground/60';
+  } else if (distance === 2) {
+    lineOpacityClass = 'bg-muted-foreground/45';
+  } else {
+    lineOpacityClass = 'bg-muted-foreground/30';
+  }
 
   return (
     <button

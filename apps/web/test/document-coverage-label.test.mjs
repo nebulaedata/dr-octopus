@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { documentCoverageLabel } from '../src/features/session/document-coverage-label.ts';
+import { documentCoverageLabel } from '../src/features/session/utils/document-coverage-label.ts';
 
 /**
  * Returns the source default with interpolation so assertions pin the English contract.
@@ -91,14 +91,8 @@ test('Office labels distinguish extracted regions from unprocessed images and fo
     label,
     /Formula values \(1 occurrences, structural evidence\): Coverage or result reliability could not be verified/u
   );
-  assert.match(
-    label,
-    /Text regions \(1 package parts, structural evidence\): Included in text extraction/u
-  );
-  assert.doesNotMatch(
-    label,
-    /Text regions \(1 package parts, structural evidence\): Only partially/u
-  );
+  assert.match(label, /Text regions \(1 package parts, structural evidence\): Included in text extraction/u);
+  assert.doesNotMatch(label, /Text regions \(1 package parts, structural evidence\): Only partially/u);
   assert.match(
     documentCoverageLabel(t, {
       ...coverage,

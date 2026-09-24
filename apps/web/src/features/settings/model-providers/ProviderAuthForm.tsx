@@ -21,11 +21,14 @@ import {
   useProviderAuthSession,
   useProviderAuthSessionCleanup,
 } from '@/queries/provider-auth-queries';
-import { queryKeys } from '@/queries/query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import { ProviderAuthMethodSelect } from './ProviderAuthMethodSelect';
 import { ProviderAuthReset } from './ProviderAuthReset';
 import { ProviderAuthSessionContent } from './ProviderAuthSessionContent';
-import { canSubmitProviderAuth, isProviderAuthMethodActive } from './provider-auth-view-state';
+import {
+  canSubmitProviderAuth,
+  isProviderAuthMethodActive,
+} from '@/features/settings/utils/provider-auth-view-state';
 import { useI18n } from '@/i18n/use-i18n';
 import type { Translate } from '@/i18n/use-i18n';
 import type {
@@ -88,7 +91,9 @@ export function ProviderAuthForm({ provider }: ProviderAuthFormProps) {
         setSubmissionError(
           cause instanceof Error
             ? cause
-            : new Error(t('settings.providers.auth.failed', 'Provider authentication could not be completed.'))
+            : new Error(
+                t('settings.providers.auth.failed', 'Provider authentication could not be completed.')
+              )
         );
       } finally {
         setSubmittingApiKey(false);
@@ -118,9 +123,13 @@ export function ProviderAuthForm({ provider }: ProviderAuthFormProps) {
     if (session.status === 'completed') {
       toast.add({
         title: t('settings.providers.auth.successTitle', 'Authentication successful'),
-        description: t('settings.providers.auth.successDescription', 'Credentials for {{name}} were saved securely.', {
-          name: provider.name,
-        }),
+        description: t(
+          'settings.providers.auth.successDescription',
+          'Credentials for {{name}} were saved securely.',
+          {
+            name: provider.name,
+          }
+        ),
         type: 'success',
       });
     }
@@ -182,81 +191,97 @@ export function ProviderAuthForm({ provider }: ProviderAuthFormProps) {
             )}
           </form.Field>
           <form.Subscribe selector={(state) => state.values.authType}>
-            {(authType) =>
-              authType === 'api_key' ? (
-                <form.Field
-                  name="apiKey"
-                  validators={{
-                    onSubmit: ({ value, fieldApi }) =>
-                      fieldApi.form.getFieldValue('authType') === 'api_key' && value.length === 0
-                        ? t('settings.providers.auth.apiKeyRequired', 'Enter an API Key.')
-                        : undefined,
-                  }}
-                >
-                  {(field) => (
-                    <Field data-invalid={field.state.meta.errors.length > 0 || undefined}>
-                      <FieldLabel htmlFor="provider-api-key" className="text-xs text-muted-foreground">
-                        {t('settings.providers.auth.apiKeyLabel', 'API Key')}
-                      </FieldLabel>
-                      <Input
-                        id="provider-api-key"
-                        type="password"
-                        autoComplete="new-password"
-                        value={field.state.value}
-                        placeholder={apiKeyPlaceholder(provider, t)}
-                        disabled={sessionActive || createSession.isPending || submittingApiKey}
-                        onBlur={field.handleBlur}
-                        onChange={(event) => field.handleChange(event.target.value)}
-                        aria-invalid={field.state.meta.errors.length > 0 || undefined}
-                      />
-                      <FieldDescription className="text-xs">
-                        {t(
-                          'settings.providers.auth.apiKeyDescription',
-                          'For security, a saved API Key is never refilled; entering a new value replaces the existing credential.'
-                        )}
-                      </FieldDescription>
-                      <FieldError errors={field.state.meta.errors.map((message) => ({ message }))} />
-                    </Field>
-                  )}
-                </form.Field>
-              ) : authType === 'oauth' ? (
-                <>
-                  {isProviderAuthMethodActive(provider.auth, authType) ? (
-                    <Alert>
-                      <UserRoundCheckIcon />
-                      <AlertTitle>{t('settings.providers.auth.oauthActiveTitle', 'OAuth signed in')}</AlertTitle>
-                      <AlertDescription className="text-xs">
-                        {t('settings.providers.auth.oauthActiveDescription', 'Provider {{name}} is authenticated via OAuth.', {
-                          name: provider.name,
-                        })}
-                      </AlertDescription>
-                      <AlertAction>
-                        <ProviderAuthReset
-                          provider={provider}
+            {(authType) => {
+              if (authType === 'api_key') {
+                return (
+                  <form.Field
+                    name="apiKey"
+                    validators={{
+                      onSubmit: ({ value, fieldApi }) =>
+                        fieldApi.form.getFieldValue('authType') === 'api_key' && value.length === 0
+                          ? t('settings.providers.auth.apiKeyRequired', 'Enter an API Key.')
+                          : undefined,
+                    }}
+                  >
+                    {(field) => (
+                      <Field data-invalid={field.state.meta.errors.length > 0 || undefined}>
+                        <FieldLabel htmlFor="provider-api-key" className="text-xs text-muted-foreground">
+                          {t('settings.providers.auth.apiKeyLabel', 'API Key')}
+                        </FieldLabel>
+                        <Input
+                          id="provider-api-key"
+                          type="password"
+                          autoComplete="new-password"
+                          value={field.state.value}
+                          placeholder={apiKeyPlaceholder(provider, t)}
                           disabled={sessionActive || createSession.isPending || submittingApiKey}
+                          onBlur={field.handleBlur}
+                          onChange={(event) => field.handleChange(event.target.value)}
+                          aria-invalid={field.state.meta.errors.length > 0 || undefined}
                         />
-                      </AlertAction>
-                    </Alert>
-                  ) : (
-                    <Alert>
-                      <LogInIcon />
-                      <AlertTitle>{t('settings.providers.auth.oauthTitle', 'OAuth authentication')}</AlertTitle>
-                      <AlertDescription className="text-xs">
-                        {t(
-                          'settings.providers.auth.oauthDescription',
-                          'After submitting, follow the provider instructions to open the authorization page and sign in.'
-                        )}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </>
-              ) : null
-            }
+                        <FieldDescription className="text-xs">
+                          {t(
+                            'settings.providers.auth.apiKeyDescription',
+                            'For security, a saved API Key is never refilled; entering a new value replaces the existing credential.'
+                          )}
+                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors.map((message) => ({ message }))} />
+                      </Field>
+                    )}
+                  </form.Field>
+                );
+              } else if (authType === 'oauth') {
+                return (
+                  <>
+                    {isProviderAuthMethodActive(provider.auth, authType) ? (
+                      <Alert>
+                        <UserRoundCheckIcon />
+                        <AlertTitle>
+                          {t('settings.providers.auth.oauthActiveTitle', 'OAuth signed in')}
+                        </AlertTitle>
+                        <AlertDescription className="text-xs">
+                          {t(
+                            'settings.providers.auth.oauthActiveDescription',
+                            'Provider {{name}} is authenticated via OAuth.',
+                            {
+                              name: provider.name,
+                            }
+                          )}
+                        </AlertDescription>
+                        <AlertAction>
+                          <ProviderAuthReset
+                            provider={provider}
+                            disabled={sessionActive || createSession.isPending || submittingApiKey}
+                          />
+                        </AlertAction>
+                      </Alert>
+                    ) : (
+                      <Alert>
+                        <LogInIcon />
+                        <AlertTitle>
+                          {t('settings.providers.auth.oauthTitle', 'OAuth authentication')}
+                        </AlertTitle>
+                        <AlertDescription className="text-xs">
+                          {t(
+                            'settings.providers.auth.oauthDescription',
+                            'After submitting, follow the provider instructions to open the authorization page and sign in.'
+                          )}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
+                );
+              } else {
+                return null;
+              }
+            }}
           </form.Subscribe>
           {submissionError && (
             <Alert variant="destructive">
               <TriangleAlertIcon />
-              <AlertTitle>{t('settings.providers.auth.submissionFailed', 'Authentication failed')}</AlertTitle>
+              <AlertTitle>
+                {t('settings.providers.auth.submissionFailed', 'Authentication failed')}
+              </AlertTitle>
               <AlertDescription>{submissionError.message}</AlertDescription>
             </Alert>
           )}
@@ -344,7 +369,8 @@ async function submitApiKey(
   }
   if (snapshot.prompt === undefined) {
     throw new Error(
-      snapshot.error?.message ?? t('settings.providers.auth.noApiKeyPrompt', 'The provider did not request an API Key.')
+      snapshot.error?.message ??
+        t('settings.providers.auth.noApiKeyPrompt', 'The provider did not request an API Key.')
     );
   }
   const answered = await answerProviderAuthPrompt(providerKey, snapshot.id, {

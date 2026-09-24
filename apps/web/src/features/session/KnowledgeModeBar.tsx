@@ -125,6 +125,66 @@ function KnowledgeScopeEditor({ workspaceId, state, disabled, onChange }: Knowle
       listKnowledgeCollections(scope === 'global' ? undefined : workspaceId, page, signal),
     enabled: selectionMode === 'selected',
   });
+  /**
+   * Selects renderdiv content in the existing condition order.
+   */
+  function renderContent() {
+    if (collections.isPending) {
+      return <Skeleton className="h-44 w-full" />;
+    } else if (collections.error) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {collections.error.message}
+            <Button variant="link" onClick={() => void collections.refetch()}>
+              {t('common.retry', 'Retry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      );
+    } else {
+      return (
+        <Command className="border">
+          <CommandInput
+            placeholder={t('session.knowledgeMode.filterPlaceholder', 'Filter collections on this page…')}
+          />
+          <CommandList className="h-52">
+            <CommandEmpty>
+              {t('session.knowledgeMode.emptyPage', 'No matching collections on this page')}
+            </CommandEmpty>
+            <CommandGroup>
+              {collections.data?.items.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  value={`${item.name} ${item.description} ${item.id}`}
+                  disabled={!selected.includes(item.id) && selected.length >= 20}
+                  onSelect={() =>
+                    setSelected(
+                      selected.includes(item.id)
+                        ? selected.filter((id) => id !== item.id)
+                        : [...selected, item.id]
+                    )
+                  }
+                >
+                  <BookOpenIcon />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate">{item.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {item.description ||
+                        (item.source === 'remote'
+                          ? t('session.knowledgeMode.remoteFallback', 'Remote shared materials')
+                          : t('session.knowledgeMode.localFallback', 'Local knowledge collection'))}
+                    </p>
+                  </div>
+                  {selected.includes(item.id) && <CheckIcon aria-label="Selected" />}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      );
+    }
+  }
   return (
     <div className="flex flex-col gap-4">
       <ToggleGroup
@@ -169,69 +229,21 @@ function KnowledgeScopeEditor({ workspaceId, state, disabled, onChange }: Knowle
               <PageTabList
                 items={[
                   { value: 'workspace', label: t('session.knowledgeMode.scopeWorkspace', 'Workspace') },
-                  { value: 'global', label: t('session.knowledgeMode.scopeGlobal', 'Global'), icon: GlobeIcon },
+                  {
+                    value: 'global',
+                    label: t('session.knowledgeMode.scopeGlobal', 'Global'),
+                    icon: GlobeIcon,
+                  },
                 ]}
               />
             </Tabs>
             <Badge variant="outline">
-              {t('session.knowledgeMode.selectedCount', 'Selected {{count}} / 20', { count: selected.length })}
+              {t('session.knowledgeMode.selectedCount', 'Selected {{count}} / 20', {
+                count: selected.length,
+              })}
             </Badge>
           </div>
-          {collections.isPending ? (
-            <Skeleton className="h-44 w-full" />
-          ) : collections.error ? (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {collections.error.message}
-                <Button variant="link" onClick={() => void collections.refetch()}>
-                  {t('common.retry', 'Retry')}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Command className="border">
-              <CommandInput
-                placeholder={t('session.knowledgeMode.filterPlaceholder', 'Filter collections on this page…')}
-              />
-              <CommandList className="h-52">
-                <CommandEmpty>
-                  {t('session.knowledgeMode.emptyPage', 'No matching collections on this page')}
-                </CommandEmpty>
-                <CommandGroup>
-                  {collections.data?.items.map((item) => (
-                    <CommandItem
-                      key={item.id}
-                      value={`${item.name} ${item.description} ${item.id}`}
-                      disabled={!selected.includes(item.id) && selected.length >= 20}
-                      onSelect={() =>
-                        setSelected(
-                          selected.includes(item.id)
-                            ? selected.filter((id) => id !== item.id)
-                            : [...selected, item.id]
-                        )
-                      }
-                    >
-                      <BookOpenIcon />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate">{item.name}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {item.description ||
-                            (item.source === 'remote'
-                              ? t('session.knowledgeMode.remoteFallback', 'Remote shared materials')
-                              : t('session.knowledgeMode.localFallback', 'Local knowledge collection'))}
-                        </p>
-                      </div>
-                      {selected.includes(item.id) && (
-                        <CheckIcon
-                          aria-label="Selected"
-                        />
-                      )}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          )}
+          {renderContent()}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSelected([])} disabled={!selected.length}>
               <CopyXIcon data-icon="inline-start" />

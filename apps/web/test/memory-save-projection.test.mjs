@@ -5,8 +5,8 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { projectMemorySave } from '../src/features/session/memory-save-projection.ts';
-import { normalizeMessage, projectPersistedTranscript } from '../src/stores/session/normalizer.ts';
+import { projectMemorySave } from '../src/features/session/utils/memory-save-projection.ts';
+import { normalizeMessage, projectPersistedTranscript } from '../src/stores/session/utils/normalizer.ts';
 import { createSessionStore } from '../src/stores/session/store.ts';
 
 const receipt = {

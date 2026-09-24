@@ -10,14 +10,14 @@ import test from 'node:test';
 test('Settings keeps canonical routes while Workbench entry opens one route-masked dialog', () => {
   const router = readFileSync(new URL('../src/router/index.ts', import.meta.url), 'utf8');
   const layout = readFileSync(
-    new URL('../src/features/settings/layout/SettingsLayout.tsx', import.meta.url),
+    new URL('../src/features/settings/Layout/SettingsLayout.tsx', import.meta.url),
     'utf8'
   );
   const dialog = readFileSync(
-    new URL('../src/features/settings/layout/SettingsDialogHost.tsx', import.meta.url),
+    new URL('../src/features/settings/Layout/SettingsDialogHost.tsx', import.meta.url),
     'utf8'
   );
-  const workbench = readFileSync(new URL('../src/features/layout/index.tsx', import.meta.url), 'utf8');
+  const workbench = readFileSync(new URL('../src/features/layout/Layout.tsx', import.meta.url), 'utf8');
   const header = readFileSync(new URL('../src/features/layout/Header.tsx', import.meta.url), 'utf8');
 
   assert.match(
@@ -67,11 +67,11 @@ test('scheduled-task management is a Workbench page while Settings only owns ser
 
 test('complete Settings navigation entries all resolve to a concrete dialog page', () => {
   const navigation = readFileSync(
-    new URL('../src/features/settings/settings-navigation.ts', import.meta.url),
+    new URL('../src/features/settings/hooks/use-settings-navigation.ts', import.meta.url),
     'utf8'
   );
   const dialog = readFileSync(
-    new URL('../src/features/settings/layout/SettingsDialogHost.tsx', import.meta.url),
+    new URL('../src/features/settings/Layout/SettingsDialogHost.tsx', import.meta.url),
     'utf8'
   );
 

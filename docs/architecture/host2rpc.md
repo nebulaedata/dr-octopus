@@ -140,7 +140,7 @@ resident sessionId -> runtimeId -> AgentRpcProcess -> child pid
 
 ## 5. Browser Tab 与 `/ws` 生命周期
 
-`apps/web/src/utils/realtime-client.ts` 导出一个 tab-scoped `realtimeClient` 单例。单例内部
+`apps/web/src/lib/runtime/realtime-client.ts` 导出一个 tab-scoped `realtimeClient` 单例。单例内部
 只有一个 `WebSocket`，同时维护消息监听器、连接状态监听器和已订阅 Session 集合。
 
 ### 5.1 建连
@@ -551,7 +551,7 @@ Tab 打开超过 32 个不同 Session 后可能触及连接订阅上限。后续
 
 ### Web
 
-- [`apps/web/src/utils/realtime-client.ts`](../../apps/web/src/utils/realtime-client.ts)：tab-scoped
+- [`apps/web/src/lib/runtime/realtime-client.ts`](../../apps/web/src/lib/runtime/realtime-client.ts)：tab-scoped
   WebSocket、重连、订阅恢复、命令发送和连接状态。
 - [`apps/web/src/queries/realtime-queries.ts`](../../apps/web/src/queries/realtime-queries.ts)：连接生命周期、
   snapshot 水合和 sequence gap reconcile。

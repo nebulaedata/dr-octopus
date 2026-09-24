@@ -45,6 +45,46 @@ export function MemoryServiceCard({
     : undefined;
   const active = status?.state === 'running';
   const busy = !!pending || loading || status?.state === 'stopping' || status?.state === 'starting';
+  /**
+   * Selects button content in the existing condition order.
+   */
+  function renderButtonContent() {
+    if (pending === 'start') {
+      return t('memory.service.startingProgress', 'Starting…');
+    } else if (pending === 'stop') {
+      return t('memory.service.stoppingProgress', 'Stopping…');
+    } else if (active) {
+      return t('memory.service.stop', 'Stop');
+    } else {
+      return t('memory.service.start', 'Start');
+    }
+  }
+  /**
+   * Selects button content2 in the existing condition order.
+   */
+  function renderButtonContent2() {
+    if (pending && pending !== 'restart') {
+      return <Spinner data-icon="inline-start" />;
+    } else if (active) {
+      return <SquareIcon data-icon="inline-start" />;
+    } else {
+      return <PlayIcon data-icon="inline-start" />;
+    }
+  }
+  /**
+   * Selects badge content in the existing condition order.
+   */
+  function renderBadgeContent() {
+    if (loading) {
+      return t('memory.service.checking', 'Checking');
+    } else if (failed) {
+      return t('memory.service.unknown', 'Status unknown');
+    } else if (status) {
+      return labels[status.state];
+    } else {
+      return t('memory.service.unknown', 'Status unknown');
+    }
+  }
   return (
     <Card className="shrink-0 shadow-none">
       <CardContent className="flex flex-wrap items-center gap-4">
@@ -59,14 +99,7 @@ export function MemoryServiceCard({
               className={cn(active ? 'bg-success/12 text-success' : 'text-muted-foreground')}
               aria-live="polite"
             >
-              {pendingLabels ??
-                (loading
-                  ? t('memory.service.checking', 'Checking')
-                  : failed
-                    ? t('memory.service.unknown', 'Status unknown')
-                    : status
-                      ? labels[status.state]
-                      : t('memory.service.unknown', 'Status unknown'))}
+              {pendingLabels ?? renderBadgeContent()}
             </Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -84,20 +117,8 @@ export function MemoryServiceCard({
             aria-busy={!!pending && pending !== 'restart'}
             onClick={() => onAction(active ? 'stop' : 'start')}
           >
-            {pending && pending !== 'restart' ? (
-              <Spinner data-icon="inline-start" />
-            ) : active ? (
-              <SquareIcon data-icon="inline-start" />
-            ) : (
-              <PlayIcon data-icon="inline-start" />
-            )}
-            {pending === 'start'
-              ? t('memory.service.startingProgress', 'Starting…')
-              : pending === 'stop'
-                ? t('memory.service.stoppingProgress', 'Stopping…')
-                : active
-                  ? t('memory.service.stop', 'Stop')
-                  : t('memory.service.start', 'Start')}
+            {renderButtonContent2()}
+            {renderButtonContent()}
           </Button>
           {active || status?.state === 'unavailable' || pending === 'restart' ? (
             <Button

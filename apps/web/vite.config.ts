@@ -16,10 +16,23 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, fileURLToPath(new URL('../../', import.meta.url)), 'SERVER_');
   const host = env.SERVER_HOST?.trim() || '127.0.0.1';
-  const proxyHost = host === '0.0.0.0' ? '127.0.0.1' : host === '::' ? '[::1]' : host;
+  let proxyHost = host;
+  if (host === '0.0.0.0') {
+    proxyHost = '127.0.0.1';
+  } else if (host === '::') {
+    proxyHost = '[::1]';
+  }
   const port = env.SERVER_PORT?.trim() || '3000';
   const target = `http://${proxyHost}:${port}`;
   return {
+    build: {
+      rolldownOptions: {
+        treeshake: {
+          // Feature entrypoints are checked pure re-exports; unused entries must not load sibling pages.
+          moduleSideEffects: [{ test: /\/src\/features\/[^/]+\/index\.ts$/, sideEffects: false }],
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': '/src',

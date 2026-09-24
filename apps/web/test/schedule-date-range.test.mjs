@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { historyDateBounds } from '../src/features/schedules/schedule-date-range.ts';
+import { historyDateBounds } from '../src/features/schedules/utils/schedule-date-range.ts';
 
 const t = (key, defaultValue) => defaultValue;
 

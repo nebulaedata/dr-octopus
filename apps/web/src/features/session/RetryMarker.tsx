@@ -73,12 +73,22 @@ function RetryNotice({
   useInterval(() => setNow(Date.now()), waiting ? 1_000 : undefined, { immediate: true });
   const title = formatRetryTitle(retry, now);
   const failed = retry.status === 'failed';
-  const detail = failed
-    ? (retry.finalError ?? retry.errorMessage)
-    : retry.status === 'succeeded'
-      ? undefined
-      : retry.errorMessage;
-  const Icon = failed ? CircleXIcon : retry.status === 'succeeded' ? CircleCheckIcon : RefreshCwIcon;
+  let detail: string | undefined;
+  if (failed) {
+    detail = retry.finalError ?? retry.errorMessage;
+  } else if (retry.status === 'succeeded') {
+    detail = undefined;
+  } else {
+    detail = retry.errorMessage;
+  }
+  let Icon;
+  if (failed) {
+    Icon = CircleXIcon;
+  } else if (retry.status === 'succeeded') {
+    Icon = CircleCheckIcon;
+  } else {
+    Icon = RefreshCwIcon;
+  }
 
   /**
    * Sends the existing fenced abort-retry command and prevents duplicate clicks while awaiting its events.

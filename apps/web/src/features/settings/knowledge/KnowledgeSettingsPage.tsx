@@ -2,7 +2,7 @@
  * @author Codex
  * @description Knowledge model settings and shared daemon lifecycle inside the existing Settings frame.
  */
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DatabaseIcon, PlayIcon, SquareIcon, RotateCwIcon } from 'lucide-react';
 import { Card, CardContent } from '@octopus/ui/components/card';
@@ -43,6 +43,46 @@ export function KnowledgeSettingsPage() {
   const pendingAction = lifecycle.isPending ? lifecycle.variables : undefined;
   const changingState = pendingAction === 'start' || pendingAction === 'stop';
   const restarting = pendingAction === 'restart';
+  /**
+   * Selects button content in the existing condition order.
+   */
+  function renderButtonContent() {
+    if (changingState) {
+      if (pendingAction === 'start') {
+        return t('settings.knowledge.service.starting', 'Starting…');
+      } else {
+        return t('settings.knowledge.service.stopping', 'Stopping…');
+      }
+    } else if (active) {
+      return t('settings.knowledge.service.stop', 'Stop');
+    } else {
+      return t('settings.knowledge.service.start', 'Start');
+    }
+  }
+  /**
+   * Selects button content2 in the existing condition order.
+   */
+  function renderButtonContent2() {
+    if (changingState) {
+      return <Spinner data-icon="inline-start" aria-label="Action in progress" />;
+    } else if (active) {
+      return <SquareIcon data-icon="inline-start" />;
+    } else {
+      return <PlayIcon data-icon="inline-start" />;
+    }
+  }
+  /**
+   * Selects badge content in the existing condition order.
+   */
+  function renderBadgeContent() {
+    if (active) {
+      return t('settings.knowledge.service.state.running', 'Running');
+    } else if (service.data?.state === 'stopped') {
+      return t('settings.knowledge.service.state.stopped', 'Stopped');
+    } else {
+      return t('settings.knowledge.service.state.notStarted', 'Not started');
+    }
+  }
   return (
     <SettingContainer>
       <Card className="shrink-0 shadow-none">
@@ -57,11 +97,7 @@ export function KnowledgeSettingsPage() {
                 variant="secondary"
                 className={cn(active ? 'bg-success text-white' : 'text-muted-foreground')}
               >
-                {active
-                  ? t('settings.knowledge.service.state.running', 'Running')
-                  : service.data?.state === 'stopped'
-                    ? t('settings.knowledge.service.state.stopped', 'Stopped')
-                    : t('settings.knowledge.service.state.notStarted', 'Not started')}
+                {renderBadgeContent()}
               </Badge>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -79,20 +115,8 @@ export function KnowledgeSettingsPage() {
               aria-busy={changingState}
               onClick={() => lifecycle.mutate(active ? 'stop' : 'start')}
             >
-              {changingState ? (
-                <Spinner data-icon="inline-start" aria-label="Action in progress" />
-              ) : active ? (
-                <SquareIcon data-icon="inline-start" />
-              ) : (
-                <PlayIcon data-icon="inline-start" />
-              )}
-              {changingState
-                ? pendingAction === 'start'
-                  ? t('settings.knowledge.service.starting', 'Starting…')
-                  : t('settings.knowledge.service.stopping', 'Stopping…')
-                : active
-                  ? t('settings.knowledge.service.stop', 'Stop')
-                  : t('settings.knowledge.service.start', 'Start')}
+              {renderButtonContent2()}
+              {renderButtonContent()}
             </Button>
             {active || restarting ? (
               <Button

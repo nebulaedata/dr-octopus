@@ -72,6 +72,58 @@ export function KnowledgeDocuments({
   });
   const items = documents.data?.items ?? [];
   const selected = items.filter((document) => selectedIds.includes(document.id));
+  /**
+   * Selects renderdiv content in the existing condition order.
+   */
+  function renderContent() {
+    if (documents.isError && documents.data === undefined) {
+      return (
+        <div className="p-5">
+          <Alert variant="destructive">
+            <TriangleAlertIcon />
+            <AlertTitle>{t('knowledge.documents.loadFailed', 'Failed to load documents')}</AlertTitle>
+            <AlertDescription>{documents.error.message}</AlertDescription>
+            <AlertAction>
+              <Button variant="outline" size="sm" onClick={() => void documents.refetch()}>
+                {t('common.retry', 'Retry')}
+              </Button>
+            </AlertAction>
+          </Alert>
+        </div>
+      );
+    } else if (!documents.isPending && !documents.data?.items.length) {
+      return (
+        <Empty className="py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileTextIcon />
+            </EmptyMedia>
+            <EmptyTitle>
+              {t('knowledge.documents.emptyTitle', 'No documents in this collection yet')}
+            </EmptyTitle>
+            <EmptyDescription className="text-xs">
+              {t(
+                'knowledge.documents.emptyDescription',
+                'Upload documents or add text to start building this knowledge.'
+              )}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      );
+    } else {
+      return (
+        <KnowledgeDocumentTable
+          workspaceId={workspaceId}
+          items={items}
+          loading={documents.isPending}
+          selectedIds={selectedIds}
+          setSelectedIds={setSelectedIds}
+          batchPending={batchPending}
+          onJob={(job) => setJobId(job.id)}
+        />
+      );
+    }
+  }
   return (
     <div className="flex h-[70dvh] min-h-96 min-w-0 flex-col gap-5 lg:h-full lg:min-h-0">
       <section className="shrink-0">
@@ -162,47 +214,7 @@ export function KnowledgeDocuments({
       ) : null}
       {job.data ? <KnowledgeJobFeedback workspaceId={workspaceId} result={job.data} /> : null}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card **:data-[slot=table-container]:overflow-visible">
-        {documents.isError && documents.data === undefined ? (
-          <div className="p-5">
-            <Alert variant="destructive">
-              <TriangleAlertIcon />
-              <AlertTitle>{t('knowledge.documents.loadFailed', 'Failed to load documents')}</AlertTitle>
-              <AlertDescription>{documents.error.message}</AlertDescription>
-              <AlertAction>
-                <Button variant="outline" size="sm" onClick={() => void documents.refetch()}>
-                  {t('common.retry', 'Retry')}
-                </Button>
-              </AlertAction>
-            </Alert>
-          </div>
-        ) : !documents.isPending && !documents.data?.items.length ? (
-          <Empty className="py-16">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <FileTextIcon />
-              </EmptyMedia>
-              <EmptyTitle>
-                {t('knowledge.documents.emptyTitle', 'No documents in this collection yet')}
-              </EmptyTitle>
-              <EmptyDescription className="text-xs">
-                {t(
-                  'knowledge.documents.emptyDescription',
-                  'Upload documents or add text to start building this knowledge.'
-                )}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <KnowledgeDocumentTable
-            workspaceId={workspaceId}
-            items={items}
-            loading={documents.isPending}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-            batchPending={batchPending}
-            onJob={(job) => setJobId(job.id)}
-          />
-        )}
+        {renderContent()}
       </div>
       {(documents.data?.total ?? 0) > 20 || page > 1 ? (
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">

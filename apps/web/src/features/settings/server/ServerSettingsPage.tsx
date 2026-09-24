@@ -8,7 +8,7 @@ import { Button } from '@octopus/ui/components/button';
 import { Spinner } from '@octopus/ui/components/spinner';
 import { getServerSettings } from '@/api/server-settings';
 import { useI18n } from '@/i18n/use-i18n';
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { ServerSettingsEditor } from './ServerSettingsEditor';
 
 /**

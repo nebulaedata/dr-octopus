@@ -26,7 +26,7 @@ import { updatePermissionSettings } from '@/api/permissions';
 import { PermissionActionBadge } from './PermissionActionBadge';
 import { PermissionSelect } from './PermissionSelect';
 import { PermissionToolJsonHelp } from './PermissionJsonHelp';
-import { getModeLabels } from './permission-labels';
+import { getModeLabels } from '@/features/settings/utils/permission-labels';
 import { useI18n } from '@/i18n/use-i18n';
 import type { PermissionConfig, PermissionSettingsSnapshot } from '@octopus/shared/protocol';
 
@@ -149,18 +149,28 @@ export function PermissionToolEditor({
               <form.Field
                 name="name"
                 validators={{
-                  onChange: ({ value }) =>
-                    !PermissionConfigSchema.safeParse({ policy: { tools: { [value]: 'ask' } } }).success
-                      ? t(
-                          'settings.permissions.toolEditor.nameInvalid',
-                          'Enter a valid tool name; whitespace and reserved field names are not supported'
-                        )
-                      : !tool &&
-                          (snapshot.effective?.toolRules[value] ||
-                            snapshot.effective?.policy.tools[value] ||
-                            Object.values(snapshot.effective?.modes ?? {}).some((mode) => mode.tools[value]))
-                        ? t('settings.permissions.toolEditor.nameExists', 'This tool already exists; edit the existing rule')
-                        : undefined,
+                  onChange: ({ value }) => {
+                    if (
+                      !PermissionConfigSchema.safeParse({ policy: { tools: { [value]: 'ask' } } }).success
+                    ) {
+                      return t(
+                        'settings.permissions.toolEditor.nameInvalid',
+                        'Enter a valid tool name; whitespace and reserved field names are not supported'
+                      );
+                    } else if (
+                      !tool &&
+                      (snapshot.effective?.toolRules[value] ||
+                        snapshot.effective?.policy.tools[value] ||
+                        Object.values(snapshot.effective?.modes ?? {}).some((mode) => mode.tools[value]))
+                    ) {
+                      return t(
+                        'settings.permissions.toolEditor.nameExists',
+                        'This tool already exists; edit the existing rule'
+                      );
+                    } else {
+                      return undefined;
+                    }
+                  },
                 }}
               >
                 {(field) => (
@@ -170,7 +180,10 @@ export function PermissionToolEditor({
                     </FieldLabel>
                     <Input
                       id="permission-tool-name"
-                      placeholder={t('settings.permissions.toolEditor.namePlaceholder', 'e.g. knowledge_search')}
+                      placeholder={t(
+                        'settings.permissions.toolEditor.namePlaceholder',
+                        'e.g. knowledge_search'
+                      )}
                       value={field.state.value}
                       disabled={Boolean(tool) || save.isPending}
                       onChange={(event) => field.handleChange(event.target.value)}
@@ -184,33 +197,45 @@ export function PermissionToolEditor({
               <div className="grid grid-cols-2 gap-3">
                 {(['policy', 'ask', 'auto', 'full'] as const).map((name) => (
                   <form.Field name={name} key={name}>
-                    {(field) => (
-                      <Field>
-                        <FieldLabel>
-                          {name === 'policy' ? t('settings.permissions.toolEditor.policyLabel', 'Fixed policy') : modeLabels[name]}
-                        </FieldLabel>
-                        <PermissionSelect
-                          label={
-                            name === 'policy' ? t('settings.permissions.toolEditor.policyLabel', 'Fixed policy') : modeLabels[name]
+                    {(field) => {
+                      /**
+                       * Selects action in the existing condition order.
+                       */
+                      function selectAction() {
+                        if (tool) {
+                          if (name === 'policy') {
+                            return snapshot.inherited?.policy.tools[tool];
+                          } else {
+                            return snapshot.inherited?.modes[name].tools[tool];
                           }
-                          value={field.state.value}
-                          onChange={field.handleChange}
-                          disabled={save.isPending}
-                        />
-                        <FieldDescription>
-                          {t('settings.permissions.toolEditor.defaultPrefix', 'Default: ')}
-                          <PermissionActionBadge
-                            action={
-                              tool
-                                ? name === 'policy'
-                                  ? snapshot.inherited?.policy.tools[tool]
-                                  : snapshot.inherited?.modes[name].tools[tool]
-                                : undefined
+                        } else {
+                          return undefined;
+                        }
+                      }
+                      return (
+                        <Field>
+                          <FieldLabel>
+                            {name === 'policy'
+                              ? t('settings.permissions.toolEditor.policyLabel', 'Fixed policy')
+                              : modeLabels[name]}
+                          </FieldLabel>
+                          <PermissionSelect
+                            label={
+                              name === 'policy'
+                                ? t('settings.permissions.toolEditor.policyLabel', 'Fixed policy')
+                                : modeLabels[name]
                             }
+                            value={field.state.value}
+                            onChange={field.handleChange}
+                            disabled={save.isPending}
                           />
-                        </FieldDescription>
-                      </Field>
-                    )}
+                          <FieldDescription>
+                            {t('settings.permissions.toolEditor.defaultPrefix', 'Default: ')}
+                            <PermissionActionBadge action={selectAction()} />
+                          </FieldDescription>
+                        </Field>
+                      );
+                    }}
                   </form.Field>
                 ))}
               </div>
@@ -245,7 +270,10 @@ export function PermissionToolEditor({
                     <CollapsibleContent keepMounted>
                       <Field data-invalid={field.state.meta.errors.length > 0}>
                         <FieldLabel htmlFor="permission-tool-descriptor">
-                          {t('settings.permissions.toolEditor.descriptorLabel', 'Tool kind and approval scope (JSON)')}
+                          {t(
+                            'settings.permissions.toolEditor.descriptorLabel',
+                            'Tool kind and approval scope (JSON)'
+                          )}
                         </FieldLabel>
                         <Textarea
                           id="permission-tool-descriptor"

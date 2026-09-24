@@ -10,7 +10,7 @@ import { SHORTCUT_COMMAND_IDS } from '../src/lib/shortcuts/shortcut-catalog.ts';
 
 test('every shortcut command label is statically extractable and translated', () => {
   const hook = readFileSync(
-    new URL('../src/features/settings/shortcuts/use-shortcut-command-labels.ts', import.meta.url),
+    new URL('../src/features/settings/hooks/use-shortcut-command-labels.ts', import.meta.url),
     'utf8'
   );
   const en = JSON.parse(readFileSync(new URL('../src/i18n/locales/en.json', import.meta.url), 'utf8'));

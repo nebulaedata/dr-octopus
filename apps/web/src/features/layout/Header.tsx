@@ -173,18 +173,22 @@ function WorkbenchNavMenu({ session, workspaceId, filesPanelOpen, onToggleFilesP
   const isAgentHomeRoute = pathname === '/' || /^\/workspaces\/[^/]+\/?$/.test(pathname);
   const isSkillsRoute = /^\/workspaces\/[^/]+\/(?:skills|sessions\/[^/]+\/skills)\/?$/.test(pathname);
   const isSchedulesRoute = pathname === '/schedules';
-  const chatTo =
-    session !== undefined
-      ? '/workspaces/$workspaceId/sessions/$sessionId'
-      : workspaceId !== undefined
-        ? '/workspaces/$workspaceId'
-        : '/';
-  const chatParams: Record<string, string> | undefined =
-    session !== undefined
-      ? { workspaceId: session.workspaceId, sessionId: session.id }
-      : workspaceId !== undefined
-        ? { workspaceId }
-        : undefined;
+  let chatTo: '/workspaces/$workspaceId/sessions/$sessionId' | '/workspaces/$workspaceId' | '/';
+  if (session !== undefined) {
+    chatTo = '/workspaces/$workspaceId/sessions/$sessionId';
+  } else if (workspaceId !== undefined) {
+    chatTo = '/workspaces/$workspaceId';
+  } else {
+    chatTo = '/';
+  }
+  let chatParams: Record<string, string> | undefined;
+  if (session !== undefined) {
+    chatParams = { workspaceId: session.workspaceId, sessionId: session.id };
+  } else if (workspaceId !== undefined) {
+    chatParams = { workspaceId };
+  } else {
+    chatParams = undefined;
+  }
   // Resource pages retain the Session in the URL so chat, sibling pages and the sidebar stay anchored.
   const skillsTo =
     session === undefined
@@ -194,12 +198,14 @@ function WorkbenchNavMenu({ session, workspaceId, filesPanelOpen, onToggleFilesP
     session === undefined
       ? '/workspaces/$workspaceId/knowledge'
       : '/workspaces/$workspaceId/sessions/$sessionId/knowledge';
-  const resourceParams: Record<string, string> | undefined =
-    session !== undefined
-      ? { workspaceId: session.workspaceId, sessionId: session.id }
-      : workspaceId === undefined
-        ? undefined
-        : { workspaceId };
+  let resourceParams: Record<string, string> | undefined;
+  if (session !== undefined) {
+    resourceParams = { workspaceId: session.workspaceId, sessionId: session.id };
+  } else if (workspaceId === undefined) {
+    resourceParams = undefined;
+  } else {
+    resourceParams = { workspaceId };
+  }
 
   return (
     <NavMenu

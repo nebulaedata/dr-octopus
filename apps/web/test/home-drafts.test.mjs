@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createHomeDraftStore } from '../src/stores/home-drafts.ts';
+import { createHomeDraftStore } from '../src/stores/home-drafts/index.ts';
 
 test('text, serialized mentions, explicit choice and pending request survive reload', () => {
   const data = new Map();

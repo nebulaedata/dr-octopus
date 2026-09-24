@@ -8,7 +8,7 @@ import {
   normalizeOrigins,
   serverChanges,
   validateServerField,
-} from '../src/features/settings/server/server-fields.ts';
+} from '../src/features/settings/utils/server-fields.ts';
 
 /** Passes default English copy through, matching the production fallback contract. */
 const t = (key, defaultValue) => defaultValue;

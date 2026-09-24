@@ -4,7 +4,10 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { filterTaskTools, selectTaskToolMatches } from '../src/features/schedules/schedule-tool-selection.ts';
+import {
+  filterTaskTools,
+  selectTaskToolMatches,
+} from '../src/features/schedules/utils/schedule-tool-selection.ts';
 const tools = [
   {
     name: 'web_search',

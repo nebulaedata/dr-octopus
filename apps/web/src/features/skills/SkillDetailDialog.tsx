@@ -19,7 +19,7 @@ import { Skeleton } from '@octopus/ui/components/skeleton';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { useSkill } from '@/queries/skills-queries';
 import { formatRelativeTime } from '@/utils/date';
-import { formatBytes } from './utils';
+import { formatBytes } from '@/features/skills/utils/skill-fields';
 import { useI18n } from '@/i18n/use-i18n';
 import type { SkillScope } from '@/api/skills';
 
@@ -86,7 +86,8 @@ export function SkillDetailDialog({
         {skill !== undefined && (
           <div className="flex min-h-0 flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              {skill.description || t('skills.detailDialog.noDescription', '(No description yet — edit to add one)')}
+              {skill.description ||
+                t('skills.detailDialog.noDescription', '(No description yet — edit to add one)')}
             </p>
             <p className="text-xs text-muted-foreground">
               {t('skills.common.footerMeta', '{{count}} files · {{size}} · updated {{updated}}', {

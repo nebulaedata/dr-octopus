@@ -14,7 +14,7 @@ import { ScrollArea } from '@octopus/ui/components/scroll-area';
 import { Skeleton } from '@octopus/ui/components/skeleton';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
-import { getMcpServerSourceLabel } from './mcp-server-labels';
+import { getMcpServerSourceLabel } from '@/features/settings/utils/mcp-server-labels';
 import type { Translate } from '@/i18n/use-i18n';
 import type {
   McpServerConnectivityDto,
@@ -85,7 +85,10 @@ export function McpServerCatalog(props: McpServerCatalogProps) {
                 <EmptyDescription>
                   {search.length > 0
                     ? t('settings.mcp.noMatchDescription', 'Try searching by name, transport, or source.')
-                    : t('settings.mcp.emptyDescription', 'Use the button below to add the first configuration.')}
+                    : t(
+                        'settings.mcp.emptyDescription',
+                        'Use the button below to add the first configuration.'
+                      )}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -174,12 +177,22 @@ function getConnectivityPresentation(
   pulse?: boolean;
 } {
   if (!props.enabled || props.status === 'disabled') {
-    return { label: t('settings.mcp.connectivity.disabled', 'Disabled; connectivity not checked'), className: 'bg-muted-foreground/40' };
+    return {
+      label: t('settings.mcp.connectivity.disabled', 'Disabled; connectivity not checked'),
+      className: 'bg-muted-foreground/40',
+    };
   }
   if (props.pending || props.status === undefined) {
     return props.failed
-      ? { label: t('settings.mcp.connectivity.failed', 'Connectivity check failed'), className: 'bg-destructive' }
-      : { label: t('settings.mcp.connectivity.checking', 'Checking connectivity'), className: 'bg-muted-foreground/50', pulse: true };
+      ? {
+          label: t('settings.mcp.connectivity.failed', 'Connectivity check failed'),
+          className: 'bg-destructive',
+        }
+      : {
+          label: t('settings.mcp.connectivity.checking', 'Checking connectivity'),
+          className: 'bg-muted-foreground/50',
+          pulse: true,
+        };
   }
   if (props.status === 'connected') {
     return { label: t('settings.mcp.connectivity.connected', 'Connected'), className: 'bg-success' };
@@ -190,5 +203,8 @@ function getConnectivityPresentation(
       className: 'bg-destructive',
     };
   }
-  return { label: t('settings.mcp.connectivity.failed', 'Connectivity check failed'), className: 'bg-destructive' };
+  return {
+    label: t('settings.mcp.connectivity.failed', 'Connectivity check failed'),
+    className: 'bg-destructive',
+  };
 }

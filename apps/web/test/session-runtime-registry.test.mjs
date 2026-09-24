@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { SessionRuntimeRegistry } from '../src/lib/runtime/session-runtime-registry.ts';
 import { createSessionStore } from '../src/stores/session/store.ts';
-import { getLastItemIndexByTurn } from '../src/features/session/turn-transcript-model.ts';
+import { getLastItemIndexByTurn } from '../src/features/session/utils/turn-transcript-model.ts';
 
 /**
  * Creates a deterministic subscription adapter that records desired transitions.

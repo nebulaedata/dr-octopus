@@ -58,6 +58,30 @@ export function FileEditorDialog({ workspaceId, path, onClose }: FileEditorDialo
   const file = useWorkspaceFileContent(workspaceId, path);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  /**
+   * Selects dialog content content in the existing condition order.
+   */
+  function renderPreviewContent() {
+    if (file.isPending) {
+      return (
+        <div className="flex min-h-0 items-center justify-center gap-2 text-muted-foreground">
+          <Spinner />
+          {t('session.fileEditor.loading', 'Loading file…')}
+        </div>
+      );
+    } else if (file.isError) {
+      return (
+        <Alert variant="destructive">
+          <AlertTitle>{t('session.fileEditor.openFailed', 'Unable to open file')}</AlertTitle>
+          <AlertDescription>{file.error.message}</AlertDescription>
+        </Alert>
+      );
+    } else {
+      return (
+        <FileEditor workspaceId={workspaceId} path={path} initialContent={file.data} onClose={onClose} />
+      );
+    }
+  }
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
@@ -85,19 +109,7 @@ export function FileEditorDialog({ workspaceId, path, onClose }: FileEditorDialo
           <DialogTitle className="truncate">{path.split('/').at(-1)}</DialogTitle>
           <DialogDescription className="truncate">{path}</DialogDescription>
         </DialogHeader>
-        {file.isPending ? (
-          <div className="flex min-h-0 items-center justify-center gap-2 text-muted-foreground">
-            <Spinner />
-            {t('session.fileEditor.loading', 'Loading file…')}
-          </div>
-        ) : file.isError ? (
-          <Alert variant="destructive">
-            <AlertTitle>{t('session.fileEditor.openFailed', 'Unable to open file')}</AlertTitle>
-            <AlertDescription>{file.error.message}</AlertDescription>
-          </Alert>
-        ) : (
-          <FileEditor workspaceId={workspaceId} path={path} initialContent={file.data} onClose={onClose} />
-        )}
+        {renderPreviewContent()}
       </DialogContent>
     </Dialog>
   );
@@ -171,9 +183,7 @@ function FileEditor({ workspaceId, path, initialContent, onClose }: FileEditorPr
           {t('common.cancel', 'Cancel')}
         </Button>
         <Button onClick={() => void handleSave()} disabled={!isDirty || saveFile.isPending}>
-          {saveFile.isPending
-            ? t('session.fileEditor.saving', 'Saving…')
-            : t('common.save', 'Save')}
+          {saveFile.isPending ? t('session.fileEditor.saving', 'Saving…') : t('common.save', 'Save')}
         </Button>
       </DialogFooter>
     </div>

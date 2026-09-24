@@ -3,7 +3,7 @@
  * @description Owns Session properties, queue visibility, cloning, export, and persisted behavior preferences.
  */
 
-import { copyTextWithFeedback } from '@/lib/copy-text-with-feedback';
+import { copyTextWithFeedback } from '@/utils/copy-text-with-feedback';
 import { useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { CopyIcon, DownloadIcon, InfoIcon, Layers2Icon, Settings2Icon } from 'lucide-react';

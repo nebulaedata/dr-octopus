@@ -8,7 +8,7 @@ import { Checkbox } from '@octopus/ui/components/checkbox';
 import { CheckboxHalf } from '@/components/CheckboxHalf';
 import { Badge } from '@octopus/ui/components/badge';
 import { ScrollArea } from '@octopus/ui/components/scroll-area';
-import { filterTaskTools, selectTaskToolMatches } from './schedule-tool-selection';
+import { filterTaskTools, selectTaskToolMatches } from '@/features/schedules/utils/schedule-tool-selection';
 import { SearchInput } from '@/components/SearchInput';
 import { useI18n } from '@/i18n/use-i18n';
 import type { TaskToolCatalogEntry } from '@octopus/shared/protocol/scheduled-tasks';
@@ -82,11 +82,7 @@ export function ScheduleToolPicker({
         {' ('}
         {selectedMatches}/{selectable.length})
       </label>
-      <ScrollArea
-        ref={scrollRoot}
-        className="h-105 rounded-lg border"
-        aria-label="Tool catalog"
-      >
+      <ScrollArea ref={scrollRoot} className="h-105 rounded-lg border" aria-label="Tool catalog">
         {matches.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">
             {t('schedules.toolPicker.emptyMatches', 'No matching tools. Adjust the search criteria.')}
@@ -129,7 +125,8 @@ export function ScheduleToolPicker({
                       </span>
                       <span className="wrap-break-word text-xs text-muted-foreground">
                         {t('schedules.toolPicker.sourcePrefix', 'Source: {{source}}', {
-                          source: tool.source ?? t('schedules.toolPicker.sourceMissing', 'No source provided'),
+                          source:
+                            tool.source ?? t('schedules.toolPicker.sourceMissing', 'No source provided'),
                         })}
                       </span>
                       <span className="whitespace-pre-wrap text-xs text-muted-foreground wrap-anywhere">

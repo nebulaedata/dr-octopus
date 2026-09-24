@@ -10,7 +10,7 @@ import { useWorkspaces } from '@/queries/workbench-queries';
 import { workspaceDisplayName } from '@/utils/workspace';
 import { SchedulePagination } from './SchedulePagination';
 import { ScheduleRunDetails } from './ScheduleRunDetails';
-import { scheduleRunStatusLabel } from './schedule-history-status';
+import { scheduleRunStatusLabel } from '@/features/schedules/utils/schedule-history-status';
 import { useI18n } from '@/i18n/use-i18n';
 import type { ScheduledHistoryQuery } from '@octopus/shared/protocol/scheduled-tasks';
 
@@ -36,10 +36,7 @@ export function ScheduleHistoryList({
     queryFn: ({ signal }) => searchScheduledHistory(workspaceId, { ...filters, offset, limit: 21 }, signal),
   });
   return (
-    <section
-      aria-label="Workspace run history"
-      className="flex flex-col gap-4"
-    >
+    <section aria-label="Workspace run history" className="flex flex-col gap-4">
       {history.error && (
         <p role="alert" className="text-sm text-destructive">
           {history.error.message}

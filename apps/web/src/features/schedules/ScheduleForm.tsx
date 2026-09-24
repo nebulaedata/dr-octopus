@@ -43,18 +43,24 @@ export function ScheduleForm({
   const { t } = useI18n();
   const [defaultAt] = useState(() => new Date(Date.now() + 3600_000).toISOString());
   const schedule = task?.schedule;
+  /**
+   * Selects at in the existing condition order.
+   */
+  function selectAt() {
+    if (schedule?.type === 'once') {
+      return schedule.at;
+    } else if (schedule?.type === 'interval') {
+      return schedule.anchorAt;
+    } else {
+      return defaultAt;
+    }
+  }
   const form = useForm({
     defaultValues: {
       name: task?.name ?? '',
       prompt: task?.prompt ?? '',
       type: schedule?.type ?? 'once',
-      at: localDate(
-        schedule?.type === 'once'
-          ? schedule.at
-          : schedule?.type === 'interval'
-            ? schedule.anchorAt
-            : defaultAt
-      ),
+      at: localDate(selectAt()),
       expression: schedule?.type === 'cron' ? schedule.expression : '0 9 * * *',
       timezone:
         schedule?.type === 'cron'
@@ -68,28 +74,37 @@ export function ScheduleForm({
     onSubmit: async ({ value }) => {
       setError('');
       try {
-        const originalAt =
-          schedule?.type === 'once'
-            ? schedule.at
-            : schedule?.type === 'interval'
-              ? schedule.anchorAt
-              : undefined;
-        const instant =
-          value.type === 'cron'
-            ? ''
-            : originalAt && value.at === localDate(originalAt)
-              ? originalAt
-              : new Date(value.at).toISOString();
-        const nextSchedule =
-          value.type === 'cron'
-            ? { type: 'cron', expression: value.expression, timezone: value.timezone }
-            : value.type === 'interval'
-              ? {
-                  type: 'interval',
-                  everyMs: Number(value.minutes) * 60_000,
-                  anchorAt: instant,
-                }
-              : { type: 'once', at: instant };
+        let originalAt: string | undefined;
+        if (schedule?.type === 'once') {
+          originalAt = schedule.at;
+        } else if (schedule?.type === 'interval') {
+          originalAt = schedule.anchorAt;
+        } else {
+          originalAt = undefined;
+        }
+        let instant: string;
+        if (value.type === 'cron') {
+          instant = '';
+        } else if (originalAt && value.at === localDate(originalAt)) {
+          instant = originalAt;
+        } else {
+          instant = new Date(value.at).toISOString();
+        }
+        let nextSchedule:
+          | { type: string; expression: string; timezone: string }
+          | { type: string; everyMs: number; anchorAt: string }
+          | { type: string; at: string };
+        if (value.type === 'cron') {
+          nextSchedule = { type: 'cron', expression: value.expression, timezone: value.timezone };
+        } else if (value.type === 'interval') {
+          nextSchedule = {
+            type: 'interval',
+            everyMs: Number(value.minutes) * 60_000,
+            anchorAt: instant,
+          };
+        } else {
+          nextSchedule = { type: 'once', at: instant };
+        }
         const parsed = scheduledTaskInputSchema.safeParse({
           name: value.name,
           prompt: value.prompt,
@@ -110,7 +125,11 @@ export function ScheduleForm({
         }
         await onSave(parsed.data);
       } catch (failure) {
-        setError(failure instanceof Error ? failure.message : t('schedules.form.saveFailed', 'Save failed. Please try again.'));
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : t('schedules.form.saveFailed', 'Save failed. Please try again.')
+        );
       }
     },
   });
@@ -141,9 +160,7 @@ export function ScheduleForm({
           <form.Field name="prompt">
             {(field) => (
               <Field>
-                <FieldLabel htmlFor="schedule-prompt">
-                  {t('schedules.form.prompt', 'Run prompt')}
-                </FieldLabel>
+                <FieldLabel htmlFor="schedule-prompt">{t('schedules.form.prompt', 'Run prompt')}</FieldLabel>
                 <Textarea
                   id="schedule-prompt"
                   required
@@ -273,7 +290,10 @@ export function ScheduleForm({
                     value={field.state.value}
                     onChange={(value) => field.handleChange(value as 'skip' | 'coalesce')}
                     items={[
-                      { value: 'coalesce', label: t('schedules.form.misfireCoalesce', 'Coalesce into one catch-up run') },
+                      {
+                        value: 'coalesce',
+                        label: t('schedules.form.misfireCoalesce', 'Coalesce into one catch-up run'),
+                      },
                       { value: 'skip', label: t('schedules.form.policySkip', 'Skip') },
                     ]}
                   />
@@ -291,7 +311,10 @@ export function ScheduleForm({
                     value={field.state.value}
                     onChange={(value) => field.handleChange(value as 'skip' | 'queue-one')}
                     items={[
-                      { value: 'queue-one', label: t('schedules.form.overlapQueueOne', 'Keep one queued run') },
+                      {
+                        value: 'queue-one',
+                        label: t('schedules.form.overlapQueueOne', 'Keep one queued run'),
+                      },
                       { value: 'skip', label: t('schedules.form.policySkip', 'Skip') },
                     ]}
                   />
@@ -329,9 +352,7 @@ export function ScheduleForm({
           {t('common.cancel', 'Cancel')}
         </Button>
         <Button type="submit" disabled={pending}>
-          {pending
-            ? t('schedules.form.saving', 'Saving…')
-            : t('schedules.form.saveTask', 'Save task')}
+          {pending ? t('schedules.form.saving', 'Saving…') : t('schedules.form.saveTask', 'Save task')}
         </Button>
       </DialogFooter>
     </form>

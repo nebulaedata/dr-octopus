@@ -5,7 +5,7 @@
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { RestartSessionDialog } from './RestartSessionDialog';
-import { useRestartSession } from './use-restart-session';
+import { useRestartSession } from '@/features/session/hooks/use-restart-session';
 import { useI18n } from '@/i18n/use-i18n';
 import { AlertTriangleIcon } from 'lucide-react';
 import { Spinner } from '@octopus/ui/components/spinner';
@@ -28,6 +28,18 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
   ) {
     return null;
   }
+  /**
+   * Selects alert title content in the existing condition order.
+   */
+  function renderAlertTitleContent() {
+    if (restarting) {
+      return t('session.configAlert.titleRestarting', 'Restarting session');
+    } else if (control?.restart.status === 'failed') {
+      return t('session.configAlert.titleFailed', 'Session restart failed');
+    } else {
+      return t('session.configAlert.titleChanged', 'Model service configuration changed');
+    }
+  }
   return (
     <>
       <Alert
@@ -35,13 +47,7 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
         className="pointer-events-auto shadow-lg shadow-black/5 dark:shadow-white/5 border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50"
       >
         {restarting ? <Spinner /> : <AlertTriangleIcon />}
-        <AlertTitle>
-          {restarting
-            ? t('session.configAlert.titleRestarting', 'Restarting session')
-            : control?.restart.status === 'failed'
-              ? t('session.configAlert.titleFailed', 'Session restart failed')
-              : t('session.configAlert.titleChanged', 'Model service configuration changed')}
-        </AlertTitle>
+        <AlertTitle>{renderAlertTitleContent()}</AlertTitle>
         <AlertDescription className="flex items-center justify-between gap-3">
           <span>
             {restarting

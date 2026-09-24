@@ -24,7 +24,7 @@ import { jevSettingsUpdateSchema } from '@octopus/shared/protocol';
 import { jevSettingsQuery, jevModelsQuery } from '@/queries/jev-queries';
 import { probeJev, saveJevSettings, saveJevCredential } from '@/api/jev';
 import { useI18n } from '@/i18n/use-i18n';
-import { SettingContainer } from './layout/SettingContainer';
+import { SettingContainer } from './Layout/SettingContainer';
 import type { JevSettingsSnapshot, JevSettingsUpdate } from '@octopus/shared/protocol';
 
 /**

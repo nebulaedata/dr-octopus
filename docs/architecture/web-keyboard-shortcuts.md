@@ -32,17 +32,19 @@
 
 ## 3. 总体架构
 
-分三层，依赖单向向下，符合 store 边界与 components 纯净性约束：
+按界面接线、React Hook、运行时和持久化分工；依赖按具体文件保持单向，符合 store 边界与 components 纯净性约束：
 
 ```text
 features（接线层）          features/layout、features/session/Composer、features/settings/shortcuts
-   │  useShortcut(id, handler) / 读取绑定
+   │
+hooks/use-shortcut.ts      useShortcut(id, handler) / useShortcutBinding(id)
+   │
 lib/shortcuts（引擎层）     ShortcutKeyRegister 单例 + 组合键规范化 + 命令目录（纯 TS，无 React/无 store 依赖的类本体）
    │  订阅覆盖变化
 stores/shortcuts（持久层）  zustand persist：用户绑定覆盖（overrides），localStorage
 ```
 
-- `src/lib/shortcuts/`：领域无关的引擎。类本体不 import zustand；`index.ts` 负责把单例与 store 接线（订阅覆盖变化刷新生效绑定），并导出 React hook。
+- `src/lib/shortcuts/`：领域无关的引擎。类本体不 import zustand；`shortcut-runtime.ts` 负责把单例与 store 接线（订阅覆盖变化刷新生效绑定），`index.ts` 仅显式导出基础设施。React Hook 位于 `src/hooks/use-shortcut.ts`；store 只导入纯命令目录，不导入运行时入口。
 - `src/stores/shortcuts/`：唯一读写 localStorage 的地方，暴露语义化 action（`setBinding` / `clearBinding` / `resetBinding` / `resetAll`）。
 - `src/features/settings/shortcuts/`：设置页 UI，按现有 Settings 卡片模式实现。
 - Composer 作用域命令（发送 / 换行）不走 window 派发，见 §8。
@@ -257,7 +259,9 @@ Card
 apps/web/src/lib/shortcuts/shortcut-combo.ts          # 组合键规范化（纯函数）
 apps/web/src/lib/shortcuts/shortcut-catalog.ts        # 命令目录与类型
 apps/web/src/lib/shortcuts/shortcut-key-register.ts   # ShortcutKeyRegister 类
-apps/web/src/lib/shortcuts/index.ts                   # 单例接线 + useShortcut / useShortcutBinding
+apps/web/src/lib/shortcuts/index.ts                   # 基础设施显式导出
+apps/web/src/lib/shortcuts/shortcut-runtime.ts        # 单例接线
+apps/web/src/hooks/use-shortcut.ts                    # useShortcut / useShortcutBinding
 apps/web/src/stores/shortcuts/store.ts                # overrides 持久化
 apps/web/src/stores/shortcuts/index.ts                # store 公共出口
 apps/web/src/features/settings/shortcuts/ShortcutsSettingsPage.tsx

@@ -24,10 +24,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/
 import { useI18n } from '@/i18n/use-i18n';
 import { useShortcutsStore } from '@/stores/shortcuts';
 import { resolveEffectiveBinding, SHORTCUT_CATALOG } from '@/lib/shortcuts';
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { ShortcutRecorder } from './ShortcutRecorder';
-import { matchesShortcutQuery } from './shortcut-search';
-import { useShortcutCommandLabels } from './use-shortcut-command-labels';
+import { matchesShortcutQuery } from '@/features/settings/utils/shortcut-search';
+import { useShortcutCommandLabels } from '@/features/settings/hooks/use-shortcut-command-labels';
 import type { ShortcutCommandId } from '@/lib/shortcuts';
 
 const CHROME_SHORTCUTS_URL = 'chrome://extensions/shortcuts';

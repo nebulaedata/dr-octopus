@@ -7,12 +7,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { SchedulerToolRenderer } from '../src/features/session/tool-renderers/CustomToolRenderers/SchedulerToolRenderer.tsx';
-import {
-  projectSchedulerTool,
-  summarizeSchedulerTool,
-} from '../src/features/session/tool-renderers/CustomToolRenderers/index.ts';
-import { resolveToolRenderer } from '../src/features/session/tool-renderers/registry.ts';
+import { SchedulerToolRenderer } from '../src/features/session/ToolRenderers/CustomToolRenderers/SchedulerToolRenderer.tsx';
+import { projectSchedulerTool } from '../src/features/session/utils/scheduler-projection.ts';
+import { summarizeSchedulerTool } from '../src/features/session/utils/scheduler-projection.ts';
+import { resolveToolRenderer } from './helpers/tool-renderer-selection.mjs';
 
 /**
  * Returns the source default with interpolation so assertions pin the English contract.

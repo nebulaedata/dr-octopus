@@ -24,9 +24,9 @@ import { HorizontalArea } from '@/components/HorizontalArea';
 import { useI18n } from '@/i18n/use-i18n';
 import { sessionStores } from '@/stores/session';
 import { AttachmentDiagnostics } from './AttachmentDiagnostics';
-import { documentCoverageLabel } from './document-coverage-label';
-import { abortAttachmentUploadTask } from './attachment-upload-tasks';
-import { toComposerAttachment } from './attachment-projection';
+import { documentCoverageLabel } from '@/features/session/utils/document-coverage-label';
+import { abortAttachmentUploadTask } from '@/stores/session';
+import { toComposerAttachment } from '@/features/session/utils/attachment-projection';
 import { cn } from '@octopus/ui/lib/utils';
 import type { ComposerAttachmentViewModel } from '@/stores/session';
 import type { Translate } from '@/i18n/use-i18n';
@@ -146,59 +146,65 @@ export function ComposerAttachments({ disabled = false, sessionId, workspaceId }
   return (
     <HorizontalArea aria-label="Composer attachments" className="w-full">
       <AttachmentGroup className="w-max min-w-full flex-nowrap overflow-visible pb-3 *:data-[slot=attachment]:w-72 *:data-[slot=attachment]:max-w-full">
-        {attachments.map((item) => (
-          <Attachment
-            key={item.id}
-            state={attachmentState(item.status)}
-            size="sm"
-            className={cn(
-              'h-16 cursor-default hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-white/15 transition-shadow duration-200 ease-in-out',
-              item.status === 'failed' || item.status === 'deleted' ? 'border-destructive' : '',
-              item.status === 'rejected' && 'border-warning'
-            )}
-          >
-            <AttachmentMedia variant="icon">
-              {item.status === 'processing' || item.status === 'deleted' ? (
-                <Spinner />
-              ) : item.presentationKind === 'image' ? (
-                <ImageIcon />
-              ) : (
-                <FileIcon />
+        {attachments.map((item) => {
+          /**
+           * Selects attachment media content in the existing condition order.
+           */
+          function renderAttachmentMediaContent() {
+            if (item.status === 'processing' || item.status === 'deleted') {
+              return <Spinner />;
+            } else if (item.presentationKind === 'image') {
+              return <ImageIcon />;
+            } else {
+              return <FileIcon />;
+            }
+          }
+          return (
+            <Attachment
+              key={item.id}
+              state={attachmentState(item.status)}
+              size="sm"
+              className={cn(
+                'h-16 cursor-default hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-white/15 transition-shadow duration-200 ease-in-out',
+                item.status === 'failed' || item.status === 'deleted' ? 'border-destructive' : '',
+                item.status === 'rejected' && 'border-warning'
               )}
-            </AttachmentMedia>
-            <AttachmentContent>
-              <AttachmentTitle title={item.name}>{item.name}</AttachmentTitle>
-              <AttachmentDescription>
-                {item.status === 'ready' && documentCoverageLabel(t, item.coverage) ? (
-                  <AttachmentDiagnostics text={documentCoverageLabel(t, item.coverage)!} />
-                ) : (
-                  <span title={description(t, item)}>{description(t, item)}</span>
+            >
+              <AttachmentMedia variant="icon">{renderAttachmentMediaContent()}</AttachmentMedia>
+              <AttachmentContent>
+                <AttachmentTitle title={item.name}>{item.name}</AttachmentTitle>
+                <AttachmentDescription>
+                  {item.status === 'ready' && documentCoverageLabel(t, item.coverage) ? (
+                    <AttachmentDiagnostics text={documentCoverageLabel(t, item.coverage)!} />
+                  ) : (
+                    <span title={description(t, item)}>{description(t, item)}</span>
+                  )}
+                </AttachmentDescription>
+                {item.status === 'uploading' && item.progress !== undefined && (
+                  <Progress value={item.progress.percentage} className="mt-2" />
                 )}
-              </AttachmentDescription>
-              {item.status === 'uploading' && item.progress !== undefined && (
-                <Progress value={item.progress.percentage} className="mt-2" />
-              )}
-            </AttachmentContent>
-            <AttachmentActions>
-              {item.status === 'failed' && item.error?.retryable === true ? (
+              </AttachmentContent>
+              <AttachmentActions>
+                {item.status === 'failed' && item.error?.retryable === true ? (
+                  <AttachmentAction
+                    aria-label={`Retry ${item.name}`}
+                    disabled={disabled || retry.isPending}
+                    onClick={() => retryProcessing(item)}
+                  >
+                    <RefreshCwIcon />
+                  </AttachmentAction>
+                ) : null}
                 <AttachmentAction
-                  aria-label={`Retry ${item.name}`}
-                  disabled={disabled || retry.isPending}
-                  onClick={() => retryProcessing(item)}
+                  aria-label={`Remove ${item.name}`}
+                  disabled={disabled || item.status === 'deleted'}
+                  onClick={() => void removeAttachment(item)}
                 >
-                  <RefreshCwIcon />
+                  <XIcon />
                 </AttachmentAction>
-              ) : null}
-              <AttachmentAction
-                aria-label={`Remove ${item.name}`}
-                disabled={disabled || item.status === 'deleted'}
-                onClick={() => void removeAttachment(item)}
-              >
-                <XIcon />
-              </AttachmentAction>
-            </AttachmentActions>
-          </Attachment>
-        ))}
+              </AttachmentActions>
+            </Attachment>
+          );
+        })}
       </AttachmentGroup>
     </HorizontalArea>
   );

@@ -8,7 +8,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ThemeProvider } from '@octopus/ui/components/theme-provider';
 import { TooltipProvider } from '@octopus/ui/components/tooltip';
 import { MarkdownRenderTheme } from './components/MarkdownRenderTheme';
-import { queryClient } from './queries/query-client';
+import { queryClient } from '@/queries/core/query-client';
 import type { PropsWithChildren } from 'react';
 
 /** 全局日期语言由 src/i18n 模块随界面语言统一切换。 */

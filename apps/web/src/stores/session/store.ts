@@ -5,9 +5,9 @@
 
 import { createStore } from 'zustand/vanilla';
 import { combine } from 'zustand/middleware';
-import { reduceEvent } from './reducer';
-import { applySessionHistory } from './history';
-import { projectPersistedTranscript } from './normalizer';
+import { reduceEvent } from '@/stores/session/reducers/session-reducer';
+import { applySessionHistory } from './utils/history';
+import { projectPersistedTranscript } from './utils/normalizer';
 import type { CommandAckMessage, SessionSnapshotDto } from '@octopus/shared/protocol';
 import type { MessageProjection, SessionActions, SessionProjectionState, SessionStoreApi } from './type';
 

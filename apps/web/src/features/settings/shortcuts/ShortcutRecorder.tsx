@@ -9,7 +9,7 @@ import { useI18n } from '@/i18n/use-i18n';
 import { useShortcutsStore } from '@/stores/shortcuts';
 import { findBindingConflict, normalizeEvent, shortcutKey } from '@/lib/shortcuts';
 import { cn } from '@octopus/ui/lib/utils';
-import { useShortcutCommandLabels } from './use-shortcut-command-labels';
+import { useShortcutCommandLabels } from '@/features/settings/hooks/use-shortcut-command-labels';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { ShortcutCommandId } from '@/lib/shortcuts';
 

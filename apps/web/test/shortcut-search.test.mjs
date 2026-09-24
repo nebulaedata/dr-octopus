@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { matchesShortcutQuery } from '../src/features/settings/shortcuts/shortcut-search.ts';
+import { matchesShortcutQuery } from '../src/features/settings/utils/shortcut-search.ts';
 
 test('matches localized labels case-insensitively', () => {
   const target = { label: 'Toggle left sidebar', combo: 'Ctrl+B' };

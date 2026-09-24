@@ -1,0 +1,187 @@
+/**
+ * @author Codex
+ * @description Reconciles SSE invalidation hints against authoritative HTTP queries without overlapping refreshes.
+ */
+import { DATA_CHANGE_RESOURCES } from '@octopus/shared/protocol';
+import type { QueryClient, QueryKey } from '@tanstack/react-query';
+import type { DataChange } from '@octopus/shared/protocol';
+
+/**
+ * Validate untrusted event payloads before selecting Query cache entries.
+ */
+export function parseDataChange(data: string): DataChange | undefined {
+  try {
+    const value: unknown = JSON.parse(data);
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+    const { resource, workspaceId } = value as Record<string, unknown>;
+    if (typeof resource !== 'string' || !DATA_CHANGE_RESOURCES.some((candidate) => candidate === resource)) {
+      return undefined;
+    }
+    if (workspaceId !== undefined && (typeof workspaceId !== 'string' || !workspaceId.length)) {
+      return undefined;
+    }
+    return value as DataChange;
+  } catch {
+    return undefined;
+  }
+}
+
+const roots = new Set([
+  'sessions',
+  'notifications',
+  'scheduled-tasks',
+  'scheduler-service',
+  'scheduler-settings',
+]);
+
+/**
+ * Select only business projections; Conversation snapshots stay owned by their runtime lifecycle.
+ */
+export function matchesDataChange(key: QueryKey, change?: DataChange): boolean {
+  if (key[0] === 'conversation-models' || key[0] === 'settings') {
+    return (
+      !change ||
+      change.resource === 'model-config' ||
+      (key[0] === 'settings' && change.resource === 'provider-auth')
+    );
+  }
+  if (key[0] === 'attachments' || key[0] === 'memory' || key[0] === 'knowledge') {
+    return !change || change.resource === key[0];
+  }
+  if (
+    key[0] === 'server-restart-operation' ||
+    key[0] === 'server-settings' ||
+    key[0] === 'environment-settings'
+  ) {
+    return !change || change.resource === 'server-lifecycle';
+  }
+  if (key[0] === 'session-stats') {
+    return (
+      !change || (change.resource === 'sessions' && (!change.workspaceId || key[1] === change.workspaceId))
+    );
+  }
+  if (key[0] === 'conversation-start' || key[0] === 'conversation-start-receipt') {
+    return (
+      !change ||
+      (change.resource === 'conversation-starts' && (!change.workspaceId || key[1] === change.workspaceId))
+    );
+  }
+  if (!roots.has(String(key[0]))) {
+    return false;
+  }
+  if (!change) {
+    return true;
+  }
+  if (change.resource === 'sessions') {
+    return key[0] === 'sessions' && (!change.workspaceId || key[1] === change.workspaceId);
+  }
+  if (change.resource === 'notifications') {
+    return key[0] === 'notifications';
+  }
+  if (key[0] !== 'scheduled-tasks') {
+    return key[0] === 'scheduler-service' || key[0] === 'scheduler-settings';
+  }
+  const workspace = key[1] === 'catalog' ? key[2] : key[1];
+  return !change.workspaceId || !workspace || workspace === change.workspaceId;
+}
+
+/**
+ * Own one coalescing queue; events received during a refresh always schedule a subsequent pass.
+ */
+export function createDataEventsSync(client: QueryClient, delay = 100) {
+  let pending: (DataChange | undefined)[] = [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let running = false;
+  let closed = false;
+
+  /**
+   * Cancel stale in-flight snapshots before refetching, including first loads with no cached data.
+   */
+  async function flush(): Promise<void> {
+    timer = undefined;
+    if (closed || running) {
+      return;
+    }
+    running = true;
+    const changes = pending;
+    pending = [];
+    const filters = {
+      predicate: (query: { queryKey: QueryKey }) =>
+        changes.some((change) => matchesDataChange(query.queryKey, change)),
+    };
+    try {
+      await client.cancelQueries(filters);
+      if (closed) {
+        return;
+      }
+      await client.invalidateQueries({
+        predicate: (query) => filters.predicate(query) && query.queryKey[0] === 'scheduler-service',
+      });
+      if (closed) {
+        return;
+      }
+      const scheduler = client.getQueryData<{ state: string }>(['scheduler-service']);
+      const unavailable = scheduler !== undefined && scheduler.state !== 'control-ready';
+      if (unavailable) {
+        await client.invalidateQueries({
+          predicate: (query) => filters.predicate(query) && query.queryKey[0] === 'scheduled-tasks',
+          refetchType: 'none',
+        });
+      }
+      if (!closed) {
+        await client.invalidateQueries({
+          predicate: (query) =>
+            filters.predicate(query) &&
+            query.queryKey[0] !== 'scheduler-service' &&
+            !(unavailable && query.queryKey[0] === 'scheduled-tasks'),
+        });
+      }
+    } finally {
+      running = false;
+      if (!closed && pending.length) {
+        schedule();
+      }
+    }
+  }
+
+  /**
+   * Bound event batches while leaving an active refresh in control of the next pass.
+   */
+  function schedule(): void {
+    if (!timer && !running) {
+      timer = setTimeout(() => {
+        void flush();
+      }, delay);
+    }
+  }
+
+  return {
+    /**
+     * Omitted change reconciles every business query after initial connection or reconnect.
+     */
+    invalidate(change?: DataChange): void {
+      if (closed) {
+        return;
+      }
+      if (!change) {
+        pending = [undefined];
+      } else if (
+        !pending.includes(undefined) &&
+        !pending.some((item) => item?.resource === change.resource && item.workspaceId === change.workspaceId)
+      ) {
+        pending.push(change);
+      }
+      schedule();
+    },
+    /**
+     * Prevent delayed work after the owning application shell unmounts.
+     */
+    close(): void {
+      closed = true;
+      clearTimeout(timer);
+      pending = [];
+    },
+  };
+}

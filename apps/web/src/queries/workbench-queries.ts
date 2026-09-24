@@ -11,7 +11,7 @@ import {
   getWorkspaces,
   updateWorkspaceFileContent,
 } from '../api/workspace';
-import { queryKeys } from './query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import type { DeleteSessionOptionsDto, SessionDto } from '@octopus/shared/protocol';
 
 /**

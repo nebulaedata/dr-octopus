@@ -2,7 +2,7 @@
  * @author Codex
  * @description Presents separate Server and Agent environment settings with source attribution and protected value editing.
  */
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BracesIcon, PencilIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
@@ -17,7 +17,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getEnvironmentSettings } from '@/api/environment';
 import { useI18n } from '@/i18n/use-i18n';
 import { EnvironmentEditor } from './EnvironmentEditor';
-import { environmentErrorMessage, getEnvironmentSourceLabels } from './environment-labels';
+import {
+  environmentErrorMessage,
+  getEnvironmentSourceLabels,
+} from '@/features/settings/utils/environment-labels';
 import type { EnvironmentEntryDto, EnvironmentScope, EnvironmentSettingsDto } from '@octopus/shared/protocol';
 
 /**
@@ -65,6 +68,101 @@ function EnvironmentScopePanel({ scope }: { scope: EnvironmentScope }) {
     query.data?.entries.filter((entry) => entry.key.toLowerCase().includes(search.toLowerCase())) ?? [];
   const sourceLabels = getEnvironmentSourceLabels(t);
 
+  /**
+   * Selects renderdiv content in the existing condition order.
+   */
+  function renderContent() {
+    if (query.isPending) {
+      return (
+        <div role="status" className="flex items-center justify-center gap-2 py-12">
+          <Spinner />
+          {t('settings.environment.loading', 'Loading environment variables…')}
+        </div>
+      );
+    } else if (query.data) {
+      return (
+        <>
+          <p className="break-all text-xs text-muted-foreground">
+            {t('settings.environment.configFile', 'Configuration file: {{path}}', { path: query.data.path })}
+          </p>
+          <div className="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('settings.environment.columnKey', 'Name')}</TableHead>
+                  <TableHead>{t('settings.environment.columnValue', 'Next load value')}</TableHead>
+                  <TableHead>{t('settings.environment.columnSource', 'Source')}</TableHead>
+                  <TableHead>
+                    <span className="sr-only">{t('settings.environment.columnActions', 'Actions')}</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {entries.map((entry) => {
+                  /**
+                   * Selects renderspan content in the existing condition order.
+                   */
+                  function renderValue() {
+                    if (entry.sensitive) {
+                      return '••••••••' as const;
+                    } else if (entry.resolvedValue === '') {
+                      return t('settings.environment.emptyString', '(empty string)');
+                    } else {
+                      return entry.resolvedValue ?? t('settings.environment.notSet', 'Not set');
+                    }
+                  }
+                  return (
+                    <TableRow key={entry.key}>
+                      <TableCell className="max-w-64 whitespace-normal">
+                        <div className="flex flex-col gap-1">
+                          <code className="break-all text-xs">{entry.key}</code>
+                          {entry.hasStoredValue && entry.source !== 'file' ? (
+                            <span className="text-xs text-muted-foreground">
+                              {t('settings.environment.storedOverridden', 'Saved value is overridden')}
+                            </span>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-40">
+                        <span
+                          className="block truncate font-mono text-xs"
+                          title={entry.sensitive ? undefined : entry.resolvedValue}
+                        >
+                          {renderValue()}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{sourceLabels[entry.source]}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Edit ${entry.key}`}
+                          onClick={() => setEditor({ snapshot: query.data!, entry })}
+                        >
+                          <PencilIcon />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {entries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                      {t('settings.environment.noMatch', 'No matching environment variables')}
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      );
+    } else {
+      return null;
+    }
+  }
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <Alert>
@@ -72,7 +170,10 @@ function EnvironmentScopePanel({ scope }: { scope: EnvironmentScope }) {
         <AlertTitle>
           {scope === 'server'
             ? t('settings.environment.alertServerTitle', 'Takes effect after restarting the Server')
-            : t('settings.environment.alertAgentTitle', 'Newly started Agent processes read the new configuration')}
+            : t(
+                'settings.environment.alertAgentTitle',
+                'Newly started Agent processes read the new configuration'
+              )}
         </AlertTitle>
         <AlertDescription>
           {t(
@@ -119,80 +220,7 @@ function EnvironmentScopePanel({ scope }: { scope: EnvironmentScope }) {
           <AlertDescription>{environmentErrorMessage(t, query.error)}</AlertDescription>
         </Alert>
       ) : null}
-      {query.isPending ? (
-        <div role="status" className="flex items-center justify-center gap-2 py-12">
-          <Spinner />
-          {t('settings.environment.loading', 'Loading environment variables…')}
-        </div>
-      ) : query.data ? (
-        <>
-          <p className="break-all text-xs text-muted-foreground">
-            {t('settings.environment.configFile', 'Configuration file: {{path}}', { path: query.data.path })}
-          </p>
-          <div className="overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('settings.environment.columnKey', 'Name')}</TableHead>
-                  <TableHead>{t('settings.environment.columnValue', 'Next load value')}</TableHead>
-                  <TableHead>{t('settings.environment.columnSource', 'Source')}</TableHead>
-                  <TableHead>
-                    <span className="sr-only">{t('settings.environment.columnActions', 'Actions')}</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entries.map((entry) => (
-                  <TableRow key={entry.key}>
-                    <TableCell className="max-w-64 whitespace-normal">
-                      <div className="flex flex-col gap-1">
-                        <code className="break-all text-xs">{entry.key}</code>
-                        {entry.hasStoredValue && entry.source !== 'file' ? (
-                          <span className="text-xs text-muted-foreground">
-                            {t('settings.environment.storedOverridden', 'Saved value is overridden')}
-                          </span>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-40">
-                      <span
-                        className="block truncate font-mono text-xs"
-                        title={entry.sensitive ? undefined : entry.resolvedValue}
-                      >
-                        {entry.sensitive
-                          ? '••••••••'
-                          : entry.resolvedValue === ''
-                            ? t('settings.environment.emptyString', '(empty string)')
-                            : (entry.resolvedValue ?? t('settings.environment.notSet', 'Not set'))}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{sourceLabels[entry.source]}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Edit ${entry.key}`}
-                        onClick={() => setEditor({ snapshot: query.data!, entry })}
-                      >
-                        <PencilIcon />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {entries.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
-                      {t('settings.environment.noMatch', 'No matching environment variables')}
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </TableBody>
-            </Table>
-          </div>
-        </>
-      ) : null}
+      {renderContent()}
       {editor ? (
         <EnvironmentEditor
           snapshot={editor.snapshot}

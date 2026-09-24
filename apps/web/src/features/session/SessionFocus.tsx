@@ -4,7 +4,7 @@
  */
 import { useEffect } from 'react';
 import { useEventListener, useMemoizedFn } from 'ahooks';
-import { realtimeClient } from '@/utils/realtime-client';
+import { realtimeClient } from '@/lib/runtime/realtime-client';
 
 /**
  * Treat a focused Session page as being read; leaving the route clears its focus intent.

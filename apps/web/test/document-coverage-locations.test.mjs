@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { coverageLocationsLabel } from '../src/features/session/document-coverage-locations.ts';
+import { coverageLocationsLabel } from '../src/features/session/utils/document-coverage-locations.ts';
 
 /**
  * Returns the source default with interpolation so assertions pin the English contract.
@@ -13,8 +13,20 @@ const t = (key, defaultValue, options) =>
   defaultValue.replace(/\{\{(\w+)\}\}/g, (_, name) => String(options?.[name] ?? ''));
 
 test('Only consecutive reported pages or slides become ranges', () => {
-  assert.equal(coverageLocationsLabel(t, [3, 1, 2, 6, 6, 8].map((page) => ({ page }))), 'Pages 1–3, 6, 8');
-  assert.equal(coverageLocationsLabel(t, [2, 3, 7].map((slide) => ({ slide }))), 'Slides 2–3, 7');
+  assert.equal(
+    coverageLocationsLabel(
+      t,
+      [3, 1, 2, 6, 6, 8].map((page) => ({ page }))
+    ),
+    'Pages 1–3, 6, 8'
+  );
+  assert.equal(
+    coverageLocationsLabel(
+      t,
+      [2, 3, 7].map((slide) => ({ slide }))
+    ),
+    'Slides 2–3, 7'
+  );
   assert.equal(coverageLocationsLabel(t, []), 'No specific locations provided');
   assert.equal(coverageLocationsLabel(t, [{}]), 'No specific locations provided');
 });

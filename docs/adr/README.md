@@ -84,3 +84,4 @@
 | [ADR-0067](./0067-memory-run-lifecycle.md) | Accepted | 统一记忆触发、跨轮用户证据、显式请求结果与会话生命周期隔离 |
 | [ADR-0068](./0068-command-completion.md) | Accepted | 指令完成独立于业务输出，通过响应后状态确认与请求/运行时隔离收尾 |
 | [ADR-0069](./0069-optional-jev-evaluation.md) | Accepted | 可选 Jev SDK 判断能力，环境变量凭据与保守记忆筛选 |
+| [ADR-0070](./0070-web-feature-entrypoints.md) | Accepted | 纯 feature 入口、局部 Hook/工具归属、私有工具注册与保持惰性页面加载 |

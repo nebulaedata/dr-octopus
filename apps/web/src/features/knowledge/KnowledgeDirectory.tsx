@@ -90,16 +90,59 @@ export function KnowledgeDirectory({
       resetScroll: false,
     });
   }
-  return (
-    <>
-      {collections.data ? (
-        <KnowledgeQueryErrorToast
-          key={page}
-          title={t('knowledge.directory.loadFailed', 'Failed to load knowledge collections')}
-          error={collections.error}
-        />
-      ) : null}
-      {collections.isPending ? (
+  /**
+   * Selects collectionsis pending in the existing condition order.
+   */
+  /**
+   * Renders the selected local or read-only remote collection without changing selection ownership.
+   */
+  function renderSelectedCollection() {
+    if (!selected) {
+      return null;
+    }
+    if (selected.source === 'remote') {
+      return (
+        <div className="flex flex-col gap-5" key={selected.id}>
+          <section className="rounded-2xl border bg-card p-5">
+            <div className="flex min-w-0 items-start gap-4">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <CloudIcon className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h2 className="text-base font-semibold tracking-tight">{selected.name}</h2>
+                  <Badge variant="outline">
+                    {selected.remoteState === 'ready'
+                      ? t('knowledge.directory.remoteReady', 'Remote · read-only')
+                      : t('knowledge.directory.remotePending', 'Remote · pending recovery')}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {selected.description ||
+                    t(
+                      'knowledge.directory.remoteDescription',
+                      'A shared knowledge collection managed by a remote Dr.Octopus instance.'
+                    )}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground/80">
+                  {t(
+                    'knowledge.directory.remoteSource',
+                    'Source: {{ref}} · Documents and indexing are managed by the peer',
+                    { ref: selected.connectionRef }
+                  )}
+                </p>
+              </div>
+              <KnowledgeSearchAction collection={selected} />
+            </div>
+          </section>
+        </div>
+      );
+    }
+    return <KnowledgeDocuments key={selected.id} workspaceId={workspaceId} collection={selected} />;
+  }
+  function renderCollections() {
+    if (collections.isPending) {
+      return (
         <div
           role="status"
           aria-label="Loading knowledge base…"
@@ -121,10 +164,14 @@ export function KnowledgeDirectory({
             <Skeleton className="mt-2.5 h-4 w-64 max-w-full" />
           </section>
         </div>
-      ) : collections.isError && items === undefined ? (
+      );
+    } else if (collections.isError && items === undefined) {
+      return (
         <Alert variant="destructive">
           <TriangleAlertIcon />
-          <AlertTitle>{t('knowledge.directory.loadFailed', 'Failed to load knowledge collections')}</AlertTitle>
+          <AlertTitle>
+            {t('knowledge.directory.loadFailed', 'Failed to load knowledge collections')}
+          </AlertTitle>
           <AlertDescription>{collections.error.message}</AlertDescription>
           <AlertAction>
             <Button variant="outline" size="sm" onClick={() => void collections.refetch()}>
@@ -132,7 +179,9 @@ export function KnowledgeDirectory({
             </Button>
           </AlertAction>
         </Alert>
-      ) : items !== undefined && items.length > 0 ? (
+      );
+    } else if (items !== undefined && items.length > 0) {
+      return (
         <div className="grid p-0.5 min-h-0 items-start gap-5 lg:h-full lg:grid-cols-[264px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
           <aside className="flex max-h-full min-h-0 flex-col gap-0.5 overflow-hidden rounded-xl border bg-card/60">
             <div className="flex shrink-0 items-center justify-between px-5 py-4 border-b">
@@ -168,54 +217,19 @@ export function KnowledgeDirectory({
               />
             ) : null}
           </aside>
-          {selected ? (
-            selected.source === 'remote' ? (
-              <div className="flex flex-col gap-5" key={selected.id}>
-                <section className="rounded-2xl border bg-card p-5">
-                  <div className="flex min-w-0 items-start gap-4">
-                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <CloudIcon className="size-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <h2 className="text-base font-semibold tracking-tight">{selected.name}</h2>
-                        <Badge variant="outline">
-                          {selected.remoteState === 'ready'
-                            ? t('knowledge.directory.remoteReady', 'Remote · read-only')
-                            : t('knowledge.directory.remotePending', 'Remote · pending recovery')}
-                        </Badge>
-                      </div>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        {selected.description ||
-                          t(
-                            'knowledge.directory.remoteDescription',
-                            'A shared knowledge collection managed by a remote Dr.Octopus instance.'
-                          )}
-                      </p>
-                      <p className="mt-2 text-xs text-muted-foreground/80">
-                        {t(
-                          'knowledge.directory.remoteSource',
-                          'Source: {{ref}} · Documents and indexing are managed by the peer',
-                          { ref: selected.connectionRef }
-                        )}
-                      </p>
-                    </div>
-                    <KnowledgeSearchAction collection={selected} />
-                  </div>
-                </section>
-              </div>
-            ) : (
-              <KnowledgeDocuments key={selected.id} workspaceId={workspaceId} collection={selected} />
-            )
-          ) : null}
+          {renderSelectedCollection()}
         </div>
-      ) : (
+      );
+    } else {
+      return (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <LibraryBigIcon />
             </EmptyMedia>
-            <EmptyTitle>{t('knowledge.directory.emptyTitle', 'Start with your first knowledge collection')}</EmptyTitle>
+            <EmptyTitle>
+              {t('knowledge.directory.emptyTitle', 'Start with your first knowledge collection')}
+            </EmptyTitle>
             <EmptyDescription>
               {t(
                 'knowledge.directory.emptyDescription',
@@ -230,7 +244,19 @@ export function KnowledgeDirectory({
             </Button>
           </EmptyContent>
         </Empty>
-      )}
+      );
+    }
+  }
+  return (
+    <>
+      {collections.data ? (
+        <KnowledgeQueryErrorToast
+          key={page}
+          title={t('knowledge.directory.loadFailed', 'Failed to load knowledge collections')}
+          error={collections.error}
+        />
+      ) : null}
+      {renderCollections()}
       {creating ? (
         <CreateCollectionDialog
           workspaceId={workspaceId}

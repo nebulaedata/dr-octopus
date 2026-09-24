@@ -7,7 +7,7 @@ import test from 'node:test';
 import {
   getKnowledgeJobFailure,
   getKnowledgeJobNotification,
-} from '../src/features/knowledge/knowledge-job-feedback.ts';
+} from '../src/features/knowledge/utils/knowledge-job-feedback.ts';
 
 const t = (key, defaultValue, options) =>
   defaultValue.replace(/\{\{(\w+)\}\}/g, (_, name) => String(options?.[name] ?? ''));
@@ -18,7 +18,10 @@ test('duplicate archive documents report an actionable message instead of an int
     leaves: [{ status: 'failed', reason: 'DOCUMENT_DUPLICATE_CONFLICT' }],
   });
   assert.equal(notification.type, 'error');
-  assert.equal(notification.description, 'This document already exists or is being imported; do not upload it again.');
+  assert.equal(
+    notification.description,
+    'This document already exists or is being imported; do not upload it again.'
+  );
 });
 
 /**
@@ -64,11 +67,17 @@ test('polling retains notification identity while a new retry attempt can notify
 });
 
 test('partial and blocked jobs expose failures without treating a dependency wait as retryable', () => {
-  assert.equal(getKnowledgeJobFailure(t, result('partial', { kind: 'reindex' })).title, 'Reindexing partially failed');
+  assert.equal(
+    getKnowledgeJobFailure(t, result('partial', { kind: 'reindex' })).title,
+    'Reindexing partially failed'
+  );
   const blocked = result('waiting_dependency', { blockedReason: 'MODEL_NOT_CONFIGURED' });
   blocked.leaves = [];
   assert.equal(getKnowledgeJobFailure(t, blocked).retryable, false);
-  assert.equal(getKnowledgeJobFailure(t, blocked).description, 'Configure an Embedding model in Settings - Knowledge.');
+  assert.equal(
+    getKnowledgeJobFailure(t, blocked).description,
+    'Configure an Embedding model in Settings - Knowledge.'
+  );
 });
 
 test('healthy job states do not replay old leaf failures and duplicate reasons are collapsed', () => {
@@ -81,7 +90,10 @@ test('healthy job states do not replay old leaf failures and duplicate reasons a
   );
   const empty = result('failed');
   empty.leaves = [];
-  assert.equal(getKnowledgeJobFailure(t, empty).description, 'The task could not complete. Check the model service and retry.');
+  assert.equal(
+    getKnowledgeJobFailure(t, empty).description,
+    'The task could not complete. Check the model service and retry.'
+  );
 });
 
 test('OCR truncation explains the recognition failure without masking it with a generic document error', () => {

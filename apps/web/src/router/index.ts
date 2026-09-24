@@ -34,7 +34,7 @@ import {
 } from './routes';
 import { settingsModalSearchSchema } from './settings-modal';
 import { prewarmGeneralHome, prewarmWorkspaceHome } from './home-prewarm';
-import { queryClient } from '@/queries/query-client';
+import { queryClient } from '@/queries/core/query-client';
 import type { QueryClient } from '@tanstack/react-query';
 
 interface RouterContext {

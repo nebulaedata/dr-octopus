@@ -5,12 +5,10 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  projectGoalToolDetails,
-  summarizeGoalTool,
-} from '../src/features/session/tool-renderers/CustomToolRenderers/index.ts';
-import { resolveToolRenderer } from '../src/features/session/tool-renderers/registry.ts';
-import { createGoalClearCommand, GOAL_CLEAR_MESSAGE } from '../src/features/session/goal-command.ts';
+import { projectGoalToolDetails } from '../src/features/session/utils/goal-projection.ts';
+import { summarizeGoalTool } from '../src/features/session/utils/goal-projection.ts';
+import { resolveToolRenderer } from './helpers/tool-renderer-selection.mjs';
+import { createGoalClearCommand, GOAL_CLEAR_MESSAGE } from '../src/features/session/utils/goal-command.ts';
 import { createSessionStore } from '../src/stores/session/store.ts';
 
 const goal = {

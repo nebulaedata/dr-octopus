@@ -17,7 +17,7 @@ import {
   listKnowledgeMounts,
 } from '@/api/knowledge-connections';
 import { useI18n } from '@/i18n/use-i18n';
-import { SettingsSectionLink } from '../layout/SettingsSectionLink';
+import { SettingsSectionLink } from '../Layout/SettingsSectionLink';
 
 /**
  * Store only mount identity here; edits to URL and bearer credentials stay in the existing MCP settings.

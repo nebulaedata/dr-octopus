@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { toWorkspaceReferences } from '../src/features/session/workspace-reference-payload.ts';
+import { toWorkspaceReferences } from '../src/features/session/utils/workspace-reference-payload.ts';
 
 test('Workspace reference payload preserves order, kind, and path while removing labels and duplicates', () => {
   assert.deepEqual(

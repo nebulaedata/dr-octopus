@@ -5,23 +5,21 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSessionStore } from '../src/stores/session/store.ts';
-import { resolveToolRenderer } from '../src/features/session/tool-renderers/registry.ts';
+import { resolveToolRenderer } from './helpers/tool-renderer-selection.mjs';
 
 test('intermediate mode events keep Composer locked until the matching acknowledgement', () => {
   const store = createSessionStore('session');
   store.setState({ hydrated: true, loadState: 'ready', runtimeId: 'runtime', epoch: 1, lastSequence: 1 });
   store.getState().beginWorkModeChange('request', 'knowledge');
-  store
-    .getState()
-    .applyEvent({
-      type: 'extension.ui',
-      sessionId: 'session',
-      runtimeId: 'runtime',
-      epoch: 1,
-      sequence: 2,
-      payload: { method: 'setStatus', statusKey: 'octopus-knowledge-mode' },
-      planMode: { available: true, workMode: 'agent', phase: 'off', awaitingAction: false },
-    });
+  store.getState().applyEvent({
+    type: 'extension.ui',
+    sessionId: 'session',
+    runtimeId: 'runtime',
+    epoch: 1,
+    sequence: 2,
+    payload: { method: 'setStatus', statusKey: 'octopus-knowledge-mode' },
+    planMode: { available: true, workMode: 'agent', phase: 'off', awaitingAction: false },
+  });
   assert.equal(store.getState().pendingWorkMode.requestId, 'request');
   const complete = { available: true, workMode: 'knowledge', phase: 'off', awaitingAction: false };
   store.getState().setPlanMode(complete, 'older-request');

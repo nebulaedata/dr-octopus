@@ -16,7 +16,7 @@ import {
 } from '@octopus/ui/components/select';
 import { Kbd } from '@octopus/ui/components/kbd';
 import { useI18n } from '@/i18n/use-i18n';
-import type { AgentWorkMode } from './composer-types';
+export type AgentWorkMode = 'agent' | 'plan' | 'knowledge';
 import type { Translate } from '@/i18n/use-i18n';
 
 /**

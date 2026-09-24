@@ -10,8 +10,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@octopus/ui
 import { Spinner } from '@octopus/ui/components/spinner';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
-import { resolveToolRenderer } from './tool-renderers/registry';
-import { customToolLabel } from './tool-renderers/custom-tool-renderer-definitions';
+import { ToolRenderer } from './ToolRenderers/ToolRenderer';
+import { customToolLabel } from './utils/tool-label';
+import type { ToolRendererSelection } from './ToolRenderers/ToolRenderer';
 import type { Translate } from '@/i18n/use-i18n';
 import type { ToolProjection } from '@/stores/session';
 
@@ -35,14 +36,29 @@ function toolStatusLabel(t: Translate, status: ToolProjection['status']): string
  * 渲染一个可折叠工具执行记录。
  */
 export function ToolCard({ tool }: { tool: ToolProjection }) {
+  return (
+    <ToolRenderer toolName={tool.name}>
+      {(renderer) => <ToolCardView tool={tool} renderer={renderer} />}
+    </ToolRenderer>
+  );
+}
+/**
+ * Keeps collapse state and common chrome independent of tool-specific registration.
+ */
+function ToolCardView({ tool, renderer }: { tool: ToolProjection; renderer: ToolRendererSelection }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const renderer = resolveToolRenderer(tool.name);
   const Renderer = renderer.component;
   const ToolIcon = renderer.icon;
   const summary = renderer.summarize?.(tool, t);
-  const StatusIcon =
-    tool.status === 'running' ? Spinner : tool.status === 'success' ? CheckCircle2Icon : XCircleIcon;
+  let StatusIcon;
+  if (tool.status === 'running') {
+    StatusIcon = Spinner;
+  } else if (tool.status === 'success') {
+    StatusIcon = CheckCircle2Icon;
+  } else {
+    StatusIcon = XCircleIcon;
+  }
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="overflow-hidden rounded-xl border bg-card">
       <CollapsibleTrigger

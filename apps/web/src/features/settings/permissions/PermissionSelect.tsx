@@ -12,7 +12,7 @@ import {
 } from '@octopus/ui/components/select';
 
 import { PermissionActionBadge } from './PermissionActionBadge';
-import { getPermissionActions } from './permission-labels';
+import { getPermissionActions } from '@/features/settings/utils/permission-labels';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
 

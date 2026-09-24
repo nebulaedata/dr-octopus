@@ -40,6 +40,18 @@ export function ScheduleArchiveActions({ task }: { task: ScheduledTask }) {
       await queries.invalidateQueries({ queryKey: ['scheduled-tasks'] });
     },
   });
+  /**
+   * Selects button content in the existing condition order.
+   */
+  function renderButtonContent() {
+    if (mutation.isPending) {
+      return t('schedules.archive.processing', 'Processing…');
+    } else if (action === 'purge') {
+      return t('schedules.archive.confirmPurge', 'Confirm permanent deletion');
+    } else {
+      return t('schedules.archive.confirmRestore', 'Confirm restore');
+    }
+  }
   return (
     <>
       <Button
@@ -90,7 +102,8 @@ export function ScheduleArchiveActions({ task }: { task: ScheduledTask }) {
                 : t('schedules.archive.restoreTitle', 'Restore the archived task?')}
             </DialogTitle>
             <DialogDescription>
-              {task.name}{'. '}
+              {task.name}
+              {'. '}
               {action === 'purge'
                 ? t(
                     'schedules.archive.purgeDescription',
@@ -117,11 +130,7 @@ export function ScheduleArchiveActions({ task }: { task: ScheduledTask }) {
               onClick={() => action && mutation.mutate(action)}
             >
               {mutation.isPending && <LoaderCircleIcon className="animate-spin" />}
-              {mutation.isPending
-                ? t('schedules.archive.processing', 'Processing…')
-                : action === 'purge'
-                  ? t('schedules.archive.confirmPurge', 'Confirm permanent deletion')
-                  : t('schedules.archive.confirmRestore', 'Confirm restore')}
+              {renderButtonContent()}
             </Button>
           </DialogFooter>
         </ScheduleDialogContent>

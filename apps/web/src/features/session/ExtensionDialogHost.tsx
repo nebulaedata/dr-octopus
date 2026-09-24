@@ -39,9 +39,9 @@ import {
   getDisplayOptions,
   getImmediateSelectValue,
   getRpivMultipleQuestionnaire,
-} from './extension-dialog-model';
+} from '@/features/session/utils/extension-dialog-model';
 import type { HostEventEnvelope } from '@octopus/shared/protocol';
-import type { ExtensionRequestPayload } from './extension-dialog-model';
+import type { ExtensionRequestPayload } from '@/features/session/utils/extension-dialog-model';
 
 /**
  * Responds only to the oldest pending request and invalidates it after one response.
@@ -188,6 +188,49 @@ function ExtensionRequestQuestionnaire({
     respond({ value: formValue });
   }
 
+  /**
+   * Selects card content content in the existing condition order.
+   */
+  function renderExtensionContent() {
+    if (selectable) {
+      return (
+        <QuestionnaireChoices>
+          {options.map((option) => (
+            <QuestionnaireChoice
+              key={option.value}
+              value={option.value}
+              checked={rpivMultiple === undefined ? undefined : selectedOptionIds.has(option.value)}
+              onChange={(event) => submitSelectOption(option.value, event.currentTarget.checked)}
+            >
+              <span className="font-medium">{option.label}</span>
+              {option.description !== undefined && (
+                <QuestionnaireChoiceDescription>{option.description}</QuestionnaireChoiceDescription>
+              )}
+            </QuestionnaireChoice>
+          ))}
+        </QuestionnaireChoices>
+      );
+    } else if (method === 'editor') {
+      return (
+        <Textarea
+          aria-label="Extension response"
+          autoFocus
+          placeholder={payload.placeholder}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      );
+    } else {
+      return (
+        <QuestionnaireInput
+          aria-label="Extension response"
+          autoFocus
+          defaultValue={payload.prefill}
+          placeholder={payload.placeholder}
+        />
+      );
+    }
+  }
   return (
     <div
       aria-live="assertive"
@@ -209,38 +252,7 @@ function ExtensionRequestQuestionnaire({
               </QuestionnaireDescription>
             </CardHeader>
             <CardContent>
-              {selectable ? (
-                <QuestionnaireChoices>
-                  {options.map((option) => (
-                    <QuestionnaireChoice
-                      key={option.value}
-                      value={option.value}
-                      checked={rpivMultiple === undefined ? undefined : selectedOptionIds.has(option.value)}
-                      onChange={(event) => submitSelectOption(option.value, event.currentTarget.checked)}
-                    >
-                      <span className="font-medium">{option.label}</span>
-                      {option.description !== undefined && (
-                        <QuestionnaireChoiceDescription>{option.description}</QuestionnaireChoiceDescription>
-                      )}
-                    </QuestionnaireChoice>
-                  ))}
-                </QuestionnaireChoices>
-              ) : method === 'editor' ? (
-                <Textarea
-                  aria-label="Extension response"
-                  autoFocus
-                  placeholder={payload.placeholder}
-                  value={value}
-                  onChange={(event) => setValue(event.target.value)}
-                />
-              ) : (
-                <QuestionnaireInput
-                  aria-label="Extension response"
-                  autoFocus
-                  defaultValue={payload.prefill}
-                  placeholder={payload.placeholder}
-                />
-              )}
+              {renderExtensionContent()}
               {rpivMultiple !== undefined && (
                 <Input
                   aria-label="Custom answer"

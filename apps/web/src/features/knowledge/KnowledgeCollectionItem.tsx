@@ -38,14 +38,16 @@ export function KnowledgeCollectionItem({
   });
   const createdAt = new Date(collection.createdAt);
   const date = Number.isNaN(createdAt.getTime()) ? undefined : createdAt.toLocaleDateString();
-  const count =
-    collection.source === 'remote'
-      ? t('knowledge.collectionItem.countUnavailable', 'Document count unavailable')
-      : documents.data !== undefined
-        ? t('knowledge.collectionItem.documentCount', '{{count}} documents', { count: documents.data })
-        : documents.isError
-          ? t('knowledge.collectionItem.countFailed', 'Failed to load count')
-          : t('knowledge.collectionItem.loading', 'Loading…');
+  let count: string;
+  if (collection.source === 'remote') {
+    count = t('knowledge.collectionItem.countUnavailable', 'Document count unavailable');
+  } else if (documents.data !== undefined) {
+    count = t('knowledge.collectionItem.documentCount', '{{count}} documents', { count: documents.data });
+  } else if (documents.isError) {
+    count = t('knowledge.collectionItem.countFailed', 'Failed to load count');
+  } else {
+    count = t('knowledge.collectionItem.loading', 'Loading…');
+  }
   return (
     <div
       data-active={active || undefined}

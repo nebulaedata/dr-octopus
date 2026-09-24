@@ -24,7 +24,7 @@ import { updatePermissionSettings } from '@/api/permissions';
 import { PermissionActionBadge } from './PermissionActionBadge';
 import { PermissionSelect } from './PermissionSelect';
 import { PermissionConfigJsonHelp } from './PermissionJsonHelp';
-import { getKindLabels, getModeLabels } from './permission-labels';
+import { getKindLabels, getModeLabels } from '@/features/settings/utils/permission-labels';
 import { useI18n } from '@/i18n/use-i18n';
 import type { PermissionConfig, PermissionSettingsSnapshot } from '@octopus/shared/protocol';
 
@@ -226,10 +226,14 @@ export function PermissionConfigEditor({
                                   <FieldLabel>{kindLabels[kind]}</FieldLabel>
                                   <PermissionSelect
                                     className="w-10!"
-                                    label={t('settings.permissions.configEditor.modeKindAriaLabel', '{{mode}} {{kind}}', {
-                                      mode: modeLabels[name],
-                                      kind: kindLabels[kind],
-                                    })}
+                                    label={t(
+                                      'settings.permissions.configEditor.modeKindAriaLabel',
+                                      '{{mode}} {{kind}}',
+                                      {
+                                        mode: modeLabels[name],
+                                        kind: kindLabels[kind],
+                                      }
+                                    )}
                                     value={field.state.value}
                                     onChange={(value) =>
                                       field.handleChange(value as typeof field.state.value)

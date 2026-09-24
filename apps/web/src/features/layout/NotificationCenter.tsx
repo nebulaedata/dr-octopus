@@ -29,7 +29,7 @@ import {
 } from '@octopus/ui/components/item';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@octopus/ui/components/empty';
 import { getNotifications, markAllNotificationsRead } from '@/api/notifications';
-import { ScheduleRunStatusBadge } from '@/features/schedules/ScheduleRunStatusBadge';
+import { ScheduleRunStatusBadge } from '@/features/schedules';
 import { useI18n } from '@/i18n/use-i18n';
 
 /**
@@ -85,7 +85,9 @@ export function NotificationCenter() {
               <DialogTitle>{t('layout.notifications.title', 'Notifications')}</DialogTitle>
               {!!inbox.data?.unreadCount && (
                 <Badge variant="secondary">
-                  {t('layout.notifications.unreadBadge', '{{unread}} unread', { unread: inbox.data.unreadCount })}
+                  {t('layout.notifications.unreadBadge', '{{unread}} unread', {
+                    unread: inbox.data.unreadCount,
+                  })}
                 </Badge>
               )}
             </div>
@@ -93,11 +95,7 @@ export function NotificationCenter() {
               {t('layout.notifications.description', 'Task results and pending items')}
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea
-            key={offset}
-            aria-label="Notification list"
-            className="min-h-0 flex-1 border-y"
-          >
+          <ScrollArea key={offset} aria-label="Notification list" className="min-h-0 flex-1 border-y">
             <div className="px-2 py-2 sm:px-3">
               {inbox.isPending && (
                 <p role="status" className="px-3 py-8 text-center text-sm text-muted-foreground">
@@ -164,7 +162,10 @@ export function NotificationCenter() {
                             dateTime={notice.createdAt}
                             className="text-xs tabular-nums text-muted-foreground"
                           >
-                            {formatDateTime(notice.createdAt, t('layout.notifications.dateFormat', 'MMM D, HH:mm'))}
+                            {formatDateTime(
+                              notice.createdAt,
+                              t('layout.notifications.dateFormat', 'MMM D, HH:mm')
+                            )}
                           </time>
                         </div>
                       </ItemContent>

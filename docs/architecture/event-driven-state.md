@@ -16,7 +16,7 @@
 | 会话执行与统计 | 当前代际 Agent 事件 | 原有 WebSocket；统计在消息完成时失效 |
 | 延后实例更新 | Runtime Coordinator | 安全条件改变时唤醒 DeferredRestarts |
 
-所有浏览器失效规则集中在 `apps/web/src/queries/data-events-sync.ts`。页面只声明查询，不自行建立重复连接或刷新定时器。资源名定义在共享协议中；SSE 入口使用同一资源名单验证事件。ESLint 禁止业务代码重新引入 `refetchInterval`。
+所有浏览器失效规则集中在 `apps/web/src/queries/utils/data-events-sync.ts`。页面只声明查询，不自行建立重复连接或刷新定时器。资源名定义在共享协议中；SSE 入口使用同一资源名单验证事件。ESLint 禁止业务代码重新引入 `refetchInterval`。
 
 ## 一致性与恢复
 

@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@octopus/ui/components/dropdown-menu';
 import { formatRelativeTime } from '@/utils/date';
-import { formatBytes } from './utils';
+import { formatBytes } from '@/features/skills/utils/skill-fields';
 import { useI18n } from '@/i18n/use-i18n';
 import type { SkillDto } from '@octopus/shared/protocol';
 

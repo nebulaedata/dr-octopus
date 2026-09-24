@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@octopus/ui/components/dialog';
 import { useI18n } from '@/i18n/use-i18n';
-import type { useRestartSession } from './use-restart-session';
+import type { useRestartSession } from '@/features/session/hooks/use-restart-session';
 
 /**
  * Keeps interruption authorization explicit without changing the selected Session.

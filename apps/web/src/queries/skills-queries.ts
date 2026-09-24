@@ -13,7 +13,7 @@ import {
   updateSkill,
   uploadSkill,
 } from '../api/skills';
-import { queryKeys } from './query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import type { SkillEditorInput, SkillScope, SkillUpdateInput } from '../api/skills';
 import type { QueryClient } from '@tanstack/react-query';
 

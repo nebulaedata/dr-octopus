@@ -5,10 +5,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { McpServerConfigurationInputSchema } from '@octopus/shared/protocol';
-import {
-  isDirectToolsEnabled,
-  resolveDirectTools,
-} from '../src/features/settings/mcp-servers/mcp-direct-tools.ts';
+import { isDirectToolsEnabled, resolveDirectTools } from '../src/features/settings/utils/mcp-direct-tools.ts';
 
 test('search and allowlist strategies survive the form switch and API validation', () => {
   for (const previous of ['search', ['read_*'], true, false, undefined]) {

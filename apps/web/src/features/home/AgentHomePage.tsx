@@ -6,12 +6,12 @@ import { useState } from 'react';
 import { Button } from '@octopus/ui/components/button';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
 import { OctopusLogo } from '@/components/OctopusLogo';
-import { Composer } from '@/features/session/Composer';
+import { Composer } from '@/features/session';
 import { ModelSetupDialog } from './ModelSetupDialog';
 import { useHomeDrafts } from '@/stores/home-drafts';
 import { useWorkbenchHome } from '@/stores/workbench-home';
 import { useI18n } from '@/i18n/use-i18n';
-import { useHomeDraft } from './use-home-draft';
+import { useHomeDraft } from '@/features/home/hooks/use-home-draft';
 
 /**
  * Retains the existing local draft identity without prewarming a process.
@@ -60,6 +60,24 @@ function HomeDraft({
     modelSetupRequest,
     requestModelSetup,
   } = useHomeDraft(workspaceId, id, onSeparate);
+  /**
+   * Selects issue in the existing condition order.
+   */
+  function selectIssue() {
+    if (pending) {
+      return null;
+    } else if (catalog.isError) {
+      return 'error' as const;
+    } else if (catalog.isSuccess && !selected) {
+      if (models.length === 0) {
+        return 'empty' as const;
+      } else {
+        return 'selection' as const;
+      }
+    } else {
+      return null;
+    }
+  }
   return (
     <section aria-label="Agent home" className="flex h-full min-h-0 flex-col overflow-y-auto px-4 sm:px-8">
       <div className="mx-auto my-auto w-full max-w-180 py-12">
@@ -70,17 +88,7 @@ function HomeDraft({
           </h1>
         </div>
         <ModelSetupDialog
-          issue={
-            pending
-              ? null
-              : catalog.isError
-                ? 'error'
-                : catalog.isSuccess && !selected
-                  ? models.length === 0
-                    ? 'empty'
-                    : 'selection'
-                  : null
-          }
+          issue={selectIssue()}
           requestVersion={modelSetupRequest}
           refreshing={catalog.isFetching}
           onRetry={() => void catalog.refetch()}

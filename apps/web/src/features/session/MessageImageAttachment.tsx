@@ -32,6 +32,18 @@ import type { MessageAttachmentDto } from '@octopus/shared/protocol/attachments'
 export function MessageImageAttachment({ attachment }: { attachment: MessageAttachmentDto }) {
   const { t } = useI18n();
   const available = attachment.availability === 'available' && attachment.previewUrl !== undefined;
+  /**
+   * Selects attachment media content in the existing condition order.
+   */
+  function renderAttachmentMediaContent() {
+    if (available) {
+      return <img src={attachment.previewUrl} alt="" loading="lazy" />;
+    } else if (attachment.availability === 'available') {
+      return <ImageIcon />;
+    } else {
+      return <MessageAttachmentUnavailableIcon />;
+    }
+  }
   return (
     <Dialog>
       <Attachment
@@ -40,13 +52,7 @@ export function MessageImageAttachment({ attachment }: { attachment: MessageAtta
         className="h-16 ring-0! hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-white/15 transition-shadow duration-200 ease-in-out"
       >
         <AttachmentMedia variant={available ? 'image' : 'icon'}>
-          {available ? (
-            <img src={attachment.previewUrl} alt="" loading="lazy" />
-          ) : attachment.availability === 'available' ? (
-            <ImageIcon />
-          ) : (
-            <MessageAttachmentUnavailableIcon />
-          )}
+          {renderAttachmentMediaContent()}
         </AttachmentMedia>
         <MessageAttachmentContent attachment={attachment} />
         {available || attachment.capabilities.canDownload ? (

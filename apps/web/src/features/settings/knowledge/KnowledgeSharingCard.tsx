@@ -2,7 +2,7 @@
  * @author Codex
  * @description Explicit read-only MCP publication with scoped collection selection and one-time token display.
  */
-import { copyTextWithFeedback } from '@/lib/copy-text-with-feedback';
+import { copyTextWithFeedback } from '@/utils/copy-text-with-feedback';
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

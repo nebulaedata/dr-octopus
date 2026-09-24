@@ -201,7 +201,7 @@ async function createBrowserFixture() {
   };
   global.WebSocket = FakeWebSocket;
 
-  const module = await import('../src/utils/realtime-client.ts');
+  const module = await import("../src/lib/runtime/realtime-client.ts");
   return {
     RealtimeClient: module.RealtimeClient,
     maxAttempts: module.MAX_REALTIME_RECONNECT_ATTEMPTS,

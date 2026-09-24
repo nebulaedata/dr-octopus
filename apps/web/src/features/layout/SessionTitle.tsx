@@ -4,7 +4,6 @@
  */
 import { useRef } from 'react';
 import { useSize } from 'ahooks';
-import styles from './session-title.module.css';
 import type { CSSProperties } from 'react';
 
 /**
@@ -25,12 +24,16 @@ export function SessionTitle({ title }: { title: string }) {
   return (
     <span
       ref={viewport}
-      className={`${styles.viewport} min-w-0 truncate font-medium text-sm`}
+      className="group/title relative min-w-0 truncate font-medium text-sm motion-safe:group-hover:data-[overflow=true]:text-clip"
       data-overflow={overflow > 1}
       style={style}
     >
-      <span className={styles.staticTitle}>{title}</span>
-      <span ref={content} aria-hidden="true" className={styles.content}>
+      <span className="motion-safe:group-hover:group-data-[overflow=true]/title:opacity-0">{title}</span>
+      <span
+        ref={content}
+        aria-hidden="true"
+        className="invisible absolute top-0 left-0 w-max whitespace-nowrap align-top motion-safe:group-hover:group-data-[overflow=true]/title:visible motion-safe:group-hover:group-data-[overflow=true]/title:animate-session-title"
+      >
         {title}
       </span>
     </span>

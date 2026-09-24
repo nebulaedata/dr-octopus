@@ -61,6 +61,7 @@ export default defineConfig([
         },
       ],
       curly: ['error', 'all'],
+      'no-nested-ternary': 'error',
       eqeqeq: ['error', 'always'],
       'no-console': 'error',
       'no-restricted-imports': [

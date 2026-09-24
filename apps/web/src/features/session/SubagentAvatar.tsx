@@ -3,7 +3,7 @@
  * @description Renders local deterministic pixel artwork beside a subagent's visible name.
  */
 
-import { createSubagentAvatar } from './subagent-avatar';
+import { createSubagentAvatar } from '@/features/session/utils/subagent-avatar';
 
 /**
  * Displays decorative identity artwork without network requests or mutable random state.

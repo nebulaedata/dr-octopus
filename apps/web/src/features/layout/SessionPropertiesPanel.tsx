@@ -7,7 +7,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useStore } from 'zustand';
 import { useRealtimeConnection } from '@/hooks/use-realtime';
 import { sessionStores } from '@/stores/session';
-import { PropertiesPanel } from '@/features/session/PropertiesPanel';
+import { PropertiesPanel } from '@/features/session';
 import type { SessionDto } from '@octopus/shared/protocol';
 
 export interface SessionPropertiesPanelProps {

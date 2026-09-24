@@ -12,7 +12,7 @@ import {
   getProviderAuthSession,
   resetProviderAuth,
 } from '../api/settings';
-import { queryKeys } from './query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import type { ModelProviderAuthMethod, ProviderAuthSessionDto } from '@octopus/shared/protocol';
 
 /**

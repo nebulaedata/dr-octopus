@@ -3,7 +3,7 @@
  * @description Orchestrates URL-owned Provider selection across responsive catalog and detail panes.
  */
 
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { useEffect, useState } from 'react';
 import { AddLocalProviderDialog } from './AddLocalProviderDialog';
 import { useResponsive } from 'ahooks';

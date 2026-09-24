@@ -29,7 +29,7 @@
 
 ## P1-02：结束先于 ACK 到达时，待确认请求无法清理
 
-位置：[reducer.ts](../../apps/web/src/stores/session/reducer.ts) 的 `agent_settled` 分支（约第 265 行），以及 [store.ts](../../apps/web/src/stores/session/store.ts) 的 `acknowledgeUserCommand()`（约第 354 行）。
+位置：[reducer.ts](../../apps/web/src/stores/session/reducers/session-reducer.ts) 的 `agent_settled` 分支（约第 265 行），以及 [store.ts](../../apps/web/src/stores/session/store.ts) 的 `acknowledgeUserCommand()`（约第 354 行）。
 
 `agent_settled` 只清理已经标记 `commandAcknowledged` 的本地请求；不含 completion 的迟到 ACK 只补上标记，不重新应用已经收到的终态。
 
@@ -47,7 +47,7 @@
 
 ## P1-03：会话级结束事件误结束新请求并删除其关联
 
-位置：[reducer.ts](../../apps/web/src/stores/session/reducer.ts) 的 `completeActiveTurn()` 调用，以及 [UserMessageRequestCorrelator](../../apps/server/src/modules/channel/channel.service.ts) 的 `agent_settled → #clearSession()` 分支（约第 854 行）。
+位置：[reducer.ts](../../apps/web/src/stores/session/reducers/session-reducer.ts) 的 `completeActiveTurn()` 调用，以及 [UserMessageRequestCorrelator](../../apps/server/src/modules/channel/channel.service.ts) 的 `agent_settled → #clearSession()` 分支（约第 854 行）。
 
 两个位置都把“某次执行结束”扩展成了“当前会话中的全部或当前工作结束”：
 

@@ -20,7 +20,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
 import { updateModelCapabilities } from '@/api/model-capabilities';
-import { queryKeys } from '@/queries/query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import { useI18n } from '@/i18n/use-i18n';
 import type { ModelSettingsDto, UpdateModelCapabilitiesBody } from '@octopus/shared/protocol';
 

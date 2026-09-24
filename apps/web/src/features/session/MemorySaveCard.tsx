@@ -9,7 +9,7 @@ import { Button } from '@octopus/ui/components/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@octopus/ui/components/card';
 import { formatMessageTime } from '@/utils/date';
 import { useI18n } from '@/i18n/use-i18n';
-import type { MemorySaveProjection } from './memory-save-projection';
+import type { MemorySaveProjection } from '@/features/session/utils/memory-save-projection';
 
 /**
  * Renders the historical save receipt without querying or inventing remembered content.

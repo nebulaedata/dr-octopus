@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@octopus/ui/components/select';
-import { getServerFieldLabels, numericLimits } from './server-fields';
+import { getServerFieldLabels, numericLimits } from '@/features/settings/utils/server-fields';
 import { useI18n } from '@/i18n/use-i18n';
 import { OriginList } from './OriginList';
 import type { ServerSettingKey, ServerSettingsDto } from '@octopus/shared/protocol';
@@ -49,31 +49,18 @@ export function ServerField({
   const host = name === 'SERVER_HOST';
   const boolean = host || name === 'SERVER_FILE_LOG_ENABLED' || name === 'SERVER_FILE_LOG_REQUIRED';
   const exposed = !['127.0.0.1', '::1'].includes(effective);
-  return (
-    <Field data-invalid={!!error} data-disabled={disabled}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <FieldLabel htmlFor={name}>
-          {fieldLabels[name]}{' '}
-          {host && exposed && !restoring ? (
-            <Badge variant="destructive">{t('settings.server.dangerousBadge', 'Danger')}</Badge>
-          ) : null}
-        </FieldLabel>
-        {boolean && !restoring ? (
-          <Switch
-            id={name}
-            name={name}
-            disabled={disabled}
-            checked={host ? exposed : ['true', '1'].includes(effective)}
-            onCheckedChange={(checked) =>
-              onChange(host ? (checked ? '0.0.0.0' : '127.0.0.1') : String(checked))
-            }
-          />
-        ) : null}
-      </div>
-      {restoring ? (
+  /**
+   * Selects field content in the existing condition order.
+   */
+  function renderFieldContent() {
+    if (restoring) {
+      return (
         <div className="flex flex-col items-start gap-2">
           <FieldDescription>
-            {t('settings.server.restoreInheritHint', 'Inheritance resumes after saving; the inherited value will be shown then.')}
+            {t(
+              'settings.server.restoreInheritHint',
+              'Inheritance resumes after saving; the inherited value will be shown then.'
+            )}
           </FieldDescription>
           <Button
             type="button"
@@ -85,18 +72,24 @@ export function ServerField({
             {t('settings.server.undoRestoreInherit', 'Undo restore inheritance')}
           </Button>
         </div>
-      ) : host ? (
+      );
+    } else if (host) {
+      return (
         <FieldDescription>
           {t(
             'settings.server.hostExposureHint',
             'When enabled, the service is exposed to the network and others can control your computer resources through the agent (dangerous) - Current: {{value}}',
             { value: effective }
           )}
-          {!['127.0.0.1', '0.0.0.0'].includes(effective) ? t('settings.server.customSuffix', ' (custom)') : ''}
+          {!['127.0.0.1', '0.0.0.0'].includes(effective)
+            ? t('settings.server.customSuffix', ' (custom)')
+            : ''}
         </FieldDescription>
-      ) : name === 'SERVER_CORS_ORIGIN' ? (
-        <OriginList value={effective} disabled={disabled} onChange={onChange} />
-      ) : name === 'SERVER_FILE_LOG_LEVEL' ? (
+      );
+    } else if (name === 'SERVER_CORS_ORIGIN') {
+      return <OriginList value={effective} disabled={disabled} onChange={onChange} />;
+    } else if (name === 'SERVER_FILE_LOG_LEVEL') {
+      return (
         <Select
           value={effective || 'inherit'}
           onValueChange={(next) => onChange(next === 'inherit' ? '' : String(next))}
@@ -115,7 +108,9 @@ export function ServerField({
             </SelectGroup>
           </SelectContent>
         </Select>
-      ) : !boolean ? (
+      );
+    } else if (!boolean) {
+      return (
         <Input
           id={name}
           name={name}
@@ -128,7 +123,37 @@ export function ServerField({
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
         />
-      ) : null}
+      );
+    } else {
+      return null;
+    }
+  }
+  return (
+    <Field data-invalid={!!error} data-disabled={disabled}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <FieldLabel htmlFor={name}>
+          {fieldLabels[name]}{' '}
+          {host && exposed && !restoring ? (
+            <Badge variant="destructive">{t('settings.server.dangerousBadge', 'Danger')}</Badge>
+          ) : null}
+        </FieldLabel>
+        {boolean && !restoring ? (
+          <Switch
+            id={name}
+            name={name}
+            disabled={disabled}
+            checked={host ? exposed : ['true', '1'].includes(effective)}
+            onCheckedChange={(checked) => {
+              if (host) {
+                onChange(checked ? '0.0.0.0' : '127.0.0.1');
+                return;
+              }
+              onChange(String(checked));
+            }}
+          />
+        ) : null}
+      </div>
+      {renderFieldContent()}
       <FieldError errors={error ? [{ message: error }] : []} />
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer">

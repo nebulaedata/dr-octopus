@@ -14,7 +14,7 @@ import {
   submitMessageFeedback,
   updateSessionPreferences,
 } from '../api/sessions';
-import { queryKeys } from './query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import { sessionStores } from '../stores/session';
 import type { SessionDto, SessionPreferencesDto } from '@octopus/shared/protocol';
 import type { MessageProjection } from '../stores/session';

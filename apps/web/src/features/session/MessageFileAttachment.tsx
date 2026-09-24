@@ -52,6 +52,36 @@ export function MessageFileAttachment({ attachment }: { attachment: MessageAttac
     enabled: previewOpen && previewable,
     staleTime: Number.POSITIVE_INFINITY,
   });
+  /**
+   * Selects dialog content content in the existing condition order.
+   */
+  function renderPreviewContent() {
+    if (preview.isPending) {
+      return (
+        <div className="flex min-h-0 items-center justify-center gap-2 text-muted-foreground">
+          <Spinner />
+          {t('session.messageFile.loadingPreview', 'Loading preview…')}
+        </div>
+      );
+    } else if (preview.isError) {
+      return (
+        <Alert variant="destructive">
+          <AlertTitle>{t('session.messageFile.previewFailed', 'Unable to open preview')}</AlertTitle>
+          <AlertDescription>{preview.error.message}</AlertDescription>
+        </Alert>
+      );
+    } else {
+      return (
+        <div className="min-h-0 overflow-hidden">
+          {attachment.previewKind === 'code' && attachment.previewLanguage !== undefined ? (
+            <CodeEditor readOnly language={attachment.previewLanguage} value={preview.data} />
+          ) : (
+            <FileContentPreview kind="markdown">{preview.data}</FileContentPreview>
+          )}
+        </div>
+      );
+    }
+  }
   return (
     <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
       <Attachment
@@ -88,25 +118,7 @@ export function MessageFileAttachment({ attachment }: { attachment: MessageAttac
             <DialogDescription>{attachment.detectedMediaType}</DialogDescription>
           </DialogHeader>
           <Separator />
-          {preview.isPending ? (
-            <div className="flex min-h-0 items-center justify-center gap-2 text-muted-foreground">
-              <Spinner />
-              {t('session.messageFile.loadingPreview', 'Loading preview…')}
-            </div>
-          ) : preview.isError ? (
-            <Alert variant="destructive">
-              <AlertTitle>{t('session.messageFile.previewFailed', 'Unable to open preview')}</AlertTitle>
-              <AlertDescription>{preview.error.message}</AlertDescription>
-            </Alert>
-          ) : (
-            <div className="min-h-0 overflow-hidden">
-              {attachment.previewKind === 'code' && attachment.previewLanguage !== undefined ? (
-                <CodeEditor readOnly language={attachment.previewLanguage} value={preview.data} />
-              ) : (
-                <FileContentPreview kind="markdown">{preview.data}</FileContentPreview>
-              )}
-            </div>
-          )}
+          {renderPreviewContent()}
         </DialogContent>
       ) : null}
     </Dialog>

@@ -3,7 +3,7 @@
  * @description Presents Provider authentication progress, safe external actions, prompts, and terminal results.
  */
 
-import { copyTextWithFeedback } from '@/lib/copy-text-with-feedback';
+import { copyTextWithFeedback } from '@/utils/copy-text-with-feedback';
 import { CheckCircleIcon, CopyIcon, ExternalLinkIcon, KeyRoundIcon, TriangleAlertIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';

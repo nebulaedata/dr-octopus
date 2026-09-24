@@ -49,12 +49,14 @@ function sourceLabel(t: Translate, source: string): string {
  */
 export function EffectiveSkillCard({ skill }: EffectiveSkillCardProps) {
   const { t } = useI18n();
-  const managedLabel =
-    skill.managedScope === 'workspace'
-      ? t('skills.effectiveCard.managed.workspace', 'Managed by workspace')
-      : skill.managedScope === 'global'
-        ? t('skills.effectiveCard.managed.global', 'Managed globally')
-        : undefined;
+  let managedLabel: string | undefined;
+  if (skill.managedScope === 'workspace') {
+    managedLabel = t('skills.effectiveCard.managed.workspace', 'Managed by workspace');
+  } else if (skill.managedScope === 'global') {
+    managedLabel = t('skills.effectiveCard.managed.global', 'Managed globally');
+  } else {
+    managedLabel = undefined;
+  }
   const sourceText =
     skill.origin === 'package'
       ? t('skills.effectiveCard.originPackage', 'Provided by extension package')

@@ -42,32 +42,34 @@ export function ExecutionTimeline({
       {entries.map((entry) => {
         const toolCall = entry.role === 'toolCall';
         const toolResult = entry.role === 'toolResult';
-        const title = toolCall
-          ? t('session.executionTimeline.toolCall', 'Tool call')
-          : toolResult
-            ? t('session.executionTimeline.toolResult', 'Tool result')
-            : entry.role === 'assistant'
-              ? t('session.executionTimeline.assistant', 'Assistant reply')
-              : entry.role === 'user'
-                ? t('session.executionTimeline.user', 'Additional instructions')
-                : t('session.executionTimeline.fallback', 'Run note');
+        let title: string;
+        if (toolCall) {
+          title = t('session.executionTimeline.toolCall', 'Tool call');
+        } else if (toolResult) {
+          title = t('session.executionTimeline.toolResult', 'Tool result');
+        } else if (entry.role === 'assistant') {
+          title = t('session.executionTimeline.assistant', 'Assistant reply');
+        } else if (entry.role === 'user') {
+          title = t('session.executionTimeline.user', 'Additional instructions');
+        } else {
+          title = t('session.executionTimeline.fallback', 'Run note');
+        }
+        /**
+         * Selects icon in the existing condition order.
+         */
+        function selectIcon() {
+          if (toolCall) {
+            return <WrenchIcon />;
+          } else if (toolResult) {
+            return <TerminalIcon />;
+          } else if (entry.role === 'assistant') {
+            return <MessageSquareIcon />;
+          } else {
+            return <FileTextIcon />;
+          }
+        }
         return (
-          <TimelineItem
-            key={entry.id}
-            title={title}
-            collapsible={toolCall || toolResult}
-            icon={
-              toolCall ? (
-                <WrenchIcon />
-              ) : toolResult ? (
-                <TerminalIcon />
-              ) : entry.role === 'assistant' ? (
-                <MessageSquareIcon />
-              ) : (
-                <FileTextIcon />
-              )
-            }
-          >
+          <TimelineItem key={entry.id} title={title} collapsible={toolCall || toolResult} icon={selectIcon()}>
             {toolCall || toolResult ? (
               <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-lg border bg-muted/40 p-4 font-mono text-xs leading-6 [overflow-wrap:anywhere]">
                 {entry.text}

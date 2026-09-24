@@ -42,13 +42,19 @@ function skillEditorSchema(t: Translate) {
       .max(64, t('skills.editDialog.nameTooLong', 'The name must be at most 64 characters.'))
       .regex(
         SKILL_NAME_PATTERN,
-        t('skills.editDialog.namePattern', 'The name may only contain lowercase letters, digits, and single hyphens.')
+        t(
+          'skills.editDialog.namePattern',
+          'The name may only contain lowercase letters, digits, and single hyphens.'
+        )
       ),
     description: z
       .string()
       .trim()
       .min(1, t('skills.editDialog.descriptionRequired', 'Enter a skill description.'))
-      .max(1024, t('skills.editDialog.descriptionTooLong', 'The description must be at most 1024 characters.')),
+      .max(
+        1024,
+        t('skills.editDialog.descriptionTooLong', 'The description must be at most 1024 characters.')
+      ),
     disableModelInvocation: z.boolean(),
     body: z.string(),
   });
@@ -81,6 +87,28 @@ export function SkillEditDialog({
   const detail = useSkill(scope, name ?? '', open && mode === 'edit' && name !== undefined);
   const { t } = useI18n();
 
+  /**
+   * Selects dialog description content in the existing condition order.
+   */
+  function renderDialogDescriptionContent() {
+    if (scope.kind === 'global') {
+      return t(
+        'skills.editDialog.descriptionGlobal',
+        'The skill is saved as SKILL.md in the user directory on this machine and takes effect for new sessions in all workspaces.'
+      );
+    } else if (workspaceName === undefined) {
+      return t(
+        'skills.editDialog.descriptionWorkspace',
+        "The skill is saved as SKILL.md in the current workspace's .dr-octopus/skills directory and takes effect only for new sessions in that workspace."
+      );
+    } else {
+      return t(
+        'skills.editDialog.descriptionWorkspaceNamed',
+        'The skill is saved as SKILL.md in the current workspace\'s .dr-octopus/skills directory and takes effect only for new sessions in workspace "{{name}}".',
+        { name: workspaceName }
+      );
+    }
+  }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
@@ -90,23 +118,7 @@ export function SkillEditDialog({
               ? t('skills.page.newSkill', 'New skill')
               : t('skills.editDialog.titleEdit', 'Edit skill {{name}}', { name: name ?? '' })}
           </DialogTitle>
-          <DialogDescription>
-            {scope.kind === 'global'
-              ? t(
-                  'skills.editDialog.descriptionGlobal',
-                  'The skill is saved as SKILL.md in the user directory on this machine and takes effect for new sessions in all workspaces.'
-                )
-              : workspaceName === undefined
-                ? t(
-                    'skills.editDialog.descriptionWorkspace',
-                    "The skill is saved as SKILL.md in the current workspace's .dr-octopus/skills directory and takes effect only for new sessions in that workspace."
-                  )
-                : t(
-                    'skills.editDialog.descriptionWorkspaceNamed',
-                    "The skill is saved as SKILL.md in the current workspace's .dr-octopus/skills directory and takes effect only for new sessions in workspace \"{{name}}\".",
-                    { name: workspaceName }
-                  )}
-          </DialogDescription>
+          <DialogDescription>{renderDialogDescriptionContent()}</DialogDescription>
         </DialogHeader>
         {mode === 'edit' && detail.isPending && (
           <div className="flex flex-col gap-4 py-2">
@@ -294,7 +306,9 @@ function SkillEditForm({
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
             return (
               <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>{t('skills.editDialog.descriptionLabel', 'Description')}</FieldLabel>
+                <FieldLabel htmlFor={field.name}>
+                  {t('skills.editDialog.descriptionLabel', 'Description')}
+                </FieldLabel>
                 <Textarea
                   id={field.name}
                   name={field.name}
@@ -308,7 +322,10 @@ function SkillEditForm({
                   onChange={(event) => field.handleChange(event.target.value)}
                   aria-invalid={isInvalid}
                 />
-                <FieldDescription>{field.state.value.length}{' / 1024'}</FieldDescription>
+                <FieldDescription>
+                  {field.state.value.length}
+                  {' / 1024'}
+                </FieldDescription>
                 {isInvalid && <FieldError errors={field.state.meta.errors} />}
               </Field>
             );

@@ -4,7 +4,7 @@
  */
 import { getConversationModels } from '@/api/conversation-starts';
 import { getWorkspaces } from '@/api/workspace';
-import { queryKeys } from '@/queries/query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import type { QueryClient } from '@tanstack/react-query';
 
 /**

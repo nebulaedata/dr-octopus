@@ -3,7 +3,7 @@
  * @description Orchestrates responsive MCP Server selection between catalog and configuration panes.
  */
 
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { useState } from 'react';
 import { useResponsive } from 'ahooks';
 import { cn } from '@octopus/ui/lib/utils';

@@ -46,11 +46,14 @@ export function ThoughtDisclosureMarker({
 }: ThoughtDisclosureMarkerProps) {
   const { t } = useI18n();
   const duration = formatThoughtDuration(startedAt, endedAt);
-  const label = isThinking
-    ? t('session.thoughtDisclosure.thinking', 'Thinking…')
-    : duration === undefined
-      ? t('session.thoughtDisclosure.thought', 'Thought')
-      : t('session.thoughtDisclosure.thoughtFor', 'Thought for {{duration}}', { duration });
+  let label: string;
+  if (isThinking) {
+    label = t('session.thoughtDisclosure.thinking', 'Thinking…');
+  } else if (duration === undefined) {
+    label = t('session.thoughtDisclosure.thought', 'Thought');
+  } else {
+    label = t('session.thoughtDisclosure.thoughtFor', 'Thought for {{duration}}', { duration });
+  }
   return (
     <Collapsible>
       <CollapsibleTrigger

@@ -12,7 +12,7 @@ import { MessageAttachmentGroup } from './MessageAttachmentGroup';
 import { MessageFailure } from './MessageFailure';
 import { MessageToolbar } from './MessageToolbar';
 import { MemorySaveCard } from './MemorySaveCard';
-import { projectMemorySave } from './memory-save-projection';
+import { projectMemorySave } from '@/features/session/utils/memory-save-projection';
 import { RichContent } from './RichContent';
 import type { ContentBlock, MessageProjection } from '@/stores/session';
 import type { SessionDto } from '@octopus/shared/protocol';

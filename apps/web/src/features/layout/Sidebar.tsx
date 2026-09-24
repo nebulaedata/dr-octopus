@@ -29,14 +29,15 @@ import { Skeleton } from '@octopus/ui/components/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/tooltip';
 import { toast } from '@octopus/ui/components/toast';
 import { useState } from 'react';
+import { SessionRestartActions } from '@/features/session';
 import { Logo } from '@/components/Logo';
 import { CreateWorkspaceDialog } from './CreateWorkspaceDialog';
 import { SessionListItem } from './SessionListItem';
-import { useRestartSession } from '../session/use-restart-session';
-import { RestartSessionDialog } from '../session/RestartSessionDialog';
 import { useI18n } from '@/i18n/use-i18n';
 import { workspaceDisplayName } from '@/utils/workspace';
 import { MAX_PINNED_SESSIONS } from '@octopus/shared/protocol';
+import type { ReactNode } from 'react';
+import type { SessionRestartActionsProps } from '@/features/session';
 import type { DeleteSessionOptionsDto, SessionDto, WorkspaceDto } from '@octopus/shared/protocol';
 
 export interface SidebarProps {
@@ -66,8 +67,23 @@ export interface SidebarProps {
  * Renders common navigation using shadcn sidebar design tokens.
  */
 export function Sidebar(props: SidebarProps) {
+  return (
+    <SessionRestartActions>
+      {(restart, dialog) => <SidebarView {...props} restart={restart} restartDialog={dialog} />}
+    </SessionRestartActions>
+  );
+}
+/**
+ * Renders sidebar chrome using the session-owned restart interaction.
+ */
+function SidebarView(
+  props: SidebarProps & {
+    restart: Parameters<SessionRestartActionsProps['children']>[0];
+    restartDialog: ReactNode;
+  }
+) {
   const { t } = useI18n();
-  const restart = useRestartSession();
+  const { restart } = props;
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const pinnedSessionCount = props.sessions.reduce(
     (count, session) => count + (session.pinnedAt === undefined ? 0 : 1),
@@ -243,7 +259,7 @@ export function Sidebar(props: SidebarProps) {
           </span>
         </Button>
       </div>
-      <RestartSessionDialog action={restart} />
+      {props.restartDialog}
       <CreateWorkspaceDialog
         open={createWorkspaceOpen}
         onOpenChange={setCreateWorkspaceOpen}

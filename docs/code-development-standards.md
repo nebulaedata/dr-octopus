@@ -278,13 +278,40 @@ Class 的 private/protected 成员可能影响结构类型兼容性。替换类�
 - 类型与实现合并后，在所属入口保留实际需要的类型导出，消费者使用 `import type`；不得为取得类型而增加运行时导入、触发初始化或保留旧路径转导出。
 - 类型是否需要独立文件、interface 是否冗余是两项不同判断。搬回实现文件不代表删除有效契约，保留有效契约也不意味着必须为其创建独立文件。
 
-## 4. 前端 feature 目录
+## 4. 前端分层与模块约定
 
-前端界面同时遵循 [前端设计规范](../apps/web/DESIGN.md)，其中统一规定同类页面复用、表单操作、密钥展示、简洁文案、状态反馈和配置归属；本节仅维护目录与依赖规则。
+前端界面同时遵循 [前端设计规范](../apps/web/DESIGN.md)，其中统一规定同类页面复用、表单操作、密钥展示、简洁文案、状态反馈和配置归属；本节维护目录分层、依赖、资源所有权及样式与加载约束。
+
+`apps/web/src/` 下的目录按职责组织，不为统一形式把独立职责全部收进 utils：
+
+| 目录 | 职责 |
+| --- | --- |
+| `features/` | 业务组件、页面及其内部 Hook、工具 |
+| `api/` | 请求与响应处理 |
+| `queries/` | 查询配置、查询与 mutation Hooks、缓存协调 |
+| `stores/` | 客户端状态及操作契约 |
+| `lib/` | 连接、监听器、注册器和运行时管理 |
+| `hooks/` | 跨 feature 的 React 生命周期适配 |
+| `utils/` | 按需调用的辅助能力，允许契约明确的局部副作用 |
 
 ### 4.1 组件入口与目录约束
 
-`apps/web/src/features/<feature>/` 存放组件文件、组件分组目录和组件入口 `index.ts`，并允许 `hooks/`、`utils/` 两个目录就近承接本 feature 的非组件逻辑。两个目录内直接放置文件，不再嵌套子目录。
+`apps/web/src/features/<feature>/` 存放组件文件、页面业务目录、组件分组目录和组件入口 `index.ts`，并允许 `hooks/`、`utils/` 两个目录就近承接本 feature 的非组件逻辑。两个目录内直接放置文件，不再嵌套子目录。
+
+目录按职责命名，而不是仅根据“是否被路由引用”判断：
+
+| 目录职责 | 命名 | 示例 |
+| --- | --- | --- |
+| 顶层业务 feature | kebab-case，全小写，多词用连字符 | `features/session/`、`features/settings/`、`features/layout/` |
+| feature 内的页面业务目录 | kebab-case | `settings/default-model/`、`settings/model-providers/`、`settings/memory/` |
+| 组件及组件组目录 | PascalCase，大写开头驼峰 | `session/MemoryAssistant/`、`session/BackgroundTasks/`、`session/ToolRenderers/`、`settings/Layout/` |
+| 固定职责目录 | 保留约定的小写名称 | `hooks/`、`utils/`；已有 `api/`、`queries/`、`stores/` 遵循各自分层约定 |
+
+- 页面业务目录承接一个可导航的业务页面或页面族，内部组件文件仍使用 PascalCase。例如 `settings/memory/MemoryScreeningCard.tsx` 不因包含组件而改为 `settings/Memory/`。
+- 组件组没有独立的页面业务归属，例如布局容器、工具卡片、后台任务面板。`settings/Layout/` 和通用占位组件组 `settings/Placeholder/` 即使被路由使用，也保持 PascalCase；顶层 `features/layout/` 是 feature 根目录，仍使用 kebab-case。
+- 页面目录名不要求与 URL 逐段一致，多个路由也可复用同一组件。目录改名不得顺带修改路由、搜索参数或导航行为。
+- 只在组件有明确分组需求时创建目录；单个组件可以直接放在所属 feature 或页面业务目录中，不强制增加同名包装目录。组件分组可以嵌套，`hooks/`、`utils/` 仍只放在所属 feature 根目录且保持扁平。
+- 目录重命名必须同步更新导入、导出、动态加载、测试和文档；路径大小写必须与磁盘实际名称完全一致，避免 Windows 可运行而 Linux 构建失败。
 
 ```text
 apps/web/src/
@@ -306,7 +333,7 @@ apps/web/src/
 - 每个业务 feature 使用 `index.ts` 显式导出该 feature 下所有组件文件的组件及必要的组件 Props 类型；不要创建汇总整个 `features/` 的巨型入口。
 - feature 外部的组件消费者（例如其他 feature、页面和路由）只通过 `features/<feature>` 导入组件，路径可省略 `index.ts`；禁止深层导入 `features/<feature>/Sidebar`。全局 hooks/utils 不得反向依赖 feature。
 - 同一 feature 内部组件可直接相对引用，避免从自身入口反向导入。组件文件内不独立对外使用的私有子组件不必导出。
-- 业务 feature 根目录禁止散放独立的 Hook、工具函数、types、constants、store、API 请求、测试或文档文件。Hook 放入本 feature 的 `hooks/`，工具及请求函数放入 `utils/`；类型与常量跟随其所属实现。测试放入 `apps/web/test/`，文档放入 `docs/`，静态资源遵循既有资源目录约定。
+- 业务 feature 根目录禁止散放独立的 Hook、工具函数、types、constants、store、API 请求、测试或文档文件。业务 Hook 放入本 feature 的 `hooks/`，工具放入 `utils/`；请求与响应处理归 `api/`，查询配置与缓存协调归 `queries/`，客户端共享状态归 `stores/`；类型与常量跟随其所属实现。测试放入 `apps/web/test/`，文档放入 `docs/`，静态资源遵循既有资源目录约定。
 - 组件专用的 Props、常量和简单渲染辅助实现内聚在组件文件；自定义 Hook 必须移入规定的 hooks 目录。
 
 ### 4.2 hooks 与工具归属
@@ -314,7 +341,7 @@ apps/web/src/
 | 内容                                               | 位置与约束                                                   |
 | -------------------------------------------------- | ------------------------------------------------------------ |
 | 具有 feature 业务语义的 Hook                       | `apps/web/src/features/<feature>/hooks/use-xxx.ts`           |
-| feature 专用的独立工具函数、业务数据转换与请求函数 | `apps/web/src/features/<feature>/utils/xxx.ts`，按用途分文件 |
+| feature 专用的独立工具函数与业务数据转换 | `apps/web/src/features/<feature>/utils/xxx.ts`，按用途分文件 |
 | 不依赖 feature 业务的通用 Hook                     | `apps/web/src/hooks/`                                        |
 | 不依赖 feature 业务的全局工具函数                  | `apps/web/src/utils/`，优先纯函数，有副作用时必须明确契约    |
 
@@ -323,9 +350,103 @@ apps/web/src/
 - 类型、常量跟随其所属组件、Hook 或工具函数；不要为了清空组件目录而将 store、业务服务等非工具实现随意改名为 utils。
 - 状态实现优先内聚在拥有它的 Hook 中并提供完整操作契约；确有独立共享状态需求时使用项目既有状态管理边界，不能在组件目录新增 store 文件。
 - Hook 封装不等于状态共享：普通自定义 Hook 的每次调用拥有独立状态；需要跨组件共享时必须明确状态所有者和实例范围，不在 render 中重复创建共享实例，也不把应隔离的状态放入模块级变量。
-- 前端请求函数负责请求与响应处理，Hook 负责调用生命周期和 UI 状态协调；可测试的数据转换放入 utils。不能将 React 状态、订阅或 effect 放入工具函数。
+- API 请求函数负责请求与响应处理；查询与缓存生命周期由 queries 管理，组件交互生命周期由所属 Hook 协调，可测试的数据转换放入所属 utils。不能将 React 状态、Hook 或 effect 伪装成工具函数；明确拥有资源的 store/query 辅助实现遵循第 4.3、4.4 节。
 - feature 工具函数不得依赖 React 组件或 Hook；全局 `hooks/`、`utils/` 不得反向依赖 `features/`。组件、Hook、工具之间的依赖不得形成环。
 - `index.ts` 只做显式导出，不执行副作用，不承载业务实现，不从中转出 feature 的内部 hooks、store 或工具函数。
+
+### 4.3 Store 目录与状态所有权
+
+`apps/web/src/stores/<domain>/` 按内聚的状态域组织，目录使用 kebab-case，外部统一从该域的 `index.ts` 导入。
+
+```text
+stores/<domain>/
+├── index.ts       # 必需：显式公共导出
+├── store.ts       # Zustand 初始化、状态与 actions
+├── type.ts        # 按需：独立使用的状态与操作契约
+├── registry.ts    # 按需：实例管理与回收
+├── reducers/      # 按需：内聚的状态转换实现
+└── utils.ts       # 按需：本状态域的辅助实现；或使用 utils/
+```
+
+- 这是基础模板，不是强制文件数量或封闭白名单。简单 store 可以只有 `index.ts + store.ts`；仅管理持久化的域可以保留命名明确的存储适配文件，不为统一形式引入 Zustand 或空壳 `store.ts`。
+- `index.ts` 只做显式公共导出，不承载初始化或业务实现；实际初始化仍由实现文件拥有。入口必须考虑其导入会加载哪些实现，不能重复创建实例或扩大订阅范围。不建立汇总所有 store 的巨型入口。
+- 所有生产调用方，包括组件、Hook、queries、运行时及其他 store，均通过目标域入口访问实际需要的操作、选择器和类型。域内部直接引用实现文件，禁止反向导入自身入口；聚焦测试可直接访问内部实现，不为测试额外暴露生产 API。
+- `store.ts` 内聚状态、actions、初始化和相关持久化配置。`type.ts` 只在契约确有独立使用需求时创建；保留 Zustand 类型推导，私有类型默认跟随实现，不强制抽走每个接口。
+- `utils.ts` 与 `utils/` 二选一；store 的 utils 承接本状态域的辅助实现，允许按明确业务职责分组，例如 `utils/attachments/`。不为单个文件机械增加目录，不增加中间入口或无职责转发；此约定不放宽 feature 的 hooks/utils 扁平约束。
+- Store 的 utils 不全部要求纯函数：归一化、投影、计算优先保持纯函数，持久化和任务管理可以封装副作用。文件名与注释必须明确存储读写、实例范围和清理责任；保留原有状态所有者，不把不相关业务、实例注册或整个 store 塞入 utils。
+- 复杂状态域的实例管理放入 `registry.ts`，关联的状态转换放入 `reducers/`；任务管理与持久化可以按业务归入 utils 子目录，继续保持各自所有权。是否拆分取决于职责和资源所有权，不取决于行数，不把独立生命周期强行合并进 `store.ts`。
+- 浏览器单例、每标签页状态、按会话隔离的 store、局部组件状态必须保持各自作用域。整理目录不得改变持久化键、序列化结构、恢复时机、初始化顺序、缓存回收、取消与清理语义；普通工厂和单例导出保持原有数量。
+- 组件短期展示状态留在组件或所属 Hook；服务端状态保持既有 TanStack Query 边界。纯工具不依赖 store 实例、组件或 Hook，公共层不反向依赖 feature。
+
+Session 的根目录明确限定为以下角色；reducers 和 utils 的内部文件直接引用实现，不新增子目录入口：
+
+```text
+stores/session/
+├── index.ts
+├── store.ts
+├── type.ts
+├── registry.ts
+├── reducers/
+│   ├── session-reducer.ts
+│   └── retry-reducer.ts
+└── utils/
+    ├── attachments/
+    │   ├── draft-storage.ts
+    │   └── upload-tasks.ts
+    ├── elapsed-time.ts
+    ├── history.ts
+    ├── normalizer.ts
+    ├── persisted-retry-projection.ts
+    ├── token-usage.ts
+    └── tool-result-projection.ts
+```
+
+### 4.4 Query 目录与缓存协调
+
+`apps/web/src/queries/` 根目录仅允许 `*-queries.ts`、`core/` 和 `utils/`：
+
+```text
+queries/
+├── core/
+│   ├── query-client.ts
+│   └── query-keys.ts
+├── data-events-queries.ts
+├── realtime-queries.ts
+├── <domain>-queries.ts
+└── utils/
+    ├── data-events-sync.ts
+    └── realtime-message-handler.ts
+```
+
+- `*-queries.ts` 是查询层的对外接线文件，负责 query options、查询和 mutation Hooks，以及缓存同步生命周期；不能只为满足后缀，把工具文件改名为 queries。表单、导航和组件交互 Hook 仍归所属 feature。
+- `core/` 承接查询基础设施，`core/query-client.ts` 唯一拥有应用共享 QueryClient 的创建和默认配置，`core/query-keys.ts` 维护共享缓存键及键工厂。直接导入对应文件，不新增 core 入口；core 不反向依赖 `*-queries.ts` 或 query utils。局部结构迁移不得顺带改写既有 key 值、前缀、参数顺序或 mutation key。
+- `utils/` 承接查询层内部辅助实现：解析、匹配、缓存更新、事件合并队列与消息处理。允许明确封装副作用，不把其全部称为纯工具；状态、定时器和关闭责任须明确，不能创建第二套共享 QueryClient 或连接。
+- React Hook 与连接挂载、卸载留在对应 queries 文件中，调用并清理辅助实现；辅助文件不导入 React，也不把 Hook 伪装成普通函数。QueryClient、运行时等依赖显式传入，保持原有实例作用域。
+- 生产调用方从对应 `*-queries.ts`、client 或 keys 模块访问公共能力，不深层导入 query utils。查询层内部直接引用实现，聚焦测试可直接验证辅助逻辑；不新增统一或子目录入口、兼容转导出、无职责包装或循环依赖。
+- utils 默认平铺，形成明确业务职责分组后可建子目录；不为单个文件机械增加目录。该规则不改变 feature 的 hooks/utils 扁平约束。
+- 迁移必须保持缓存键、失效范围、刷新顺序、请求次数、取消语义、SSE/WS 连接数量与实例范围、重连补偿、定时器及监听器清理行为。目录合规不能代替行为验证。
+
+### 4.5 Web lib、utils 与 hooks 的边界
+
+- 保留 `apps/web/src/lib/` 作为共享基础设施目录，承接长期连接、监听器注册和跨调用的运行时状态。不另建应用级 core；已有 `queries/core/` 仍负责查询层基础设施。
+- `lib/runtime/` 内聚实时连接、命令等待与会话运行时管理；`lib/shortcuts/` 内聚快捷键目录、匹配、注册器及单例接线。纯辅助函数可以留在其所属基础设施内，不因它是纯函数就强制移到 utils。
+- 全局 `utils/` 放置按需调用的辅助能力，优先纯函数，也可明确封装复制、提示等局部副作用。有持续连接、监听器或运行时保留状态的能力优先归 lib；不能只为减少目录数量把所有基础设施归为工具。
+- React 生命周期适配放入 `hooks/`；快捷键的 `useShortcut`、`useShortcutBinding` 及选项契约归 `hooks/use-shortcut.ts`，保持闭包引用、effect 依赖、注册位置与卸载语义。
+- 快捷键单例的创建、启动、绑定同步及 HMR 接线归 `lib/shortcuts/shortcut-runtime.ts`，入口 `index.ts` 只显式导出公共基础设施。入口本身没有实现，不代表导入无副作用：它仍通过导出加载既有运行时，不能借迁移改变初始化时机。
+- lib 和全局 utils 不直接导入 React Hook、hooks 层或 features。Store 可以直接依赖纯快捷键目录，不能反向导入会初始化并订阅该 store 的运行时入口；按具体模块检查依赖环，不以目录名推断整个层只能单向依赖。
+- 迁移保持共享实例数量、资源所有权、请求关联、超时、重连、监听和订阅清理、持久化键，以及当前受支持浏览器的能力降级。既有生命周期问题作为独立改动处理，不夹带修复。
+
+### 4.6 资源所有权优先于目录形式
+
+- 每个连接、单例、任务表、订阅和定时器必须明确创建、复用及清理责任；文件迁移不转移其状态所有权。
+- Hook 封装不代表状态共享；不得在每次 Hook 调用时重复创建应共享的实例，也不得将应隔离的状态变成全局单例。
+- 入口只含导出不代表导入无副作用，必须检查其加载的实现及初始化时机。300 行仅提示检查职责，沿用第 1 节约束，不作为拆分或验收门禁。
+
+### 4.7 样式与加载行为
+
+- 常规样式优先使用 Tailwind；必要的自定义 keyframes 放入现有应用样式体系，不为局部需求建立平行主题。
+- 动画须保留减少动态效果、触屏、长内容及明暗模式下的可读性和交互表现。
+- 统一组件入口时保留现有懒加载、Suspense、组件身份及重挂载规则；检查生产模块依赖和请求轨迹，避免首页提前加载未访问的重型页面。若入口导出扩大同步依赖，在 feature 内通过惰性组件包装隔离实现，并保持公共组件契约。
 
 ## 5. 可读性与基础编码约定
 

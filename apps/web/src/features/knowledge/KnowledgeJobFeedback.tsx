@@ -6,10 +6,10 @@ import { useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@octopus/ui/components/toast';
 import { changeKnowledgeJob } from '@/api/knowledge';
-import { getKnowledgeJobNotification } from './knowledge-job-feedback';
+import { getKnowledgeJobNotification } from '@/features/knowledge/utils/knowledge-job-feedback';
 import { useI18n } from '@/i18n/use-i18n';
 import type { KnowledgeJob } from '@octopus/shared/protocol/knowledge';
-import type { KnowledgeJobResult } from './knowledge-job-feedback';
+import type { KnowledgeJobResult } from '@/features/knowledge/utils/knowledge-job-feedback';
 
 /**
  * Deduplicates event-driven outcomes by job attempt and keeps each retry bound to the job that failed.
@@ -29,7 +29,11 @@ export function KnowledgeJobFeedback({
     mutationFn: ({ target, kind }: { target: KnowledgeJob; kind: 'cancel' | 'retry' }) =>
       changeKnowledgeJob(workspaceId, target, kind),
     onError: (error) => {
-      toast.add({ title: t('knowledge.jobFeedback.actionFailed', 'Task action failed'), description: error.message, type: 'error' });
+      toast.add({
+        title: t('knowledge.jobFeedback.actionFailed', 'Task action failed'),
+        description: error.message,
+        type: 'error',
+      });
     },
     onSuccess: async (_, { target }) => {
       await cache.invalidateQueries({ queryKey: ['knowledge', workspaceId ?? 'global', 'job', target.id] });

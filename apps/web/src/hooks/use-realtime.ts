@@ -4,13 +4,13 @@
  */
 
 import { useSyncExternalStore } from 'react';
-import { realtimeClient } from '../utils/realtime-client';
+import { realtimeClient } from '@/lib/runtime/realtime-client';
 import { browserSessionRuntime } from '../lib/runtime/session-runtime';
 import { sessionStores } from '../stores/session';
 import type { ClientRealtimeMessage } from '@octopus/shared/protocol';
-import type { RealtimeConnectionState } from '../utils/realtime-client';
+import type { RealtimeConnectionState } from '@/lib/runtime/realtime-client';
 
-export type { RealtimeConnectionState } from '../utils/realtime-client';
+export type { RealtimeConnectionState } from '@/lib/runtime/realtime-client';
 
 /**
  * Subscribes a component to the tab-scoped connection state.

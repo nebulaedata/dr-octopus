@@ -5,6 +5,24 @@
 
 @import '@octopus/ui/globals.css';
 
+/* Inline expansion resolves duration on each title instead of the root theme scope. */
+@theme inline {
+  --animate-session-title: session-title-bounce var(--title-duration) linear 300ms infinite;
+
+  @keyframes session-title-bounce {
+    0%,
+    95%,
+    100% {
+      transform: translateX(0);
+    }
+
+    45%,
+    50% {
+      transform: translateX(var(--title-travel));
+    }
+  }
+}
+
 @layer base {
   html,
   body,

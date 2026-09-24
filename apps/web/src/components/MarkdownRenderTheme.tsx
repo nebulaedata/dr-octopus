@@ -37,7 +37,10 @@ function useResolvedColorScheme() {
     return () => mediaQuery.removeEventListener('change', handleSystemPreferenceChange);
   }, [mode]);
 
-  return mode === 'system' ? (systemPrefersDark ? 'dark' : 'light') : mode;
+  if (mode !== 'system') {
+    return mode;
+  }
+  return systemPrefersDark ? 'dark' : 'light';
 }
 
 /**

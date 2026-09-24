@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { toComposerAttachment } from '../src/features/session/attachment-projection.ts';
+import { toComposerAttachment } from '../src/features/session/utils/attachment-projection.ts';
 import { createEditor } from 'lexical';
 import { restoreComposerDraft } from '../src/components/AgentComposerEditor/restore-draft.ts';
 import { FileMentionNode } from '../src/components/AgentComposerEditor/plugins/workspace-mentions-plugin/file-mention-node.ts';

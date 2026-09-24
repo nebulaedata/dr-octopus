@@ -4,7 +4,7 @@
  */
 
 import { AttachmentDiagnostics } from './AttachmentDiagnostics';
-import { documentCoverageLabel } from './document-coverage-label';
+import { documentCoverageLabel } from '@/features/session/utils/document-coverage-label';
 import { DownloadIcon, FileWarningIcon } from 'lucide-react';
 import {
   AttachmentAction,
@@ -93,11 +93,7 @@ export function MessageAttachmentUnavailableIcon() {
 /**
  * Formats bytes and immutable availability state in the active locale.
  */
-function availabilityText(
-  t: Translate,
-  attachment: MessageAttachmentDto,
-  codecError: boolean
-): string {
+function availabilityText(t: Translate, attachment: MessageAttachmentDto, codecError: boolean): string {
   if (attachment.availability === 'deleted') {
     return t('session.attachments.deleted', 'Deleted attachment');
   }

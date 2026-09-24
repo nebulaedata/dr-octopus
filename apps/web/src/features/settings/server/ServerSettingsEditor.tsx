@@ -15,14 +15,19 @@ import { Spinner } from '@octopus/ui/components/spinner';
 import { getServerSettings, saveServerSettings } from '@/api/server-settings';
 import { useI18n } from '@/i18n/use-i18n';
 import { ApiRequestError } from '@/utils/request';
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { ServerField } from './ServerField';
 import { ServerRestart } from './ServerRestart';
 import { ServerAccessNotice } from './ServerAccessNotice';
 import { ServerExposureDialog, UnsavedGuard } from './ServerConfirmations';
-import { normalizeOrigins, serverChanges, serverDraft, validateServerField } from './server-fields';
+import {
+  normalizeOrigins,
+  serverChanges,
+  serverDraft,
+  validateServerField,
+} from '@/features/settings/utils/server-fields';
 import type { ServerSettingsDto, UpdateEnvironmentBody } from '@octopus/shared/protocol';
-import type { ServerDraft } from './server-fields';
+import type { ServerDraft } from '@/features/settings/utils/server-fields';
 
 /**
  * Captures the editing revision so background reads cannot silently authorize stale drafts.
@@ -299,7 +304,10 @@ export function ServerSettingsEditor({
                     setMessage(t('settings.server.reloaded', 'Latest configuration loaded.'));
                   } catch {
                     setMessage(
-                      t('settings.server.refreshFailed', 'Unable to refresh the configuration; your draft is preserved.')
+                      t(
+                        'settings.server.refreshFailed',
+                        'Unable to refresh the configuration; your draft is preserved.'
+                      )
                     );
                   }
                 }}

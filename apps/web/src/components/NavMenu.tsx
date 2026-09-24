@@ -46,23 +46,28 @@ function NavMenuLink({ item }: { item: NavMenuItem }) {
     </>
   );
 
-  const render = item.disabled ? (
-    <span className={className}>{content}</span>
-  ) : item.to ? (
-    <Link
-      to={item.to as '/'}
-      params={item.params as never}
-      activeOptions={{ exact: true }}
-      className={className}
-      onClick={item.onClick}
-    >
-      {content}
-    </Link>
-  ) : (
-    <button type="button" className={className} onClick={item.onClick}>
-      {content}
-    </button>
-  );
+  let render;
+  if (item.disabled) {
+    render = <span className={className}>{content}</span>;
+  } else if (item.to) {
+    render = (
+      <Link
+        to={item.to as '/'}
+        params={item.params as never}
+        activeOptions={{ exact: true }}
+        className={className}
+        onClick={item.onClick}
+      >
+        {content}
+      </Link>
+    );
+  } else {
+    render = (
+      <button type="button" className={className} onClick={item.onClick}>
+        {content}
+      </button>
+    );
+  }
 
   return <NavigationMenuLink active={item.active} aria-disabled={item.disabled} render={render} />;
 }

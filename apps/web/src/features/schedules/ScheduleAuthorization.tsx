@@ -85,6 +85,27 @@ export function ScheduleAuthorization({
   const selectedCount = tools.filter(
     (tool) => !tool.unavailableReason && selected.includes(tool.identity)
   ).length;
+  /**
+   * Selects button content in the existing condition order.
+   */
+  function renderButtonContent() {
+    if (authorizing) {
+      return t('schedules.authorization.authorizing', 'Authorizing…');
+    } else if (selectedCount === 0) {
+      return t(
+        'schedules.authorization.confirmNoTools',
+        'Confirm persistent authorization (no tools allowed)'
+      );
+    } else {
+      return t(
+        'schedules.authorization.confirmWithTools',
+        'Confirm persistent authorization ({{count}} tools)',
+        {
+          count: selectedCount,
+        }
+      );
+    }
+  }
   return (
     <>
       {!defaultOpen && (
@@ -188,13 +209,7 @@ export function ScheduleAuthorization({
                 onClick={() => mutation.mutate({ revoke: false, key: crypto.randomUUID() })}
               >
                 {authorizing && <Spinner data-icon="inline-start" aria-hidden="true" />}
-                {authorizing
-                  ? t('schedules.authorization.authorizing', 'Authorizing…')
-                  : selectedCount === 0
-                    ? t('schedules.authorization.confirmNoTools', 'Confirm persistent authorization (no tools allowed)')
-                    : t('schedules.authorization.confirmWithTools', 'Confirm persistent authorization ({{count}} tools)', {
-                        count: selectedCount,
-                      })}
+                {renderButtonContent()}
               </Button>
             )}
             {task.authorizationRef && (

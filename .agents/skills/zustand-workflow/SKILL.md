@@ -33,20 +33,23 @@ import { combine } from 'zustand/middleware'
 
 ## File structure
 
-Create one store per cohesive domain. Place stores near the components that use them, or in a shared `stores/` directory.
+Create one store per cohesive domain under `apps/web/src/stores/<domain>/`. Follow the repository Code Development Standards for layout and ownership; do not define stores inside features.
 
 ```text
 src/
   stores/
-    game-store.ts       # store definition + actions
-    game-store.types.ts # (optional) exported types
+    game/
+      index.ts          # explicit public exports
+      store.ts          # store definition + actions
+      type.ts           # optional public contracts
+      utils.ts          # optional domain helpers, or utils/
   components/
     Game.tsx
     Board.tsx
     Square.tsx
 ```
 
-Keep the store file under 300 lines. If it grows, split into smaller stores or move helpers into `utils/`.
+Treat 300 lines only as a prompt to review cohesion, never as a size limit. Keep state and resource ownership intact. Types and utilities are optional. Keep instance management in registry.ts and related state transitions in reducers/. Store utilities may group related helpers such as utils/attachments/; persistence and task helpers must name their side effects, instance scope and cleanup ownership. Internal groups have no extra entrypoints. Feature hooks/utils remain flat. Application consumers use the domain index; internal files never import their own index.
 
 ## The `create + combine` pattern
 
@@ -232,7 +235,7 @@ export function useGameStore() {
 }
 ```
 
-This project already uses `createStore` in `apps/web/src/stores/session-store.ts` for session state that is tied to a non-React runtime. Prefer `create` for ordinary React component state.
+This project already uses `createStore` in `apps/web/src/stores/session/store.ts` for session state that is tied to a non-React runtime. Prefer `create` for ordinary React component state.
 
 ## Quick checklist
 

@@ -6,8 +6,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { QueryClient, QueryObserver } from '@tanstack/react-query';
-import { createDataEventsSync, matchesDataChange } from '../src/queries/data-events-sync.ts';
-import { parseDataChange } from '../src/queries/data-events-lifecycle.ts';
+import {
+  createDataEventsSync,
+  matchesDataChange,
+  parseDataChange,
+} from '../src/queries/utils/data-events-sync.ts';
 
 /**
  * Await a deterministic condition with a short test-only deadline.

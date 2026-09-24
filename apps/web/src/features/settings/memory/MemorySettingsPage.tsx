@@ -13,7 +13,7 @@ import { memoryQueryKey, memoryStatusQuery, memoryServiceQuery } from '@/queries
 import { useI18n } from '@/i18n/use-i18n';
 import { MemoryScreeningCard } from './MemoryScreeningCard';
 import { MemoryServiceCard } from './MemoryServiceCard';
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { CircleXIcon, HandIcon, LoaderPinwheelIcon } from 'lucide-react';
 import type { MemoryMode } from '@octopus/shared/protocol/memory';
 
@@ -53,6 +53,25 @@ export function MemorySettingsPage() {
     ),
   };
 
+  /**
+   * Selects field description content in the existing condition order.
+   */
+  function renderFieldDescriptionContent() {
+    if (!active) {
+      return t(
+        'memory.settings.startHint',
+        'Start the memory service to view and configure the memory mode.'
+      );
+    } else if (policy.isPending) {
+      return t('memory.settings.saving', 'Saving memory mode…');
+    } else if (mode) {
+      return modeDescriptions[mode];
+    } else if (status.isError) {
+      return t('memory.settings.readError', 'The memory mode could not be read. Please try again.');
+    } else {
+      return t('memory.settings.reading', 'Reading memory mode…');
+    }
+  }
   return (
     <SettingContainer>
       <MemoryServiceCard
@@ -108,21 +127,7 @@ export function MemorySettingsPage() {
                 </ToggleGroupItem>
               </ToggleGroup>
               <FieldDescription id="memory-mode-description" aria-live="polite">
-                {!active
-                  ? t(
-                      'memory.settings.startHint',
-                      'Start the memory service to view and configure the memory mode.'
-                    )
-                  : policy.isPending
-                    ? t('memory.settings.saving', 'Saving memory mode…')
-                    : mode
-                      ? modeDescriptions[mode]
-                      : status.isError
-                        ? t(
-                            'memory.settings.readError',
-                            'The memory mode could not be read. Please try again.'
-                          )
-                        : t('memory.settings.reading', 'Reading memory mode…')}
+                {renderFieldDescriptionContent()}
               </FieldDescription>
             </Field>
           </FieldGroup>

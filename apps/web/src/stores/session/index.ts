@@ -4,7 +4,10 @@
  */
 
 export { createSessionStore } from './store';
-export { persistAttachmentDraft, restoreAttachmentDraft } from './attachment-drafts';
+export {
+  persistAttachmentDraft,
+  restoreAttachmentDraft,
+} from '@/stores/session/utils/attachments/draft-storage';
 export type {
   AutoRetryProjection,
   CompactionProjection,
@@ -21,4 +24,12 @@ export type {
   TranscriptItem,
 } from './type';
 export { SessionStoreRegistry, sessionStores } from './registry';
-export { selectTurnElapsedMs } from './elapsed-time';
+export { selectTurnElapsedMs } from './utils/elapsed-time';
+
+export {
+  registerAttachmentUploadTask,
+  unregisterAttachmentUploadTask,
+  abortAttachmentUploadTask,
+} from '@/stores/session/utils/attachments/upload-tasks';
+
+export { formatTokenCount, selectTurnTokenUsage } from './utils/token-usage';

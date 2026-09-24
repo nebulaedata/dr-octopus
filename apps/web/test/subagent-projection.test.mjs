@@ -5,11 +5,9 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  projectSubagentDetails,
-  summarizeSubagent,
-} from '../src/features/session/tool-renderers/CustomToolRenderers/index.ts';
-import { resolveToolRenderer } from '../src/features/session/tool-renderers/registry.ts';
+import { projectSubagentDetails } from '../src/features/session/utils/subagent-projection.ts';
+import { summarizeSubagent } from '../src/features/session/utils/subagent-projection.ts';
+import { resolveToolRenderer } from './helpers/tool-renderer-selection.mjs';
 import { createSessionStore } from '../src/stores/session/store.ts';
 
 const fleet = {

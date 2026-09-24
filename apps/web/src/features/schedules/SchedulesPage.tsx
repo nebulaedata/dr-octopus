@@ -14,8 +14,8 @@ import { Tabs } from '@octopus/ui/components/tabs';
 import { PageTabList } from '@/components/PageTabList';
 import { ScheduleHistoryList } from './ScheduleHistoryList';
 import { ScheduleDateRangePicker } from './ScheduleDateRangePicker';
-import { getScheduleHistoryStatuses } from './schedule-history-status';
-import { historyDateBounds } from './schedule-date-range';
+import { getScheduleHistoryStatuses } from '@/features/schedules/utils/schedule-history-status';
+import { historyDateBounds } from '@/features/schedules/utils/schedule-date-range';
 import { Field, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from '@octopus/ui/components/dialog';
 import {

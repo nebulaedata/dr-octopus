@@ -12,7 +12,7 @@ import {
   getImmediateSelectValue,
   getPlanModeQuestionnaire,
   getRpivMultipleQuestionnaire,
-} from '../src/features/session/extension-dialog-model.ts';
+} from '../src/features/session/utils/extension-dialog-model.ts';
 
 test('presents Plan choices from Host metadata while preserving exact RPC option values', () => {
   const payload = {

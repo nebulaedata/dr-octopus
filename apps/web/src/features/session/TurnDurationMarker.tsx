@@ -6,7 +6,7 @@
 import { ArrowDownIcon, ArrowUpIcon, Clock3Icon } from 'lucide-react';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { formatTokenCount, selectTurnTokenUsage } from '@/stores/session/token-usage';
+import { formatTokenCount, selectTurnTokenUsage } from '@/stores/session';
 import { Marker, MarkerContent, MarkerIcon } from '@octopus/ui/components/marker';
 import { selectTurnElapsedMs, sessionStores } from '@/stores/session';
 import { useI18n } from '@/i18n/use-i18n';

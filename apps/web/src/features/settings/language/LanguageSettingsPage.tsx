@@ -8,7 +8,7 @@ import { Field, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
 import { ToggleGroup, ToggleGroupItem } from '@octopus/ui/components/toggle-group';
 import { languageOptions } from '@/i18n/config';
 import { useI18n } from '@/i18n/use-i18n';
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import type { SupportedLanguage } from '@/i18n/config';
 
 /**

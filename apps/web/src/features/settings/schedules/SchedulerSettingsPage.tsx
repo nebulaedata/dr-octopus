@@ -2,7 +2,7 @@
  * @author Codex
  * @description Configures cron defaults and global Scheduler execution capacity.
  */
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { useEffect } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

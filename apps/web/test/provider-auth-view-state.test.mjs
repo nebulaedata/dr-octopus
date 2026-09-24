@@ -8,7 +8,7 @@ import test from 'node:test';
 import {
   canSubmitProviderAuth,
   isProviderAuthMethodActive,
-} from '../src/features/settings/model-providers/provider-auth-view-state.ts';
+} from '../src/features/settings/utils/provider-auth-view-state.ts';
 
 const methods = ['api_key', 'oauth'];
 

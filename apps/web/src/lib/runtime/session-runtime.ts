@@ -4,7 +4,7 @@
  */
 
 import { sessionStores } from '@/stores/session';
-import { realtimeClient } from '@/utils/realtime-client';
+import { realtimeClient } from '@/lib/runtime/realtime-client';
 import { SessionRuntimeRegistry } from './session-runtime-registry';
 
 export const browserSessionRuntime = new SessionRuntimeRegistry(realtimeClient, {

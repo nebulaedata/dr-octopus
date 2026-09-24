@@ -28,7 +28,7 @@ import { MessageRow } from './MessageRow';
 import { RetryMarker } from './RetryMarker';
 import { ToolCard } from './ToolCard';
 import { TurnDurationMarker } from './TurnDurationMarker';
-import { getLastItemIndexByTurn } from './turn-transcript-model';
+import { getLastItemIndexByTurn } from '@/features/session/utils/turn-transcript-model';
 import type { ReactNode } from 'react';
 import type { TranscriptItem } from '@/stores/session';
 import type { SessionDto, ConversationStartDto } from '@octopus/shared/protocol';
@@ -53,6 +53,60 @@ export function Conversation({
   const hydrated = useStore(store, (state) => state.hydrated);
   const historyLoaded = useStore(store, (state) => state.historyLoaded);
   const isLoading = !historyLoaded && (loading || (!hydrated && transcriptItems.length === 0));
+  /**
+   * Selects message scroller content content in the existing condition order.
+   */
+  function renderTranscriptContent() {
+    if (
+      savedMessage &&
+      transcriptItems.length === 0 &&
+      (savedMessage.status !== 'running' || !historyLoaded || loading)
+    ) {
+      return (
+        <MessageScrollerItem messageId={`start:${sessionId}`}>
+          <MessageView
+            session={session}
+            message={{
+              id: `start:${sessionId}`,
+              role: 'user',
+              content: [{ type: 'text', text: savedMessage.message }],
+            }}
+          />
+        </MessageScrollerItem>
+      );
+    } else if (isLoading) {
+      return <MessageSkeleton />;
+    } else {
+      return (
+        <>
+          {transcriptItems.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <MessageSquareDashedIcon />
+                </EmptyMedia>
+                <EmptyTitle>
+                  {loading
+                    ? t('session.conversation.emptyTitleLoading', 'No earlier messages yet')
+                    : t('session.conversation.emptyTitle', 'Ready when you are')}
+                </EmptyTitle>
+                <EmptyDescription>
+                  {t(
+                    'session.conversation.emptyDescription',
+                    'Ask about this workspace, attach an image, or run a discovered command.'
+                  )}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <>
+              <TranscriptRows items={transcriptItems} session={session} sessionId={sessionId} />
+            </>
+          )}
+        </>
+      );
+    }
+  }
   return (
     <MessageScrollerProvider
       key={`${sessionId}:${isLoading ? 'loading' : 'ready'}`}
@@ -63,49 +117,7 @@ export function Conversation({
       <MessageScroller className="min-h-0 flex-1">
         <MessageScrollerViewport>
           <MessageScrollerContent className="mx-auto w-full max-w-4xl px-5 pt-20 pb-8 sm:px-8">
-            {savedMessage &&
-            transcriptItems.length === 0 &&
-            (savedMessage.status !== 'running' || !historyLoaded || loading) ? (
-              <MessageScrollerItem messageId={`start:${sessionId}`}>
-                <MessageView
-                  session={session}
-                  message={{
-                    id: `start:${sessionId}`,
-                    role: 'user',
-                    content: [{ type: 'text', text: savedMessage.message }],
-                  }}
-                />
-              </MessageScrollerItem>
-            ) : isLoading ? (
-              <MessageSkeleton />
-            ) : (
-              <>
-                {transcriptItems.length === 0 ? (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <MessageSquareDashedIcon />
-                      </EmptyMedia>
-                      <EmptyTitle>
-                        {loading
-                          ? t('session.conversation.emptyTitleLoading', 'No earlier messages yet')
-                          : t('session.conversation.emptyTitle', 'Ready when you are')}
-                      </EmptyTitle>
-                      <EmptyDescription>
-                        {t(
-                          'session.conversation.emptyDescription',
-                          'Ask about this workspace, attach an image, or run a discovered command.'
-                        )}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                ) : (
-                  <>
-                    <TranscriptRows items={transcriptItems} session={session} sessionId={sessionId} />
-                  </>
-                )}
-              </>
-            )}
+            {renderTranscriptContent()}
           </MessageScrollerContent>
         </MessageScrollerViewport>
         <MessageScrollerButton />

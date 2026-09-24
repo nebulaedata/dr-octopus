@@ -3,7 +3,7 @@
  * @description Presents per-message actions: copy text, fork from this history entry, and thumbs up/down.
  */
 
-import { copyTextWithFeedback } from '@/lib/copy-text-with-feedback';
+import { copyTextWithFeedback } from '@/utils/copy-text-with-feedback';
 import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { CheckIcon, CopyIcon, GitForkIcon, ThumbsDownIcon, ThumbsUpIcon } from 'lucide-react';

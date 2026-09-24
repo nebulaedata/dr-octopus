@@ -27,7 +27,7 @@ import { useRealtimeCommand } from '@/hooks/use-realtime';
 import { useI18n } from '@/i18n/use-i18n';
 import { sessionStores } from '@/stores/session';
 import { formatDuration } from '@octopus/custom-ui/components/elapsed-time';
-import { createGoalClearCommand, GOAL_CLEAR_MESSAGE } from './goal-command';
+import { createGoalClearCommand, GOAL_CLEAR_MESSAGE } from '@/features/session/utils/goal-command';
 import type { GoalStateDto, GoalStatus } from '@octopus/shared/protocol';
 import type { Translate } from '@/i18n/use-i18n';
 
@@ -62,7 +62,9 @@ export function GoalPanel({ sessionId }: { sessionId: string }) {
     } catch (error) {
       store
         .getState()
-        .setError(error instanceof Error ? error.message : t('session.goal.clearFailed', 'Could not clear the Goal.'));
+        .setError(
+          error instanceof Error ? error.message : t('session.goal.clearFailed', 'Could not clear the Goal.')
+        );
     }
   });
 

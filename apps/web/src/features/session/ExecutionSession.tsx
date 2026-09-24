@@ -4,7 +4,7 @@
  */
 import { formatDateTime } from '@/utils/date';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
-import { ScheduleRunStatusBadge } from '../schedules/ScheduleRunStatusBadge';
+import { ScheduleRunStatusBadge } from '@/features/schedules';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -88,11 +88,7 @@ function ExecutionSessionContent({ session }: { session: SessionDto }) {
           </Button>
         </header>
         {query.isPending && (
-          <div
-            role="status"
-            aria-label="Loading execution result"
-            className="flex flex-col gap-4"
-          >
+          <div role="status" aria-label="Loading execution result" className="flex flex-col gap-4">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-40 w-full" />
           </div>
@@ -100,7 +96,9 @@ function ExecutionSessionContent({ session }: { session: SessionDto }) {
         {query.error && (
           <Alert variant="destructive">
             <AlertCircleIcon />
-            <AlertTitle>{t('session.execution.loadFailedTitle', 'Failed to load execution record')}</AlertTitle>
+            <AlertTitle>
+              {t('session.execution.loadFailedTitle', 'Failed to load execution record')}
+            </AlertTitle>
             <AlertDescription>
               <p>{query.error.message}</p>
               <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
@@ -135,14 +133,12 @@ function ExecutionSessionContent({ session }: { session: SessionDto }) {
               </CardHeader>
               <CardContent>
                 <p className="whitespace-pre-wrap wrap-break-word text-sm leading-7">
-                  {query.data.prompt || t('session.execution.promptMissing', 'No task instructions were kept')}
+                  {query.data.prompt ||
+                    t('session.execution.promptMissing', 'No task instructions were kept')}
                 </p>
               </CardContent>
             </Card>
-            <section
-              aria-label="Execution timeline"
-              className="flex min-w-0 flex-col gap-5"
-            >
+            <section aria-label="Execution timeline" className="flex min-w-0 flex-col gap-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold">
                   {t('session.execution.timelineTitle', 'Execution timeline')}

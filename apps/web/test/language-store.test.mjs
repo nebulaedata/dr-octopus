@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createInstance } from 'i18next';
 import { createI18nOptions } from '../src/i18n/config.ts';
-import { createLanguageStore } from '../src/stores/language.ts';
+import { createLanguageStore } from '../src/stores/language/index.ts';
 
 /**
  * Models persistent device storage shared by successive page loads.

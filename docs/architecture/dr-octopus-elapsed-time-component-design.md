@@ -39,7 +39,7 @@ ElapsedTime = 通用展示组件，只认 elapsedMs + running
 本项目所有运行时投影的时间字段均来自服务端事件信封
 `HostEventEnvelope.timestamp`（ISO 字符串，服务端盖戳，见
 `packages/shared/src/protocol/realtime.ts`），经
-`apps/web/src/stores/session/reducer.ts` 的 `resolveTimestamp()` 解析：
+`apps/web/src/stores/session/reducers/session-reducer.ts` 的 `resolveTimestamp()` 解析：
 
 | 投影 | 时间字段 | 时钟域 |
 | ---- | -------- | ------ |

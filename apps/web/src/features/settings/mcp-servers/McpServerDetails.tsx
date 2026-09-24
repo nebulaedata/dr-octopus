@@ -24,7 +24,7 @@ import { Switch } from '@octopus/ui/components/switch';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
 import { McpServerForm } from './McpServerForm';
-import { getMcpServerSourceLabel } from './mcp-server-labels';
+import { getMcpServerSourceLabel } from '@/features/settings/utils/mcp-server-labels';
 import { Separator } from '@octopus/ui/components/separator';
 import type { McpServerConfigurationInput, McpServerDetailDto } from '@octopus/shared/protocol';
 
@@ -82,7 +82,10 @@ export function McpServerDetails(props: McpServerDetailsProps) {
           </EmptyMedia>
           <EmptyTitle>{t('settings.mcp.selectTitle', 'Select an MCP server')}</EmptyTitle>
           <EmptyDescription>
-            {t('settings.mcp.selectDescription', 'Pick one from the catalog to view its source, connection, and tool exposure.')}
+            {t(
+              'settings.mcp.selectDescription',
+              'Pick one from the catalog to view its source, connection, and tool exposure.'
+            )}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -90,6 +93,155 @@ export function McpServerDetails(props: McpServerDetailsProps) {
   }
 
   const server = props.server;
+  /**
+   * Selects renderdiv content in the existing condition order.
+   */
+  function renderContent() {
+    if (props.creating) {
+      return (
+        <section className="flex flex-col gap-4">
+          <div>
+            <h3 className="text-sm font-semibold">{t('settings.mcp.connectionTitle', 'Connection')}</h3>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                'settings.mcp.connectionCreateDescription',
+                'Add a local process, HTTP, or Socket MCP server.'
+              )}
+            </p>
+          </div>
+          <McpServerForm pending={props.mutationPending} onSubmit={props.onCreate} />
+        </section>
+      );
+    } else if (server) {
+      return (
+        <>
+          <section className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold">{t('settings.mcp.enableTitle', 'Enable server')}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'settings.mcp.enableDescription',
+                    'Does not start or stop the current Agent Runtime; restart the Agent after saving.'
+                  )}
+                </p>
+              </div>
+              <Switch
+                checked={server.enabled}
+                disabled={!server.capabilities.toggle || props.mutationPending}
+                onCheckedChange={(enabled) => void props.onActivation(server.serverKey, enabled)}
+              />
+            </div>
+          </section>
+          <section className="flex flex-col gap-4">
+            <div>
+              <h3 className="text-sm font-semibold">{t('settings.mcp.connectionTitle', 'Connection')}</h3>
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  'settings.mcp.connectionEditDescription',
+                  'Local process, HTTP, or Socket MCP server configuration.'
+                )}
+              </p>
+            </div>
+            {server.capabilities.edit ? (
+              <McpServerForm
+                server={server}
+                pending={props.mutationPending}
+                onSubmit={(_name, value) => props.onUpdate(server.serverKey, value)}
+              />
+            ) : (
+              <Alert>
+                <AlertTitle>{t('settings.mcp.readOnlyTitle', 'Source is read-only')}</AlertTitle>
+                <AlertDescription>
+                  {t(
+                    'settings.mcp.readOnlyDescription',
+                    'This definition comes from {{source}}; only the allowed global enable/disable override can be created.',
+                    { source: getMcpServerSourceLabel(t, server.source) }
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+            <Separator />
+            {server.secretBindings.length > 0 ? (
+              <section className="flex flex-col gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold">
+                    {t('settings.mcp.secretsTitle', 'Secret bindings')}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {t(
+                      'settings.mcp.secretsDescription',
+                      'Bound environment variables, HTTP headers, or OAuth client secrets.'
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {server.secretBindings.map((binding) => (
+                    <Badge key={`${binding.kind}:${binding.name}`} variant="secondary">
+                      {binding.kind}: {binding.name}
+                    </Badge>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </section>
+          <Separator />
+          {server.capabilities.remove ? (
+            <section className="flex flex-col gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">
+                  {t('settings.mcp.removeTitle', 'Remove configuration')}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'settings.mcp.removeDescription',
+                    'After removing the global definition or override, a lower-level configuration with the same name may reappear.'
+                  )}
+                </p>
+              </div>
+              <Button variant="destructive" className="w-full" onClick={() => setRemoveOpen(true)}>
+                <Trash2Icon data-icon="inline-start" />
+                {t('settings.mcp.removeHostButton', 'Remove Host configuration')}
+              </Button>
+            </section>
+          ) : null}
+          <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {t('settings.mcp.removeDialogTitle', 'Remove {{name}}?', { name: server.name })}
+                </DialogTitle>
+                <DialogDescription>
+                  {t(
+                    'settings.mcp.removeDialogDescription',
+                    'This only removes the Host-level global definition or override.'
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setRemoveOpen(false)}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={props.mutationPending}
+                  onClick={async () => {
+                    await props.onRemove(server.serverKey);
+                    setRemoveOpen(false);
+                  }}
+                >
+                  {props.mutationPending ? <Spinner data-icon="inline-start" /> : null}
+                  {t('settings.mcp.confirmRemove', 'Confirm removal')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      );
+    } else {
+      return null;
+    }
+  }
   return (
     <ScrollArea className="h-full">
       <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 md:p-6">
@@ -136,131 +288,7 @@ export function McpServerDetails(props: McpServerDetailsProps) {
             <AlertDescription>{props.mutationError}</AlertDescription>
           </Alert>
         ) : null}
-        {props.creating ? (
-          <section className="flex flex-col gap-4">
-            <div>
-              <h3 className="text-sm font-semibold">{t('settings.mcp.connectionTitle', 'Connection')}</h3>
-              <p className="text-xs text-muted-foreground">
-                {t('settings.mcp.connectionCreateDescription', 'Add a local process, HTTP, or Socket MCP server.')}
-              </p>
-            </div>
-            <McpServerForm pending={props.mutationPending} onSubmit={props.onCreate} />
-          </section>
-        ) : server ? (
-          <>
-            <section className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-semibold">{t('settings.mcp.enableTitle', 'Enable server')}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {t(
-                      'settings.mcp.enableDescription',
-                      'Does not start or stop the current Agent Runtime; restart the Agent after saving.'
-                    )}
-                  </p>
-                </div>
-                <Switch
-                  checked={server.enabled}
-                  disabled={!server.capabilities.toggle || props.mutationPending}
-                  onCheckedChange={(enabled) => void props.onActivation(server.serverKey, enabled)}
-                />
-              </div>
-            </section>
-            <section className="flex flex-col gap-4">
-              <div>
-                <h3 className="text-sm font-semibold">{t('settings.mcp.connectionTitle', 'Connection')}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {t('settings.mcp.connectionEditDescription', 'Local process, HTTP, or Socket MCP server configuration.')}
-                </p>
-              </div>
-              {server.capabilities.edit ? (
-                <McpServerForm
-                  server={server}
-                  pending={props.mutationPending}
-                  onSubmit={(_name, value) => props.onUpdate(server.serverKey, value)}
-                />
-              ) : (
-                <Alert>
-                  <AlertTitle>{t('settings.mcp.readOnlyTitle', 'Source is read-only')}</AlertTitle>
-                  <AlertDescription>
-                    {t(
-                      'settings.mcp.readOnlyDescription',
-                      'This definition comes from {{source}}; only the allowed global enable/disable override can be created.',
-                      { source: getMcpServerSourceLabel(t, server.source) }
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-              <Separator />
-              {server.secretBindings.length > 0 ? (
-                <section className="flex flex-col gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t('settings.mcp.secretsTitle', 'Secret bindings')}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {t(
-                        'settings.mcp.secretsDescription',
-                        'Bound environment variables, HTTP headers, or OAuth client secrets.'
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {server.secretBindings.map((binding) => (
-                      <Badge key={`${binding.kind}:${binding.name}`} variant="secondary">
-                        {binding.kind}: {binding.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </section>
-            <Separator />
-            {server.capabilities.remove ? (
-              <section className="flex flex-col gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold">{t('settings.mcp.removeTitle', 'Remove configuration')}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {t(
-                      'settings.mcp.removeDescription',
-                      'After removing the global definition or override, a lower-level configuration with the same name may reappear.'
-                    )}
-                  </p>
-                </div>
-                <Button variant="destructive" className="w-full" onClick={() => setRemoveOpen(true)}>
-                  <Trash2Icon data-icon="inline-start" />
-                  {t('settings.mcp.removeHostButton', 'Remove Host configuration')}
-                </Button>
-              </section>
-            ) : null}
-            <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {t('settings.mcp.removeDialogTitle', 'Remove {{name}}?', { name: server.name })}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {t('settings.mcp.removeDialogDescription', 'This only removes the Host-level global definition or override.')}
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setRemoveOpen(false)}>
-                    {t('common.cancel', 'Cancel')}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={props.mutationPending}
-                    onClick={async () => {
-                      await props.onRemove(server.serverKey);
-                      setRemoveOpen(false);
-                    }}
-                  >
-                    {props.mutationPending ? <Spinner data-icon="inline-start" /> : null}
-                    {t('settings.mcp.confirmRemove', 'Confirm removal')}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </>
-        ) : null}
+        {renderContent()}
       </div>
     </ScrollArea>
   );

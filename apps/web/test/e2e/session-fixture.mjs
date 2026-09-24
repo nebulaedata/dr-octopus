@@ -3,7 +3,7 @@
  * @description Supplies deterministic HTTP and WebSocket boundaries for browser Session regression tests.
  */
 const workspace = { id: 'workspace-e2e', name: 'Interruption tests', slug: 'interruption-tests' };
-const session = {
+const defaultSession = {
   id: 'session-e2e',
   workspaceId: workspace.id,
   title: 'Stop regression',
@@ -29,8 +29,10 @@ export async function installSessionFixture(
     subagentFleet,
     backgroundTasks,
     initialMessages = [],
+    sessionTitle = defaultSession.title,
   } = {}
 ) {
+  const session = { ...defaultSession, title: sessionTitle };
   const runtime = {
     runtimeId: 'runtime-e2e',
     epoch: 1,

@@ -3,7 +3,7 @@
  * @description Presents a session-scoped file browser as a non-route right-side panel.
  */
 
-import { copyTextWithFeedback } from '@/lib/copy-text-with-feedback';
+import { copyTextWithFeedback } from '@/utils/copy-text-with-feedback';
 import { CopyIcon } from 'lucide-react';
 import { SideRightPanel } from '@/components/SideRightPanel';
 import { useWorkspaces } from '@/queries/workbench-queries';

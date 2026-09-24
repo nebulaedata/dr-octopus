@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveToolRenderer } from '../src/features/session/tool-renderers/registry.ts';
+import { resolveToolRenderer } from './helpers/tool-renderer-selection.mjs';
 
 test('Pi built-in tools resolve specialized renderers', () => {
   assert.equal(resolveToolRenderer('bash').component.name, 'BashToolRenderer');

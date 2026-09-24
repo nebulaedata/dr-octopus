@@ -15,10 +15,10 @@ import { PageTabList } from '@/components/PageTabList';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@octopus/ui/components/table';
 import { getPermissionSettings } from '@/api/permissions';
 import { useWorkspaces } from '@/queries/workbench-queries';
-import { SettingContainer } from '../layout/SettingContainer';
+import { SettingContainer } from '../Layout/SettingContainer';
 import { PermissionActionBadge } from './PermissionActionBadge';
 import { PermissionSelect } from './PermissionSelect';
-import { getKindLabels, getModeLabels } from './permission-labels';
+import { getKindLabels, getModeLabels } from '@/features/settings/utils/permission-labels';
 import { PermissionResetButton } from './PermissionResetButton';
 import { PermissionAuditCard } from './PermissionAuditCard';
 import { PermissionConfigEditor } from './PermissionConfigEditor';
@@ -36,6 +36,33 @@ export function PermissionsPage() {
   const [selected, setSelected] = useState('');
   const [scope, setScope] = useState('global');
   const workspaceId = selected || workspaces.data?.[0]?.id;
+  /**
+   * Selects tabs content content in the existing condition order.
+   */
+  function renderTabsContentContent() {
+    if (workspaces.isPending) {
+      return <Spinner />;
+    } else if (workspaces.isError) {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {t('settings.permissions.workspacesFailed', 'Failed to load workspaces.')}
+            <Button variant="link" onClick={() => void workspaces.refetch()}>
+              {t('common.retry', 'Retry')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      );
+    } else if (workspaceId) {
+      return <PermissionScopePanel key={workspaceId} workspaceId={workspaceId} />;
+    } else {
+      return (
+        <p className="text-sm text-muted-foreground">
+          {t('settings.permissions.noWorkspace', 'No workspaces yet; create one first.')}
+        </p>
+      );
+    }
+  }
   return (
     <SettingContainer
       classNames={{ container: 'p-0 md:p-0', content: 'min-h-full max-w-5xl gap-5 px-4 py-5 md:px-6' }}
@@ -67,26 +94,7 @@ export function PermissionsPage() {
         <TabsContent value="global">
           <PermissionScopePanel />
         </TabsContent>
-        <TabsContent value="workspace">
-          {workspaces.isPending ? (
-            <Spinner />
-          ) : workspaces.isError ? (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {t('settings.permissions.workspacesFailed', 'Failed to load workspaces.')}
-                <Button variant="link" onClick={() => void workspaces.refetch()}>
-                  {t('common.retry', 'Retry')}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : workspaceId ? (
-            <PermissionScopePanel key={workspaceId} workspaceId={workspaceId} />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {t('settings.permissions.noWorkspace', 'No workspaces yet; create one first.')}
-            </p>
-          )}
-        </TabsContent>
+        <TabsContent value="workspace">{renderTabsContentContent()}</TabsContent>
       </Tabs>
     </SettingContainer>
   );
@@ -123,6 +131,32 @@ function PermissionScopePanel({ workspaceId }: { workspaceId?: string }) {
         .sort()
         .filter((name) => name.toLowerCase().includes(search.toLowerCase()))
     : [];
+  /**
+   * Selects renderdiv content in the existing condition order.
+   */
+  function renderContent() {
+    if (editor?.type === 'tool') {
+      return (
+        <PermissionToolEditor
+          snapshot={editor.snapshot}
+          workspaceId={workspaceId}
+          tool={editor.tool}
+          onClose={() => setEditor(undefined)}
+        />
+      );
+    } else if (editor) {
+      return (
+        <PermissionConfigEditor
+          snapshot={editor.snapshot}
+          workspaceId={workspaceId}
+          mode={editor.type}
+          onClose={() => setEditor(undefined)}
+        />
+      );
+    } else {
+      return null;
+    }
+  }
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -172,10 +206,14 @@ function PermissionScopePanel({ workspaceId }: { workspaceId?: string }) {
         <Alert variant="destructive" key={item.path}>
           <AlertTitle>{t('settings.permissions.invalidTitle', 'Invalid configuration')}</AlertTitle>
           <AlertDescription>
-            {t('settings.permissions.invalidDescription', '{{message}}. Fix via JSON configuration: {{path}}', {
-              message: item.message,
-              path: item.path,
-            })}
+            {t(
+              'settings.permissions.invalidDescription',
+              '{{message}}. Fix via JSON configuration: {{path}}',
+              {
+                message: item.message,
+                path: item.path,
+              }
+            )}
           </AlertDescription>
         </Alert>
       ))}
@@ -184,7 +222,9 @@ function PermissionScopePanel({ workspaceId }: { workspaceId?: string }) {
           <div className="rounded-xl border p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-medium">{t('settings.permissions.modesTitle', 'Permission run modes')}</h3>
+                <h3 className="text-sm font-medium">
+                  {t('settings.permissions.modesTitle', 'Permission run modes')}
+                </h3>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {t(
                     'settings.permissions.modesDescription',
@@ -306,21 +346,7 @@ function PermissionScopePanel({ workspaceId }: { workspaceId?: string }) {
           </p>
         </>
       ) : null}
-      {editor?.type === 'tool' ? (
-        <PermissionToolEditor
-          snapshot={editor.snapshot}
-          workspaceId={workspaceId}
-          tool={editor.tool}
-          onClose={() => setEditor(undefined)}
-        />
-      ) : editor ? (
-        <PermissionConfigEditor
-          snapshot={editor.snapshot}
-          workspaceId={workspaceId}
-          mode={editor.type}
-          onClose={() => setEditor(undefined)}
-        />
-      ) : null}
+      {renderContent()}
     </div>
   );
 }

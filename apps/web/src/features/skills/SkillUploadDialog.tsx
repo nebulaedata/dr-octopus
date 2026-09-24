@@ -22,7 +22,7 @@ import { cn } from '@octopus/ui/lib/utils';
 import { Upload } from '@/components/Upload';
 import { useUploadSkill } from '@/queries/skills-queries';
 import { ApiRequestError } from '@/utils/request';
-import { formatBytes } from './utils';
+import { formatBytes } from '@/features/skills/utils/skill-fields';
 import { useI18n } from '@/i18n/use-i18n';
 import type { SkillScope } from '@/api/skills';
 import type { DragEvent } from 'react';
@@ -205,7 +205,10 @@ export function SkillUploadDialog({
                 {t('skills.uploadDialog.dropHint', 'Click to choose a file, or drag it here')}
               </span>
               <span className="text-xs text-muted-foreground">
-                {t('skills.uploadDialog.dropFormats', '.md single skill file · .zip skill package (with resource files)')}
+                {t(
+                  'skills.uploadDialog.dropFormats',
+                  '.md single skill file · .zip skill package (with resource files)'
+                )}
               </span>
             </span>
           </Upload>
@@ -236,11 +239,15 @@ export function SkillUploadDialog({
         {conflictMessage !== null && (
           <Alert variant="destructive">
             <TriangleAlertIcon />
-            <AlertTitle>{t('skills.uploadDialog.conflictTitle', 'A skill with the same name already exists')}</AlertTitle>
+            <AlertTitle>
+              {t('skills.uploadDialog.conflictTitle', 'A skill with the same name already exists')}
+            </AlertTitle>
             <AlertDescription>
-              {conflictMessage}
-              {' '}
-              {t('skills.uploadDialog.conflictSuffix', 'Confirming will completely replace the original skill files.')}
+              {conflictMessage}{' '}
+              {t(
+                'skills.uploadDialog.conflictSuffix',
+                'Confirming will completely replace the original skill files.'
+              )}
             </AlertDescription>
           </Alert>
         )}

@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { copyText } from '../src/lib/clipboard.ts';
+import { copyText } from "../src/utils/clipboard.ts";
 
 /**
  * Installs a minimal browser surface and records the legacy copy lifecycle.

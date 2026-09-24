@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createWorkbenchHomeStore } from '../src/stores/workbench-home.ts';
+import { createWorkbenchHomeStore } from '../src/stores/workbench-home/index.ts';
 
 test('repeated New session actions and home remounts share one workspace draft', () => {
   const useWorkbenchHome = createWorkbenchHomeStore(() => createTabStorage());

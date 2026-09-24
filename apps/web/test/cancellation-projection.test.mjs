@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeMessage, projectPersistedTranscript } from '../src/stores/session/normalizer.ts';
+import { normalizeMessage, projectPersistedTranscript } from '../src/stores/session/utils/normalizer.ts';
 
 test('compatibility preserves the raw reason while suppressing the failure presentation', () => {
   const raw = Object.freeze({

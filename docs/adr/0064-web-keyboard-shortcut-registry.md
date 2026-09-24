@@ -12,7 +12,7 @@ Web 端此前没有全局键盘体系：唯一的快捷键逻辑硬编码在 Com
 
 ## 决策
 
-1. 采用三层单向依赖架构：`src/lib/shortcuts/` 为纯 TS 引擎（组合键规范化、数据驱动命令目录、`ShortcutKeyRegister` 类）；`src/stores/shortcuts/` 独占绑定覆盖的持久化；`src/features/` 通过 `useShortcut(commandId, handler)` 等 hook 接线。引擎类本体不 import zustand/React，单例接线集中在 `lib/shortcuts/index.ts`。
+1. 采用三层单向依赖架构：`src/lib/shortcuts/` 为纯 TS 引擎（组合键规范化、数据驱动命令目录、`ShortcutKeyRegister` 类）；`src/stores/shortcuts/` 独占绑定覆盖的持久化；`src/features/` 通过 `useShortcut(commandId, handler)` 等 hook 接线。引擎类本体不 import zustand/React，单例接线集中在 `lib/shortcuts/shortcut-runtime.ts`；`index.ts` 只显式导出基础设施，React Hooks 位于 `hooks/use-shortcut.ts`。
 2. 命令目录（catalog）是唯一命令权威：每条命令声明稳定 ID、i18n key、默认绑定、作用域（`global`/`composer`）、状态（`active`/`placeholder`）与 `allowInEditable`。新增命令 = catalog 加一行 + 注册 handler，引擎与设置页零改动。占位命令（首期：语音识别 `Ctrl+D`）只读展示、不参与派发与冲突检测。
 3. 全局命令由引擎持有唯一的 window `keydown` 监听统一派发；守卫依次排除 IME 组合中、长按重复、录制暂停期、可编辑焦点目标；可编辑焦点仅在组合键不含 Ctrl/Alt/Meta 时拦截（此类组合不产生文本输入），`allowInEditable` 命令例外（如 `Shift+Esc` 停止生成）；命中即 `preventDefault`，handler 按 LIFO 调用、首个返回 `true` 者消费事件。
 4. Composer 作用域命令（发送/换行）不走 window 派发：Enter 手势仍归 Lexical `SubmitShortcutPlugin` 所有（要让位于 typeahead 菜单等编辑器内部状态），但发送判定改为由 feature 层（Composer）基于生效绑定与规范化匹配计算并以 props 传入，保持 `src/components/` 不依赖 stores/features 的纯净边界；用户改绑后插件行为自动跟随。非发送的 Enter 手势一律保持编辑器默认换行语义。

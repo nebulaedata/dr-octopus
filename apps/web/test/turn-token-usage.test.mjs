@@ -5,8 +5,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSessionStore } from '../src/stores/session/store.ts';
-import { normalizeTokenUsage, selectTurnTokenUsage } from '../src/stores/session/token-usage.ts';
-import { reduceEvent } from '../src/stores/session/reducer.ts';
+import { normalizeTokenUsage, selectTurnTokenUsage } from '../src/stores/session/utils/token-usage.ts';
+import { reduceEvent } from '../src/stores/session/reducers/session-reducer.ts';
 
 const usage = { input: 100, output: 20, cacheRead: 300, cacheWrite: 50, totalTokens: 470 };
 const messages = [
@@ -35,17 +35,15 @@ test('prompt includes both cache categories and absent or invalid usage remains 
 
 test('history sums the whole tool loop without tool-result double counting or crossing turns', () => {
   const store = createSessionStore('session');
-  store
-    .getState()
-    .previewHistory({
-      sessionId: 'session',
-      messageFeedback: [],
-      messages: [
-        ...messages,
-        { id: 'next-user', role: 'user', content: 'Next', timestamp: 5000 },
-        { id: 'next-answer', role: 'assistant', content: [], usage, timestamp: 6000 },
-      ],
-    });
+  store.getState().previewHistory({
+    sessionId: 'session',
+    messageFeedback: [],
+    messages: [
+      ...messages,
+      { id: 'next-user', role: 'user', content: 'Next', timestamp: 5000 },
+      { id: 'next-answer', role: 'assistant', content: [], usage, timestamp: 6000 },
+    ],
+  });
   const state = store.getState();
   assert.deepEqual(selectTurnTokenUsage(state, 'turn-message-user'), { input: 900, output: 40 });
   assert.deepEqual(selectTurnTokenUsage(state, 'turn-message-next-user'), { input: 450, output: 20 });

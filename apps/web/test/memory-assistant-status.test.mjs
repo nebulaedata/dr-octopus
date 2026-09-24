@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { describeMemoryAssistantState } from '../src/features/session/MemoryAssistant/memory-assistant-status.ts';
+import { describeMemoryAssistantState } from '../src/features/session/utils/memory-assistant-status.ts';
 
 /**
  * Renders the source-language default so assertions pin the English copy contract.
@@ -62,7 +62,10 @@ test('mirrors the legacy fall-through for read-only and uninitialized availabili
   const readOnly = describeMemoryAssistantState(t, snapshot({ availability: 'read-only' }));
   assert.equal(readOnly.label, 'Auto memory');
   assert.equal(readOnly.tone, 'active');
-  const uninitialized = describeMemoryAssistantState(t, snapshot({ availability: 'uninitialized', mode: 'manual' }));
+  const uninitialized = describeMemoryAssistantState(
+    t,
+    snapshot({ availability: 'uninitialized', mode: 'manual' })
+  );
   assert.equal(uninitialized.label, 'Manual memory');
 });
 

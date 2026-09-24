@@ -93,7 +93,19 @@ export function useOctopusLogoMotion(loading = false) {
       ) {
         input.consumedInput = input.lastInput;
         setIsContinuing(true);
-        setReactionDuration(input.interval < 130 ? 0.44 : input.interval < 260 ? 0.56 : 0.72);
+        /**
+         * Selects inputinterval130 in the existing condition order.
+         */
+        function selectBlinkDuration() {
+          if (input.interval < 130) {
+            return 0.44 as const;
+          } else if (input.interval < 260) {
+            return 0.56 as const;
+          } else {
+            return 0.72 as const;
+          }
+        }
+        setReactionDuration(selectBlinkDuration());
         setReactionStart(logo.getCurrentTime());
       } else {
         setReactionStart(null);

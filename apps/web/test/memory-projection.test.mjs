@@ -6,16 +6,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { resolveToolRenderer } from '../src/features/session/tool-renderers/registry.ts';
-import { customToolLabel } from '../src/features/session/tool-renderers/custom-tool-renderer-definitions.ts';
-import { MemoryToolRenderer } from '../src/features/session/tool-renderers/CustomToolRenderers/MemoryToolRenderer.tsx';
-import { reduceEvent } from '../src/stores/session/reducer.ts';
+import { resolveToolRenderer } from './helpers/tool-renderer-selection.mjs';
+import { customToolLabel } from '../src/features/session/utils/tool-label.ts';
+import { MemoryToolRenderer } from '../src/features/session/ToolRenderers/CustomToolRenderers/MemoryToolRenderer.tsx';
+import { reduceEvent } from '../src/stores/session/reducers/session-reducer.ts';
 import {
   projectMemoryTool,
   summarizeMemoryTool,
-} from '../src/features/session/tool-renderers/CustomToolRenderers/memory-tool-projection.ts';
-import { projectPersistedTranscript } from '../src/stores/session/normalizer.ts';
-import { normalizeToolResult } from '../src/stores/session/tool-result-projection.ts';
+} from '../src/features/session/utils/memory-tool-projection.ts';
+import { projectPersistedTranscript } from '../src/stores/session/utils/normalizer.ts';
+import { normalizeToolResult } from '../src/stores/session/utils/tool-result-projection.ts';
 
 /**
  * Returns the source default with interpolation so assertions pin the English contract.
@@ -166,9 +166,7 @@ test('memory cards preserve errors and unknown result versions', () => {
     { status: 'complete', details: { version: 99, action: 'read', items: [] } },
     { status: 'complete', details: { version: 1, action: 'read', items: null } },
   ]) {
-    const html = renderToStaticMarkup(
-      createElement(MemoryToolRenderer, { tool: { ...tool, content: [] } })
-    );
+    const html = renderToStaticMarkup(createElement(MemoryToolRenderer, { tool: { ...tool, content: [] } }));
     // The raw fallback never renders the structured memory section.
     assert.doesNotMatch(html, /Raw result/u);
   }

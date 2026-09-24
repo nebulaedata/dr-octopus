@@ -9,7 +9,7 @@ import {
   detectLocalProvider,
   getLocalRuntimes,
 } from '@/api/local-providers';
-import { queryKeys } from './query-keys';
+import { queryKeys } from '@/queries/core/query-keys';
 import type { ConfigureLocalProviderBody, ModelProviderDetailDto } from '@octopus/shared/protocol';
 
 /**

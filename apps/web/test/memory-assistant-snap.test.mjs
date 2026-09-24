@@ -8,7 +8,7 @@ import {
   clampMemoryAssistantPosition,
   computeMemoryAssistantSnapTarget,
   MEMORY_ASSISTANT_SNAP_MARGIN,
-} from '../src/features/session/MemoryAssistant/memory-assistant-snap.ts';
+} from '../src/features/session/utils/memory-assistant-snap.ts';
 
 const viewport = { width: 1000, height: 800 };
 const size = { width: 200, height: 72 };

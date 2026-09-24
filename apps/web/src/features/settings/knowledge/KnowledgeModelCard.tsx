@@ -67,26 +67,44 @@ export function KnowledgeModelCard({
         timeoutMs: kind === 'ocr' ? 60_000 : 30_000,
         ...(value.apiKey ? { apiKey: value.apiKey } : {}),
       };
-      await mutation.mutateAsync(
-        kind === 'embedding'
-          ? { ...connection, kind, dimensions: Number(value.dimensions), batchSize: 16 }
-          : kind === 'ocr'
-            ? { ...connection, kind, mode: value.mode, maxOutputTokens: 4096 }
-            : { ...connection, kind, enabled: value.enabled, maxCandidates: 40, allowRemoteEvidence: false }
-      );
+      /**
+       * Selects kindembedding2 in the existing condition order.
+       */
+      function createConnectionUpdate() {
+        if (kind === 'embedding') {
+          return { ...connection, kind, dimensions: Number(value.dimensions), batchSize: 16 };
+        } else if (kind === 'ocr') {
+          return { ...connection, kind, mode: value.mode, maxOutputTokens: 4096 };
+        } else {
+          return {
+            ...connection,
+            kind,
+            enabled: value.enabled,
+            maxCandidates: 40,
+            allowRemoteEvidence: false,
+          };
+        }
+      }
+      await mutation.mutateAsync(createConnectionUpdate());
       form.setFieldValue('apiKey', '');
     },
   });
+  /**
+   * Selects card title content in the existing condition order.
+   */
+  function renderCardTitleContent() {
+    if (kind === 'ocr') {
+      return t('settings.knowledge.model.ocrTitle', 'OCR · Scan recognition');
+    } else if (kind === 'embedding') {
+      return t('settings.knowledge.model.embeddingTitle', 'Embedding · Semantic retrieval');
+    } else {
+      return t('settings.knowledge.model.rerankerTitle', 'Reranker · Result ranking');
+    }
+  }
   return (
     <Card className="shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">
-          {kind === 'ocr'
-            ? t('settings.knowledge.model.ocrTitle', 'OCR · Scan recognition')
-            : kind === 'embedding'
-              ? t('settings.knowledge.model.embeddingTitle', 'Embedding · Semantic retrieval')
-              : t('settings.knowledge.model.rerankerTitle', 'Reranker · Result ranking')}
-        </CardTitle>
+        <CardTitle className="text-base">{renderCardTitleContent()}</CardTitle>
         <CardDescription>{descriptions[kind]}</CardDescription>
       </CardHeader>
       <CardContent>
@@ -129,27 +147,35 @@ export function KnowledgeModelCard({
                 value.trim() ? undefined : t('settings.knowledge.model.modelRequired', 'Enter a model name'),
             }}
           >
-            {(field) => (
-              <Field>
-                <FieldLabel htmlFor={`${kind}-model`}>
-                  {t('settings.knowledge.model.modelLabel', 'Model name')}
-                </FieldLabel>
-                <Input
-                  id={`${kind}-model`}
-                  value={field.state.value}
-                  placeholder={
-                    kind === 'embedding'
-                      ? 'bge-m3'
-                      : kind === 'ocr'
-                        ? 'PaddleOCR-VL-1.6-0.9B'
-                        : 'bge-reranker-v2-m3'
-                  }
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                />
-                <FieldError errors={field.state.meta.errors.map((message) => ({ message }))} />
-              </Field>
-            )}
+            {(field) => {
+              /**
+               * Selects placeholder in the existing condition order.
+               */
+              function selectPlaceholder() {
+                if (kind === 'embedding') {
+                  return 'bge-m3' as const;
+                } else if (kind === 'ocr') {
+                  return 'PaddleOCR-VL-1.6-0.9B' as const;
+                } else {
+                  return 'bge-reranker-v2-m3' as const;
+                }
+              }
+              return (
+                <Field>
+                  <FieldLabel htmlFor={`${kind}-model`}>
+                    {t('settings.knowledge.model.modelLabel', 'Model name')}
+                  </FieldLabel>
+                  <Input
+                    id={`${kind}-model`}
+                    value={field.state.value}
+                    placeholder={selectPlaceholder()}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                  />
+                  <FieldError errors={field.state.meta.errors.map((message) => ({ message }))} />
+                </Field>
+              );
+            }}
           </form.Field>
           <form.Field name="apiKey">
             {(field) => (
@@ -166,7 +192,10 @@ export function KnowledgeModelCard({
                   autoComplete="new-password"
                   placeholder={
                     current?.secretRef
-                      ? t('settings.knowledge.model.apiKeySavedPlaceholder', 'Saved; leave empty to keep unchanged')
+                      ? t(
+                          'settings.knowledge.model.apiKeySavedPlaceholder',
+                          'Saved; leave empty to keep unchanged'
+                        )
                       : t('settings.knowledge.model.apiKeyEmptyPlaceholder', 'Leave empty for local services')
                   }
                   value={field.state.value}
@@ -182,7 +211,10 @@ export function KnowledgeModelCard({
                 onSubmit: ({ value }) =>
                   Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 8192
                     ? undefined
-                    : t('settings.knowledge.model.dimensionsInvalid', 'Dimensions must be between 1 and 8192'),
+                    : t(
+                        'settings.knowledge.model.dimensionsInvalid',
+                        'Dimensions must be between 1 and 8192'
+                      ),
               }}
             >
               {(field) => (
@@ -226,7 +258,9 @@ export function KnowledgeModelCard({
                       <SelectItem value="force">
                         {t('settings.knowledge.model.modeForce', 'Use OCR on all pages')}
                       </SelectItem>
-                      <SelectItem value="off">{t('settings.knowledge.model.modeOff', 'Disable OCR')}</SelectItem>
+                      <SelectItem value="off">
+                        {t('settings.knowledge.model.modeOff', 'Disable OCR')}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -278,19 +312,25 @@ export function KnowledgeModelCard({
                   apiKey: value.apiKey,
                   timeoutMs: kind === 'ocr' ? 60_000 : 30_000,
                 };
-                probe.mutate(
-                  kind === 'embedding'
-                    ? { ...connection, kind, dimensions: Number(value.dimensions), batchSize: 16 }
-                    : kind === 'ocr'
-                      ? { ...connection, kind, mode: value.mode, maxOutputTokens: 4096 }
-                      : {
-                          ...connection,
-                          kind,
-                          enabled: value.enabled,
-                          maxCandidates: 40,
-                          allowRemoteEvidence: false,
-                        }
-                );
+                /**
+                 * Selects kindembedding in the existing condition order.
+                 */
+                function createModelUpdate() {
+                  if (kind === 'embedding') {
+                    return { ...connection, kind, dimensions: Number(value.dimensions), batchSize: 16 };
+                  } else if (kind === 'ocr') {
+                    return { ...connection, kind, mode: value.mode, maxOutputTokens: 4096 };
+                  } else {
+                    return {
+                      ...connection,
+                      kind,
+                      enabled: value.enabled,
+                      maxCandidates: 40,
+                      allowRemoteEvidence: false,
+                    };
+                  }
+                }
+                probe.mutate(createModelUpdate());
               }}
             >
               <UnplugIcon />

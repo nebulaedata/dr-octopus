@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from '@octopus/ui/components/dialog';
 import { formatRelativeTime } from '@/utils/date';
-import { RenameSessionDialog } from '@/features/session/RenameSessionDialog';
+import { RenameSessionDialog } from '@/features/session';
 import { Checkbox } from '@octopus/ui/components/checkbox';
 import { Label } from '@octopus/ui/components/label';
 import { RuntimeStatus } from './RuntimeStatus';

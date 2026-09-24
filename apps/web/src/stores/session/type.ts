@@ -3,7 +3,7 @@
  * @description Defines normalized browser projections and the imperative Session Store contract.
  */
 import type { MemoryRuntimeSnapshot } from '@octopus/shared/protocol/memory';
-import type { TokenUsage } from './token-usage';
+import type { TokenUsage } from './utils/token-usage';
 
 import type { StoreApi } from 'zustand/vanilla';
 import type {

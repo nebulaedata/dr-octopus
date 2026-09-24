@@ -46,6 +46,18 @@ export function MemoryPage() {
     setCursors([undefined]);
     void client.invalidateQueries({ queryKey: memoryQueryKey });
   }
+  /**
+   * Selects badge content in the existing condition order.
+   */
+  function renderBadgeContent() {
+    if (mode === 'off') {
+      return t('memory.page.modeOff', 'Memory off');
+    } else if (mode === 'manual') {
+      return t('memory.page.modeManual', 'Manual mode');
+    } else {
+      return t('memory.page.modeAuto', 'Auto mode');
+    }
+  }
   return (
     <Page classNames={{ content: 'pb-8' }}>
       <PageHero
@@ -85,10 +97,7 @@ export function MemoryPage() {
           </>
         }
       />
-      <section
-        aria-label="Memory overview"
-        className="flex flex-nowrap items-center justify-between gap-4"
-      >
+      <section aria-label="Memory overview" className="flex flex-nowrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{t('memory.page.global', 'Global memory')}</span>
           <Badge variant="secondary">
@@ -99,15 +108,7 @@ export function MemoryPage() {
                 })
               : t('memory.page.loading', 'Loading')}
           </Badge>
-          {mode && (
-            <Badge variant="outline">
-              {mode === 'off'
-                ? t('memory.page.modeOff', 'Memory off')
-                : mode === 'manual'
-                  ? t('memory.page.modeManual', 'Manual mode')
-                  : t('memory.page.modeAuto', 'Auto mode')}
-            </Badge>
-          )}
+          {mode && <Badge variant="outline">{renderBadgeContent()}</Badge>}
         </div>
       </section>
       <section aria-label="toolbar" className="flex flex-nowrap items-center justify-between gap-4">
@@ -123,12 +124,7 @@ export function MemoryPage() {
           }}
         />
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="Refresh memories"
-            onClick={refresh}
-          >
+          <Button variant="outline" size="sm" aria-label="Refresh memories" onClick={refresh}>
             <RefreshCwIcon />
             {t('common.refresh', 'Refresh')}
           </Button>
@@ -177,8 +173,14 @@ export function MemoryPage() {
             </EmptyTitle>
             <EmptyDescription>
               {query
-                ? t('memory.page.emptySearchDescription', 'Try another keyword, or clear the search to keep browsing.')
-                : t('memory.page.emptyDescription', 'Click "Remember something" to save preferences and conventions.')}
+                ? t(
+                    'memory.page.emptySearchDescription',
+                    'Try another keyword, or clear the search to keep browsing.'
+                  )
+                : t(
+                    'memory.page.emptyDescription',
+                    'Click "Remember something" to save preferences and conventions.'
+                  )}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -224,7 +226,10 @@ export function MemoryPage() {
       )}
       {query && directory.data && (
         <p className="pb-4 text-xs text-muted-foreground">
-          {t('memory.page.searchHint', 'Search shows candidate indexes. Clear the keyword to browse all memories.')}
+          {t(
+            'memory.page.searchHint',
+            'Search shows candidate indexes. Clear the keyword to browse all memories.'
+          )}
         </p>
       )}
       {creating && (

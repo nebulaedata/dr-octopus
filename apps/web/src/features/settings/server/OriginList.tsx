@@ -26,7 +26,14 @@ export function OriginList({
 }) {
   const { t } = useI18n();
   const [extra, setExtra] = useState(false);
-  const rows = value ? value.split(',') : extra ? [''] : [];
+  let rows: string[];
+  if (value) {
+    rows = value.split(',');
+  } else if (extra) {
+    rows = [''];
+  } else {
+    rows = [];
+  }
   return (
     <div className="flex flex-col gap-2">
       <FieldDescription>

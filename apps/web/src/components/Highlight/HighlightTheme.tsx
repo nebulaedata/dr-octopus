@@ -33,9 +33,22 @@ export function HighlightTheme() {
   const { mode } = useTheme();
 
   useEffect(() => {
-    const lightMedia =
-      mode === 'dark' ? 'not all' : mode === 'light' ? 'all' : '(prefers-color-scheme: light)';
-    const darkMedia = mode === 'light' ? 'not all' : mode === 'dark' ? 'all' : '(prefers-color-scheme: dark)';
+    let lightMedia: 'not all' | 'all' | '(prefers-color-scheme: light)';
+    if (mode === 'dark') {
+      lightMedia = 'not all';
+    } else if (mode === 'light') {
+      lightMedia = 'all';
+    } else {
+      lightMedia = '(prefers-color-scheme: light)';
+    }
+    let darkMedia: 'not all' | 'all' | '(prefers-color-scheme: dark)';
+    if (mode === 'light') {
+      darkMedia = 'not all';
+    } else if (mode === 'dark') {
+      darkMedia = 'all';
+    } else {
+      darkMedia = '(prefers-color-scheme: dark)';
+    }
     mountThemeStylesheet(LIGHT_STYLE_ELEMENT_ID, githubLightHref, lightMedia);
     mountThemeStylesheet(DARK_STYLE_ELEMENT_ID, githubDarkHref, darkMedia);
   }, [mode]);

@@ -8,7 +8,7 @@ import test from 'node:test';
 import {
   projectPlanModeTool,
   summarizePlanModeTool,
-} from '../src/features/session/tool-renderers/CustomToolRenderers/plan-mode-projection.ts';
+} from '../src/features/session/utils/plan-mode-projection.ts';
 
 test('projects question answers by stable id', () => {
   const tool = {
@@ -43,8 +43,5 @@ test('accepts only the versioned completion details contract', () => {
   };
   assert.equal(projectPlanModeTool(valid).plan, '# Safe plan');
   assert.equal(summarizePlanModeTool(valid), 'Proposed plan ready');
-  assert.equal(
-    projectPlanModeTool({ ...valid, details: { ...valid.details, version: 2 } }).plan,
-    undefined
-  );
+  assert.equal(projectPlanModeTool({ ...valid, details: { ...valid.details, version: 2 } }).plan, undefined);
 });

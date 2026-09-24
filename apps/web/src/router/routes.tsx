@@ -6,27 +6,19 @@
 import { lazy, Suspense } from 'react';
 import { useNavigate, useRouterState, useSearch } from '@tanstack/react-router';
 import { LoadingFallback } from '../components/LoadingFallback';
-import { Layout } from '../features/layout';
-import { WorkbenchHomePage } from '../features/home';
-import { WorkbenchWorkspacePage } from '../features/workspace';
+import { WorkbenchSessionPage as LazyWorkbenchSessionPage } from '@/features/session';
+import { SchedulesPage as LazySchedulesPage } from '@/features/schedules';
+import { Layout } from '@/features/layout';
+import { WorkbenchHomePage } from '@/features/home';
+import { WorkbenchWorkspacePage } from '@/features/workspace';
 import { useI18n } from '../i18n/use-i18n';
 import type { SettingsPath } from './settings-modal';
-
-/**
- * Loads the dependency-heavy transcript renderer only for Session routes.
- */
-const loadSessionPage = async () => {
-  const module = await import('../features/session');
-  return { default: module.WorkbenchSessionPage };
-};
-
-const LazyWorkbenchSessionPage = lazy(loadSessionPage);
 
 /**
  * Loads the Skill management feature only for the Skills route.
  */
 const loadSkillsPage = async () => {
-  const module = await import('../features/skills');
+  const module = await import('@/features/skills');
   return { default: module.SkillsPage };
 };
 
@@ -53,7 +45,7 @@ const LazyEnvironmentPage = lazy(() =>
   loadSettingsModule().then((module) => ({ default: module.EnvironmentPage }))
 );
 const LazyServerSettingsPage = lazy(() =>
-  import('../features/settings/server/ServerSettingsPage').then((module) => ({
+  import('@/features/settings').then((module) => ({
     default: module.ServerSettingsPage,
   }))
 );
@@ -64,7 +56,11 @@ const LazyServerSettingsPage = lazy(() =>
 export function ServerSettingsRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.serverSettings', 'Loading server settings…')} />}>
+    <Suspense
+      fallback={
+        <LoadingFallback message={t('layout.routeLoading.serverSettings', 'Loading server settings…')} />
+      }
+    >
       <LazyServerSettingsPage />
     </Suspense>
   );
@@ -78,18 +74,15 @@ const LazyExtensionsPage = lazy(() =>
 const LazySchedulerSettingsPage = lazy(() =>
   loadSettingsModule().then((module) => ({ default: module.SchedulerSettingsPage }))
 );
-const LazySchedulesPage = lazy(() =>
-  import('../features/schedules').then((module) => ({ default: module.SchedulesPage }))
-);
 const LazyKnowledgePage = lazy(() =>
-  import('../features/knowledge/KnowledgePage').then((module) => ({ default: module.KnowledgePage }))
+  import('@/features/knowledge').then((module) => ({ default: module.KnowledgePage }))
 );
 
 /**
  * Load knowledge Settings independently of conversation code.
  */
 const LazyKnowledgeSettingsPage = lazy(() =>
-  import('../features/settings/knowledge/KnowledgeSettingsPage').then((module) => ({
+  import('@/features/settings').then((module) => ({
     default: module.KnowledgeSettingsPage,
   }))
 );
@@ -100,7 +93,9 @@ const LazyKnowledgeSettingsPage = lazy(() =>
 export function KnowledgeRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.knowledge', 'Loading knowledge base…')} />}>
+    <Suspense
+      fallback={<LoadingFallback message={t('layout.routeLoading.knowledge', 'Loading knowledge base…')} />}
+    >
       <LazyKnowledgePage />
     </Suspense>
   );
@@ -112,7 +107,13 @@ export function KnowledgeRoute() {
 export function KnowledgeSettingsRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.knowledgeSettings', 'Loading knowledge settings…')} />}>
+    <Suspense
+      fallback={
+        <LoadingFallback
+          message={t('layout.routeLoading.knowledgeSettings', 'Loading knowledge settings…')}
+        />
+      }
+    >
       <LazyKnowledgeSettingsPage />
     </Suspense>
   );
@@ -148,7 +149,9 @@ export function WorkspaceRoute() {
 export function SessionRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.session', 'Loading session module…')} />}>
+    <Suspense
+      fallback={<LoadingFallback message={t('layout.routeLoading.session', 'Loading session module…')} />}
+    >
       <LazyWorkbenchSessionPage />
     </Suspense>
   );
@@ -160,7 +163,9 @@ export function SessionRoute() {
 export function SkillsRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.skills', 'Loading skills module…')} />}>
+    <Suspense
+      fallback={<LoadingFallback message={t('layout.routeLoading.skills', 'Loading skills module…')} />}
+    >
       <LazySkillsPage />
     </Suspense>
   );
@@ -186,7 +191,11 @@ export function ModelProvidersRoute() {
   const navigate = useNavigate({ from: '/settings/model-providers' });
   const search = useSearch({ from: '/workbench/settings/model-providers' });
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.modelProviders', 'Loading model providers…')} />}>
+    <Suspense
+      fallback={
+        <LoadingFallback message={t('layout.routeLoading.modelProviders', 'Loading model providers…')} />
+      }
+    >
       <LazyModelProvidersPage
         provider={search.provider}
         onProviderChange={(provider, options) =>
@@ -206,7 +215,9 @@ export function ModelProvidersRoute() {
 export function DefaultModelRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.defaultModel', 'Loading default model…')} />}>
+    <Suspense
+      fallback={<LoadingFallback message={t('layout.routeLoading.defaultModel', 'Loading default model…')} />}
+    >
       <LazyDefaultModelPage />
     </Suspense>
   );
@@ -218,7 +229,11 @@ export function DefaultModelRoute() {
 export function EnvironmentRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.environment', 'Loading environment settings…')} />}>
+    <Suspense
+      fallback={
+        <LoadingFallback message={t('layout.routeLoading.environment', 'Loading environment settings…')} />
+      }
+    >
       <LazyEnvironmentPage />
     </Suspense>
   );
@@ -230,7 +245,9 @@ export function EnvironmentRoute() {
 export function McpServersRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.mcpServers', 'Loading MCP servers…')} />}>
+    <Suspense
+      fallback={<LoadingFallback message={t('layout.routeLoading.mcpServers', 'Loading MCP servers…')} />}
+    >
       <LazyMcpServersPage />
     </Suspense>
   );
@@ -242,7 +259,9 @@ export function McpServersRoute() {
 export function ExtensionsRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.extensions', 'Loading extensions…')} />}>
+    <Suspense
+      fallback={<LoadingFallback message={t('layout.routeLoading.extensions', 'Loading extensions…')} />}
+    >
       <LazyExtensionsPage />
     </Suspense>
   );
@@ -256,7 +275,9 @@ export function SchedulesRoute() {
   const navigate = useNavigate({ from: '/schedules' });
   const search = useSearch({ from: '/workbench/schedules' });
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.schedules', 'Loading scheduled tasks…')} />}>
+    <Suspense
+      fallback={<LoadingFallback message={t('layout.routeLoading.schedules', 'Loading scheduled tasks…')} />}
+    >
       <LazySchedulesPage
         view={search.tab ?? 'tasks'}
         authorizationTarget={
@@ -292,7 +313,13 @@ export function SchedulesRoute() {
 export function SchedulerSettingsRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.schedulerSettings', 'Loading scheduler settings…')} />}>
+    <Suspense
+      fallback={
+        <LoadingFallback
+          message={t('layout.routeLoading.schedulerSettings', 'Loading scheduler settings…')}
+        />
+      }
+    >
       <LazySchedulerSettingsPage />
     </Suspense>
   );
@@ -305,7 +332,9 @@ export function SettingsPlaceholderRoute() {
   const { t } = useI18n();
   const pathname = useRouterState({ select: (state) => state.location.pathname as SettingsPath });
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.settingsPage', 'Loading settings page…')} />}>
+    <Suspense
+      fallback={<LoadingFallback message={t('layout.routeLoading.settingsPage', 'Loading settings page…')} />}
+    >
       <LazySettingsPlaceholderPage pathname={pathname} />
     </Suspense>
   );
@@ -326,10 +355,10 @@ export function PermissionsRoute() {
  * Load global memory management without a Workspace or Session prerequisite.
  */
 const LazyMemoryPage = lazy(() =>
-  import('../features/memory/MemoryPage').then((module) => ({ default: module.MemoryPage }))
+  import('@/features/memory').then((module) => ({ default: module.MemoryPage }))
 );
 const LazyMemorySettingsPage = lazy(() =>
-  import('../features/settings/memory/MemorySettingsPage').then((module) => ({
+  import('@/features/settings').then((module) => ({
     default: module.MemorySettingsPage,
   }))
 );
@@ -351,14 +380,18 @@ export function MemoryRoute() {
 export function MemorySettingsRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.memorySettings', 'Loading memory settings…')} />}>
+    <Suspense
+      fallback={
+        <LoadingFallback message={t('layout.routeLoading.memorySettings', 'Loading memory settings…')} />
+      }
+    >
       <LazyMemorySettingsPage />
     </Suspense>
   );
 }
 
 const LazyLanguageSettingsPage = lazy(() =>
-  import('../features/settings/language/LanguageSettingsPage').then((module) => ({
+  import('@/features/settings').then((module) => ({
     default: module.LanguageSettingsPage,
   }))
 );
@@ -368,14 +401,18 @@ const LazyLanguageSettingsPage = lazy(() =>
 export function LanguageSettingsRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.languageSettings', 'Loading language settings…')} />}>
+    <Suspense
+      fallback={
+        <LoadingFallback message={t('layout.routeLoading.languageSettings', 'Loading language settings…')} />
+      }
+    >
       <LazyLanguageSettingsPage />
     </Suspense>
   );
 }
 
 const LazyShortcutsSettingsPage = lazy(() =>
-  import('../features/settings/shortcuts/ShortcutsSettingsPage').then((module) => ({
+  import('@/features/settings').then((module) => ({
     default: module.ShortcutsSettingsPage,
   }))
 );
@@ -385,7 +422,13 @@ const LazyShortcutsSettingsPage = lazy(() =>
 export function ShortcutsSettingsRoute() {
   const { t } = useI18n();
   return (
-    <Suspense fallback={<LoadingFallback message={t('layout.routeLoading.shortcutsSettings', 'Loading keyboard shortcuts…')} />}>
+    <Suspense
+      fallback={
+        <LoadingFallback
+          message={t('layout.routeLoading.shortcutsSettings', 'Loading keyboard shortcuts…')}
+        />
+      }
+    >
       <LazyShortcutsSettingsPage />
     </Suspense>
   );

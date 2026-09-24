@@ -54,7 +54,9 @@ export function ProviderDetails(props: ProviderDetailsProps) {
     return (
       <div className="p-5">
         <Alert variant="destructive">
-          <AlertTitle>{t('settings.providers.detailsLoadFailed', 'Failed to load provider details')}</AlertTitle>
+          <AlertTitle>
+            {t('settings.providers.detailsLoadFailed', 'Failed to load provider details')}
+          </AlertTitle>
           <AlertDescription className="flex flex-col gap-3">
             <span>{props.error}</span>
             <div className="flex gap-2">
@@ -88,6 +90,28 @@ export function ProviderDetails(props: ProviderDetailsProps) {
   }
 
   const provider = props.provider;
+  /**
+   * Selects renderdiv content in the existing condition order.
+   */
+  function renderContent() {
+    if (provider.local) {
+      return (
+        <Badge variant="secondary">
+          {provider.modelCount > 0
+            ? t('settings.providers.configured', 'Configured')
+            : t('settings.providers.pendingConfiguration', 'Pending configuration')}
+        </Badge>
+      );
+    } else if (provider.auth.configured) {
+      return (
+        <Badge variant="secondary" className="bg-success text-white">
+          {t('settings.providers.authenticated', 'Authenticated')}
+        </Badge>
+      );
+    } else {
+      return <Badge variant="outline">{t('settings.providers.unauthenticated', 'Not authenticated')}</Badge>;
+    }
+  }
   return (
     <ScrollArea className="h-full">
       <div className="mx-auto flex max-w-4xl flex-col gap-6 p-4 md:p-6">
@@ -99,19 +123,7 @@ export function ProviderDetails(props: ProviderDetailsProps) {
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="truncate text-lg font-semibold">{provider.name}</h2>
               <Badge variant="outline">{provider.provenance}</Badge>
-              {provider.local ? (
-                <Badge variant="secondary">
-                  {provider.modelCount > 0
-                    ? t('settings.providers.configured', 'Configured')
-                    : t('settings.providers.pendingConfiguration', 'Pending configuration')}
-                </Badge>
-              ) : provider.auth.configured ? (
-                <Badge variant="secondary" className="bg-success text-white">
-                  {t('settings.providers.authenticated', 'Authenticated')}
-                </Badge>
-              ) : (
-                <Badge variant="outline">{t('settings.providers.unauthenticated', 'Not authenticated')}</Badge>
-              )}
+              {renderContent()}
             </div>
             <p className="truncate text-sm text-muted-foreground">{provider.providerId}</p>
           </div>
@@ -126,7 +138,9 @@ export function ProviderDetails(props: ProviderDetailsProps) {
           <>
             <section className="flex flex-col gap-4">
               <div>
-                <h3 className="text-sm font-semibold">{t('settings.providers.authTitle', 'Authentication')}</h3>
+                <h3 className="text-sm font-semibold">
+                  {t('settings.providers.authTitle', 'Authentication')}
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   {t('settings.providers.authDescription', 'Choose the provider authentication method')}
                 </p>
@@ -144,7 +158,10 @@ export function ProviderDetails(props: ProviderDetailsProps) {
               ) : (
                 <Alert>
                   <AlertTitle>
-                    {t('settings.providers.authEnvManagedTitle', 'Authentication managed by the runtime environment')}
+                    {t(
+                      'settings.providers.authEnvManagedTitle',
+                      'Authentication managed by the runtime environment'
+                    )}
                   </AlertTitle>
                   <AlertDescription>
                     {t(
@@ -185,10 +202,14 @@ export function ProviderDetails(props: ProviderDetailsProps) {
             <div>
               <h3 className="text-sm font-semibold">{t('settings.providers.modelsTitle', 'Models')}</h3>
               <p className="text-xs text-muted-foreground">
-                {t('settings.providers.modelsAvailable', '{{available}} of {{total}} models currently available', {
-                  available: provider.availableModelCount,
-                  total: provider.modelCount,
-                })}
+                {t(
+                  'settings.providers.modelsAvailable',
+                  '{{available}} of {{total}} models currently available',
+                  {
+                    available: provider.availableModelCount,
+                    total: provider.modelCount,
+                  }
+                )}
               </p>
             </div>
             <Badge variant="secondary">{provider.modelCount}</Badge>
