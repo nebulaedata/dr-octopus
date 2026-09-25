@@ -41,6 +41,12 @@ function ProviderModelRow({
         </ItemDescription>
       </ItemContent>
       <ItemActions className="flex-wrap justify-end">
+        {model.interfaces.includes('other') && (
+          <Badge variant="outline">{t('settings.providers.otherInterface', 'Other')}</Badge>
+        )}
+        {!model.interfaces.includes('chat') && model.interfaces.includes('image') && (
+          <Badge variant="outline">{t('settings.providers.imageOnly', 'Image only')}</Badge>
+        )}
         {model.capabilities.includes('reasoning') && (
           <Tooltip>
             <TooltipTrigger aria-label="Reasoning">

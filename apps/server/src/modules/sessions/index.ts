@@ -71,6 +71,7 @@ const plugin: FastifyPluginCallback = (server, _options, done) => {
       workspaceService: server.workspacesService,
       listMessageAttachments: (sessionId) => server.attachmentsService.listMessageAttachments(sessionId),
       refreshConfiguration: () => server.modelConfigMonitor.refresh(),
+      modelSettings: server.settingsService,
     }
   );
   server.decorate('sessionsService', service);

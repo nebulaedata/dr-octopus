@@ -19,6 +19,7 @@ import { createMemoryExtension } from '../extensions/memory/index.js';
 import { createSchedulerExtension } from '../extensions/scheduler/index.js';
 import { createSubagentBridgeExtension } from '../extensions/subagent-bridge/index.js';
 import { createBackgroundTaskExtension } from '../extensions/background-task/index.js';
+import { createImagegenExtension } from '../extensions/imagegen/index.js';
 import type { InlineExtension } from '@earendil-works/pi-coding-agent';
 
 /**
@@ -69,6 +70,9 @@ export async function runOctopusCli(args: string[]): Promise<void> {
 
   // Run Pi CLI with Extensions
   const extensionFactories: InlineExtension[] = [
+    ...(processRole === 'subagent' || isTaskProcess
+      ? []
+      : [{ name: 'octopus-imagegen', hidden: true, factory: createImagegenExtension(getAgentDir()) }]),
     {
       name: 'octopus-memory',
       hidden: true,

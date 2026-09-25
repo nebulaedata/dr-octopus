@@ -35,6 +35,8 @@ Only components and their types are exported from component files, preserving Fa
 
 ## Result contract
 
+The `image_generate` renderer reads a versioned image receipt from `details`: actual provider/model, workspace-relative and absolute paths, MIME types and dimensions. Images load through the workspace image preview endpoint; downloading uses the existing file endpoint. Live and restored receipts share the same parser. Unknown versions, malformed receipts and tool failures retain `ToolContent`; missing files show an explicit unavailable state. No raw image base64 is stored in receipt metadata. See [image generation](imagegen.md).
+
 Pi `0.84.3` tool content contains only text and image blocks. The browser projection separates model-facing content from UI-oriented structured data:
 
 ```ts

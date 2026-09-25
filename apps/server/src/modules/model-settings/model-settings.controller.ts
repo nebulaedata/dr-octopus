@@ -6,6 +6,10 @@
  * - GET /api/settings/model-providers/:providerKey
  * - DELETE /api/settings/model-providers/:providerKey
  * - GET /api/settings/default-model
+ * - GET /api/settings/imagegen
+ * - GET /api/settings/imagegen/candidates
+ * - PUT /api/settings/imagegen
+ * - DELETE /api/settings/imagegen
  * - GET /api/settings/default-model/candidates
  * - PUT /api/settings/default-model
  * - DELETE /api/settings/model-providers/:providerKey/auth
@@ -15,6 +19,7 @@
  * - DELETE /api/settings/model-providers/:providerKey/auth-sessions/:authSessionId
  */
 import {
+  ImagegenConfigSchema,
   ConfigureCustomProviderBodySchema,
   CreateCustomProviderBodySchema,
   DetectCustomProviderBodySchema,
@@ -43,6 +48,16 @@ interface ProviderParams {
  * @param service Settings application use cases.
  */
 export function registerSettingsController(server: FastifyInstance, service: SettingsService): void {
+  server.get('/settings/imagegen', () => service.getImagegenSettings());
+  server.get('/settings/imagegen/candidates', () => service.listImagegenCandidates());
+  server.put('/settings/imagegen', (request) => {
+    const parsed = ImagegenConfigSchema.safeParse(request.body);
+    if (!parsed.success) {
+      throw invalidSettingsRequest('The image model selection is malformed.');
+    }
+    return service.saveImagegenSettings(parsed.data);
+  });
+  server.delete('/settings/imagegen', () => service.saveImagegenSettings(null));
   registerCustomProviderController(server, service);
   server.get('/settings/model-providers', () => service.listProviders());
 
@@ -157,6 +172,10 @@ function invalidRequest() {
  * Settings-domain message variants keyed by stable error code.
  */
 export const settingsErrorMessages: ErrorMessageCatalog = {
+  IMAGEGEN_MODEL_UNAVAILABLE: {
+    en: 'The image model is unavailable. Check its API Key, capability and protocol.',
+    'zh-CN': '生图模型不可用，请检查 API Key、模型能力和生图协议。',
+  },
   MODEL_PROVIDER_CAPABILITY_UNSUPPORTED: {
     en: 'This operation is not supported by the selected provider or model.',
     'zh-CN': '所选提供商或模型不支持此操作。',

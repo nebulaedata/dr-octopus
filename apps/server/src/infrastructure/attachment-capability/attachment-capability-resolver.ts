@@ -176,10 +176,13 @@ function createDeliveryCapabilities(
     if (context.agent === undefined || context.agent.modelInputs.has('image')) {
       return ['rpc-image'];
     }
+    if (context.policy.allowMaterialization && context.tools.has('read-file')) {
+      return ['manifest-path'];
+    }
     diagnostics.push(
       error('MODEL_INPUT_UNSUPPORTED', 'The selected model does not accept image input.', true)
     );
-    return context.policy.allowMaterialization && context.tools.has('read-file') ? ['manifest-path'] : [];
+    return [];
   }
   const delivery: AgentDeliveryCapability[] = [];
   if (

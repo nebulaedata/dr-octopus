@@ -9,3 +9,4 @@ export { PlanModeToolRenderer } from './PlanModeToolRenderer';
 export { SchedulerToolRenderer } from './SchedulerToolRenderer';
 export { KnowledgeToolRenderer } from './KnowledgeToolRenderer';
 export { MemoryToolRenderer } from './MemoryToolRenderer';
+export { ImagegenToolRenderer } from './ImagegenToolRenderer';

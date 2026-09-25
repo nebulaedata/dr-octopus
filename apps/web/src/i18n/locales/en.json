@@ -1029,6 +1029,13 @@
       "alt": "Image attachment",
       "unsupported": "Unsupported attachment"
     },
+    "imagegen": {
+      "alt": "Generated image",
+      "download": "Download",
+      "filePath": "File path",
+      "missing": "This image is missing or cannot be previewed.",
+      "viewOriginal": "View original"
+    },
     "knowledgeEvidence": {
       "citationLabel": "Citation ID",
       "citationMissing": "This result did not provide a citation ID",
@@ -1528,6 +1535,22 @@
       "navigationDescription": "Navigate between global Settings modules.",
       "navigationTitle": "Settings navigation",
       "titleFallback": "Settings"
+    },
+    "imagegen": {
+      "choose": "Choose an image model",
+      "clear": "Clear image model",
+      "description": "Used for image generation and reference image editing. Changes apply to the next image request.",
+      "editing": "Reference images supported",
+      "loadFailed": "Could not load image model settings.",
+      "model": "Provider / image model",
+      "noCandidates": "Configure a supported provider and mark its model as image generation in Model providers.",
+      "protocol": "Use the OpenAI Images protocol for this service (generation and edits).",
+      "required": "Choose an available image model.",
+      "save": "Save image model",
+      "saved": "Image model updated",
+      "textOnly": "Text to image only",
+      "title": "Image model",
+      "unavailable": "Unavailable"
     },
     "jev": {
       "apiKey": "API Key",
@@ -2048,6 +2071,8 @@
       "authTitle": "Authentication",
       "avatarAlt": "{{name}} avatar",
       "backToList": "Back to list",
+      "bothInterfaces": "Chat and image generation",
+      "chatInterface": "Chat",
       "configured": "Configured",
       "confirmDelete": "Delete provider",
       "defaultBadge": "Default",
@@ -2063,6 +2088,8 @@
       "endpointTitle": "Endpoint",
       "imageGeneration": "Image generation",
       "imageInput": "Image input",
+      "imageInterface": "Image generation",
+      "imageOnly": "Image only",
       "loadFailed": "Failed to load model providers",
       "local": {
         "addDescription": "Add a model service, then configure its endpoint, model, and API Key.",
@@ -2100,11 +2127,14 @@
         "title": "Model service configuration"
       },
       "modelCapabilities": "Model capabilities",
+      "modelInterfaces": "Model interfaces",
+      "modelInterfacesHint": "Only models supporting chat can be selected for agents.",
       "modelsAvailable": "{{available}} of {{total}} models currently available",
       "modelsAvailableShort": "{{available}}/{{total}} models available",
       "modelsTitle": "Models",
       "noMatch": "No matching results",
       "noMatchDescription": "Try another name or Provider ID.",
+      "otherInterface": "Other",
       "pendingConfiguration": "Pending configuration",
       "readonlySuffix": " (readonly)",
       "reasoning": "Reasoning",

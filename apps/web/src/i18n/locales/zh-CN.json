@@ -1006,6 +1006,13 @@
       "alt": "图片附件",
       "unsupported": "不支持的附件"
     },
+    "imagegen": {
+      "alt": "生成的图片",
+      "download": "下载",
+      "filePath": "文件路径",
+      "missing": "图片文件已丢失或无法预览。",
+      "viewOriginal": "查看原图"
+    },
     "knowledgeEvidence": {
       "citationLabel": "引用标识",
       "citationMissing": "此结果未提供引用标识",
@@ -1483,6 +1490,22 @@
       "navigationDescription": "在全局设置模块间导航。",
       "navigationTitle": "设置导航",
       "titleFallback": "设置"
+    },
+    "imagegen": {
+      "choose": "选择生图模型",
+      "clear": "清除生图模型",
+      "description": "用于图片生成和参考图编辑，修改将在下一次生图请求生效。",
+      "editing": "支持参考图",
+      "loadFailed": "无法加载生图模型设置。",
+      "model": "提供商 / 生图模型",
+      "noCandidates": "请在模型服务中配置支持的提供商，并标记模型的生图能力。",
+      "protocol": "此服务使用 OpenAI Images 协议（生成和编辑）。",
+      "required": "请选择可用的生图模型。",
+      "save": "保存生图模型",
+      "saved": "生图模型已更新",
+      "textOnly": "仅文生图",
+      "title": "生图模型",
+      "unavailable": "不可用"
     },
     "jev": {
       "apiKey": "API Key",
@@ -2001,6 +2024,8 @@
       "authTitle": "认证",
       "avatarAlt": "{{name}} 头像",
       "backToList": "返回列表",
+      "bothInterfaces": "对话与图像生成",
+      "chatInterface": "文本对话",
       "configured": "已配置",
       "confirmDelete": "删除模型服务",
       "defaultBadge": "默认",
@@ -2016,6 +2041,8 @@
       "endpointTitle": "Endpoint",
       "imageGeneration": "生图",
       "imageInput": "图像输入",
+      "imageInterface": "图像生成",
+      "imageOnly": "纯生图",
       "loadFailed": "模型服务加载失败",
       "local": {
         "addDescription": "添加模型服务，随后配置服务地址、模型和 API Key。",
@@ -2053,11 +2080,14 @@
         "title": "模型服务配置"
       },
       "modelCapabilities": "模型能力",
+      "modelInterfaces": "模型接口类型",
+      "modelInterfacesHint": "只有支持文本对话的模型可用作智能体模型。",
       "modelsAvailable": "{{available}}/{{total}} 个模型当前可用",
       "modelsAvailableShort": "{{available}}/{{total}} 个模型可用",
       "modelsTitle": "模型",
       "noMatch": "没有匹配结果",
       "noMatchDescription": "尝试其他名称或 Provider ID。",
+      "otherInterface": "其他",
       "pendingConfiguration": "待配置",
       "readonlySuffix": "（只读）",
       "reasoning": "推理",

@@ -16,7 +16,7 @@
  *
  * 自主实现的 watcher 刻意保持很小，并维护以下不变量：
  *
- * - 只监控 apps/server/src 下的 TypeScript 文件，避免追踪 workspace 依赖和构建缓存。
+ * - 监控 Server TypeScript 源码和 shared/dist 协议产物，以内容摘要排除无效通知。
  * - 使用 process.execPath 直接创建 Node 子进程，不经过 cmd.exe shell 包装。
  * - 编辑器一次保存产生的重复通知会被合并。
  * - 所有重启进入同一条 Promise 链；必须观察到旧子进程 exit 后才能创建新子进程，任何时刻
@@ -37,6 +37,9 @@ import { fileURLToPath } from 'node:url';
 
 const SERVER_DIRECTORY = fileURLToPath(new URL('..', import.meta.url));
 const SOURCE_DIRECTORY = join(SERVER_DIRECTORY, 'src');
+// Workspace exports resolve to built JavaScript; shared schema rebuilds must replace the loaded module cache.
+const SHARED_DIRECTORY = fileURLToPath(new URL('../../../packages/shared/dist', import.meta.url));
+const WATCHED_DIRECTORIES = [SOURCE_DIRECTORY, SHARED_DIRECTORY];
 const RESTART_DELAY_MS = 100;
 const FORCE_STOP_DELAY_MS = 5_000;
 const DEV_WATCH_SHUTDOWN_MESSAGE_TYPE = 'octopus:dev-watch:shutdown';
@@ -51,22 +54,24 @@ let shuttingDown = false;
 let sourceSnapshot = createSourceSnapshot();
 
 /**
- * Produces a content-addressed snapshot of every TypeScript source watched by this process.
+ * Produces a content-addressed snapshot of Server sources and built shared protocol dependencies.
  *
  * Windows can emit directory notifications even when a source file was only inspected by
  * another process. Hashing paths and contents keeps those notifications from restarting the
  * Server while still detecting source creation, deletion, rename, and content changes.
  *
- * @returns Stable digest for the current TypeScript source tree.
+ * @returns Stable digest for the watched runtime files.
  */
 function createSourceSnapshot() {
   const hash = createHash('sha256');
-  updateSourceSnapshotHash(hash, SOURCE_DIRECTORY);
+  for (const directory of WATCHED_DIRECTORIES) {
+    updateSourceSnapshotHash(hash, directory);
+  }
   return hash.digest('hex');
 }
 
 /**
- * Adds one directory's TypeScript paths and contents to a source snapshot in stable order.
+ * Adds one directory's runtime source paths and contents to a snapshot in stable order.
  *
  * @param {import('node:crypto').Hash} hash Snapshot digest being assembled.
  * @param {string} directory Directory currently being traversed.
@@ -81,7 +86,7 @@ function updateSourceSnapshotHash(hash, directory) {
       updateSourceSnapshotHash(hash, entryPath);
       continue;
     }
-    if (!entry.isFile() || !entry.name.endsWith('.ts')) {
+    if (!entry.isFile() || !/\.(?:ts|js)$/.test(entry.name)) {
       continue;
     }
     hash.update(relative(SOURCE_DIRECTORY, entryPath).replaceAll('\\', '/'));
@@ -211,15 +216,19 @@ async function shutdown(exitCode) {
   }
   shuttingDown = true;
   clearTimeout(restartTimer);
-  sourceWatcher.close();
+  for (const watcher of sourceWatchers) {
+    watcher.close();
+  }
   await restartChain;
   await stopServer('shutdown');
   process.exit(exitCode);
 }
 
-const sourceWatcher = watch(SOURCE_DIRECTORY, { recursive: true }, () => {
-  scheduleRestart();
-});
+const sourceWatchers = WATCHED_DIRECTORIES.map((directory) =>
+  watch(directory, { recursive: true }, () => {
+    scheduleRestart();
+  })
+);
 
 process.once('SIGINT', () => void shutdown(0));
 process.once('SIGTERM', () => void shutdown(0));

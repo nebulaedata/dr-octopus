@@ -3,6 +3,7 @@
  * @description Owns deterministic custom, built-in and fallback rendering behind a component selection contract.
  */
 import {
+  ImageIcon,
   BookOpenIcon,
   BrainIcon,
   CalendarClockIcon,
@@ -18,6 +19,7 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {
+  ImagegenToolRenderer,
   KnowledgeToolRenderer,
   MemoryToolRenderer,
   GoalToolRenderer,
@@ -76,6 +78,7 @@ interface ToolRendererDefinition {
  * Add custom tool renderers here; entries take precedence over Pi built-ins and the fallback renderer.
  */
 const CUSTOM_TOOL_RENDERERS: readonly ToolRendererDefinition[] = [
+  { names: ['image_generate'], component: ImagegenToolRenderer, icon: ImageIcon },
   {
     names: ['memory_recall'],
     component: MemoryToolRenderer,

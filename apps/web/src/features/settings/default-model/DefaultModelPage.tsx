@@ -4,6 +4,7 @@
  */
 
 import { SettingContainer } from '../Layout/SettingContainer';
+import { ImagegenSettings } from './ImagegenSettings';
 import { useEffect } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
@@ -99,6 +100,7 @@ export function DefaultModelPage() {
       <SettingContainer classNames={{ content: 'mx-0 max-w-none gap-4' }}>
         <Skeleton className="h-32 w-full max-w-3xl" />
         <Skeleton className="h-64 w-full max-w-3xl" />
+        <ImagegenSettings />
       </SettingContainer>
     );
   }
@@ -110,6 +112,7 @@ export function DefaultModelPage() {
           <AlertTitle>{t('settings.defaultModel.loadFailed', 'Failed to load the default model')}</AlertTitle>
           <AlertDescription>{queryError.message}</AlertDescription>
         </Alert>
+        <ImagegenSettings />
       </SettingContainer>
     );
   }
@@ -128,7 +131,9 @@ export function DefaultModelPage() {
     <SettingContainer>
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">{t('settings.defaultModel.currentTitle', 'Current default model')}</CardTitle>
+          <CardTitle className="text-sm">
+            {t('settings.defaultModel.currentTitle', 'Current default model')}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-2">
           <span className="text-muted-foreground">
@@ -142,7 +147,9 @@ export function DefaultModelPage() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">{t('settings.defaultModel.selectTitle', 'Choose a default model')}</CardTitle>
+          <CardTitle className="text-sm">
+            {t('settings.defaultModel.selectTitle', 'Choose a default model')}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -157,12 +164,16 @@ export function DefaultModelPage() {
                 name="selection"
                 validators={{
                   onSubmit: ({ value }) =>
-                    value.length === 0 ? t('settings.defaultModel.selectRequired', 'Select an available model.') : undefined,
+                    value.length === 0
+                      ? t('settings.defaultModel.selectRequired', 'Select an available model.')
+                      : undefined,
                 }}
               >
                 {(field) => (
                   <Field data-invalid={field.state.meta.errors.length > 0 || undefined}>
-                    <FieldLabel className="text-xs">{t('settings.defaultModel.fieldLabel', 'Provider / Model')}</FieldLabel>
+                    <FieldLabel className="text-xs">
+                      {t('settings.defaultModel.fieldLabel', 'Provider / Model')}
+                    </FieldLabel>
                     <Select
                       items={selectItems}
                       value={field.state.value || null}
@@ -173,7 +184,9 @@ export function DefaultModelPage() {
                         aria-invalid={field.state.meta.errors.length > 0 || undefined}
                         onBlur={field.handleBlur}
                       >
-                        <SelectValue placeholder={t('settings.defaultModel.selectPlaceholder', 'Select a default model')}>
+                        <SelectValue
+                          placeholder={t('settings.defaultModel.selectPlaceholder', 'Select a default model')}
+                        >
                           {(value: string) =>
                             selectItems.find((item) => item.value === value)?.label ??
                             t('settings.defaultModel.selectPlaceholder', 'Select a default model')
@@ -234,6 +247,7 @@ export function DefaultModelPage() {
           </form>
         </CardContent>
       </Card>
+      <ImagegenSettings />
     </SettingContainer>
   );
 }

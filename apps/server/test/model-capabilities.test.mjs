@@ -16,7 +16,116 @@ import {
   saveModelCapabilities,
 } from '../dist/infrastructure/pi-settings/custom-provider-repository.js';
 import { SettingsService } from '../dist/modules/model-settings/model-settings.service.js';
+import { ConversationModelsService } from '../dist/modules/conversation-start/conversation-start.service.js';
 import { registerSettingsController } from '../dist/modules/model-settings/model-settings.controller.js';
+
+test('custom interfaces survive reload, filter agent candidates and reject image-only admission', async (t) => {
+  const agentDir = await mkdtemp(join(tmpdir(), 'octopus-interfaces-'));
+  t.after(() => rm(agentDir, { recursive: true, force: true }));
+  const path = join(agentDir, 'models.json');
+  await writeFile(
+    path,
+    JSON.stringify({
+      providers: {
+        custom: {
+          api: 'openai-completions',
+          baseUrl: 'https://example.test/v1',
+          apiKey: 'test-key',
+          models: [{ id: 'arbitrary-name' }, { id: 'legacy-chat' }],
+        },
+      },
+    })
+  );
+  const service = new SettingsService(createPiSettingsStore({ agentDir }));
+  const provider = (await service.listProviders()).providers.find((p) => p.providerId === 'custom');
+  const detail = await service.getProvider(provider.providerKey);
+  const model = detail.models.find((m) => m.modelId === 'arbitrary-name');
+  const capabilities = { reasoning: false, input: ['text'], imageGeneration: true };
+  const app = Fastify();
+  t.after(() => app.close());
+  registerSettingsController(app, service);
+  const url = `/settings/model-providers/${provider.providerKey}/models/${model.modelKey}/capabilities`;
+  for (const interfaces of [
+    [],
+    ['video'],
+    ['chat', 'chat'],
+    ['chat', 'other'],
+    ['image', 'other'],
+    'image',
+  ]) {
+    assert.equal(
+      (await app.inject({ method: 'PUT', url, payload: { ...capabilities, interfaces } })).statusCode,
+      400
+    );
+  }
+  await service.setDefaultModel(provider.providerKey, model.modelKey);
+  assert.equal(
+    (await app.inject({ method: 'PUT', url, payload: { ...capabilities, interfaces: ['image'] } }))
+      .statusCode,
+    200
+  );
+  const reloaded = new SettingsService(createPiSettingsStore({ agentDir }));
+  const restored = await reloaded.getProvider(provider.providerKey);
+  assert.deepEqual(restored.models.find((m) => m.modelId === model.modelId).interfaces, ['image']);
+  assert.deepEqual(restored.models.find((m) => m.modelId === 'legacy-chat').interfaces, ['chat']);
+  assert.equal((await reloaded.getDefaultModel()).available, false);
+  assert.equal(
+    (await reloaded.listDefaultModelCandidates()).candidates.some((m) => m.modelId === model.modelId),
+    false
+  );
+  await assert.rejects(reloaded.setDefaultModel(provider.providerKey, model.modelKey));
+  const admission = new ConversationModelsService(reloaded, async () => 'version');
+  await assert.rejects(admission.resolve({ mode: 'explicit', provider: 'custom', modelId: model.modelId }), {
+    code: 'CONVERSATION_MODEL_REQUIRED',
+  });
+  await assert.rejects(admission.resolve({ mode: 'default' }), { code: 'CONVERSATION_MODEL_REQUIRED' });
+  // Older clients can update other capabilities without erasing the configured interface.
+  await reloaded.updateModelCapabilities(provider.providerKey, model.modelKey, capabilities);
+  assert.deepEqual(
+    (await reloaded.getProvider(provider.providerKey)).models.find((m) => m.modelId === model.modelId)
+      .interfaces,
+    ['image']
+  );
+  for (const interfaces of [['chat', 'image'], ['chat']]) {
+    await reloaded.updateModelCapabilities(provider.providerKey, model.modelKey, {
+      ...capabilities,
+      interfaces,
+    });
+    assert.equal(
+      (await admission.resolve({ mode: 'explicit', provider: 'custom', modelId: model.modelId })).id,
+      model.modelId
+    );
+  }
+  assert.equal(
+    (await app.inject({ method: 'PUT', url, payload: { ...capabilities, interfaces: ['other'] } }))
+      .statusCode,
+    200
+  );
+  const otherService = new SettingsService(createPiSettingsStore({ agentDir }));
+  assert.deepEqual(
+    (await otherService.getProvider(provider.providerKey)).models.find((m) => m.modelId === model.modelId)
+      .interfaces,
+    ['other']
+  );
+  assert.equal((await otherService.getDefaultModel()).available, false);
+  assert.equal(
+    (await otherService.listDefaultModelCandidates()).candidates.some((m) => m.modelId === model.modelId),
+    false
+  );
+  await assert.rejects(otherService.setDefaultModel(provider.providerKey, model.modelKey));
+  const otherAdmission = new ConversationModelsService(otherService, async () => 'version');
+  await assert.rejects(
+    otherAdmission.resolve({ mode: 'explicit', provider: 'custom', modelId: model.modelId }),
+    { code: 'CONVERSATION_MODEL_REQUIRED' }
+  );
+  const document = JSON.parse(await readFile(path, 'utf8'));
+  assert.equal(
+    document.providers.custom.models[0].interfaces,
+    undefined,
+    'Host metadata must not leak into Pi configuration'
+  );
+  assert.deepEqual(document.octopusModelCapabilities.custom[model.modelId].interfaces, ['other']);
+});
 
 test('custom model capability edits survive reload and unlock Pi thinking levels', async (t) => {
   const agentDir = await mkdtemp(join(tmpdir(), 'octopus-capabilities-'));
@@ -91,7 +200,9 @@ test('custom model capability edits survive reload and unlock Pi thinking levels
   const cleared = await app.inject({ method: 'PUT', url, payload });
   assert.deepEqual(cleared.json().models[0].capabilities, ['reasoning', 'image_input']);
   assert.equal(commits, 1, 'clearing the image marker must not restart sessions');
-  assert.equal(JSON.parse(await readFile(path, 'utf8')).octopusModelCapabilities.custom, undefined);
+  assert.deepEqual(JSON.parse(await readFile(path, 'utf8')).octopusModelCapabilities.custom, {
+    'custom-model': { imageGeneration: false },
+  });
   const runtime = await ModelRuntime.create({
     modelsPath: path,
     authPath: join(agentDir, 'auth.json'),
@@ -215,6 +326,8 @@ for (const withOverrides of [false, true]) {
     );
     const document = JSON.parse(await readFile(path, 'utf8'));
     assert.equal(document.providers.openai.models, undefined);
-    assert.equal(document.octopusModelCapabilities.openai, undefined);
+    assert.deepEqual(document.octopusModelCapabilities.openai, {
+      [model.modelId]: { imageGeneration: false },
+    });
   });
 }

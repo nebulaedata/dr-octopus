@@ -8,14 +8,19 @@ import { join } from 'node:path';
 import {
   CredentialSynchronizationError,
   ModelRuntime,
+  ModelRegistry,
   SettingsManager,
 } from '@earendil-works/pi-coding-agent';
 import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
 import { builtinImagesModels } from '@earendil-works/pi-ai/providers/all';
+import { getImagegenCatalog, readImagegenConfig, saveImagegenConfig } from '@octopus/agent';
 import { PiCredentialSynchronizationError } from './types.js';
 import { saveModelCapabilities } from './custom-provider-repository.js';
 import { CustomProviderStore } from './custom-provider-store.js';
 import type {
+  ImagegenConfig,
+  ImagegenSettingsDto,
+  ImagegenCandidate,
   UpdateModelCapabilitiesBody,
   CustomProviderTypeDto,
   ConfigureCustomProviderBody,
@@ -329,6 +334,44 @@ export class ServerPiSettingsStore {
       ...(providerId === undefined ? {} : { providerId }),
       ...(modelId === undefined ? {} : { modelId }),
     };
+  }
+
+  /**
+   * Lists supported image models without resolving or exposing credentials.
+   */
+  public async listImagegenCandidates(): Promise<ImagegenCandidate[]> {
+    const runtime = await this.#getRuntime();
+    return (await getImagegenCatalog(this.#agentDir, new ModelRegistry(runtime))).map(
+      (entry) => entry.candidate
+    );
+  }
+
+  /**
+   * Reads the independent default and checks current capability and authentication metadata.
+   */
+  public async getImagegenSettings(): Promise<ImagegenSettingsDto> {
+    const config = await readImagegenConfig(this.#agentDir);
+    const candidates = await this.listImagegenCandidates();
+    return {
+      config,
+      available:
+        config !== null &&
+        candidates.some(
+          (candidate) =>
+            candidate.providerId === config.providerId &&
+            candidate.modelId === config.modelId &&
+            candidate.adapter === config.adapter &&
+            candidate.available
+        ),
+      effect: 'next_call',
+    };
+  }
+
+  /**
+   * Saves or clears the independently owned image default.
+   */
+  public async saveImagegenSettings(config: ImagegenConfig | null): Promise<void> {
+    await saveImagegenConfig(this.#agentDir, config);
   }
 
   /**

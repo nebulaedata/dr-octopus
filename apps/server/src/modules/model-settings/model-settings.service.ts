@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import { MODEL_CONFIG_ROUTE } from '../../infrastructure/runtime-config/config-routes.js';
 import type {
+  ImagegenConfig,
   ConfigureCustomProviderBody,
   CreateCustomProviderBody,
   DefaultModelCandidateDto,
@@ -119,6 +120,43 @@ function toModel(
  */
 export class SettingsService {
   /**
+   * Returns image configuration for the next tool invocation.
+   */
+  public getImagegenSettings() {
+    return this.piSettings.getImagegenSettings();
+  }
+
+  /**
+   * Returns supported image candidates including unavailable authentication states.
+   */
+  public async listImagegenCandidates() {
+    return { candidates: await this.piSettings.listImagegenCandidates() };
+  }
+
+  /**
+   * Validates the complete selection before saving; null explicitly clears it.
+   */
+  public async saveImagegenSettings(config: ImagegenConfig | null) {
+    if (
+      config !== null &&
+      !(await this.piSettings.listImagegenCandidates()).some(
+        (candidate) =>
+          candidate.providerId === config.providerId &&
+          candidate.modelId === config.modelId &&
+          candidate.adapter === config.adapter &&
+          candidate.available
+      )
+    ) {
+      throw new ApplicationError(
+        'IMAGEGEN_MODEL_UNAVAILABLE',
+        'The image model is unavailable. Check its API Key, capability and protocol.',
+        { statusCode: 422 }
+      );
+    }
+    await this.piSettings.saveImagegenSettings(config);
+    return this.piSettings.getImagegenSettings();
+  }
+  /**
    * Creates the application service.
    *
    * @param piSettings Server-owned Pi settings infrastructure port.
@@ -223,7 +261,8 @@ export class SettingsService {
       );
     }
     const current = await this.piSettings.getDefaultModel();
-    if (current.providerId === provider.id) {
+    const imageDefault = await this.piSettings.getImagegenSettings?.();
+    if (current.providerId === provider.id || imageDefault?.config?.providerId === provider.id) {
       throw new ApplicationError(
         'MODEL_PROVIDER_DEFAULT_IN_USE',
         'Choose another default model before deleting this provider.',
@@ -294,9 +333,25 @@ export class SettingsService {
             modelId: model.id,
           }),
       configured: configured.providerId !== undefined && configured.modelId !== undefined,
-      available: model?.available ?? false,
+      available: Boolean(model?.available && (model.interfaces ?? ['chat']).includes('chat')),
       effect: 'new_sessions',
     };
+  }
+
+  /**
+   * Removes explicitly non-chat models while leaving runtime availability and extension models to Pi.
+   * Preserves input order and model metadata, independent of the Host's credential snapshot.
+   */
+  public async filterChatModels<T extends { provider: string; id: string }>(models: T[]): Promise<T[]> {
+    const providers = await this.piSettings.listProviders();
+    const excluded = new Set(
+      providers.flatMap((provider) =>
+        provider.models
+          .filter((model) => model.interfaces !== undefined && !model.interfaces.includes('chat'))
+          .map((model) => `${provider.id}\u0000${model.id}`)
+      )
+    );
+    return models.filter((model) => !excluded.has(`${model.provider}\u0000${model.id}`));
   }
 
   /**
@@ -445,7 +500,7 @@ export class ModelConfigMonitor {
     );
     const parsed = JSON.parse(settings!) as Record<string, unknown>;
     const runtimeModels = JSON.parse(models!) as Record<string, unknown>;
-    // Display-only capabilities refresh catalogs without invalidating inference runtimes.
+    // Host capabilities refresh candidate catalogs without changing Pi's inference configuration.
     delete runtimeModels['octopusModelCapabilities'];
     const modelVersion = digest([runtimeModels, auth]);
     const version = digest([models, auth, parsed['defaultProvider'], parsed['defaultModel']]);

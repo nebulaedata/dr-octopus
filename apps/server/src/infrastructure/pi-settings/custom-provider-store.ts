@@ -67,7 +67,8 @@ export class CustomProviderStore {
           ...provider,
           models: provider.models.map((model) => ({
             ...model,
-            imageGeneration: marked[model.id]?.imageGeneration === true,
+            imageGeneration: marked[model.id]?.imageGeneration ?? model.imageGeneration,
+            interfaces: marked[model.id]?.interfaces ?? model.interfaces ?? ['chat'],
           })),
         });
       }

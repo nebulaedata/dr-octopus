@@ -10,8 +10,10 @@
  * - GET /api/workspaces/:workspaceId/files/content
  * - PUT /api/workspaces/:workspaceId/files/content
  * - GET /api/workspaces/:workspaceId/files/download
+ * - GET /api/workspaces/:workspaceId/files/image
  */
 import { createReadStream } from 'node:fs';
+import { registerErrorMessages } from '../../infrastructure/i18n/error-catalog.js';
 import { toWorkspaceDto } from './workspaces.utils.js';
 import type { FastifyInstance } from 'fastify';
 import type {
@@ -30,12 +32,36 @@ import type { WorkspacesService } from './workspaces.service.js';
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 /**
+ * Registers localized failures owned by workspace image delivery.
+ */
+export function registerWorkspaceImageErrors(): void {
+  registerErrorMessages('workspaces', {
+    WORKSPACE_IMAGE_UNSUPPORTED: {
+      en: 'The image is unavailable or unsupported.',
+      'zh-CN': '图片不可用或格式不受支持。',
+    },
+  });
+}
+
+/**
  * Registers all Workspace routes behind one application Interface.
  *
  * @param server Fastify application receiving the routes.
  * @param service Unified Workspace application behavior.
  */
 export function registerWorkspacesController(server: FastifyInstance, service: WorkspacesService): void {
+  server.get<{ Params: WorkspaceRouteParams; Querystring: ReadWorkspaceFileQuery }>(
+    '/workspaces/:workspaceId/files/image',
+    async (request, reply) => {
+      const image = await service.readImage(request.params.workspaceId, request.query.path ?? '');
+      return reply
+        .type(image.mimeType)
+        .header('x-content-type-options', 'nosniff')
+        .header('content-disposition', 'inline')
+        .header('cache-control', 'private, no-cache')
+        .send(image.bytes);
+    }
+  );
   server.get('/workspaces', async () => (await service.list()).map(toWorkspaceDto));
 
   server.post<{ Body: CreateWorkspaceBody }>('/workspaces', async (request, reply) =>

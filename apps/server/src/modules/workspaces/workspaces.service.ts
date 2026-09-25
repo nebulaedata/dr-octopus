@@ -8,6 +8,7 @@ import { ZipArchive } from 'archiver';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import { hasErrorCode, normalizeRelativePath, resolveWithinRoot } from './workspaces.utils.js';
 import { readDirectorySafely, resolveWorkspaceReferenceSelection } from './workspaces.repository.js';
+import { readWorkspaceImage } from './workspaces.repository.js';
 import type { Readable } from 'node:stream';
 import type { FileTreeEntryDto, WorkspaceReferenceDto } from '@octopus/shared/protocol';
 import type { WorkspaceDescriptor, WorkspaceSelector, WorkspaceService } from '@octopus/agent';
@@ -28,6 +29,22 @@ export interface WorkspacesServiceOptions {
  * Presents Workspace lifecycle and filesystem behavior through one cohesive application Module.
  */
 export class WorkspacesService {
+  /**
+   * Returns a validated workspace image for authenticated inline preview.
+   */
+  public async readImage(workspaceId: string, path: string) {
+    const workspace = await this.resolve({ id: workspaceId });
+    try {
+      return await readWorkspaceImage(workspace.cwd, path);
+    } catch (error) {
+      if (hasErrorCode(error, 'ENOENT')) {
+        throw new ApplicationError('WORKSPACE_FILE_NOT_FOUND', 'Workspace entry was not found.', {
+          statusCode: 404,
+        });
+      }
+      throw error;
+    }
+  }
   readonly #workspaceBackend: WorkspaceService;
 
   /**

@@ -8,7 +8,8 @@ import type { ThinkingLevel } from './runtime.js';
 import type { CustomProviderConfigurationDto } from './settings-custom-provider.js';
 
 export type ModelCapability = 'reasoning' | 'image_input' | 'image_generation';
-export type ModelInterface = 'chat' | 'image';
+/** Host classification; `other` never enters Pi's native input/output modalities. */
+export type ModelInterface = 'chat' | 'image' | 'other';
 
 export const UpdateModelCapabilitiesBodySchema = z
   .object({
@@ -18,6 +19,13 @@ export const UpdateModelCapabilitiesBodySchema = z
       .min(1)
       .refine((input) => input.includes('text')),
     imageGeneration: z.boolean(),
+    interfaces: z
+      .array(z.enum(['chat', 'image', 'other']))
+      .min(1)
+      .max(2)
+      .refine((interfaces) => new Set(interfaces).size === interfaces.length)
+      .refine((interfaces) => !interfaces.includes('other') || interfaces.length === 1)
+      .optional(),
   })
   .strict();
 export type UpdateModelCapabilitiesBody = z.infer<typeof UpdateModelCapabilitiesBodySchema>;
@@ -66,7 +74,7 @@ export interface ModelSettingsDto {
   input: Array<'text' | 'image'>;
   /** Unified display capabilities from Pi catalogs or user-managed model metadata. */
   capabilities: ModelCapability[];
-  /** Pi catalog interfaces, independent of manually declared capabilities. */
+  /** Supported interfaces from the catalog or explicit custom model configuration. */
   interfaces: ModelInterface[];
   contextWindow?: number;
   maxTokens?: number;

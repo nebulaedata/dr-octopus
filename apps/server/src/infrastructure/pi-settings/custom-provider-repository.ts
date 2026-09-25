@@ -5,7 +5,11 @@
 import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { UpdateModelCapabilitiesBody, CustomProviderConfigurationDto } from '@octopus/shared/protocol';
+import type {
+  UpdateModelCapabilitiesBody,
+  CustomProviderConfigurationDto,
+  ModelInterface,
+} from '@octopus/shared/protocol';
 
 export interface CustomProviderRecord extends CustomProviderConfigurationDto {
   name: string;
@@ -14,8 +18,11 @@ interface ModelDocument {
   providers: Record<string, Record<string, unknown>>;
   /** Persisted Pi document key used by existing installations. */
   octopusLocalProviders?: Record<string, CustomProviderRecord>;
-  /** Settings-only image capability kept outside Pi's inference model schema. */
-  octopusModelCapabilities?: Record<string, Record<string, { imageGeneration: true }>>;
+  /** Host model capabilities kept outside Pi's inference model schema. */
+  octopusModelCapabilities?: Record<
+    string,
+    Record<string, { imageGeneration: boolean; interfaces?: ModelInterface[] }>
+  >;
 }
 const queues = new Map<string, Promise<unknown>>();
 
@@ -141,7 +148,7 @@ export async function deleteCustomProvider(path: string, id: string): Promise<bo
 }
 
 /**
- * Updates Pi capabilities and stores the image-generation marker separately from inference settings.
+ * Updates Pi capabilities and preserves Host interface declarations separately from inference settings.
  */
 export async function saveModelCapabilities(
   path: string,
@@ -150,7 +157,7 @@ export async function saveModelCapabilities(
   input: UpdateModelCapabilitiesBody
 ): Promise<boolean> {
   return updateProviderDocument(path, id, (document) => {
-    const { imageGeneration, ...piCapabilities } = input;
+    const { imageGeneration, interfaces, ...piCapabilities } = input;
     const provider = document.providers[id];
     if (!provider) {
       throw new Error('Provider configuration no longer exists.');
@@ -165,11 +172,11 @@ export async function saveModelCapabilities(
     }
     document.octopusModelCapabilities ??= {};
     const marked = { ...document.octopusModelCapabilities[id] };
-    if (imageGeneration) {
-      marked[modelId] = { imageGeneration: true };
-    } else {
-      delete marked[modelId];
-    }
+    marked[modelId] = {
+      ...marked[modelId],
+      imageGeneration,
+      ...(interfaces === undefined ? {} : { interfaces }),
+    };
     if (Object.keys(marked).length > 0) {
       document.octopusModelCapabilities[id] = marked;
     } else {

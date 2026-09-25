@@ -102,6 +102,7 @@ for (const width of [1280, 390, 320]) {
       await reasoning.focus();
       await page.keyboard.press('Space');
       await dialog.getByRole('checkbox', { name: 'Image input' }).check();
+      await dialog.getByRole('button', { name: 'Image generation', exact: true }).click();
       await dialog.getByRole('button', { name: 'Save configuration' }).click();
       await expect(dialog.getByText('Test save failed')).toBeVisible();
       await expect(reasoning).toBeChecked();
@@ -122,10 +123,30 @@ for (const width of [1280, 390, 320]) {
       assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
       await dialog.getByRole('button', { name: 'Save configuration' }).click();
       await expect(dialog).not.toBeVisible();
-      assert.deepEqual(writes.at(-1), { reasoning: true, input: ['text', 'image'], imageGeneration: false });
+      assert.deepEqual(writes.at(-1), {
+        reasoning: true,
+        input: ['text', 'image'],
+        imageGeneration: false,
+        interfaces: ['image'],
+      });
       await expect(edit).toBeFocused();
       await edit.click();
+      await expect(dialog.getByRole('button', { name: 'Image generation', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
       await expect(page.getByRole('checkbox', { name: 'Reasoning' })).toBeChecked();
+      await dialog.getByRole('button', { name: 'Other', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Save configuration' }).click();
+      await expect(dialog).not.toBeVisible();
+      assert.deepEqual(writes.at(-1).interfaces, ['other']);
+      await expect(page.getByText('Other', { exact: true })).toBeVisible();
+      await edit.click();
+      await expect(dialog.getByRole('button', { name: 'Other', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      await page.screenshot({ animations: 'disabled', path: join(artifacts, `other-${width}.png`) });
       await page.keyboard.press('Escape');
       await expect(edit).toBeFocused();
     } finally {

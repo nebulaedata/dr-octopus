@@ -7,8 +7,50 @@ export { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { isAbsolute, relative, sep } from 'node:path';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import { hasErrorCode, normalizeRelativePath, resolveWithinRoot } from './workspaces.utils.js';
+import { readFile } from 'node:fs/promises';
+import sharp from 'sharp';
 import type { Dirent } from 'node:fs';
 import type { WorkspaceReferenceDto } from '@octopus/shared/protocol';
+
+/**
+ * Reads a bounded real image inside a workspace without following links outside its root.
+ */
+export async function readWorkspaceImage(root: string, path: string) {
+  const canonicalRoot = await realpath(root);
+  const target = await realpath(resolveWithinRoot(root, normalizeRelativePath(path)));
+  const suffix = relative(canonicalRoot, target);
+  if (isAbsolute(suffix) || suffix === '..' || suffix.startsWith(`..${sep}`)) {
+    throw new ApplicationError('WORKSPACE_FILE_PATH_INVALID', 'Requested path is invalid.', {
+      statusCode: 400,
+    });
+  }
+  const info = await stat(target);
+  if (!info.isFile() || info.size > 32 * 1024 * 1024) {
+    throw new ApplicationError('WORKSPACE_IMAGE_UNSUPPORTED', 'The image is unavailable or unsupported.', {
+      statusCode: 415,
+    });
+  }
+  const bytes = await readFile(target);
+  if (bytes.length > 32 * 1024 * 1024) {
+    throw new ApplicationError('WORKSPACE_IMAGE_UNSUPPORTED', 'The image is unavailable or unsupported.', {
+      statusCode: 415,
+    });
+  }
+  try {
+    const image = sharp(bytes, { limitInputPixels: 40_000_000 });
+    const metadata = await image.metadata();
+    if (!['png', 'jpeg', 'webp'].includes(metadata.format ?? '') || (metadata.pages ?? 1) > 1) {
+      throw new Error('Unsupported image');
+    }
+    await image.stats();
+    return { bytes, mimeType: `image/${metadata.format}` };
+  } catch (cause) {
+    throw new ApplicationError('WORKSPACE_IMAGE_UNSUPPORTED', 'The image is unavailable or unsupported.', {
+      statusCode: 415,
+      cause,
+    });
+  }
+}
 
 /**
  * Resolves, validates, normalizes, and de-duplicates Workspace references.

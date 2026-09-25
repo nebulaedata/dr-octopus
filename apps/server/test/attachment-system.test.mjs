@@ -48,6 +48,26 @@ const allProcessors = new Set([
   'full-text-index',
 ]);
 
+test('text-only models receive an image manifest path when materialization is available', () => {
+  const context = capabilityContext();
+  context.agent.modelInputs = new Set(['text']);
+  const result = createAttachmentCapabilityResolver().resolve(evidence('png', 'image/png', 'png'), context);
+  assert.deepEqual(result.deliveryCapabilities, ['manifest-path']);
+  assert.equal(
+    result.diagnostics.some((item) => item.code === 'MODEL_INPUT_UNSUPPORTED'),
+    false
+  );
+  context.tools = new Set();
+  const unavailable = createAttachmentCapabilityResolver().resolve(
+    evidence('png', 'image/png', 'png'),
+    context
+  );
+  assert.equal(
+    unavailable.diagnostics.some((item) => item.code === 'MODEL_INPUT_UNSUPPORTED'),
+    true
+  );
+});
+
 /**
  * Creates the explicit pure resolution context shared by focused cases.
  */

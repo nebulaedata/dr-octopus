@@ -60,6 +60,7 @@ import type {
 } from '../../infrastructure/runtime/index.js';
 import type { SessionNotificationsRepository } from './sessions.repository.js';
 import type { WorkspaceService } from '@octopus/agent';
+import type { SettingsService } from '../model-settings/index.js';
 
 /**
  * Exposes Session use cases shared by HTTP and realtime transport Adapters.
@@ -88,6 +89,7 @@ export class SessionsService {
   readonly #commands: RuntimeCommands;
   readonly #events: RuntimeEventProjection;
   readonly #artifacts: RuntimeArtifacts;
+  readonly #modelSettings: SessionsServiceOptions['modelSettings'];
   readonly #createSessionId: () => string;
   readonly #messageEntryCache = new Map<string, { cursor?: string; entries: SessionEntry[] }>();
   readonly #listMessageAttachments: (sessionId: string) => Map<string, MessageAttachmentDto[]>;
@@ -96,6 +98,7 @@ export class SessionsService {
    */
   public constructor(options: SessionsServiceDependencies) {
     this.#runtime = options.runtime;
+    this.#modelSettings = options.modelSettings;
     this.#refreshConfiguration = () => options.refreshConfiguration?.() ?? Promise.resolve();
     this.#sessions = options.sessionsRepository;
     this.#feedback = options.messageFeedbackRepository;
@@ -339,6 +342,7 @@ export class SessionsService {
         );
       }
     }
+    await this.#assertChatModel(command);
     return this.#commands.execute(sessionId, command, expected);
   }
 
@@ -441,6 +445,7 @@ export class SessionsService {
     command: Extract<ManagedSessionCommand, { type: 'set_model' | 'set_thinking_level' }>,
     expected: RuntimeGenerationTarget = {}
   ): Promise<ThinkingStateDto> {
+    await this.#assertChatModel(command);
     const thinking = await this.#commands.executeThinkingControl(sessionId, command, expected);
     this.#sessions.updatePreferences(sessionId, { thinkingLevel: thinking.level });
     return thinking;
@@ -629,7 +634,7 @@ export class SessionsService {
           planMode: this.#readPlanModeState(sessionId, planModeAvailable),
           memory: this.#events.getMemory(sessionId),
           commands,
-          models: this.#artifacts.projectModels(modelsResponse),
+          models: await this.#filterChatModels(this.#artifacts.projectModels(modelsResponse)),
           readiness: {
             ready: true,
             runtimeId: target.binding.runtimeId,
@@ -833,7 +838,34 @@ export class SessionsService {
    * 获取模型列表并压缩为浏览器稳定 DTO。
    */
   public async getModels(sessionId: string): Promise<ModelDto[]> {
-    return this.#artifacts.getModels(sessionId);
+    return this.#filterChatModels(await this.#artifacts.getModels(sessionId));
+  }
+
+  /**
+   * Preserves runtime availability while excluding explicitly non-chat models.
+   */
+  async #filterChatModels(models: ModelDto[]): Promise<ModelDto[]> {
+    if (!this.#modelSettings) {
+      return models;
+    }
+    return this.#modelSettings.filterChatModels(models);
+  }
+
+  /**
+   * Rejects explicitly non-chat models; Pi validates availability in the active runtime.
+   */
+  async #assertChatModel(command: ManagedSessionCommand): Promise<void> {
+    if (command.type !== 'set_model' || !this.#modelSettings) {
+      return;
+    }
+    const models = await this.#modelSettings.filterChatModels([
+      { provider: command.provider, id: command.modelId },
+    ]);
+    if (models.length === 0) {
+      throw new ApplicationError('CONVERSATION_MODEL_REQUIRED', 'Choose an available model before sending.', {
+        statusCode: 409,
+      });
+    }
   }
 
   /**
@@ -1526,6 +1558,7 @@ export function createSessionCommandCatalog(runtimeCommands: readonly RuntimeCom
 }
 
 export interface SessionsServiceOptions {
+  modelSettings?: Pick<SettingsService, 'filterChatModels'>;
   runtime?: SessionRuntimeCoordinator;
   /**
    * Reconciles effective configuration before activating or sending new work.

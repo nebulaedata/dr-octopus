@@ -1,6 +1,10 @@
 {
   "version": 2,
   "toolRules": {
+    "image_generate": {
+      "kind": "write",
+      "pathFields": ["referenceImages", "outputDirectory"]
+    },
     "background_task": {
       "kind": "read"
     },

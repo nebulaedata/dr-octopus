@@ -6,6 +6,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
+import { SettingsService } from '../dist/modules/model-settings/index.js';
 import { createSessionsService } from '../dist/modules/sessions/index.js';
 import { projectHostVisibleUserMessage } from '../dist/modules/sessions/sessions.service.js';
 
@@ -24,6 +25,7 @@ function createService(options = {}) {
     },
     getBindingBySessionId: () => undefined,
     stop: async () => undefined,
+    ...options.runtime,
   };
   const sessionsRepository = {
     getRow: options.getRow ?? (() => undefined),
@@ -56,10 +58,108 @@ function createService(options = {}) {
     sessionsRepository,
     messageFeedbackRepository,
     piSessionsRepository,
+    modelSettings: options.modelSettings,
   });
 
   return { service, emit: (event) => runtimeListener?.(event) };
 }
+
+test('session model lists and switches honor the Host chat candidate catalog', async (t) => {
+  const commands = [];
+  const models = ['chat', 'image', 'both', 'other'].map((id) => ({ provider: 'custom', id, name: id }));
+  const { service } = createService({
+    getRow: () => ({ id: 'session-a', workspaceId: 'workspace-a', agentSessionPath: '/tmp/session-a.jsonl' }),
+    modelSettings: new SettingsService({
+      listProviders: async () => [
+        {
+          id: 'custom',
+          models: [
+            { id: 'chat', interfaces: ['chat'] },
+            { id: 'image', interfaces: ['image'] },
+            { id: 'both', interfaces: ['chat', 'image'] },
+            { id: 'other', interfaces: ['other'] },
+          ],
+        },
+      ],
+    }),
+    runtime: {
+      withExisting: async (_request, operation) =>
+        operation({
+          binding: { runtimeId: 'runtime-a', epoch: 1 },
+          execute: async (command) => {
+            commands.push(command);
+            return { success: true, data: { models } };
+          },
+        }),
+    },
+  });
+  t.after(() => service.dispose());
+  assert.deepEqual(
+    (await service.getModels('session-a')).map((model) => model.id),
+    ['chat', 'both']
+  );
+  const command = { type: 'set_model', provider: 'custom', modelId: 'image' };
+  await assert.rejects(service.executeThinkingControl('session-a', command), {
+    code: 'CONVERSATION_MODEL_REQUIRED',
+  });
+  await assert.rejects(service.execute('session-a', command), { code: 'CONVERSATION_MODEL_REQUIRED' });
+  await assert.rejects(service.executeThinkingControl('session-a', { ...command, modelId: 'other' }), {
+    code: 'CONVERSATION_MODEL_REQUIRED',
+  });
+  await assert.rejects(service.execute('session-a', { ...command, modelId: 'other' }), {
+    code: 'CONVERSATION_MODEL_REQUIRED',
+  });
+  assert.equal(
+    commands.some((item) => item.type === 'set_model'),
+    false
+  );
+});
+
+test('runtime-only models remain selectable through both model-switch entrypoints', async (t) => {
+  const models = [
+    { provider: 'extension', id: 'chat', name: 'Extension chat' },
+    { provider: 'custom', id: 'runtime-auth', name: 'Runtime authenticated chat' },
+  ];
+  const commands = [];
+  const { service } = createService({
+    getRow: () => ({ id: 'session-a', workspaceId: 'workspace-a', agentSessionPath: '/tmp/session-a.jsonl' }),
+    modelSettings: new SettingsService({
+      listProviders: async () => [
+        {
+          id: 'custom',
+          models: [{ id: 'runtime-auth', available: false }],
+        },
+      ],
+    }),
+    runtime: {
+      withExisting: async (_request, operation) =>
+        operation({
+          binding: { runtimeId: 'runtime-a', epoch: 1 },
+          execute: async (command) => {
+            commands.push(command);
+            if (command.type === 'get_available_models') {
+              return { success: true, data: { models } };
+            }
+            if (command.type === 'get_available_thinking_levels') {
+              return { success: true, data: { levels: ['off'] } };
+            }
+            return { success: true, data: { model: models[0], thinkingLevel: 'off' } };
+          },
+        }),
+    },
+  });
+  t.after(() => service.dispose());
+  assert.deepEqual(
+    await service.getModels('session-a'),
+    models.map((model) => ({ ...model, reasoning: false, input: ['text'] }))
+  );
+  for (const model of models) {
+    const command = { type: 'set_model', provider: model.provider, modelId: model.id };
+    await service.execute('session-a', command);
+    await service.executeThinkingControl('session-a', command);
+    assert.equal(commands.filter((item) => item.type === 'set_model' && item.modelId === model.id).length, 2);
+  }
+});
 
 /**
  * Drains queued microtasks so deferred event enrichment can complete.

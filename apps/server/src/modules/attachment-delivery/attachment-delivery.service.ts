@@ -107,11 +107,17 @@ export class AttachmentDeliveryService {
       }
       if (item.classification === 'direct-image') {
         if (!input.modelInputs.has('image')) {
-          throw new ApplicationError(
-            'MODEL_INPUT_UNSUPPORTED',
-            'The selected model does not accept image attachments.',
-            { statusCode: 422, retryable: true }
-          );
+          result.manifests.push({
+            attachmentId: item.id,
+            name: item.name,
+            detectedMediaType: item.detectedMediaType ?? 'application/octet-stream',
+            byteSize: item.byteSize,
+            sha256: row.sha256,
+            ...delivery,
+            delivery: 'manifest-only',
+            contentAvailableToModel: false,
+          });
+          continue;
         }
         const image = this.attachments.getDeliveryDerivative(item.id, 'model-image');
         if (

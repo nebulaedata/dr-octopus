@@ -17,12 +17,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@octopus/ui/components/dialog';
-import { Field, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
+import { ToggleButtonGroup } from '@/components/ToggleButtonGroup';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
 import { updateModelCapabilities } from '@/api/model-capabilities';
 import { queryKeys } from '@/queries/core/query-keys';
 import { useI18n } from '@/i18n/use-i18n';
-import type { ModelSettingsDto, UpdateModelCapabilitiesBody } from '@octopus/shared/protocol';
+import type { ModelInterface, ModelSettingsDto, UpdateModelCapabilitiesBody } from '@octopus/shared/protocol';
 
 /**
  * Keeps the trigger mounted so closing the editor restores keyboard focus to its model row.
@@ -85,22 +86,43 @@ function ModelCapabilitiesForm({
       await Promise.all([
         client.invalidateQueries({ queryKey: queryKeys.modelProvidersRoot }),
         client.invalidateQueries({ queryKey: queryKeys.defaultModel }),
+        client.invalidateQueries({ queryKey: queryKeys.imagegen }),
+        client.invalidateQueries({ queryKey: ['conversation-models'] }),
+        client.invalidateQueries({ queryKey: queryKeys.bootstrapRoot }),
       ]);
       onSaved();
     },
   });
+  let interfaceType = 'chat';
+  if (model.interfaces.includes('other')) {
+    interfaceType = 'other';
+  } else if (!model.interfaces.includes('chat')) {
+    interfaceType = 'image';
+  } else if (model.interfaces.includes('image')) {
+    interfaceType = 'both';
+  }
   const form = useForm({
     defaultValues: {
       reasoning: model.reasoning,
       image: model.input.includes('image'),
       imageGeneration: model.capabilities.includes('image_generation'),
+      interfaceType,
     },
     onSubmit: async ({ value }) => {
+      let interfaces: ModelInterface[] = ['chat'];
+      if (value.interfaceType === 'other') {
+        interfaces = ['other'];
+      } else if (value.interfaceType === 'image') {
+        interfaces = ['image'];
+      } else if (value.interfaceType === 'both') {
+        interfaces = ['chat', 'image'];
+      }
       try {
         await mutation.mutateAsync({
           reasoning: value.reasoning,
           input: value.image ? ['text', 'image'] : ['text'],
           imageGeneration: value.imageGeneration,
+          interfaces,
         });
       } catch {
         // The inline error preserves the draft for retry.
@@ -117,6 +139,47 @@ function ModelCapabilitiesForm({
       }}
     >
       <FieldGroup>
+        <form.Field name="interfaceType">
+          {(field) => (
+            <Field>
+              <FieldLabel>{t('settings.providers.modelInterfaces', 'Model interfaces')}</FieldLabel>
+              <ToggleButtonGroup
+                className="flex-wrap"
+                ariaLabel="Model interfaces"
+                selectedKey={field.state.value}
+                onSelectedKeyChange={field.handleChange}
+                options={[
+                  {
+                    key: 'chat',
+                    label: t('settings.providers.chatInterface', 'Chat'),
+                    disabled: mutation.isPending,
+                  },
+                  {
+                    key: 'image',
+                    label: t('settings.providers.imageInterface', 'Image generation'),
+                    disabled: mutation.isPending,
+                  },
+                  {
+                    key: 'both',
+                    label: t('settings.providers.bothInterfaces', 'Chat and image generation'),
+                    disabled: mutation.isPending,
+                  },
+                  {
+                    key: 'other',
+                    label: t('settings.providers.otherInterface', 'Other'),
+                    disabled: mutation.isPending,
+                  },
+                ]}
+              />
+              <FieldDescription>
+                {t(
+                  'settings.providers.modelInterfacesHint',
+                  'Only models supporting chat can be selected for agents.'
+                )}
+              </FieldDescription>
+            </Field>
+          )}
+        </form.Field>
         <form.Field name="reasoning">
           {(field) => (
             <Field orientation="horizontal">
