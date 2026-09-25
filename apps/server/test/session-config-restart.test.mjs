@@ -12,7 +12,7 @@ import { RuntimeConfigChanges } from '../dist/infrastructure/runtime-config/runt
 import { createModelConfigChanges } from '../dist/modules/model-settings/model-settings.service.js';
 import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/coordinator.js';
 import { SessionLifecycleControl } from '../dist/infrastructure/runtime/session-lifecycle-control.js';
-import { saveLocalProvider } from '../dist/infrastructure/pi-settings/local-provider-repository.js';
+import { saveCustomProvider } from '../dist/infrastructure/pi-settings/custom-provider-repository.js';
 import { SessionRuntimeDirectory } from '../dist/infrastructure/runtime/runtime-directory.js';
 import { SessionRuntimeRetirement } from '../dist/infrastructure/runtime/retirement.js';
 
@@ -45,11 +45,11 @@ test('model repository distinguishes draft, unchanged configuration and a new en
   try {
     const path = join(root, 'models.json');
     const record = { name: 'Local', runtime: 'ollama', baseUrl: 'http://localhost:11434' };
-    assert.equal(await saveLocalProvider(path, 'local', record), false);
-    assert.equal(await saveLocalProvider(path, 'local', { ...record, modelId: 'model' }), true);
-    assert.equal(await saveLocalProvider(path, 'local', { ...record, modelId: 'model' }), false);
+    assert.equal(await saveCustomProvider(path, 'local', record), false);
+    assert.equal(await saveCustomProvider(path, 'local', { ...record, modelId: 'model' }), true);
+    assert.equal(await saveCustomProvider(path, 'local', { ...record, modelId: 'model' }), false);
     assert.equal(
-      await saveLocalProvider(path, 'local', {
+      await saveCustomProvider(path, 'local', {
         ...record,
         modelId: 'model',
         baseUrl: 'http://localhost:11435',

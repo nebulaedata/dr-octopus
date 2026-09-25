@@ -5,7 +5,7 @@
 
 import { SettingContainer } from '../Layout/SettingContainer';
 import { useEffect, useState } from 'react';
-import { AddLocalProviderDialog } from './AddLocalProviderDialog';
+import { AddCustomProviderDialog } from './AddCustomProviderDialog';
 import { useResponsive } from 'ahooks';
 import { cn } from '@octopus/ui/lib/utils';
 import { useModelProvider, useModelProviders } from '@/queries/settings-queries';
@@ -61,9 +61,10 @@ export function ModelProvidersPage({ provider, onProviderChange }: ModelProvider
           error={detail.error instanceof Error ? detail.error.message : undefined}
           onBack={() => onProviderChange()}
           onRetry={() => void detail.refetch()}
+          onDeleted={() => onProviderChange()}
         />
       </div>
-      {adding && <AddLocalProviderDialog onClose={() => setAdding(false)} onCreated={onProviderChange} />}
+      {adding && <AddCustomProviderDialog onClose={() => setAdding(false)} onCreated={onProviderChange} />}
     </SettingContainer>
   );
 }

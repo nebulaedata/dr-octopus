@@ -3,6 +3,7 @@
  * @description Exposes settings components while keeping hooks, state, and utilities private.
  */
 export { JevSettingsPage } from './JevSettingsPage';
+export { AboutPage } from './about/AboutPage';
 export { DefaultModelPage } from './default-model/DefaultModelPage';
 export { EnvironmentEditor } from './environment/EnvironmentEditor';
 export { EnvironmentPage } from './environment/EnvironmentPage';
@@ -34,8 +35,8 @@ export { McpServersPage } from './mcp-servers/McpServersPage';
 export { MemoryScreeningCard } from './memory/MemoryScreeningCard';
 export { MemoryServiceCard } from './memory/MemoryServiceCard';
 export { MemorySettingsPage } from './memory/MemorySettingsPage';
-export { AddLocalProviderDialog } from './model-providers/AddLocalProviderDialog';
-export { LocalProviderForm } from './model-providers/LocalProviderForm';
+export { AddCustomProviderDialog } from './model-providers/AddCustomProviderDialog';
+export { CustomProviderForm } from './model-providers/CustomProviderForm';
 export { ModelCapabilitiesDialog } from './model-providers/ModelCapabilitiesDialog';
 export { ModelProvidersPage } from './model-providers/ModelProvidersPage';
 export type { ModelProvidersPageProps } from './model-providers/ModelProvidersPage';

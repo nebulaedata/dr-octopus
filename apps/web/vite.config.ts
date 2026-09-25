@@ -3,6 +3,7 @@
  * @description Configures the Pi Web Vite build, React compiler, Tailwind, and local API proxies.
  */
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { defineConfig, loadEnv } from 'vite';
 import viteFastify from '@fastify/vite/plugin';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
@@ -14,6 +15,9 @@ import tailwindcss from '@tailwindcss/vite';
  * Keep development HTTP and WebSocket proxies aligned with the standalone Server's root .env.
  */
 export default defineConfig(({ mode }) => {
+  const releaseConfig = JSON.parse(
+    readFileSync(new URL('../../release.config.json', import.meta.url), 'utf8')
+  ) as { manifest: { version: string } };
   const env = loadEnv(mode, fileURLToPath(new URL('../../', import.meta.url)), 'SERVER_');
   const host = env.SERVER_HOST?.trim() || '127.0.0.1';
   let proxyHost = host;
@@ -25,6 +29,9 @@ export default defineConfig(({ mode }) => {
   const port = env.SERVER_PORT?.trim() || '3000';
   const target = `http://${proxyHost}:${port}`;
   return {
+    define: {
+      __OCTOPUS_RELEASE_VERSION__: JSON.stringify(releaseConfig.manifest.version),
+    },
     build: {
       rolldownOptions: {
         treeshake: {

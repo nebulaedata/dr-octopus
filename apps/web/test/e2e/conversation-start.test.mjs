@@ -68,6 +68,16 @@ for (const width of [1280, 390, 320]) {
         },
       })
     );
+    await page.route('**/api/settings/model-providers', (route) =>
+      route.fulfill({
+        json: {
+          providers: [
+            { providerId: 'provider', name: 'Main provider' },
+            { providerId: 'octopus-mr-token-id', name: 'Mr.Token' },
+          ],
+        },
+      })
+    );
     await page.route('**/api/workspaces/*/session-drafts', (route) => {
       runtimePreparations++;
       return route.fulfill({ status: 500, json: {} });
@@ -104,6 +114,20 @@ for (const width of [1280, 390, 320]) {
     models = [
       { id: 'one', provider: 'provider', name: 'First model', input: ['text'], reasoning: false },
       { id: 'two', provider: 'provider', name: 'Second model', input: ['text'], reasoning: false },
+      ...Array.from({ length: 14 }, (_, index) => ({
+        id: `extra-${index}`,
+        provider: 'provider',
+        name: `Extra model ${index}`,
+        input: ['text'],
+        reasoning: false,
+      })),
+      {
+        id: 'remote',
+        provider: 'octopus-mr-token-id',
+        name: 'Remote model',
+        input: ['text'],
+        reasoning: false,
+      },
     ];
     defaultId = 'one';
     await page.evaluate(() =>
@@ -123,6 +147,31 @@ for (const width of [1280, 390, 320]) {
     await picker.click();
     await page.getByRole('menuitem', { name: /^Model / }).hover();
     await expect(page.getByRole('menuitemradio', { name: 'Follow default model' })).toBeChecked();
+    await expect(
+      page.locator('[data-slot="dropdown-menu-sub-content"] [data-slot="dropdown-menu-label"]')
+    ).toHaveText(['Main provider', 'Mr.Token']);
+    await page.getByRole('menuitemradio', { name: 'Follow default model' }).focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('menuitemradio', { name: 'First model' })).toBeFocused();
+    const modelViewport = page.locator(
+      '[data-slot="dropdown-menu-sub-content"] [data-slot="scroll-area-viewport"]'
+    );
+    const dimensions = await modelViewport.evaluate((element) => ({
+      height: element.clientHeight,
+      contentHeight: element.scrollHeight,
+    }));
+    expect(dimensions.height).toBeLessThanOrEqual(288);
+    expect(dimensions.contentHeight).toBeGreaterThan(dimensions.height);
+    await modelViewport.hover();
+    await page.mouse.wheel(0, 250);
+    await expect.poll(() => modelViewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await page.getByRole('menuitemradio', { name: 'Remote model' }).click();
+    await expect(picker).toHaveAttribute('title', 'Remote model');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(picker).toHaveAttribute('aria-expanded', 'false');
+    await picker.click();
+    await page.getByRole('menuitem', { name: /^Model / }).hover();
     await page.getByRole('menuitemradio', { name: 'First model' }).click();
     await page.reload();
     await expect(picker).toHaveAttribute('title', 'First model');

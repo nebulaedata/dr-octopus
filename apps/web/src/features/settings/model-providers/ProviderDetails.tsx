@@ -3,28 +3,19 @@
  * @description Presents Provider authentication, endpoint and model snapshot details.
  */
 
-import { AstroidIcon, ImageIcon, ServerIcon, LightbulbIcon, XIcon } from 'lucide-react';
+import { ServerIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
 import { Field, FieldLabel } from '@octopus/ui/components/field';
 import { Input } from '@octopus/ui/components/input';
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from '@octopus/ui/components/item';
 import { ScrollArea } from '@octopus/ui/components/scroll-area';
 import { Skeleton } from '@octopus/ui/components/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/tooltip';
 import { ProviderAuthForm } from './ProviderAuthForm';
-import { ModelCapabilitiesDialog } from './ModelCapabilitiesDialog';
-import { LocalProviderForm } from './LocalProviderForm';
+import { ProviderModelList } from './ProviderModelList';
+import { CustomProviderForm } from './CustomProviderForm';
+import { DeleteCustomProviderDialog } from './DeleteCustomProviderDialog';
 import { useI18n } from '@/i18n/use-i18n';
 import type { ModelProviderDetailDto } from '@octopus/shared/protocol';
 
@@ -34,6 +25,7 @@ export interface ProviderDetailsProps {
   error?: string;
   onBack(): void;
   onRetry(): void;
+  onDeleted(): void;
 }
 
 /**
@@ -127,12 +119,14 @@ export function ProviderDetails(props: ProviderDetailsProps) {
             </div>
             <p className="truncate text-sm text-muted-foreground">{provider.providerId}</p>
           </div>
+          {provider.local && <DeleteCustomProviderDialog provider={provider} onDeleted={props.onDeleted} />}
         </header>
         {provider.local ? (
-          <LocalProviderForm
+          <CustomProviderForm
             key={provider.providerKey}
             providerKey={provider.providerKey}
             configuration={provider.local}
+            keyConfigured={provider.auth.source === 'stored'}
           />
         ) : (
           <>
@@ -214,65 +208,7 @@ export function ProviderDetails(props: ProviderDetailsProps) {
             </div>
             <Badge variant="secondary">{provider.modelCount}</Badge>
           </div>
-          <ItemGroup>
-            {provider.models.map((model) => (
-              <Item key={model.modelKey} variant="outline" size="sm">
-                <ItemMedia variant="icon">
-                  <AstroidIcon />
-                </ItemMedia>
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="text-xs">{model.name}</ItemTitle>
-                  <ItemDescription className="truncate text-xs">
-                    {model.modelId} · {model.api}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions className="flex-wrap justify-end">
-                  {provider.provenance === 'models_json' && (
-                    <ModelCapabilitiesDialog providerKey={provider.providerKey} model={model} />
-                  )}
-                  {model.reasoning && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant="secondary">
-                          <LightbulbIcon />
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">
-                        {t('settings.providers.reasoning', 'Supports reasoning')}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {model.input.includes('image') && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant="secondary">
-                          <ImageIcon />
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">
-                        {t('settings.providers.imageInput', 'Supports image input')}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {model.isDefault && (
-                    <Badge className="text-[11px]">{t('settings.providers.defaultBadge', 'Default')}</Badge>
-                  )}
-                  {!model.available && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant="destructive">
-                          <XIcon />
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">
-                        {t('settings.providers.unavailable', 'Model unavailable')}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </ItemActions>
-              </Item>
-            ))}
-          </ItemGroup>
+          <ProviderModelList provider={provider} />
         </section>
       </div>
     </ScrollArea>

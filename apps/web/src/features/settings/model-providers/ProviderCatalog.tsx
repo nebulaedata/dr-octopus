@@ -40,6 +40,9 @@ const providerAvatarAssets = [
  * Resolves a bundled Provider avatar from the Provider identity returned by the server.
  */
 function getProviderAvatarSrc(provider: ModelProviderSummaryDto): string | undefined {
+  if (provider.local) {
+    return provider.local.runtime === 'mr-token' ? '/assets/llm/mrtoken.svg' : undefined;
+  }
   const identities = [provider.providerId, provider.name].map((value) => value.toLocaleLowerCase());
 
   return providerAvatarAssets.find(({ aliases }) =>
@@ -55,7 +58,7 @@ export interface ProviderCatalogProps {
   onSelect(providerKey: string): void;
   onRetry(): void;
   /**
-   * Opens the local provider creation dialog.
+   * Opens the custom provider creation dialog.
    */
   onAdd(): void;
 }

@@ -17,7 +17,7 @@
     "cmdk": "^1.1.1",
     "cn": "^0.2.5",
     "date-fns": "^4.4.0",
-    "lucide-react": "^1.28.0",
+    "lucide-react": "^1.48.0",
     "react": "^19.2.6",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.6",

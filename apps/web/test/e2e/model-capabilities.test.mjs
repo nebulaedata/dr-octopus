@@ -44,6 +44,8 @@ for (const width of [1280, 390, 320]) {
         api: 'openai-completions',
         reasoning: false,
         input: ['text'],
+        capabilities: [],
+        interfaces: ['chat'],
         available: true,
         contextWindow: 32000,
         maxTokens: 4096,
@@ -73,7 +75,13 @@ for (const width of [1280, 390, 320]) {
             failSave = false;
             return route.fulfill({ status: 500, json: { message: 'Test save failed' } });
           }
-          Object.assign(model, input);
+          Object.assign(model, input, {
+            capabilities: [
+              ...(input.reasoning ? ['reasoning'] : []),
+              ...(input.input.includes('image') ? ['image_input'] : []),
+              ...(input.imageGeneration ? ['image_generation'] : []),
+            ],
+          });
           return route.fulfill({ json: provider });
         }
         if (path.endsWith('/model-providers')) return route.fulfill({ json: { providers: [provider] } });
@@ -90,26 +98,34 @@ for (const width of [1280, 390, 320]) {
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('dialog');
       await expect(dialog).toBeVisible();
-      const reasoning = dialog.getByRole('checkbox', { name: 'Supports reasoning' });
+      const reasoning = dialog.getByRole('checkbox', { name: 'Reasoning' });
       await reasoning.focus();
       await page.keyboard.press('Space');
-      await dialog.getByRole('checkbox', { name: 'Supports image input' }).check();
+      await dialog.getByRole('checkbox', { name: 'Image input' }).check();
       await dialog.getByRole('button', { name: 'Save configuration' }).click();
       await expect(dialog.getByText('Test save failed')).toBeVisible();
       await expect(reasoning).toBeChecked();
-      await page.screenshot({ animations: 'disabled', path: join(artifacts, `capabilities-${width}-light.png`) });
+      await page.screenshot({
+        animations: 'disabled',
+        path: join(artifacts, `capabilities-${width}-light.png`),
+      });
       await page.emulateMedia({ colorScheme: 'dark' });
       await expect(page.locator('html')).toHaveClass(/dark/);
-      await page.screenshot({ animations: 'disabled', path: join(artifacts, `capabilities-${width}-dark.png`) });
-      assert.ok(await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth));
+      await page.screenshot({
+        animations: 'disabled',
+        path: join(artifacts, `capabilities-${width}-dark.png`),
+      });
+      assert.ok(
+        await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth)
+      );
       const bounds = await dialog.boundingBox();
       assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
       await dialog.getByRole('button', { name: 'Save configuration' }).click();
       await expect(dialog).not.toBeVisible();
-      assert.deepEqual(writes.at(-1), { reasoning: true, input: ['text', 'image'] });
+      assert.deepEqual(writes.at(-1), { reasoning: true, input: ['text', 'image'], imageGeneration: false });
       await expect(edit).toBeFocused();
       await edit.click();
-      await expect(page.getByRole('checkbox', { name: 'Supports reasoning' })).toBeChecked();
+      await expect(page.getByRole('checkbox', { name: 'Reasoning' })).toBeChecked();
       await page.keyboard.press('Escape');
       await expect(edit).toBeFocused();
     } finally {
@@ -117,3 +133,51 @@ for (const width of [1280, 390, 320]) {
     }
   });
 }
+
+test('built-in image models show the same capability badges without an editor', async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 850 }, locale: 'en-US' });
+  try {
+    await installSessionFixture(page);
+    await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+    const provider = {
+      providerKey: 'image-provider-key',
+      providerId: 'openrouter',
+      name: 'OpenRouter',
+      provenance: 'builtin',
+      auth: { configured: true, methods: ['api_key'] },
+      capabilities: { refresh: false, endpoint: 'readonly' },
+      modelCount: 1,
+      availableModelCount: 1,
+      models: [
+        {
+          modelKey: 'image-model-key',
+          modelId: 'openai/gpt-image-1',
+          name: 'GPT Image 1',
+          api: 'openrouter-images',
+          reasoning: false,
+          input: ['text', 'image'],
+          capabilities: ['image_input', 'image_generation'],
+          interfaces: ['image'],
+          available: true,
+          isDefault: false,
+          configuration: 'inherited',
+        },
+      ],
+    };
+    await page.route('**/api/settings/**', (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith('/model-providers')) return route.fulfill({ json: { providers: [provider] } });
+      if (path.endsWith('/image-provider-key')) return route.fulfill({ json: provider });
+      return route.fulfill({ json: {} });
+    });
+    await page.goto(`${baseURL}settings/model-providers?provider=image-provider-key`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    });
+    await expect(page.getByText('GPT Image 1')).toBeVisible();
+    await expect(page.getByLabel('Image generation')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit capabilities' })).toHaveCount(0);
+  } finally {
+    await page.close();
+  }
+});

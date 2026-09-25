@@ -5,7 +5,10 @@
 
 import { z } from 'zod';
 import type { ThinkingLevel } from './runtime.js';
-import type { LocalProviderConfigurationDto } from './settings-local.js';
+import type { CustomProviderConfigurationDto } from './settings-custom-provider.js';
+
+export type ModelCapability = 'reasoning' | 'image_input' | 'image_generation';
+export type ModelInterface = 'chat' | 'image';
 
 export const UpdateModelCapabilitiesBodySchema = z
   .object({
@@ -14,6 +17,7 @@ export const UpdateModelCapabilitiesBodySchema = z
       .array(z.enum(['text', 'image']))
       .min(1)
       .refine((input) => input.includes('text')),
+    imageGeneration: z.boolean(),
   })
   .strict();
 export type UpdateModelCapabilitiesBody = z.infer<typeof UpdateModelCapabilitiesBodySchema>;
@@ -38,7 +42,8 @@ export interface ModelProviderCapabilitiesDto {
 }
 
 export interface ModelProviderSummaryDto {
-  local?: LocalProviderConfigurationDto;
+  /** Existing response field for user-added services, including remote provider types. */
+  local?: CustomProviderConfigurationDto;
   providerKey: string;
   providerId: string;
   name: string;
@@ -59,8 +64,12 @@ export interface ModelSettingsDto {
   available: boolean;
   reasoning: boolean;
   input: Array<'text' | 'image'>;
-  contextWindow: number;
-  maxTokens: number;
+  /** Unified display capabilities from Pi catalogs or user-managed model metadata. */
+  capabilities: ModelCapability[];
+  /** Pi catalog interfaces, independent of manually declared capabilities. */
+  interfaces: ModelInterface[];
+  contextWindow?: number;
+  maxTokens?: number;
   isDefault: boolean;
   configuration: 'inherited' | 'owned' | 'overridden';
 }

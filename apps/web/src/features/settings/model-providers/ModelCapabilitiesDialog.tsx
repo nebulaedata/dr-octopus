@@ -1,6 +1,6 @@
 /**
  * @author Codex
- * @description Edits Pi reasoning and image-input metadata for a custom model without discarding failed drafts.
+ * @description Edits custom model capabilities without discarding failed drafts.
  */
 import { useState } from 'react';
 import { Settings2Icon } from 'lucide-react';
@@ -41,7 +41,7 @@ export function ModelCapabilitiesDialog({
       <Tooltip>
         <TooltipTrigger
           aria-label="Edit capabilities"
-          render={<DialogTrigger render={<Button variant="ghost" size="icon" />} />}
+          render={<DialogTrigger render={<Button variant="ghost" size="icon-sm" />} />}
         >
           <Settings2Icon />
         </TooltipTrigger>
@@ -90,12 +90,17 @@ function ModelCapabilitiesForm({
     },
   });
   const form = useForm({
-    defaultValues: { reasoning: model.reasoning, image: model.input.includes('image') },
+    defaultValues: {
+      reasoning: model.reasoning,
+      image: model.input.includes('image'),
+      imageGeneration: model.capabilities.includes('image_generation'),
+    },
     onSubmit: async ({ value }) => {
       try {
         await mutation.mutateAsync({
           reasoning: value.reasoning,
           input: value.image ? ['text', 'image'] : ['text'],
+          imageGeneration: value.imageGeneration,
         });
       } catch {
         // The inline error preserves the draft for retry.
@@ -124,7 +129,7 @@ function ModelCapabilitiesForm({
                 disabled={mutation.isPending}
               />
               <FieldLabel htmlFor="model-capability-reasoning">
-                {t('settings.providers.reasoning', 'Supports reasoning')}
+                {t('settings.providers.reasoning', 'Reasoning')}
               </FieldLabel>
             </Field>
           )}
@@ -141,18 +146,29 @@ function ModelCapabilitiesForm({
                 disabled={mutation.isPending}
               />
               <FieldLabel htmlFor="model-capability-image">
-                {t('settings.providers.imageInput', 'Supports image input')}
+                {t('settings.providers.imageInput', 'Image input')}
+              </FieldLabel>
+            </Field>
+          )}
+        </form.Field>
+        <form.Field name="imageGeneration">
+          {(field) => (
+            <Field orientation="horizontal">
+              <Checkbox
+                id="model-capability-image-generation"
+                name={field.name}
+                checked={field.state.value}
+                onCheckedChange={(checked) => field.handleChange(checked === true)}
+                onBlur={field.handleBlur}
+                disabled={mutation.isPending}
+              />
+              <FieldLabel htmlFor="model-capability-image-generation">
+                {t('settings.providers.imageGeneration', 'Image generation')}
               </FieldLabel>
             </Field>
           )}
         </form.Field>
       </FieldGroup>
-      <p className="text-sm text-muted-foreground">
-        {t(
-          'settings.providers.capabilityHelp',
-          'Declare capabilities supported by this model. Available thinking levels are determined by Pi. Existing sessions may need to restart to use the updated configuration.'
-        )}
-      </p>
       {mutation.error && (
         <Alert variant="destructive">
           <AlertDescription>{mutation.error.message}</AlertDescription>

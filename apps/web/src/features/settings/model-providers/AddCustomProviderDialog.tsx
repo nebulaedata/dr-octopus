@@ -1,11 +1,11 @@
 /**
  * @author Codex
- * @description Collects a provider name and onboarding runtime type before creating a persistent draft.
+ * @description Collects a custom provider name and type before creating a persistent draft.
  */
 import { useForm } from '@tanstack/react-form';
-import { CreateLocalProviderBodySchema } from '@octopus/shared/protocol';
+import { CreateCustomProviderBodySchema } from '@octopus/shared/protocol';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
-import { Avatar, AvatarFallback } from '@octopus/ui/components/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@octopus/ui/components/avatar';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -25,14 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@octopus/ui/components/select';
-import { useLocalProviderMutations, useLocalRuntimes } from '@/queries/local-provider-queries';
+import { useCustomProviderMutations, useCustomProviderTypes } from '@/queries/custom-provider-queries';
 import { useI18n } from '@/i18n/use-i18n';
-import type { LocalRuntime } from '@octopus/shared/protocol';
+import type { CustomProviderType } from '@octopus/shared/protocol';
 
 /**
  * Renders a compact creation dialog; the parent mounts a fresh form for each opening.
  */
-export function AddLocalProviderDialog({
+export function AddCustomProviderDialog({
   onClose,
   onCreated,
 }: {
@@ -46,11 +46,11 @@ export function AddLocalProviderDialog({
   onCreated(providerKey: string): void;
 }) {
   const { t } = useI18n();
-  const runtimes = useLocalRuntimes();
-  const { create } = useLocalProviderMutations();
+  const runtimes = useCustomProviderTypes();
+  const { create } = useCustomProviderMutations();
   const form = useForm({
-    defaultValues: { name: '', runtime: 'ollama' as LocalRuntime },
-    validators: { onChange: CreateLocalProviderBodySchema },
+    defaultValues: { name: '', runtime: 'ollama' as CustomProviderType },
+    validators: { onChange: CreateCustomProviderBodySchema },
     onSubmit: async ({ value }) => {
       try {
         const provider = await create.mutateAsync(value);
@@ -76,7 +76,7 @@ export function AddLocalProviderDialog({
           <DialogDescription className="sr-only">
             {t(
               'settings.providers.local.addDescription',
-              'Add a local model service, then configure its endpoint and models.'
+              'Add a model service, then configure its endpoint, model, and API Key.'
             )}
           </DialogDescription>
         </DialogHeader>
@@ -88,9 +88,10 @@ export function AddLocalProviderDialog({
             void form.handleSubmit();
           }}
         >
-          <form.Subscribe selector={(state) => state.values.name}>
-            {(name) => (
+          <form.Subscribe selector={(state) => [state.values.name, state.values.runtime] as const}>
+            {([name, runtime]) => (
               <Avatar className="mx-auto size-14">
+                {runtime === 'mr-token' && <AvatarImage src="/assets/llm/mrtoken.svg" alt="Mr.Token" />}
                 <AvatarFallback>{name.trim().slice(0, 1).toLocaleUpperCase() || 'P'}</AvatarFallback>
               </Avatar>
             )}
@@ -99,11 +100,11 @@ export function AddLocalProviderDialog({
             <form.Field name="name">
               {(field) => (
                 <Field data-invalid={field.state.meta.errors.length > 0}>
-                  <FieldLabel htmlFor="local-provider-name">
+                  <FieldLabel htmlFor="custom-provider-name">
                     {t('settings.providers.local.nameLabel', 'Provider name')}
                   </FieldLabel>
                   <Input
-                    id="local-provider-name"
+                    id="custom-provider-name"
                     placeholder={t('settings.providers.local.namePlaceholder', 'e.g. My Ollama')}
                     maxLength={80}
                     disabled={create.isPending}
@@ -119,7 +120,7 @@ export function AddLocalProviderDialog({
             <form.Field name="runtime">
               {(field) => (
                 <Field>
-                  <FieldLabel htmlFor="local-provider-runtime">
+                  <FieldLabel htmlFor="custom-provider-runtime">
                     {t('settings.providers.local.runtimeLabel', 'Provider type')}
                   </FieldLabel>
                   <Select
@@ -134,7 +135,7 @@ export function AddLocalProviderDialog({
                     }}
                     disabled={runtimes.isPending || create.isPending}
                   >
-                    <SelectTrigger id="local-provider-runtime" className="w-full" onBlur={field.handleBlur}>
+                    <SelectTrigger id="custom-provider-runtime" className="w-full" onBlur={field.handleBlur}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

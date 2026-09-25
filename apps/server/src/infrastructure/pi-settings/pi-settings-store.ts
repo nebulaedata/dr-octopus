@@ -1,6 +1,6 @@
 /**
  * @author Codex
- * @description Implements the Server-owned Pi settings adapter using Pi 0.84.3 public APIs.
+ * @description Projects Pi chat and image catalogs into Server-owned model settings.
  */
 
 import { readFile } from 'node:fs/promises';
@@ -11,14 +11,15 @@ import {
   SettingsManager,
 } from '@earendil-works/pi-coding-agent';
 import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
+import { builtinImagesModels } from '@earendil-works/pi-ai/providers/all';
 import { PiCredentialSynchronizationError } from './types.js';
-import { saveModelCapabilities } from './local-provider-repository.js';
-import { LocalProviderStore } from './local-provider-store.js';
+import { saveModelCapabilities } from './custom-provider-repository.js';
+import { CustomProviderStore } from './custom-provider-store.js';
 import type {
   UpdateModelCapabilitiesBody,
-  LocalRuntimeDto,
-  ConfigureLocalProviderBody,
-  CreateLocalProviderBody,
+  CustomProviderTypeDto,
+  ConfigureCustomProviderBody,
+  CreateCustomProviderBody,
 } from '@octopus/shared/protocol';
 import type {
   CreatePiSettingsStoreOptions,
@@ -72,7 +73,8 @@ export class ServerPiSettingsStore {
   readonly #modelsPath: string;
   readonly #settings: SettingsManager;
   #runtime?: ModelRuntime;
-  readonly #local: LocalProviderStore;
+  readonly #imageModels = builtinImagesModels();
+  readonly #local: CustomProviderStore;
 
   /**
    * Creates the store for one explicit Pi user directory.
@@ -82,7 +84,7 @@ export class ServerPiSettingsStore {
   public constructor(options: CreatePiSettingsStoreOptions) {
     this.#agentDir = options.agentDir;
     this.#modelsPath = join(options.agentDir, 'models.json');
-    this.#local = new LocalProviderStore(this.#modelsPath, options.agentDir);
+    this.#local = new CustomProviderStore(this.#modelsPath, options.agentDir);
     this.#settings = SettingsManager.create(options.controlPlaneCwd ?? process.cwd(), options.agentDir, {
       projectTrusted: false,
     });
@@ -116,98 +118,170 @@ export class ServerPiSettingsStore {
       runtime.getAvailableSnapshot().map((model) => `${model.provider}\u0000${model.id}`)
     );
 
-    return this.#local.project(
-      runtime.getProviders().map((provider) => {
-        const auth = runtime.getProviderAuthStatus(provider.id);
-        const registeredByExtension =
-          runtime.getRegisteredProviderConfig(provider.id) !== undefined ||
-          runtime.getRegisteredNativeProvider(provider.id) !== undefined;
-        let provenance: PiSettingsProviderProvenance;
-        if (configuredProviderIds.has(provider.id)) {
-          provenance = 'models_json';
+    const providers = runtime.getProviders().map((provider) => {
+      const auth = runtime.getProviderAuthStatus(provider.id);
+      const registeredByExtension =
+        runtime.getRegisteredProviderConfig(provider.id) !== undefined ||
+        runtime.getRegisteredNativeProvider(provider.id) !== undefined;
+      let provenance: PiSettingsProviderProvenance;
+      if (configuredProviderIds.has(provider.id)) {
+        provenance = 'models_json';
+      } else {
+        if (registeredByExtension) {
+          provenance = 'extension';
         } else {
-          if (registeredByExtension) {
-            provenance = 'extension';
+          provenance = 'builtin';
+        }
+      }
+      const models = runtime.getModels(provider.id).map<PiSettingsModel>((model) => ({
+        id: model.id,
+        name: model.name,
+        api: model.api,
+        baseUrl: model.baseUrl,
+        reasoning: model.reasoning,
+        thinkingLevels: getSupportedThinkingLevels(model),
+        input: [...model.input],
+        interfaces: ['chat'],
+        contextWindow: model.contextWindow,
+        maxTokens: model.maxTokens,
+        available: available.has(`${provider.id}\u0000${model.id}`),
+        configuration: provenance === 'models_json' ? 'owned' : 'inherited',
+      }));
+      const source = mapAuthSource(auth.source);
+      const methods = [
+        provider.auth.apiKey?.login !== undefined && 'api_key',
+        provider.auth.oauth !== undefined && 'oauth',
+      ].filter((method): method is 'api_key' | 'oauth' => Boolean(method));
+      let activeMethod: 'oauth' | 'api_key' | undefined;
+      if (auth.configured) {
+        if (runtime.isUsingOAuth(provider.id)) {
+          activeMethod = 'oauth';
+        } else {
+          if (methods.includes('api_key')) {
+            activeMethod = 'api_key';
           } else {
-            provenance = 'builtin';
+            activeMethod = undefined;
           }
         }
-        const models = runtime.getModels(provider.id).map<PiSettingsModel>((model) => ({
-          id: model.id,
-          name: model.name,
-          api: model.api,
-          baseUrl: model.baseUrl,
-          reasoning: model.reasoning,
-          thinkingLevels: getSupportedThinkingLevels(model),
-          input: [...model.input],
-          contextWindow: model.contextWindow,
-          maxTokens: model.maxTokens,
-          available: available.has(`${provider.id}\u0000${model.id}`),
-          configuration: provenance === 'models_json' ? 'owned' : 'inherited',
-        }));
-        const source = mapAuthSource(auth.source);
-        const methods = [
-          provider.auth.apiKey?.login !== undefined && 'api_key',
-          provider.auth.oauth !== undefined && 'oauth',
-        ].filter((method): method is 'api_key' | 'oauth' => Boolean(method));
-        let activeMethod: 'oauth' | 'api_key' | undefined;
-        if (auth.configured) {
-          if (runtime.isUsingOAuth(provider.id)) {
-            activeMethod = 'oauth';
-          } else {
-            if (methods.includes('api_key')) {
-              activeMethod = 'api_key';
-            } else {
-              activeMethod = undefined;
-            }
-          }
+      } else {
+        activeMethod = undefined;
+      }
+      return {
+        id: provider.id,
+        name: provider.name,
+        ...(provider.baseUrl === undefined ? {} : { baseUrl: provider.baseUrl }),
+        provenance,
+        auth: {
+          configured: auth.configured,
+          methods,
+          ...(activeMethod === undefined ? {} : { activeMethod }),
+          ...(source === undefined ? {} : { source }),
+          ...(auth.label === undefined ? {} : { sourceLabel: auth.label }),
+        },
+        refreshable: provider.refreshModels !== undefined,
+        endpointOwned: provenance === 'models_json',
+        models,
+      };
+    });
+    for (const imageProvider of this.#imageModels.getProviders()) {
+      const provider = providers.find(
+        (candidate) => candidate.id === imageProvider.id && candidate.provenance === 'builtin'
+      );
+      if (!provider) {
+        continue;
+      }
+      const modelsById = new Map(provider.models.map((model) => [model.id, model]));
+      for (const imageModel of imageProvider.getModels()) {
+        const existing = modelsById.get(imageModel.id);
+        if (existing) {
+          existing.interfaces = ['chat', 'image'];
+          existing.imageGeneration = imageModel.output.includes('image');
+          existing.input = [...new Set([...existing.input, ...imageModel.input])];
         } else {
-          activeMethod = undefined;
+          const model: PiSettingsModel = {
+            id: imageModel.id,
+            name: imageModel.name,
+            api: imageModel.api,
+            baseUrl: imageModel.baseUrl,
+            reasoning: false,
+            input: [...imageModel.input],
+            interfaces: ['image'],
+            imageGeneration: imageModel.output.includes('image'),
+            available: provider.auth.configured,
+            configuration: 'inherited',
+          };
+          provider.models.push(model);
+          modelsById.set(model.id, model);
         }
-        return {
-          id: provider.id,
-          name: provider.name,
-          ...(provider.baseUrl === undefined ? {} : { baseUrl: provider.baseUrl }),
-          provenance,
-          auth: {
-            configured: auth.configured,
-            methods,
-            ...(activeMethod === undefined ? {} : { activeMethod }),
-            ...(source === undefined ? {} : { source }),
-            ...(auth.label === undefined ? {} : { sourceLabel: auth.label }),
-          },
-          refreshable: provider.refreshModels !== undefined,
-          endpointOwned: provenance === 'models_json',
-          models,
-        };
-      })
-    );
+      }
+    }
+    return this.#local.project(providers);
   }
 
   /**
-   * Returns onboarding's supported runtime defaults.
+   * Returns supported user-added provider types and endpoint defaults.
    */
-  public getLocalRuntimes(): LocalRuntimeDto[] {
-    return this.#local.onboarding.getLocalRuntimes();
+  public getCustomProviderTypes(): CustomProviderTypeDto[] {
+    return this.#local.getRuntimes();
   }
   /**
-   * Persists an independent local provider draft.
+   * Persists an independent custom provider draft.
    */
-  public createLocalProvider(input: CreateLocalProviderBody) {
+  public createCustomProvider(input: CreateCustomProviderBody) {
     return this.#local.create(input);
   }
   /**
    * Delegates provider-specific discovery to onboarding.
    */
-  public detectLocalProvider(id: string, baseUrl: string) {
-    return this.#local.detect(id, baseUrl);
+  public async detectCustomProvider(id: string, baseUrl: string, apiKey?: string) {
+    return this.#local.detect(id, baseUrl, await this.#getDiscoveryKey(id, apiKey));
   }
   /**
-   * Saves a verified model then refreshes only this provider without network model discovery.
+   * Saves every discovered model then refreshes only this provider from the local Pi catalog.
    */
-  public async configureLocalProvider(id: string, input: ConfigureLocalProviderBody) {
-    const changed = await this.#local.configure(id, input);
-    return this.#refreshProvider(id, changed);
+  public async configureCustomProvider(id: string, input: ConfigureCustomProviderBody) {
+    const changed = await this.#local.configure(id, input, await this.#getDiscoveryKey(id, input.apiKey));
+    const refreshed = await this.#refreshProvider(id, changed);
+    if (input.apiKey) {
+      await this.loginProvider(id, 'api_key', {
+        signal: new AbortController().signal,
+        prompt: () => Promise.resolve(input.apiKey!),
+        notify: () => undefined,
+      });
+    }
+    return refreshed;
+  }
+
+  /**
+   * Uses a supplied key for discovery, otherwise resolves only a previously stored Pi credential.
+   */
+  async #getDiscoveryKey(id: string, supplied?: string): Promise<string | undefined> {
+    if (supplied?.trim()) {
+      return supplied.trim();
+    }
+    const runtime = await this.#getRuntime();
+    if (!runtime.getProvider(id) || runtime.getProviderAuthStatus(id).source !== 'stored') {
+      return undefined;
+    }
+    return (await runtime.getAuth(id))?.auth.apiKey;
+  }
+
+  /**
+   * Removes a Settings-created service and its stored credential.
+   */
+  public async deleteCustomProvider(id: string) {
+    const provider = (await this.listProviders()).find((candidate) => candidate.id === id);
+    if (provider?.auth.configured) {
+      await this.logoutProvider(id);
+    }
+    const changed = await this.#local.delete(id);
+    try {
+      const runtime = await this.#getRuntime();
+      const result = await runtime.refresh({ allowNetwork: false });
+      return { changed, synchronized: !result.aborted && result.errors.size === 0 };
+    } catch {
+      return { changed, synchronized: false };
+    }
   }
 
   /**
@@ -271,7 +345,11 @@ export class ServerPiSettingsStore {
     if (model === undefined) {
       throw new Error('The selected model does not exist in the current Pi catalog.');
     }
-    if (!runtime.getAvailableSnapshot().some((candidate) => candidate === model)) {
+    if (
+      !runtime
+        .getAvailableSnapshot()
+        .some((candidate) => candidate.provider === providerId && candidate.id === modelId)
+    ) {
       throw new Error('The selected model is not currently available. Configure its credential first.');
     }
     this.#settings.setDefaultModelAndProvider(providerId, modelId);

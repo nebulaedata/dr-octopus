@@ -12,7 +12,7 @@ export * from './runtime.js';
 export * from './sessions.js';
 export * from './session-control.js';
 export * from './settings.js';
-export * from './settings-local.js';
+export * from './settings-custom-provider.js';
 export * from './settings-environment.js';
 export * from './settings-server.js';
 export * from './settings-mcp.js';

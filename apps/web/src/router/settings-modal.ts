@@ -21,9 +21,7 @@ export const settingsPaths = [
   '/settings/environment',
   '/settings/server',
   '/settings/extensions',
-  '/settings/about/version',
-  '/settings/about/company',
-  '/settings/about/licenses',
+  '/settings/about',
 ] as const;
 
 export type SettingsPath = (typeof settingsPaths)[number];

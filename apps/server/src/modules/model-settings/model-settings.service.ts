@@ -9,14 +9,16 @@ import { join } from 'node:path';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import { MODEL_CONFIG_ROUTE } from '../../infrastructure/runtime-config/config-routes.js';
 import type {
-  ConfigureLocalProviderBody,
-  CreateLocalProviderBody,
+  ConfigureCustomProviderBody,
+  CreateCustomProviderBody,
   DefaultModelCandidateDto,
   DefaultModelCandidatesDto,
   DefaultModelDto,
   ModelProviderCatalogDto,
   ModelProviderDetailDto,
   ModelProviderSummaryDto,
+  ModelCapability,
+  ModelInterface,
   UpdateModelCapabilitiesBody,
 } from '@octopus/shared/protocol';
 import type { FSWatcher } from 'node:fs';
@@ -81,6 +83,17 @@ function toModel(
   model: PiSettingsModel,
   defaultModel: { providerId?: string; modelId?: string }
 ) {
+  const capabilities: ModelCapability[] = [];
+  if (model.reasoning) {
+    capabilities.push('reasoning');
+  }
+  if (model.input.includes('image')) {
+    capabilities.push('image_input');
+  }
+  if (model.imageGeneration) {
+    capabilities.push('image_generation');
+  }
+  const interfaces: ModelInterface[] = model.interfaces ?? ['chat'];
   return {
     modelKey: opaqueKey(`${provider.id}\u0000${model.id}`),
     modelId: model.id,
@@ -89,9 +102,14 @@ function toModel(
     available: model.available,
     reasoning: model.reasoning,
     input: model.input,
-    contextWindow: model.contextWindow,
-    maxTokens: model.maxTokens,
-    isDefault: defaultModel.providerId === provider.id && defaultModel.modelId === model.id,
+    capabilities,
+    interfaces,
+    ...(model.contextWindow === undefined ? {} : { contextWindow: model.contextWindow }),
+    ...(model.maxTokens === undefined ? {} : { maxTokens: model.maxTokens }),
+    isDefault:
+      interfaces.includes('chat') &&
+      defaultModel.providerId === provider.id &&
+      defaultModel.modelId === model.id,
     configuration: model.configuration,
   };
 }
@@ -131,24 +149,24 @@ export class SettingsService {
   }
 
   /**
-   * Lists the local runtime defaults exposed by onboarding.
+   * Lists the types offered by custom provider creation.
    */
-  public getLocalRuntimes() {
-    return this.piSettings.getLocalRuntimes();
+  public getCustomProviderTypes() {
+    return this.piSettings.getCustomProviderTypes();
   }
   /**
    * Creates a persistent named draft and returns its routable detail.
    */
-  public async createLocalProvider(input: CreateLocalProviderBody) {
-    const id = await this.piSettings.createLocalProvider(input);
+  public async createCustomProvider(input: CreateCustomProviderBody) {
+    const id = await this.piSettings.createCustomProvider(input);
     return this.getProvider(opaqueKey(id));
   }
   /**
-   * Resolves the route identity before read-only local discovery.
+   * Resolves the route identity before read-only local model discovery.
    */
-  public async detectLocalProvider(key: string, baseUrl: string) {
+  public async detectCustomProvider(key: string, baseUrl: string, apiKey?: string) {
     const provider = await this.requireProvider(key);
-    return this.piSettings.detectLocalProvider(provider.id, baseUrl);
+    return this.piSettings.detectCustomProvider(provider.id, baseUrl, apiKey);
   }
   /**
    * Resolves an editable custom model before persisting its Pi capability metadata.
@@ -171,13 +189,50 @@ export class SettingsService {
   }
 
   /**
-   * Configures a local model without changing the global default pair.
+   * Synchronizes all discovered models for a user-added provider without changing the global default pair.
    */
-  public async configureLocalProvider(key: string, input: ConfigureLocalProviderBody) {
+  public async configureCustomProvider(key: string, input: ConfigureCustomProviderBody) {
     const provider = await this.requireProvider(key);
-    const result = await this.piSettings.configureLocalProvider(provider.id, input);
+    if (
+      provider.local &&
+      !['ollama', 'vllm', 'lmstudio'].includes(provider.local.runtime) &&
+      !input.apiKey &&
+      !provider.auth.configured
+    ) {
+      throw new ApplicationError(
+        'MODEL_PROVIDER_API_KEY_REQUIRED',
+        'An API Key is required for this remote model service.',
+        { statusCode: 422 }
+      );
+    }
+    const result = await this.piSettings.configureCustomProvider(provider.id, input);
     this.#recordConfiguration(result);
     return this.getProvider(key);
+  }
+
+  /**
+   * Deletes a Settings-created service unless it owns the current default model.
+   */
+  public async deleteCustomProvider(key: string) {
+    const provider = await this.requireProvider(key);
+    if (!provider.local) {
+      throw new ApplicationError(
+        'MODEL_PROVIDER_CAPABILITY_UNSUPPORTED',
+        'This provider cannot be deleted here.',
+        { statusCode: 422 }
+      );
+    }
+    const current = await this.piSettings.getDefaultModel();
+    if (current.providerId === provider.id) {
+      throw new ApplicationError(
+        'MODEL_PROVIDER_DEFAULT_IN_USE',
+        'Choose another default model before deleting this provider.',
+        { statusCode: 409 }
+      );
+    }
+    const result = await this.piSettings.deleteCustomProvider(provider.id);
+    this.#recordConfiguration(result);
+    return { deleted: true };
   }
 
   /**
@@ -253,7 +308,7 @@ export class SettingsService {
     const providers = await this.piSettings.listProviders();
     const candidates: DefaultModelCandidateDto[] = providers.flatMap((provider) =>
       provider.models
-        .filter((model) => model.available)
+        .filter((model) => model.available && (model.interfaces ?? ['chat']).includes('chat'))
         .map((model) => ({
           providerKey: opaqueKey(provider.id),
           providerId: provider.id,
@@ -282,7 +337,7 @@ export class SettingsService {
     const model = provider?.models.find(
       (candidate) => opaqueKey(`${provider.id}\u0000${candidate.id}`) === modelKey
     );
-    if (provider === undefined || model === undefined) {
+    if (provider === undefined || model === undefined || !(model.interfaces ?? ['chat']).includes('chat')) {
       throw new Error('The selected default model no longer exists.');
     }
     await this.piSettings.setDefaultModel(provider.id, model.id);
@@ -389,8 +444,11 @@ export class ModelConfigMonitor {
       ['models.json', 'auth.json', 'settings.json'].map((file) => read(join(this.options.agentDir, file)))
     );
     const parsed = JSON.parse(settings!) as Record<string, unknown>;
-    const modelVersion = digest([models, auth]);
-    const version = digest([modelVersion, parsed['defaultProvider'], parsed['defaultModel']]);
+    const runtimeModels = JSON.parse(models!) as Record<string, unknown>;
+    // Display-only capabilities refresh catalogs without invalidating inference runtimes.
+    delete runtimeModels['octopusModelCapabilities'];
+    const modelVersion = digest([runtimeModels, auth]);
+    const version = digest([models, auth, parsed['defaultProvider'], parsed['defaultModel']]);
     if (version !== this.#version) {
       await this.options.refresh();
       const confirmed = await Promise.all(

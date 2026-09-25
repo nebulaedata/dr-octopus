@@ -12,9 +12,9 @@ import { ModelRuntime } from '@earendil-works/pi-coding-agent';
 import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
 import { createPiSettingsStore } from '../dist/infrastructure/pi-settings/index.js';
 import {
-  saveLocalProvider,
+  saveCustomProvider,
   saveModelCapabilities,
-} from '../dist/infrastructure/pi-settings/local-provider-repository.js';
+} from '../dist/infrastructure/pi-settings/custom-provider-repository.js';
 import { SettingsService } from '../dist/modules/model-settings/model-settings.service.js';
 import { registerSettingsController } from '../dist/modules/model-settings/model-settings.controller.js';
 
@@ -58,21 +58,40 @@ test('custom model capability edits survive reload and unlock Pi thinking levels
     { reasoning: 'true', input: ['text'] },
     { reasoning: true, input: [] },
     { reasoning: true, input: ['audio'] },
+    { reasoning: true, input: ['text'], tasks: ['unsupported'] },
+    { reasoning: true, input: ['text'], imageGeneration: true, tasks: ['reranking'] },
+    { reasoning: true, input: ['text'], imageGeneration: true, tasks: ['embedding'] },
   ]) {
     assert.equal((await app.inject({ method: 'PUT', url, payload })).statusCode, 400);
   }
-  const payload = { reasoning: true, input: ['text', 'image'] };
+  const payload = { reasoning: true, input: ['text', 'image'], imageGeneration: false };
   const response = await app.inject({ method: 'PUT', url, payload });
   assert.equal(response.statusCode, 200, response.body);
   assert.equal(response.json().models[0].reasoning, true);
   assert.equal(commits, 1);
   await app.inject({ method: 'PUT', url, payload });
   assert.equal(commits, 1, 'identical edits must not restart sessions again');
+  const labeled = await app.inject({
+    method: 'PUT',
+    url,
+    payload: { ...payload, imageGeneration: true },
+  });
+  assert.deepEqual(labeled.json().models[0].capabilities, ['reasoning', 'image_input', 'image_generation']);
+  assert.equal(commits, 1, 'the image marker must not restart sessions');
   const document = JSON.parse(await readFile(path, 'utf8'));
   assert.deepEqual(document.unrelated, { preserve: true });
   assert.equal(document.providers.custom.apiKey, provider.apiKey);
   assert.deepEqual(document.providers.custom.models[1], provider.models[1]);
   assert.deepEqual(document.providers.custom.models[0].compat, { thinkingFormat: 'qwen' });
+  assert.equal(document.providers.custom.models[0].imageGeneration, undefined);
+  assert.deepEqual(document.octopusModelCapabilities.custom['custom-model'], { imageGeneration: true });
+  const reloadedService = new SettingsService(createPiSettingsStore({ agentDir }));
+  const reloadedDetail = await reloadedService.getProvider(summary.providerKey);
+  assert.deepEqual(reloadedDetail.models[0].capabilities, ['reasoning', 'image_input', 'image_generation']);
+  const cleared = await app.inject({ method: 'PUT', url, payload });
+  assert.deepEqual(cleared.json().models[0].capabilities, ['reasoning', 'image_input']);
+  assert.equal(commits, 1, 'clearing the image marker must not restart sessions');
+  assert.equal(JSON.parse(await readFile(path, 'utf8')).octopusModelCapabilities.custom, undefined);
   const runtime = await ModelRuntime.create({
     modelsPath: path,
     authPath: join(agentDir, 'auth.json'),
@@ -82,7 +101,11 @@ test('custom model capability edits survive reload and unlock Pi thinking levels
   assert.deepEqual(reloaded.input, ['text', 'image']);
   assert.equal(reloaded.maxTokens, 2048);
   assert.ok(getSupportedThinkingLevels(reloaded).includes('high'));
-  await app.inject({ method: 'PUT', url, payload: { reasoning: false, input: ['text'] } });
+  await app.inject({
+    method: 'PUT',
+    url,
+    payload: { reasoning: false, input: ['text'], imageGeneration: false },
+  });
   await runtime.refresh({ providers: ['custom'], allowNetwork: false });
   assert.deepEqual(getSupportedThinkingLevels(runtime.getModel('custom', 'custom-model')), ['off']);
   await assert.rejects(service.updateModelCapabilities(summary.providerKey, 'missing', payload));
@@ -95,21 +118,103 @@ test('custom model capability edits survive reload and unlock Pi thinking levels
   );
 });
 
+test('built-in image models share the provider list without becoming chat defaults', async (t) => {
+  const agentDir = await mkdtemp(join(tmpdir(), 'octopus-image-catalog-'));
+  t.after(() => rm(agentDir, { recursive: true, force: true }));
+  const service = new SettingsService(createPiSettingsStore({ agentDir }));
+  const catalog = await service.listProviders();
+  const openrouter = catalog.providers.find((provider) => provider.providerId === 'openrouter');
+  const detail = await service.getProvider(openrouter.providerKey);
+  const imageOnly = detail.models.find((model) => model.modelId === 'openai/gpt-image-1');
+  assert.deepEqual(imageOnly.interfaces, ['image']);
+  assert.ok(imageOnly.capabilities.includes('image_generation'));
+  assert.equal(imageOnly.contextWindow, undefined);
+  assert.equal(imageOnly.maxTokens, undefined);
+  assert.equal(detail.models.filter((model) => model.modelId === 'google/gemini-3-pro-image').length, 1);
+  assert.deepEqual(detail.models.find((model) => model.modelId === 'google/gemini-3-pro-image').interfaces, [
+    'chat',
+    'image',
+  ]);
+  assert.ok(detail.modelCount > 366);
+  const deepseek = catalog.providers.find((provider) => provider.providerId === 'deepseek');
+  const deepseekDetail = await service.getProvider(deepseek.providerKey);
+  assert.ok(deepseekDetail.models.every((model) => !model.capabilities.includes('image_generation')));
+  const candidates = await service.listDefaultModelCandidates();
+  assert.ok(
+    candidates.candidates.every(
+      (model) => model.modelId !== imageOnly.modelId || model.providerId !== 'openrouter'
+    )
+  );
+  await assert.rejects(service.setDefaultModel(openrouter.providerKey, imageOnly.modelKey));
+});
+
 test('local endpoint resaves preserve edited model capabilities and concurrent edits', async (t) => {
   const dir = await mkdtemp(join(tmpdir(), 'octopus-capabilities-local-'));
   t.after(() => rm(dir, { recursive: true, force: true }));
   const path = join(dir, 'models.json');
   const record = { name: 'Local', runtime: 'vllm', baseUrl: 'http://localhost:8000', modelId: 'local-model' };
-  await saveLocalProvider(path, 'local', record);
-  await saveLocalProvider(path, 'other', { ...record, modelId: 'other-model' });
+  await saveCustomProvider(path, 'local', record);
+  await saveCustomProvider(path, 'other', { ...record, modelId: 'other-model' });
   await Promise.all([
-    saveModelCapabilities(path, 'local', record.modelId, { reasoning: true, input: ['text', 'image'] }),
-    saveModelCapabilities(path, 'other', 'other-model', { reasoning: true, input: ['text'] }),
+    saveModelCapabilities(path, 'local', record.modelId, {
+      reasoning: true,
+      input: ['text', 'image'],
+      imageGeneration: false,
+    }),
+    saveModelCapabilities(path, 'other', 'other-model', {
+      reasoning: true,
+      input: ['text'],
+      imageGeneration: false,
+    }),
   ]);
-  await saveLocalProvider(path, 'local', { ...record, baseUrl: 'http://localhost:8001' });
+  await saveCustomProvider(path, 'local', { ...record, baseUrl: 'http://localhost:8001' });
   const document = JSON.parse(await readFile(path, 'utf8'));
   assert.equal(document.providers.local.models[0].reasoning, true);
   assert.deepEqual(document.providers.local.models[0].input, ['text', 'image']);
   assert.equal(document.providers.local.models[0].compat.supportsReasoningEffort, true);
   assert.equal(document.providers.other.models[0].reasoning, true);
 });
+
+for (const withOverrides of [false, true]) {
+  test(`inherited model image capabilities persist without explicit models (overrides: ${withOverrides})`, async (t) => {
+    const agentDir = await mkdtemp(join(tmpdir(), 'octopus-inherited-capabilities-'));
+    t.after(() => rm(agentDir, { recursive: true, force: true }));
+    const path = join(agentDir, 'models.json');
+    await writeFile(
+      path,
+      JSON.stringify({
+        providers: {
+          openai: {
+            baseUrl: 'https://example.test/v1',
+            ...(withOverrides ? { modelOverrides: { 'gpt-4': { reasoning: false } } } : {}),
+          },
+        },
+      })
+    );
+    const service = new SettingsService(createPiSettingsStore({ agentDir }));
+    const provider = (await service.listProviders()).providers.find((item) => item.providerId === 'openai');
+    const detail = await service.getProvider(provider.providerKey);
+    const model = detail.models.find((item) => item.modelId === 'gpt-4');
+    const capabilities = { reasoning: model.reasoning, input: model.input, imageGeneration: true };
+    const saved = await service.updateModelCapabilities(provider.providerKey, model.modelKey, capabilities);
+    assert.ok(
+      saved.models.find((item) => item.modelId === model.modelId).capabilities.includes('image_generation')
+    );
+    const reloaded = new SettingsService(createPiSettingsStore({ agentDir }));
+    const restored = await reloaded.getProvider(provider.providerKey);
+    assert.ok(
+      restored.models.find((item) => item.modelId === model.modelId).capabilities.includes('image_generation')
+    );
+    const cleared = await reloaded.updateModelCapabilities(provider.providerKey, model.modelKey, {
+      ...capabilities,
+      imageGeneration: false,
+    });
+    assert.equal(
+      cleared.models.find((item) => item.modelId === model.modelId).capabilities.includes('image_generation'),
+      false
+    );
+    const document = JSON.parse(await readFile(path, 'utf8'));
+    assert.equal(document.providers.openai.models, undefined);
+    assert.equal(document.octopusModelCapabilities.openai, undefined);
+  });
+}

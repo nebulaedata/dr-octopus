@@ -8,6 +8,7 @@ import { mkdtemp, writeFile, rm, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ModelConfigMonitor } from '../dist/modules/model-settings/model-settings.service.js';
+import { saveModelCapabilities } from '../dist/infrastructure/pi-settings/custom-provider-repository.js';
 import { RuntimeConfigChanges } from '../dist/infrastructure/runtime-config/runtime-config-changes.js';
 
 test('model/auth changes stale instances, default changes only notify, and fingerprints survive Host restart', async () => {
@@ -89,5 +90,67 @@ test('native atomic replacements publish configuration changes without periodic 
     unsubscribe();
     await monitor.close();
     await rm(agentDir, { recursive: true, force: true });
+  }
+});
+
+test('image capability file changes refresh catalogs without staling inference runtimes', async (t) => {
+  const agentDir = await mkdtemp(join(tmpdir(), 'octopus-marker-monitor-'));
+  t.after(() => rm(agentDir, { recursive: true, force: true }));
+  const path = join(agentDir, 'models.json');
+  await writeFile(
+    path,
+    JSON.stringify({
+      providers: {
+        custom: {
+          api: 'openai-completions',
+          baseUrl: 'http://localhost:1234/v1',
+          models: [{ id: 'model', reasoning: false, input: ['text'] }],
+        },
+      },
+    })
+  );
+  const changes = new RuntimeConfigChanges();
+  let refreshed = 0;
+  let notices = 0;
+  const options = {
+    agentDir,
+    changes,
+    refresh: async () => {
+      refreshed++;
+    },
+    notify: () => notices++,
+    onError() {},
+  };
+  const monitor = new ModelConfigMonitor(options);
+  try {
+    let version = await monitor.refresh();
+    for (const imageGeneration of [true, false]) {
+      assert.equal(
+        await saveModelCapabilities(path, 'custom', 'model', {
+          reasoning: false,
+          input: ['text'],
+          imageGeneration,
+        }),
+        false
+      );
+      const next = await monitor.refresh();
+      assert.notEqual(next, version, 'catalog version includes display metadata');
+      version = next;
+      assert.equal(changes.current(), 0, 'display metadata must not stale sessions');
+    }
+    assert.equal(refreshed, 3);
+    assert.equal(notices, 3);
+    const restarted = new ModelConfigMonitor({ ...options, changes: new RuntimeConfigChanges() });
+    assert.equal(await restarted.refresh(), version);
+    await restarted.close();
+    await saveModelCapabilities(path, 'custom', 'model', {
+      reasoning: true,
+      input: ['text'],
+      imageGeneration: false,
+    });
+    await monitor.refresh();
+    assert.equal(changes.current(), 1, 'inference capability changes still stale sessions');
+  } finally {
+    await monitor.close();
   }
 });

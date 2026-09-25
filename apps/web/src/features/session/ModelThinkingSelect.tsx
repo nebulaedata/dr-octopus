@@ -4,11 +4,14 @@
  */
 
 import { BotIcon, BrainCircuitIcon, ChevronDownIcon } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@octopus/ui/components/button';
+import { ScrollArea } from '@octopus/ui/components/scroll-area';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -18,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@octopus/ui/components/dropdown-menu';
 import { useI18n } from '@/i18n/use-i18n';
+import { modelProvidersQueryOptions } from '@/queries/settings-queries';
 import type { ModelDto, ThinkingLevel } from '@octopus/shared/protocol';
 
 export interface ModelThinkingSelectProps {
@@ -63,10 +67,21 @@ export function ModelThinkingSelect({
   onThinkingValueChange,
 }: ModelThinkingSelectProps) {
   const { t } = useI18n();
+  const providerCatalog = useQuery({ ...modelProvidersQueryOptions, enabled: open !== false });
+  const providerNames = new Map(
+    providerCatalog.data?.providers.map((provider) => [provider.providerId, provider.name]) ?? []
+  );
   const modelItems = models.map((model) => ({
     value: `${model.provider}/${model.id}`,
     label: model.name,
+    provider: model.provider,
   }));
+  const groupedModels = new Map<string, typeof modelItems>();
+  for (const model of modelItems) {
+    const group = groupedModels.get(model.provider) ?? [];
+    group.push(model);
+    groupedModels.set(model.provider, group);
+  }
   const selectedModel = modelItems.find((model) => model.value === modelValue);
 
   /**
@@ -127,7 +142,7 @@ export function ModelThinkingSelect({
                 {selectedModel?.label ?? t('session.modelThinking.notSelected', 'Not selected')}
               </span>
             </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="min-w-56">
+            <DropdownMenuSubContent className="min-w-56 overflow-hidden">
               <DropdownMenuGroup>
                 <DropdownMenuRadioGroup
                   value={followDefault ? 'follow-default' : (modelValue ?? '')}
@@ -141,13 +156,26 @@ export function ModelThinkingSelect({
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  {modelItems.map((model) => (
-                    <DropdownMenuRadioItem key={model.value} value={model.value}>
-                      <span className="max-w-52 truncate" title={model.label}>
-                        {model.label}
-                      </span>
-                    </DropdownMenuRadioItem>
-                  ))}
+                  <ScrollArea
+                    aria-label="Models by provider"
+                    className="*:data-[slot=scroll-area-viewport]:max-h-72"
+                  >
+                    {[...groupedModels.entries()].map(([providerId, providerModels], index) => (
+                      <DropdownMenuGroup key={providerId}>
+                        {index > 0 && <DropdownMenuSeparator />}
+                        <DropdownMenuLabel className="sticky top-0 z-10 bg-popover font-geist">
+                          {providerNames.get(providerId) ?? providerId}
+                        </DropdownMenuLabel>
+                        {providerModels.map((model) => (
+                          <DropdownMenuRadioItem key={model.value} value={model.value}>
+                            <span className="max-w-52 truncate" title={model.label}>
+                              {model.label}
+                            </span>
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuGroup>
+                    ))}
+                  </ScrollArea>
                 </DropdownMenuRadioGroup>
               </DropdownMenuGroup>
             </DropdownMenuSubContent>

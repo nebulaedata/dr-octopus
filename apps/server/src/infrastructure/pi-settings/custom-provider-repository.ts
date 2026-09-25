@@ -1,18 +1,21 @@
 /**
  * @author Codex
- * @description Persists Host-owned local provider metadata and Pi model configuration in one atomic document.
+ * @description Persists user-added provider metadata and Pi model configuration in one atomic document.
  */
 import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { UpdateModelCapabilitiesBody, LocalProviderConfigurationDto } from '@octopus/shared/protocol';
+import type { UpdateModelCapabilitiesBody, CustomProviderConfigurationDto } from '@octopus/shared/protocol';
 
-export interface LocalProviderRecord extends LocalProviderConfigurationDto {
+export interface CustomProviderRecord extends CustomProviderConfigurationDto {
   name: string;
 }
 interface ModelDocument {
   providers: Record<string, Record<string, unknown>>;
-  octopusLocalProviders?: Record<string, LocalProviderRecord>;
+  /** Persisted Pi document key used by existing installations. */
+  octopusLocalProviders?: Record<string, CustomProviderRecord>;
+  /** Settings-only image capability kept outside Pi's inference model schema. */
+  octopusModelCapabilities?: Record<string, Record<string, { imageGeneration: true }>>;
 }
 const queues = new Map<string, Promise<unknown>>();
 
@@ -42,9 +45,9 @@ async function readDocument(path: string): Promise<ModelDocument> {
 }
 
 /**
- * Reads saved local providers, including configurations originally created by onboarding.
+ * Reads saved custom providers, including local configurations originally created by onboarding.
  */
-export async function readLocalProviders(path: string): Promise<Record<string, LocalProviderRecord>> {
+export async function readCustomProviderMetadata(path: string) {
   const document = await readDocument(path);
   const records = { ...document.octopusLocalProviders };
   for (const runtime of ['ollama', 'vllm', 'lmstudio'] as const) {
@@ -60,46 +63,85 @@ export async function readLocalProviders(path: string): Promise<Record<string, L
       };
     }
   }
-  return records;
+  return { records, imageGeneration: document.octopusModelCapabilities ?? {} };
 }
 
 /**
- * Serializes read/merge/write operations per document; drafts never expose fictitious Pi models.
+ * Reads provider records for mutation paths that do not need model capabilities.
+ */
+export async function readCustomProviders(path: string): Promise<Record<string, CustomProviderRecord>> {
+  return (await readCustomProviderMetadata(path)).records;
+}
+
+/**
+ * Persists every discovered model, preserving capability edits for matching IDs; legacy single-model records remain readable.
  * @returns Whether the persisted Pi Provider configuration changed; metadata-only drafts return false.
  */
-export async function saveLocalProvider(
+export async function saveCustomProvider(
   path: string,
   id: string,
-  record: LocalProviderRecord
+  record: CustomProviderRecord,
+  discoveredModels?: ReadonlyArray<{ id: string; name?: string }>
 ): Promise<boolean> {
   return updateProviderDocument(path, id, (document) => {
     document.octopusLocalProviders = { ...document.octopusLocalProviders, [id]: record };
-    if (record.modelId) {
+    const models = discoveredModels ?? (record.modelId ? [{ id: record.modelId }] : undefined);
+    if (models !== undefined) {
       const root = record.baseUrl.replace(/\/+$/, '');
+      const local = ['ollama', 'vllm', 'lmstudio'].includes(record.runtime);
+      const existingModels = document.providers[id]?.models as Array<Record<string, unknown>> | undefined;
+      const previousById = new Map(existingModels?.map((model) => [model.id, model]) ?? []);
       document.providers[id] = {
         ...document.providers[id],
         name: record.name,
-        baseUrl: root.endsWith('/v1') ? root : `${root}/v1`,
-        api: 'openai-completions',
-        apiKey: id,
-        compat: { supportsDeveloperRole: false, supportsReasoningEffort: false },
-        models: [
-          {
-            name: `${record.modelId} (Local)`,
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            ...((document.providers[id]?.models as Array<Record<string, unknown>> | undefined)?.find(
-              (model) => model.id === record.modelId
-            ) ?? { reasoning: false, input: ['text'] }),
-            id: record.modelId,
-          },
-        ],
+        baseUrl: local && !root.endsWith('/v1') ? `${root}/v1` : root,
+        api: record.api ?? 'openai-completions',
+        ...(local
+          ? { apiKey: id, compat: { supportsDeveloperRole: false, supportsReasoningEffort: false } }
+          : {}),
+        models: models.map((model) => ({
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          ...(previousById.get(model.id) ?? {
+            reasoning: false,
+            input: ['text'],
+          }),
+          id: model.id,
+          name: model.name ?? (local ? `${model.id} (Local)` : model.id),
+        })),
       };
+      const marked = document.octopusModelCapabilities?.[id];
+      if (discoveredModels && marked && document.octopusModelCapabilities) {
+        const discoveredIds = new Set(discoveredModels.map((model) => model.id));
+        const remaining = Object.fromEntries(
+          Object.entries(marked).filter(([modelId]) => discoveredIds.has(modelId))
+        );
+        if (Object.keys(remaining).length > 0) {
+          document.octopusModelCapabilities[id] = remaining;
+        } else {
+          delete document.octopusModelCapabilities[id];
+        }
+      }
     }
   });
 }
 
 /**
- * Updates only Pi capability metadata, preserving provider credentials and all other model settings.
+ * Removes one Settings-owned provider and its draft without touching unrelated Pi configuration.
+ */
+export async function deleteCustomProvider(path: string, id: string): Promise<boolean> {
+  return updateProviderDocument(path, id, (document) => {
+    if (document.octopusLocalProviders) {
+      delete document.octopusLocalProviders[id];
+    }
+    if (document.octopusModelCapabilities) {
+      delete document.octopusModelCapabilities[id];
+    }
+    delete document.providers[id];
+  });
+}
+
+/**
+ * Updates Pi capabilities and stores the image-generation marker separately from inference settings.
  */
 export async function saveModelCapabilities(
   path: string,
@@ -108,6 +150,7 @@ export async function saveModelCapabilities(
   input: UpdateModelCapabilitiesBody
 ): Promise<boolean> {
   return updateProviderDocument(path, id, (document) => {
+    const { imageGeneration, ...piCapabilities } = input;
     const provider = document.providers[id];
     if (!provider) {
       throw new Error('Provider configuration no longer exists.');
@@ -115,14 +158,26 @@ export async function saveModelCapabilities(
     const models = provider.models as Array<Record<string, unknown>> | undefined;
     const model = models?.find((candidate) => candidate.id === modelId);
     if (model) {
-      Object.assign(model, input);
+      Object.assign(model, piCapabilities);
       if (document.octopusLocalProviders?.[id]) {
         model.compat = { ...(model.compat as object), supportsReasoningEffort: input.reasoning };
       }
     }
+    document.octopusModelCapabilities ??= {};
+    const marked = { ...document.octopusModelCapabilities[id] };
+    if (imageGeneration) {
+      marked[modelId] = { imageGeneration: true };
+    } else {
+      delete marked[modelId];
+    }
+    if (Object.keys(marked).length > 0) {
+      document.octopusModelCapabilities[id] = marked;
+    } else {
+      delete document.octopusModelCapabilities[id];
+    }
     const overrides = (provider.modelOverrides ?? {}) as Record<string, object>;
     if (!model || overrides[modelId]) {
-      provider.modelOverrides = { ...overrides, [modelId]: { ...overrides[modelId], ...input } };
+      provider.modelOverrides = { ...overrides, [modelId]: { ...overrides[modelId], ...piCapabilities } };
     }
   });
 }

@@ -68,10 +68,6 @@
     },
     "readyTitle": "我是 Dr.Octopus，今天想做点什么呢？",
     "separateDraft": "保留输入并另建会话",
-    "snippets": {
-      "fill": "点击填充",
-      "send": "点击即发送"
-    },
     "statusUnavailable": "暂时无法确认提交状态，请重试查询同一请求。"
   },
   "knowledge": {
@@ -1398,6 +1394,19 @@
     }
   },
   "settings": {
+    "about": {
+      "licenseLink": "在 GitHub 查看 MIT 许可证",
+      "licenseTitle": "开源许可",
+      "maintainersDescription": "由南京星恒数据科技有限公司开源，并与社区贡献者共同维护。",
+      "maintainersTitle": "项目与维护者",
+      "noticesLink": "第三方许可声明",
+      "productName": "Dr.Octopus",
+      "releaseLink": "在 GitHub 查看此版本",
+      "repositoryLink": "在 GitHub 查看项目",
+      "subtitle": "基于 Pi 的本地优先 AI 智能体工作空间，融合持久记忆、知识库和任务自动化，支持通过网页与终端使用。",
+      "versionTitle": "版本",
+      "versionValue": "v{{version}}"
+    },
     "defaultModel": {
       "currentTitle": "当前默认模型",
       "fieldLabel": "Provider / Model",
@@ -1664,9 +1673,9 @@
       "transportStdio": "stdio（本地进程）"
     },
     "nav": {
-      "company": {
-        "description": "公司介绍页面尚未开放。",
-        "label": "公司"
+      "about": {
+        "description": "版本、维护者与开源许可。",
+        "label": "关于 Dr.Octopus"
       },
       "defaultModel": {
         "description": "选择新建会话使用的默认模型，不影响正在运行的会话。",
@@ -1698,10 +1707,6 @@
       "language": {
         "description": "选择界面显示语言，切换后立即生效。",
         "label": "语言"
-      },
-      "licenses": {
-        "description": "开源协议信息页面尚未开放。",
-        "label": "开源协议"
       },
       "mcp": {
         "description": "添加和管理 MCP 服务器连接及可用工具。",
@@ -1738,10 +1743,6 @@
       "theme": {
         "description": "主题模式配置尚未开放。",
         "label": "主题模式"
-      },
-      "version": {
-        "description": "版本信息页面尚未开放。",
-        "label": "版本"
       }
     },
     "permissions": {
@@ -2000,33 +2001,46 @@
       "authTitle": "认证",
       "avatarAlt": "{{name}} 头像",
       "backToList": "返回列表",
-      "capabilityHelp": "请按模型实际能力标记。可用思考等级由 Pi 决定；已有会话可能需要重启才能使用更新后的配置。",
       "configured": "已配置",
+      "confirmDelete": "删除模型服务",
       "defaultBadge": "默认",
+      "delete": "删除模型服务",
+      "deleteDefaultBlocked": "该服务正在提供默认模型。请先选择其他默认模型。",
+      "deleteDescription": "这将删除该服务及其模型配置。如果它是当前默认服务，请先更换默认模型。",
+      "deleteTitle": "删除 {{name}}？",
       "detailsLoadFailed": "Provider 详情加载失败",
       "editCapabilities": "编辑能力",
       "empty": "没有模型服务",
       "emptyDescription": "点击下方按钮添加本地模型服务。",
       "endpointDescription": "大模型提供商的 API 访问地址",
       "endpointTitle": "Endpoint",
-      "imageInput": "支持图像输入",
+      "imageGeneration": "生图",
+      "imageInput": "图像输入",
       "loadFailed": "模型服务加载失败",
       "local": {
-        "addDescription": "添加本地模型服务，随后配置服务地址和模型。",
+        "addDescription": "添加模型服务，随后配置服务地址、模型和 API Key。",
         "adding": "添加中…",
         "addTitle": "添加提供商",
-        "detect": "检测模型",
-        "detecting": "检测中…",
+        "apiKeyLabel": "API Key",
+        "apiLabel": "API 协议",
+        "chatCompletions": "Chat Completions",
+        "detect": "获取模型",
+        "detecting": "正在获取模型…",
         "endpointHelpOllama": "通过 /api/tags 获取本地模型；推理使用 /v1。",
         "endpointHelpOpenAI": "通过 OpenAI 兼容的 /v1/models 获取已加载模型。",
+        "endpointHelpRemote": "填写提供商的 OpenAI 兼容基础地址和所需路径前缀。",
         "endpointLabel": "服务地址",
-        "footerHint": "保存后可在默认模型设置中选择此模型，新会话使用最新配置。",
-        "helpSuffix": "本地地址指运行 Dr.Octopus Server 的机器。当前支持无需 API Key 的本地服务。",
-        "modelLabel": "模型",
-        "modelPlaceholder": "选择模型",
+        "helpSuffix": "本地地址指运行 Dr.Octopus Server 的机器。",
+        "keyConfigured": "********（已配置）",
+        "keyOptional": "本地服务可留空。",
+        "keyRequired": "远程服务首次配置时必填；以后留空会保留已保存的密钥。",
+        "modelsHint": "服务返回的全部模型会显示在下方列表中，并可设为默认模型。",
+        "modelsSynced": "模型列表已更新。",
         "nameLabel": "提供商名称",
         "namePlaceholder": "例如 我的 Ollama",
         "noModels": "服务已连接，但没有可用模型。请先下载或加载模型后重新检测。",
+        "noRemoteModels": "服务已连接，但提供商未返回模型。请检查 API Key 和服务地址后重试。",
+        "responses": "Responses",
         "runtimeHelp": {
           "lmstudio": "在 LM Studio 中加载模型并启动 Local Server。默认地址：http://127.0.0.1:1234/v1。",
           "ollama": "启动 Ollama（ollama serve），并用 ollama pull 下载模型。默认地址：http://127.0.0.1:11434。",
@@ -2035,10 +2049,8 @@
         "runtimeLabel": "提供商类型",
         "runtimesFailed": "提供商类型加载失败。",
         "save": "保存配置",
-        "saved": "配置已保存。",
         "saving": "保存中…",
-        "title": "本地模型配置",
-        "unreachable": "无法连接服务，请检查服务已启动且地址正确，然后重新检测。"
+        "title": "模型服务配置"
       },
       "modelCapabilities": "模型能力",
       "modelsAvailable": "{{available}}/{{total}} 个模型当前可用",
@@ -2048,7 +2060,7 @@
       "noMatchDescription": "尝试其他名称或 Provider ID。",
       "pendingConfiguration": "待配置",
       "readonlySuffix": "（只读）",
-      "reasoning": "支持推理",
+      "reasoning": "推理",
       "searchPlaceholder": "搜索模型服务…",
       "selectDescription": "从左侧目录查看认证状态、Endpoint 和模型能力。",
       "selectTitle": "选择一个模型服务",

@@ -4,13 +4,11 @@
  */
 
 import {
-  BookOpenIcon,
   BoxesIcon,
   BracesIcon,
   BrainIcon,
-  Building2Icon,
   CalendarClockIcon,
-  FileBadgeIcon,
+  InfoIcon,
   KeyboardIcon,
   LanguagesIcon,
   LibraryIcon,
@@ -215,28 +213,11 @@ function getSettingsNavigation(t: Translate): SettingsNavigationGroup[] {
       label: t('settings.nav.group.about', 'About'),
       items: [
         {
-          label: t('settings.nav.version.label', 'Version'),
-          description: t('settings.nav.version.description', 'The version page is not available yet.'),
-          path: '/settings/about/version',
-          icon: FileBadgeIcon,
-          pageType: 'placeholder',
-        },
-        {
-          label: t('settings.nav.company.label', 'Company'),
-          description: t('settings.nav.company.description', 'The company page is not available yet.'),
-          path: '/settings/about/company',
-          icon: Building2Icon,
-          pageType: 'placeholder',
-        },
-        {
-          label: t('settings.nav.licenses.label', 'Licenses'),
-          description: t(
-            'settings.nav.licenses.description',
-            'The open-source licenses page is not available yet.'
-          ),
-          path: '/settings/about/licenses',
-          icon: BookOpenIcon,
-          pageType: 'placeholder',
+          label: t('settings.nav.about.label', 'About Dr.Octopus'),
+          description: t('settings.nav.about.description', 'Version, maintainers, and license.'),
+          path: '/settings/about',
+          icon: InfoIcon,
+          pageType: 'complete',
         },
       ],
     },

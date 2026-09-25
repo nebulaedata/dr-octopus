@@ -3,7 +3,7 @@
  * @description Defines the Server-owned port for reading and mutating Pi user-scope model settings.
  */
 
-import type { ThinkingLevel, LocalProviderConfigurationDto } from '@octopus/shared/protocol';
+import type { ThinkingLevel, CustomProviderConfigurationDto, ModelInterface } from '@octopus/shared/protocol';
 
 export type PiSettingsProviderProvenance = 'builtin' | 'models_json' | 'extension';
 
@@ -15,14 +15,17 @@ export interface PiSettingsModel {
   baseUrl: string;
   reasoning: boolean;
   input: Array<'text' | 'image'>;
-  contextWindow: number;
-  maxTokens: number;
+  interfaces?: ModelInterface[];
+  imageGeneration?: boolean;
+  contextWindow?: number;
+  maxTokens?: number;
   available: boolean;
   configuration: 'inherited' | 'owned' | 'overridden';
 }
 
 export interface PiSettingsProvider {
-  local?: LocalProviderConfigurationDto;
+  /** Existing catalog field for user-added local and remote services. */
+  local?: CustomProviderConfigurationDto;
   id: string;
   name: string;
   baseUrl?: string;

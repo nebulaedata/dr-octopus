@@ -8,6 +8,7 @@
 import { createRootRouteWithContext, createRoute, createRouter, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
 import {
+  AboutRoute,
   DefaultModelRoute,
   EnvironmentRoute,
   ServerSettingsRoute,
@@ -168,12 +169,22 @@ const mcpServersRoute = createRoute({
   component: McpServersRoute,
 });
 
-const placeholderSettingsPaths = [
-  'appearance/theme',
-  'about/version',
-  'about/company',
-  'about/licenses',
-] as const;
+const placeholderSettingsPaths = ['appearance/theme'] as const;
+const legacyAboutPaths = ['about/version', 'about/company', 'about/licenses'] as const;
+const legacyAboutRoutes = legacyAboutPaths.map((path) =>
+  createRoute({
+    path,
+    getParentRoute: () => settingsLayoutRoute,
+    beforeLoad: () => {
+      throw redirect({ to: '/settings/about', replace: true });
+    },
+  })
+);
+const aboutRoute = createRoute({
+  path: 'about',
+  getParentRoute: () => settingsLayoutRoute,
+  component: AboutRoute,
+});
 const schedulerSettingsRoute = createRoute({
   path: 'schedules',
   getParentRoute: () => settingsLayoutRoute,
@@ -267,6 +278,8 @@ const routeTree = rootRoute.addChildren([
       environmentRoute,
       serverSettingsRoute,
       permissionsRoute,
+      aboutRoute,
+      ...legacyAboutRoutes,
       ...placeholderSettingsRoutes,
     ]),
   ]),

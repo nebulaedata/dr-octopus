@@ -4,6 +4,7 @@
  * - GET /api/settings/model-providers
  * - PUT /api/settings/model-providers/:providerKey/models/:modelKey/capabilities
  * - GET /api/settings/model-providers/:providerKey
+ * - DELETE /api/settings/model-providers/:providerKey
  * - GET /api/settings/default-model
  * - GET /api/settings/default-model/candidates
  * - PUT /api/settings/default-model
@@ -14,9 +15,9 @@
  * - DELETE /api/settings/model-providers/:providerKey/auth-sessions/:authSessionId
  */
 import {
-  ConfigureLocalProviderBodySchema,
-  CreateLocalProviderBodySchema,
-  DetectLocalProviderBodySchema,
+  ConfigureCustomProviderBodySchema,
+  CreateCustomProviderBodySchema,
+  DetectCustomProviderBodySchema,
   UpdateDefaultModelBodySchema,
   UpdateModelCapabilitiesBodySchema,
 } from '@octopus/shared/protocol';
@@ -42,7 +43,7 @@ interface ProviderParams {
  * @param service Settings application use cases.
  */
 export function registerSettingsController(server: FastifyInstance, service: SettingsService): void {
-  registerLocalProviderController(server, service);
+  registerCustomProviderController(server, service);
   server.get('/settings/model-providers', () => service.listProviders());
 
   server.get<{ Params: ProviderParams }>('/settings/model-providers/:providerKey', async (request, reply) => {
@@ -57,6 +58,9 @@ export function registerSettingsController(server: FastifyInstance, service: Set
     }
     return provider;
   });
+  server.delete<{ Params: ProviderParams }>('/settings/model-providers/:providerKey', (request) =>
+    service.deleteCustomProvider(request.params.providerKey)
+  );
 
   server.put<{ Params: ProviderParams & { modelKey: string } }>(
     '/settings/model-providers/:providerKey/models/:modelKey/capabilities',
@@ -95,11 +99,11 @@ function invalidSettingsRequest(message: string): ApplicationError {
 /**
  * Validates bodies and ensures retried creation requests cannot duplicate providers.
  */
-export function registerLocalProviderController(server: FastifyInstance, service: SettingsService): void {
+export function registerCustomProviderController(server: FastifyInstance, service: SettingsService): void {
   const ledger = new MutationIdempotencyLedger();
-  server.get('/settings/local-runtimes', () => service.getLocalRuntimes());
+  server.get('/settings/local-runtimes', () => service.getCustomProviderTypes());
   server.post('/settings/local-providers', async (request, reply) => {
-    const body = CreateLocalProviderBodySchema.safeParse(request.body);
+    const body = CreateCustomProviderBodySchema.safeParse(request.body);
     const key = request.headers['idempotency-key'];
     if (
       !body.success ||
@@ -110,33 +114,33 @@ export function registerLocalProviderController(server: FastifyInstance, service
     }
     const result = await ledger.execute(
       {
-        scope: 'local-providers',
+        scope: 'custom-providers',
         key,
-        type: 'create-local-provider',
+        type: 'create-custom-provider',
         fingerprint: mutationFingerprint(body.data),
       },
-      () => service.createLocalProvider(body.data)
+      () => service.createCustomProvider(body.data)
     );
     return reply.status(201).send(result);
   });
   server.post<{ Params: { providerKey: string } }>(
     '/settings/model-providers/:providerKey/local/detect',
     (request) => {
-      const body = DetectLocalProviderBodySchema.safeParse(request.body);
+      const body = DetectCustomProviderBodySchema.safeParse(request.body);
       if (!body.success) {
         throw invalidRequest();
       }
-      return service.detectLocalProvider(request.params.providerKey, body.data.baseUrl);
+      return service.detectCustomProvider(request.params.providerKey, body.data.baseUrl, body.data.apiKey);
     }
   );
   server.put<{ Params: { providerKey: string } }>(
     '/settings/model-providers/:providerKey/local',
     (request) => {
-      const body = ConfigureLocalProviderBodySchema.safeParse(request.body);
+      const body = ConfigureCustomProviderBodySchema.safeParse(request.body);
       if (!body.success) {
         throw invalidRequest();
       }
-      return service.configureLocalProvider(request.params.providerKey, body.data);
+      return service.configureCustomProvider(request.params.providerKey, body.data);
     }
   );
 }
@@ -144,11 +148,9 @@ export function registerLocalProviderController(server: FastifyInstance, service
  * Returns a stable validation failure without echoing request data.
  */
 function invalidRequest() {
-  return new ApplicationError(
-    'INVALID_SETTINGS_REQUEST',
-    '本地提供商配置无效，请检查名称、服务地址和模型。',
-    { statusCode: 400 }
-  );
+  return new ApplicationError('INVALID_SETTINGS_REQUEST', '模型服务配置无效，请检查名称、服务地址和模型。', {
+    statusCode: 400,
+  });
 }
 
 /**
@@ -168,12 +170,36 @@ export const settingsErrorMessages: ErrorMessageCatalog = {
     'zh-CN': '无效的权限配置范围。',
   },
   LOCAL_MODEL_NOT_FOUND: {
-    en: 'The selected model is no longer available; detect models again.',
-    'zh-CN': '所选模型已不可用，请重新检测模型。',
+    en: 'The selected model is no longer available; retrieve the model list again.',
+    'zh-CN': '所选模型已不可用，请重新获取模型列表。',
+  },
+  MODEL_DISCOVERY_AUTH_FAILED: {
+    en: 'The API Key is invalid or cannot list models for this provider.',
+    'zh-CN': 'API Key 无效，或没有获取该提供商模型列表的权限。',
+  },
+  MODEL_DISCOVERY_FAILED: {
+    en: 'The provider rejected the model-list request.',
+    'zh-CN': '提供商拒绝了获取模型列表的请求。',
+  },
+  MODEL_DISCOVERY_INVALID_RESPONSE: {
+    en: 'The provider returned an invalid model list.',
+    'zh-CN': '提供商返回的模型列表格式无效。',
+  },
+  LOCAL_RUNTIME_OFFLINE: {
+    en: 'Cannot connect to the model service. Check its address and availability.',
+    'zh-CN': '无法连接模型服务，请检查服务地址和运行状态。',
   },
   LOCAL_PROVIDER_NOT_FOUND: {
-    en: 'This provider is not a configurable local model service.',
-    'zh-CN': '该提供商不是可配置的本地模型服务。',
+    en: 'This provider is not a configurable custom model service.',
+    'zh-CN': '该提供商不是可配置的自定义模型服务。',
+  },
+  MODEL_PROVIDER_DEFAULT_IN_USE: {
+    en: 'Choose another default model before deleting this provider.',
+    'zh-CN': '请先选择其他默认模型，再删除此模型服务。',
+  },
+  MODEL_PROVIDER_API_KEY_REQUIRED: {
+    en: 'An API Key is required for this remote model service.',
+    'zh-CN': '远程模型服务需要填写 API Key。',
   },
   PERMISSION_CONFIG_BUSY: {
     en: 'The permission configuration is being saved; try again later.',

@@ -69,10 +69,6 @@
     },
     "readyTitle": "I'm Dr.Octopus — what would you like to do today?",
     "separateDraft": "Keep input in a separate conversation",
-    "snippets": {
-      "fill": "Click to fill",
-      "send": "Click to send"
-    },
     "statusUnavailable": "Submission status is unavailable. Retry to check the same request."
   },
   "knowledge": {
@@ -1443,6 +1439,19 @@
     }
   },
   "settings": {
+    "about": {
+      "licenseLink": "View MIT license",
+      "licenseTitle": "License",
+      "maintainersDescription": "Open sourced by Nanjing Xingheng Data Technology Co., Ltd. and maintained together with community contributors.",
+      "maintainersTitle": "Project and maintainers",
+      "noticesLink": "Third-party notices",
+      "productName": "Dr.Octopus",
+      "releaseLink": "View this release on GitHub",
+      "repositoryLink": "View project on GitHub",
+      "subtitle": "A local-first AI agent workspace powered by Pi, combining persistent memory, knowledge bases, and task automation through web and terminal interfaces.",
+      "versionTitle": "Version",
+      "versionValue": "v{{version}}"
+    },
     "defaultModel": {
       "currentTitle": "Current default model",
       "fieldLabel": "Provider / Model",
@@ -1711,9 +1720,9 @@
       "transportStdio": "stdio (local process)"
     },
     "nav": {
-      "company": {
-        "description": "The company page is not available yet.",
-        "label": "Company"
+      "about": {
+        "description": "Version, maintainers, and license.",
+        "label": "About Dr.Octopus"
       },
       "defaultModel": {
         "description": "Choose the default model for new sessions; running sessions are unaffected.",
@@ -1745,10 +1754,6 @@
       "language": {
         "description": "Choose the interface language; changes apply immediately.",
         "label": "Language"
-      },
-      "licenses": {
-        "description": "The open-source licenses page is not available yet.",
-        "label": "Licenses"
       },
       "mcp": {
         "description": "Add and manage MCP server connections and available tools.",
@@ -1785,10 +1790,6 @@
       "theme": {
         "description": "Theme mode configuration is not available yet.",
         "label": "Theme mode"
-      },
-      "version": {
-        "description": "The version page is not available yet.",
-        "label": "Version"
       }
     },
     "permissions": {
@@ -2047,33 +2048,46 @@
       "authTitle": "Authentication",
       "avatarAlt": "{{name}} avatar",
       "backToList": "Back to list",
-      "capabilityHelp": "Declare capabilities supported by this model. Available thinking levels are determined by Pi. Existing sessions may need to restart to use the updated configuration.",
       "configured": "Configured",
+      "confirmDelete": "Delete provider",
       "defaultBadge": "Default",
+      "delete": "Delete provider",
+      "deleteDefaultBlocked": "This provider is the current default. Choose another default model before deleting it.",
+      "deleteDescription": "This removes the provider and its model configuration. Select another default model first if this provider is currently the default.",
+      "deleteTitle": "Delete {{name}}?",
       "detailsLoadFailed": "Failed to load provider details",
       "editCapabilities": "Edit capabilities",
       "empty": "No model providers",
       "emptyDescription": "Use the button below to add a local model provider.",
       "endpointDescription": "API access address of the model provider",
       "endpointTitle": "Endpoint",
-      "imageInput": "Supports image input",
+      "imageGeneration": "Image generation",
+      "imageInput": "Image input",
       "loadFailed": "Failed to load model providers",
       "local": {
-        "addDescription": "Add a local model service, then configure its endpoint and models.",
+        "addDescription": "Add a model service, then configure its endpoint, model, and API Key.",
         "adding": "Adding…",
         "addTitle": "Add provider",
-        "detect": "Detect models",
-        "detecting": "Detecting…",
+        "apiKeyLabel": "API Key",
+        "apiLabel": "API protocol",
+        "chatCompletions": "Chat Completions",
+        "detect": "Get models",
+        "detecting": "Getting models…",
         "endpointHelpOllama": "Models are discovered via /api/tags; inference uses /v1.",
         "endpointHelpOpenAI": "Loaded models are discovered via the OpenAI-compatible /v1/models.",
+        "endpointHelpRemote": "Enter the provider’s OpenAI-compatible base URL and any required path prefix.",
         "endpointLabel": "Endpoint",
-        "footerHint": "After saving, select this model in the default model settings; new sessions use the latest configuration.",
-        "helpSuffix": "The local address refers to the machine running Dr.Octopus Server. Currently only local services without API Key are supported.",
-        "modelLabel": "Model",
-        "modelPlaceholder": "Select a model",
+        "helpSuffix": "The local address refers to the machine running Dr.Octopus Server.",
+        "keyConfigured": "******** (configured)",
+        "keyOptional": "Optional for local services.",
+        "keyRequired": "Required when first configuring a remote service. Leave blank later to keep the saved key.",
+        "modelsHint": "All models returned by this service appear in the list below and can be used as the default model.",
+        "modelsSynced": "Model list updated.",
         "nameLabel": "Provider name",
         "namePlaceholder": "e.g. My Ollama",
         "noModels": "Connected, but no models available. Download or load a model, then detect again.",
+        "noRemoteModels": "Connected, but this provider returned no models. Check the API Key and endpoint, then try again.",
+        "responses": "Responses",
         "runtimeHelp": {
           "lmstudio": "Load a model in LM Studio and start the Local Server. Default address: http://127.0.0.1:1234/v1.",
           "ollama": "Start Ollama (ollama serve) and download models with ollama pull. Default address: http://127.0.0.1:11434.",
@@ -2082,10 +2096,8 @@
         "runtimeLabel": "Provider type",
         "runtimesFailed": "Failed to load provider types.",
         "save": "Save configuration",
-        "saved": "Configuration saved.",
         "saving": "Saving…",
-        "title": "Local model configuration",
-        "unreachable": "Cannot connect to the service. Check that it is started and the address is correct, then detect again."
+        "title": "Model service configuration"
       },
       "modelCapabilities": "Model capabilities",
       "modelsAvailable": "{{available}} of {{total}} models currently available",
@@ -2095,7 +2107,7 @@
       "noMatchDescription": "Try another name or Provider ID.",
       "pendingConfiguration": "Pending configuration",
       "readonlySuffix": " (readonly)",
-      "reasoning": "Supports reasoning",
+      "reasoning": "Reasoning",
       "searchPlaceholder": "Search model providers…",
       "selectDescription": "Pick one from the catalog to view authentication status, endpoint, and model capabilities.",
       "selectTitle": "Select a model provider",

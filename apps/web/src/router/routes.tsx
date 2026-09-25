@@ -121,6 +121,7 @@ export function KnowledgeSettingsRoute() {
 const LazySettingsPlaceholderPage = lazy(() =>
   loadSettingsModule().then((module) => ({ default: module.SettingsPlaceholderPage }))
 );
+const LazyAboutPage = lazy(() => loadSettingsModule().then((module) => ({ default: module.AboutPage })));
 const LazySnippetsSettingsPage = lazy(() =>
   loadSettingsModule().then((module) => ({ default: module.SnippetsSettingsPage }))
 );
@@ -350,6 +351,17 @@ export function SettingsPlaceholderRoute() {
       fallback={<LoadingFallback message={t('layout.routeLoading.settingsPage', 'Loading settings page…')} />}
     >
       <LazySettingsPlaceholderPage pathname={pathname} />
+    </Suspense>
+  );
+}
+
+/**
+ * Renders the About page at its canonical Settings URL.
+ */
+export function AboutRoute() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <LazyAboutPage />
     </Suspense>
   );
 }

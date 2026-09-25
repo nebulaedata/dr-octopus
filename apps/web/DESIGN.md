@@ -85,7 +85,7 @@
 | 加载            | `Skeleton`、`MessageSkeleton`、`LoadingFallback`、`Spinner` |
 | 快捷键提示      | `Kbd`（@octopus/ui）                                        |
 
-- Button 沿用已有 variant 和 size：主操作用默认强调，次要操作用 `outline` / `secondary`，工具栏和低强调入口用 `ghost`，破坏性操作用 `destructive`。普通关闭或返回不应因邻近危险操作而使用危险样式。
+- Button 沿用已有 variant 和 size：主操作用默认强调，次要操作用 `outline` / `secondary`，工具栏和低强调入口用 `ghost`。所有执行删除或打开删除确认框的按钮都必须使用 `destructive` variant，不能用 `outline` / `ghost`；确认框中的最终删除按钮同样使用 `destructive`。普通关闭或返回不应因邻近危险操作而使用危险样式。
 - 菜单使用现有 DropdownMenu / Select 等组件；单选项展示当前值及选中状态。有官方选项列表时优先提供选择器，覆盖加载、失败重试和当前值保留。会话中的模型与思考等级继续复用合并选择器。
 - 提交及辅助操作统一放在表单底部右侧；按钮顺序、尺寸和主次样式与同类表单一致，窄屏允许换行。
 - 短表单使用 Dialog，附属管理详情可使用 Sheet。仓库尚未安装 AlertDialog：危险删除确认沿用 Dialog 加警示区的模式（`border-destructive/30 bg-destructive/5`、警示图标和明确的对象名称，参考 SkillDeleteDialog）；后续按 CLI 安装 AlertDialog 后统一替换。保留 primitive 的焦点管理、键盘和关闭行为。

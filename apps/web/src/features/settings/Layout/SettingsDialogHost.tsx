@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@octopus/ui/components/dialog';
 import { DefaultModelPage } from '../default-model/DefaultModelPage';
+import { AboutPage } from '../about/AboutPage';
 import { PermissionsPage } from '../permissions/PermissionsPage';
 import { EnvironmentPage } from '../environment/EnvironmentPage';
 import { ExtensionsPage } from '../extensions/ExtensionsPage';
@@ -108,6 +109,8 @@ function SettingsDialogPage({
   onProviderChange(provider?: string): void;
 }): ReactNode {
   switch (location.path) {
+    case '/settings/about':
+      return <AboutPage />;
     case '/settings/server':
       return <ServerSettingsPage />;
     case '/settings/model-providers':

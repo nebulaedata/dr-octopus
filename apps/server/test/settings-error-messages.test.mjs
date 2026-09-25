@@ -60,12 +60,12 @@ test('settings codes render localized messages through the public error projecti
   assert.equal(toPublicError(other, 'zh-CN').message, '权限配置无效。');
   assert.equal(toPublicError(other, 'en').message, 'The permission configuration is invalid.');
   // Single-site codes render their generic on both locales.
-  const model = new ApplicationError('LOCAL_MODEL_NOT_FOUND', '所选模型已不可用，请重新检测模型。', {
+  const model = new ApplicationError('LOCAL_MODEL_NOT_FOUND', '所选模型已不可用，请重新获取模型列表。', {
     statusCode: 404,
   });
-  assert.equal(toPublicError(model, 'zh-CN').message, '所选模型已不可用，请重新检测模型。');
+  assert.equal(toPublicError(model, 'zh-CN').message, '所选模型已不可用，请重新获取模型列表。');
   assert.equal(
     toPublicError(model, 'en').message,
-    'The selected model is no longer available; detect models again.'
+    'The selected model is no longer available; retrieve the model list again.'
   );
 });

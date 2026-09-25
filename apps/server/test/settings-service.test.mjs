@@ -13,7 +13,7 @@ test('model commits notify before a refresh failure is returned; unchanged and f
   let result = { changed: false, synchronized: true };
   let commits = 0;
   let defaultCommits = 0;
-  fixture.piSettings.configureLocalProvider = async () => {
+  fixture.piSettings.configureCustomProvider = async () => {
     if (result instanceof Error) {
       throw result;
     }
@@ -25,15 +25,15 @@ test('model commits notify before a refresh failure is returned; unchanged and f
   });
   try {
     const key = (await service.listProviders()).providers[0].providerKey;
-    await service.configureLocalProvider(key, {});
+    await service.configureCustomProvider(key, {});
     assert.equal(commits, 0);
     result = { changed: true, synchronized: false };
-    await assert.rejects(service.configureLocalProvider(key, {}), {
+    await assert.rejects(service.configureCustomProvider(key, {}), {
       code: 'MODEL_CONFIG_COMMITTED_UNSYNCED',
     });
     assert.equal(commits, 1);
     result = new Error('save failed');
-    await assert.rejects(service.configureLocalProvider(key, {}), /save failed/);
+    await assert.rejects(service.configureCustomProvider(key, {}), /save failed/);
     assert.equal(commits, 1);
     const candidates = await service.listDefaultModelCandidates();
     await service.setDefaultModel(key, candidates.candidates[0].modelKey);

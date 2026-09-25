@@ -4,6 +4,8 @@
 
 Before creating or changing UI, read and follow [Frontend Design Guidelines](./DESIGN.md). It defines the shared visual language, page patterns, responsive behavior, interaction states, and design verification requirements. Keep that guide aligned when shared design conventions change; record task-specific QA evidence in the PR rather than a root-level report.
 
+Buttons that delete an object or open its deletion confirmation must use the `destructive` variant. The final confirmation button also uses `destructive`; cancel and back buttons keep their normal variant.
+
 ## Stack Conventions
 
 - Prefer shadcn/ui components; create custom UI only when no suitable primitive exists. Install official components into `packages/ui` with commands such as `pnpm dlx shadcn@latest add badge -c packages/ui`; never copy them manually.
