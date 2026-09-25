@@ -8,6 +8,7 @@ import {
   AlertCircleIcon,
   ChevronRightIcon,
   DownloadIcon,
+  EyeIcon,
   FileIcon,
   FilePlusIcon,
   FolderIcon,
@@ -34,7 +35,8 @@ import {
 import { Input } from '@octopus/ui/components/input';
 import { ScrollArea } from '@octopus/ui/components/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/tooltip';
-import { getWorkspaceFileDownloadUrl } from '@/api/workspace';
+import { getWorkspaceFileDownloadUrl, getWorkspaceFileImageUrl } from '@/api/workspace';
+import { ImagePreviewDialog } from '@/components/ImagePreviewDialog';
 import { useI18n } from '@/i18n/use-i18n';
 import { useFileExplorerStore } from '@/stores/file-explorer';
 import { download } from '@/utils/common';
@@ -52,6 +54,13 @@ export interface ExplorerFileTreeProps {
 interface CreationTarget {
   parentPath?: string;
   type: FileTreeEntryType;
+}
+
+/**
+ * Matches image formats supported by the Workspace's validated inline image endpoint.
+ */
+function isPreviewableImage(path: string): boolean {
+  return /\.(?:png|jpe?g|webp)$/i.test(path);
 }
 
 /**
@@ -92,6 +101,7 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
   const [creating, setCreating] = useState<CreationTarget | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingPath, setEditingPath] = useState<string | null>(null);
+  const [previewingPath, setPreviewingPath] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -155,7 +165,19 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
 
   const selectedPaths = workspace.selectedPaths;
   const selectedNode = selectedPaths.length === 1 ? workspace.nodesByPath[selectedPaths[0]] : undefined;
-  const canEditSelected = selectedNode?.entry.type === 'file';
+  const canOpenSelected = selectedNode?.entry.type === 'file';
+  const selectedIsImage = canOpenSelected && isPreviewableImage(selectedPaths[0]);
+
+  /**
+   * Routes supported image files to the viewer and other files to the text editor.
+   */
+  function openFile(path: string) {
+    if (isPreviewableImage(path)) {
+      setPreviewingPath(path);
+    } else {
+      setEditingPath(path);
+    }
+  }
 
   /**
    * Begins an inline create flow, expanding and loading the target directory first when needed.
@@ -294,15 +316,19 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label="Edit File"
-                  disabled={!canEditSelected}
-                  onClick={() => canEditSelected && setEditingPath(selectedPaths[0])}
+                  aria-label={selectedIsImage ? 'Preview image' : 'Edit file'}
+                  disabled={!canOpenSelected}
+                  onClick={() => canOpenSelected && openFile(selectedPaths[0])}
                 >
-                  <PencilIcon />
+                  {selectedIsImage ? <EyeIcon /> : <PencilIcon />}
                 </Button>
               }
             />
-            <TooltipContent>{t('session.explorer.editFile', 'Edit File')}</TooltipContent>
+            <TooltipContent>
+              {selectedIsImage
+                ? t('session.explorer.previewImage', 'Preview image')
+                : t('session.explorer.editFile', 'Edit File')}
+            </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger
@@ -391,7 +417,7 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
                     setCreating(null);
                   }}
                   onCancelCreate={() => setCreating(null)}
-                  onOpenEditor={setEditingPath}
+                  onOpenFile={openFile}
                 />
               ))
             )}
@@ -409,6 +435,15 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
       />
       {editingPath !== null && (
         <FileEditorDialog workspaceId={workspaceId} path={editingPath} onClose={() => setEditingPath(null)} />
+      )}
+      {previewingPath !== null && (
+        <ImagePreviewDialog
+          open
+          onOpenChange={(open) => !open && setPreviewingPath(null)}
+          src={getWorkspaceFileImageUrl(workspaceId, previewingPath)}
+          title={previewingPath.split('/').at(-1) ?? previewingPath}
+          description={previewingPath}
+        />
       )}
     </div>
   );
@@ -565,7 +600,7 @@ function FileTreeEntryItem({
   creating,
   onSubmitCreate,
   onCancelCreate,
-  onOpenEditor,
+  onOpenFile,
 }: {
   workspaceId: string;
   path: string;
@@ -573,7 +608,7 @@ function FileTreeEntryItem({
   creating: CreationTarget | null;
   onSubmitCreate(parentPath: string, name: string, type: FileTreeEntryType): Promise<void>;
   onCancelCreate(): void;
-  onOpenEditor(path: string): void;
+  onOpenFile(path: string): void;
 }) {
   const { t } = useI18n();
   const node = useFileExplorerStore((state) => state.workspaces[workspaceId]?.nodesByPath[path]);
@@ -608,11 +643,12 @@ function FileTreeEntryItem({
           selectedClassName
         )}
         style={indentStyle}
+        title={node.entry.name}
         onClick={(event) => selectPath(workspaceId, path, event.ctrlKey || event.metaKey)}
-        onDoubleClick={() => onOpenEditor(path)}
+        onDoubleClick={() => onOpenFile(path)}
       >
         <FileIcon />
-        <span className="truncate">{node.entry.name}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{node.entry.name}</span>
       </Button>
     );
   }
@@ -681,6 +717,7 @@ function FileTreeEntryItem({
             size="sm"
             className={cn('group w-full justify-start gap-1.5 transition-none', folderClassName)}
             style={indentStyle}
+            title={node.entry.name}
             onClick={(event) => selectPath(workspaceId, path, event.ctrlKey || event.metaKey)}
           >
             {node.loading ? (
@@ -689,7 +726,7 @@ function FileTreeEntryItem({
               <ChevronRightIcon className="transition-transform group-aria-expanded:rotate-90" />
             )}
             <FolderIcon />
-            <span className="truncate">{node.entry.name}</span>
+            <span className="min-w-0 flex-1 truncate text-left">{node.entry.name}</span>
           </Button>
         }
       />
@@ -714,7 +751,7 @@ function FileTreeEntryItem({
                 creating={creating}
                 onSubmitCreate={onSubmitCreate}
                 onCancelCreate={onCancelCreate}
-                onOpenEditor={onOpenEditor}
+                onOpenFile={onOpenFile}
               />
             ))}
           </div>

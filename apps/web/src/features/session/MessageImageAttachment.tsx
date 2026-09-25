@@ -3,6 +3,7 @@
  * @description Renders an authorized image derivative card with a keyboard-accessible shadcn Dialog preview.
  */
 
+import { useState } from 'react';
 import { EyeIcon, ImageIcon } from 'lucide-react';
 import {
   Attachment,
@@ -10,14 +11,7 @@ import {
   AttachmentActions,
   AttachmentMedia,
 } from '@octopus/ui/components/attachment';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@octopus/ui/components/dialog';
+import { ImagePreviewDialog } from '@/components/ImagePreviewDialog';
 import {
   MessageAttachmentContent,
   MessageAttachmentDownload,
@@ -31,6 +25,7 @@ import type { MessageAttachmentDto } from '@octopus/shared/protocol/attachments'
  */
 export function MessageImageAttachment({ attachment }: { attachment: MessageAttachmentDto }) {
   const { t } = useI18n();
+  const [previewOpen, setPreviewOpen] = useState(false);
   const available = attachment.availability === 'available' && attachment.previewUrl !== undefined;
   /**
    * Selects attachment media content in the existing condition order.
@@ -45,7 +40,7 @@ export function MessageImageAttachment({ attachment }: { attachment: MessageAtta
     }
   }
   return (
-    <Dialog>
+    <>
       <Attachment
         state={available ? 'done' : 'error'}
         size="sm"
@@ -58,34 +53,27 @@ export function MessageImageAttachment({ attachment }: { attachment: MessageAtta
         {available || attachment.capabilities.canDownload ? (
           <AttachmentActions>
             {available ? (
-              <DialogTrigger
-                render={
-                  <AttachmentAction
-                    aria-label={`Preview ${attachment.name}`}
-                    title={t('session.attachments.previewTitle', 'Preview')}
-                  />
-                }
+              <AttachmentAction
+                aria-label={`Preview ${attachment.name}`}
+                title={t('session.attachments.previewTitle', 'Preview')}
+                onClick={() => setPreviewOpen(true)}
               >
                 <EyeIcon />
-              </DialogTrigger>
+              </AttachmentAction>
             ) : null}
             <MessageAttachmentDownload attachment={attachment} />
           </AttachmentActions>
         ) : null}
       </Attachment>
       {available ? (
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{attachment.name}</DialogTitle>
-            <DialogDescription>{attachment.detectedMediaType}</DialogDescription>
-          </DialogHeader>
-          <img
-            src={attachment.contentUrl ?? attachment.previewUrl}
-            alt={attachment.name}
-            className="max-h-[75vh] max-w-full object-contain"
-          />
-        </DialogContent>
+        <ImagePreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          src={attachment.contentUrl ?? attachment.previewUrl ?? ''}
+          title={attachment.name}
+          description={attachment.detectedMediaType}
+        />
       ) : null}
-    </Dialog>
+    </>
   );
 }

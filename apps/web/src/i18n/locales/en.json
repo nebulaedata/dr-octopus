@@ -36,6 +36,16 @@
     "htmlRenderer": {
       "title": "HTML preview"
     },
+    "imagePreview": {
+      "dragHint": "Drag to move",
+      "hint": "Use the mouse wheel or controls to zoom.",
+      "loadFailed": "Unable to load image.",
+      "reset": "Reset view",
+      "rotateLeft": "Rotate left",
+      "rotateRight": "Rotate right",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
+    },
     "listPagination": {
       "next": "Next",
       "previous": "Previous"
@@ -961,6 +971,7 @@
       "noFilesTitle": "No files yet",
       "noWorkspaceDescription": "This workspace has not been set up yet.",
       "noWorkspaceTitle": "No workspace yet",
+      "previewImage": "Preview image",
       "refreshFile": "Refresh File",
       "retrying": "Retrying…",
       "uploadFile": "Upload File"

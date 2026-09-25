@@ -121,6 +121,16 @@ export function getWorkspaceFileDownloadUrl(workspaceId: string, path: string): 
 }
 
 /**
+ * Builds the same-origin URL for a validated, inline Workspace image.
+ *
+ * @param workspaceId Target Workspace identifier.
+ * @param path Slash-separated image path relative to the Workspace root.
+ */
+export function getWorkspaceFileImageUrl(workspaceId: string, path: string): string {
+  return `/api/workspaces/${encodeURIComponent(workspaceId)}/files/image?path=${encodeURIComponent(path)}`;
+}
+
+/**
  * Reads one Workspace text file for editing.
  *
  * @param workspaceId Target Workspace identifier.
