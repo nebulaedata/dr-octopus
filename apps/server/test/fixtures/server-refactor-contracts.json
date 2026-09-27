@@ -105,7 +105,7 @@
       "PUT /settings/knowledge/sharing",
       "PUT /settings/mcp-servers/:serverKey",
       "PUT /settings/model-providers/:providerKey/local",
-      "PUT /settings/model-providers/:providerKey/models/:modelKey/capabilities",
+      "PUT /settings/model-providers/:providerKey/models/:modelKey/configuration",
       "PUT /settings/permissions",
       "PUT /skills/:name",
       "PUT /workspaces/:workspaceId/files/content",

@@ -8,7 +8,7 @@ import { mkdtemp, writeFile, rm, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ModelConfigMonitor } from '../dist/modules/model-settings/model-settings.service.js';
-import { saveModelCapabilities } from '../dist/infrastructure/pi-settings/custom-provider-repository.js';
+import { saveModelConfiguration } from '../dist/infrastructure/pi-settings/custom-provider-repository.js';
 import { RuntimeConfigChanges } from '../dist/infrastructure/runtime-config/runtime-config-changes.js';
 
 test('model/auth changes stale instances, default changes only notify, and fingerprints survive Host restart', async () => {
@@ -126,7 +126,7 @@ test('image capability file changes refresh catalogs without staling inference r
     let version = await monitor.refresh();
     for (const imageGeneration of [true, false]) {
       assert.equal(
-        await saveModelCapabilities(path, 'custom', 'model', {
+        await saveModelConfiguration(path, 'custom', 'model', {
           reasoning: false,
           input: ['text'],
           imageGeneration,
@@ -143,7 +143,7 @@ test('image capability file changes refresh catalogs without staling inference r
     const restarted = new ModelConfigMonitor({ ...options, changes: new RuntimeConfigChanges() });
     assert.equal(await restarted.refresh(), version);
     await restarted.close();
-    await saveModelCapabilities(path, 'custom', 'model', {
+    await saveModelConfiguration(path, 'custom', 'model', {
       reasoning: true,
       input: ['text'],
       imageGeneration: false,

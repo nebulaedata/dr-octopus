@@ -216,12 +216,12 @@ for (const [runtime, api] of [
       document.providers[created.providerId].models.map((model) => model.id),
       ['example-model', 'other-model']
     );
-    await service.updateModelCapabilities(created.providerKey, saved.models[0].modelKey, {
+    await service.updateModelConfiguration(created.providerKey, saved.models[0].modelKey, {
       reasoning: true,
       input: ['text', 'image'],
       imageGeneration: true,
     });
-    await service.updateModelCapabilities(created.providerKey, saved.models[1].modelKey, {
+    await service.updateModelConfiguration(created.providerKey, saved.models[1].modelKey, {
       reasoning: false,
       input: ['text'],
       imageGeneration: false,

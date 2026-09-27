@@ -37,7 +37,7 @@ export { MemoryServiceCard } from './memory/MemoryServiceCard';
 export { MemorySettingsPage } from './memory/MemorySettingsPage';
 export { AddCustomProviderDialog } from './model-providers/AddCustomProviderDialog';
 export { CustomProviderForm } from './model-providers/CustomProviderForm';
-export { ModelCapabilitiesDialog } from './model-providers/ModelCapabilitiesDialog';
+export { ModelConfigurationDialog } from './model-providers/ModelConfigurationDialog';
 export { ModelProvidersPage } from './model-providers/ModelProvidersPage';
 export type { ModelProvidersPageProps } from './model-providers/ModelProvidersPage';
 export { ProviderAuthForm } from './model-providers/ProviderAuthForm';

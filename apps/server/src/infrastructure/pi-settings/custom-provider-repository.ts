@@ -6,7 +6,7 @@ import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type {
-  UpdateModelCapabilitiesBody,
+  UpdateModelConfigurationBody,
   CustomProviderConfigurationDto,
   ModelInterface,
 } from '@octopus/shared/protocol';
@@ -57,6 +57,49 @@ async function readDocument(path: string): Promise<ModelDocument> {
 export async function readCustomProviderMetadata(path: string) {
   const document = await readDocument(path);
   const records = { ...document.octopusLocalProviders };
+  const configuredLimits: Record<string, Record<string, { contextWindow: boolean; maxTokens: boolean }>> = {};
+  for (const [providerId, provider] of Object.entries(document.providers)) {
+    const definitions: unknown[] = Array.isArray(provider.models) ? provider.models : [];
+    const overrides =
+      provider.modelOverrides &&
+      typeof provider.modelOverrides === 'object' &&
+      !Array.isArray(provider.modelOverrides)
+        ? (provider.modelOverrides as Record<string, unknown>)
+        : {};
+    configuredLimits[providerId] = {};
+    for (const definition of definitions) {
+      if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
+        continue;
+      }
+      const candidate = definition as Record<string, unknown>;
+      const modelId = candidate.id;
+      if (typeof modelId !== 'string') {
+        continue;
+      }
+      const rawOverride = overrides[modelId];
+      const override =
+        rawOverride && typeof rawOverride === 'object' && !Array.isArray(rawOverride)
+          ? (rawOverride as Record<string, unknown>)
+          : undefined;
+      configuredLimits[providerId][modelId] = {
+        contextWindow:
+          typeof candidate.contextWindow === 'number' || typeof override?.contextWindow === 'number',
+        maxTokens: typeof candidate.maxTokens === 'number' || typeof override?.maxTokens === 'number',
+      };
+    }
+    for (const [modelId, rawOverride] of Object.entries(overrides)) {
+      if (!configuredLimits[providerId][modelId]) {
+        const override =
+          rawOverride && typeof rawOverride === 'object' && !Array.isArray(rawOverride)
+            ? (rawOverride as Record<string, unknown>)
+            : undefined;
+        configuredLimits[providerId][modelId] = {
+          contextWindow: typeof override?.contextWindow === 'number',
+          maxTokens: typeof override?.maxTokens === 'number',
+        };
+      }
+    }
+  }
   for (const runtime of ['ollama', 'vllm', 'lmstudio'] as const) {
     const id = `octopus-${runtime}`;
     const provider = document.providers[id];
@@ -70,7 +113,7 @@ export async function readCustomProviderMetadata(path: string) {
       };
     }
   }
-  return { records, imageGeneration: document.octopusModelCapabilities ?? {} };
+  return { records, imageGeneration: document.octopusModelCapabilities ?? {}, configuredLimits };
 }
 
 /**
@@ -150,14 +193,14 @@ export async function deleteCustomProvider(path: string, id: string): Promise<bo
 /**
  * Updates Pi capabilities and preserves Host interface declarations separately from inference settings.
  */
-export async function saveModelCapabilities(
+export async function saveModelConfiguration(
   path: string,
   id: string,
   modelId: string,
-  input: UpdateModelCapabilitiesBody
+  input: UpdateModelConfigurationBody
 ): Promise<boolean> {
   return updateProviderDocument(path, id, (document) => {
-    const { imageGeneration, interfaces, ...piCapabilities } = input;
+    const { imageGeneration, interfaces, ...piConfiguration } = input;
     const provider = document.providers[id];
     if (!provider) {
       throw new Error('Provider configuration no longer exists.');
@@ -165,7 +208,7 @@ export async function saveModelCapabilities(
     const models = provider.models as Array<Record<string, unknown>> | undefined;
     const model = models?.find((candidate) => candidate.id === modelId);
     if (model) {
-      Object.assign(model, piCapabilities);
+      Object.assign(model, piConfiguration);
       if (document.octopusLocalProviders?.[id]) {
         model.compat = { ...(model.compat as object), supportsReasoningEffort: input.reasoning };
       }
@@ -184,7 +227,7 @@ export async function saveModelCapabilities(
     }
     const overrides = (provider.modelOverrides ?? {}) as Record<string, object>;
     if (!model || overrides[modelId]) {
-      provider.modelOverrides = { ...overrides, [modelId]: { ...overrides[modelId], ...piCapabilities } };
+      provider.modelOverrides = { ...overrides, [modelId]: { ...overrides[modelId], ...piConfiguration } };
     }
   });
 }

@@ -15,13 +15,13 @@ import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
 import { builtinImagesModels } from '@earendil-works/pi-ai/providers/all';
 import { getImagegenCatalog, readImagegenConfig, saveImagegenConfig } from '@octopus/agent';
 import { PiCredentialSynchronizationError } from './types.js';
-import { saveModelCapabilities } from './custom-provider-repository.js';
+import { saveModelConfiguration } from './custom-provider-repository.js';
 import { CustomProviderStore } from './custom-provider-store.js';
 import type {
   ImagegenConfig,
   ImagegenSettingsDto,
   ImagegenCandidate,
-  UpdateModelCapabilitiesBody,
+  UpdateModelConfigurationBody,
   CustomProviderTypeDto,
   ConfigureCustomProviderBody,
   CreateCustomProviderBody,
@@ -292,8 +292,8 @@ export class ServerPiSettingsStore {
   /**
    * Saves capabilities without replacing endpoint, credentials, or unrelated model configuration.
    */
-  public async updateModelCapabilities(id: string, modelId: string, input: UpdateModelCapabilitiesBody) {
-    const changed = await saveModelCapabilities(this.#modelsPath, id, modelId, input);
+  public async updateModelConfiguration(id: string, modelId: string, input: UpdateModelConfigurationBody) {
+    const changed = await saveModelConfiguration(this.#modelsPath, id, modelId, input);
     return this.#refreshProvider(id, changed);
   }
 

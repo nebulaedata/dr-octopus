@@ -19,6 +19,8 @@ export interface PiSettingsModel {
   imageGeneration?: boolean;
   contextWindow?: number;
   maxTokens?: number;
+  contextWindowConfigured?: boolean;
+  maxTokensConfigured?: boolean;
   available: boolean;
   configuration: 'inherited' | 'owned' | 'overridden';
 }

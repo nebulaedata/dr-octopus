@@ -13,7 +13,7 @@ import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
 import { createPiSettingsStore } from '../dist/infrastructure/pi-settings/index.js';
 import {
   saveCustomProvider,
-  saveModelCapabilities,
+  saveModelConfiguration,
 } from '../dist/infrastructure/pi-settings/custom-provider-repository.js';
 import { SettingsService } from '../dist/modules/model-settings/model-settings.service.js';
 import { ConversationModelsService } from '../dist/modules/conversation-start/conversation-start.service.js';
@@ -44,7 +44,7 @@ test('custom interfaces survive reload, filter agent candidates and reject image
   const app = Fastify();
   t.after(() => app.close());
   registerSettingsController(app, service);
-  const url = `/settings/model-providers/${provider.providerKey}/models/${model.modelKey}/capabilities`;
+  const url = `/settings/model-providers/${provider.providerKey}/models/${model.modelKey}/configuration`;
   for (const interfaces of [
     [],
     ['video'],
@@ -80,14 +80,32 @@ test('custom interfaces survive reload, filter agent candidates and reject image
   });
   await assert.rejects(admission.resolve({ mode: 'default' }), { code: 'CONVERSATION_MODEL_REQUIRED' });
   // Older clients can update other capabilities without erasing the configured interface.
-  await reloaded.updateModelCapabilities(provider.providerKey, model.modelKey, capabilities);
+  await reloaded.updateModelConfiguration(provider.providerKey, model.modelKey, capabilities);
   assert.deepEqual(
     (await reloaded.getProvider(provider.providerKey)).models.find((m) => m.modelId === model.modelId)
       .interfaces,
     ['image']
   );
+  assert.equal(
+    (
+      await app.inject({
+        method: 'PUT',
+        url,
+        payload: { ...capabilities, interfaces: ['image'], contextWindow: 1000000, maxTokens: 32768 },
+      })
+    ).statusCode,
+    422
+  );
+  const chatConfiguration = await app.inject({
+    method: 'PUT',
+    url,
+    payload: { ...capabilities, interfaces: ['chat', 'image'], contextWindow: 1000000, maxTokens: 32768 },
+  });
+  assert.equal(chatConfiguration.statusCode, 200, chatConfiguration.body);
+  assert.equal(chatConfiguration.json().models[0].contextWindow, 1000000);
+  assert.equal(chatConfiguration.json().models[0].maxTokens, 32768);
   for (const interfaces of [['chat', 'image'], ['chat']]) {
-    await reloaded.updateModelCapabilities(provider.providerKey, model.modelKey, {
+    await reloaded.updateModelConfiguration(provider.providerKey, model.modelKey, {
       ...capabilities,
       interfaces,
     });
@@ -162,7 +180,7 @@ test('custom model capability edits survive reload and unlock Pi thinking levels
   const summary = (await service.listProviders()).providers.find((p) => p.providerId === 'custom');
   const detail = await service.getProvider(summary.providerKey);
   const model = detail.models.find((m) => m.modelId === 'custom-model');
-  const url = `/settings/model-providers/${summary.providerKey}/models/${model.modelKey}/capabilities`;
+  const url = `/settings/model-providers/${summary.providerKey}/models/${model.modelKey}/configuration`;
   for (const payload of [
     { reasoning: 'true', input: ['text'] },
     { reasoning: true, input: [] },
@@ -219,14 +237,83 @@ test('custom model capability edits survive reload and unlock Pi thinking levels
   });
   await runtime.refresh({ providers: ['custom'], allowNetwork: false });
   assert.deepEqual(getSupportedThinkingLevels(runtime.getModel('custom', 'custom-model')), ['off']);
-  await assert.rejects(service.updateModelCapabilities(summary.providerKey, 'missing', payload));
+  await assert.rejects(service.updateModelConfiguration(summary.providerKey, 'missing', payload));
   const builtin = (await service.listProviders()).providers.find(
     (p) => p.provenance === 'builtin' && p.modelCount > 0
   );
   const builtinDetail = await service.getProvider(builtin.providerKey);
   await assert.rejects(
-    service.updateModelCapabilities(builtin.providerKey, builtinDetail.models[0].modelKey, payload)
+    service.updateModelConfiguration(builtin.providerKey, builtinDetail.models[0].modelKey, payload)
   );
+});
+
+test('custom model token limits replace Pi defaults and survive rediscovery', async (t) => {
+  const agentDir = await mkdtemp(join(tmpdir(), 'octopus-model-limits-'));
+  t.after(() => rm(agentDir, { recursive: true, force: true }));
+  const path = join(agentDir, 'models.json');
+  const record = {
+    name: 'Remote models',
+    runtime: 'openai-compatible',
+    baseUrl: 'https://example.test/v1',
+    api: 'openai-completions',
+  };
+  await saveCustomProvider(path, 'custom', record, [{ id: 'large' }, { id: 'small' }]);
+  const service = new SettingsService(createPiSettingsStore({ agentDir }));
+  const provider = (await service.listProviders()).providers.find((item) => item.providerId === 'custom');
+  const initial = await service.getProvider(provider.providerKey);
+  const model = initial.models.find((item) => item.modelId === 'large');
+  assert.equal(model.contextWindow, 128000);
+  assert.equal(model.maxTokens, 16384);
+  assert.equal(model.contextWindowConfigured, false);
+  assert.equal(model.maxTokensConfigured, false);
+
+  const app = Fastify();
+  t.after(() => app.close());
+  registerSettingsController(app, service);
+  const url = `/settings/model-providers/${provider.providerKey}/models/${model.modelKey}/configuration`;
+  const capabilities = { reasoning: false, input: ['text'], imageGeneration: false };
+  const capabilityOnly = await app.inject({ method: 'PUT', url, payload: capabilities });
+  assert.equal(capabilityOnly.statusCode, 200);
+  assert.equal(capabilityOnly.json().models[0].contextWindowConfigured, false);
+  assert.equal(JSON.parse(await readFile(path, 'utf8')).providers.custom.models[0].contextWindow, undefined);
+  for (const limits of [
+    { contextWindow: 0, maxTokens: 32768 },
+    { contextWindow: 1.5, maxTokens: 1 },
+    { contextWindow: 1000000, maxTokens: 1000000 },
+  ]) {
+    const response = await app.inject({ method: 'PUT', url, payload: { ...capabilities, ...limits } });
+    assert.ok([400, 422].includes(response.statusCode));
+  }
+  const response = await app.inject({
+    method: 'PUT',
+    url,
+    payload: { ...capabilities, contextWindow: 1000000, maxTokens: 32768 },
+  });
+  assert.equal(response.statusCode, 200, response.body);
+  const configured = response.json().models.find((item) => item.modelId === 'large');
+  assert.equal(configured.contextWindow, 1000000);
+  assert.equal(configured.maxTokens, 32768);
+  assert.equal(configured.contextWindowConfigured, true);
+  assert.equal(configured.maxTokensConfigured, true);
+  const saved = JSON.parse(await readFile(path, 'utf8'));
+  assert.equal(saved.providers.custom.models[0].contextWindow, 1000000);
+  assert.equal(saved.providers.custom.models[0].maxTokens, 32768);
+  assert.equal(saved.providers.custom.models[1].contextWindow, undefined);
+
+  await saveCustomProvider(path, 'custom', record, [{ id: 'large' }, { id: 'new' }]);
+  const restored = await new SettingsService(createPiSettingsStore({ agentDir })).getProvider(
+    provider.providerKey
+  );
+  assert.equal(restored.models[0].contextWindow, 1000000);
+  assert.equal(restored.models[0].maxTokens, 32768);
+  assert.equal(restored.models[1].contextWindowConfigured, false);
+  const runtime = await ModelRuntime.create({
+    modelsPath: path,
+    authPath: join(agentDir, 'auth.json'),
+    allowModelNetwork: false,
+  });
+  assert.equal(runtime.getModel('custom', 'large').contextWindow, 1000000);
+  assert.equal(runtime.getModel('custom', 'large').maxTokens, 32768);
 });
 
 test('built-in image models share the provider list without becoming chat defaults', async (t) => {
@@ -267,12 +354,12 @@ test('local endpoint resaves preserve edited model capabilities and concurrent e
   await saveCustomProvider(path, 'local', record);
   await saveCustomProvider(path, 'other', { ...record, modelId: 'other-model' });
   await Promise.all([
-    saveModelCapabilities(path, 'local', record.modelId, {
+    saveModelConfiguration(path, 'local', record.modelId, {
       reasoning: true,
       input: ['text', 'image'],
       imageGeneration: false,
     }),
-    saveModelCapabilities(path, 'other', 'other-model', {
+    saveModelConfiguration(path, 'other', 'other-model', {
       reasoning: true,
       input: ['text'],
       imageGeneration: false,
@@ -306,8 +393,14 @@ for (const withOverrides of [false, true]) {
     const provider = (await service.listProviders()).providers.find((item) => item.providerId === 'openai');
     const detail = await service.getProvider(provider.providerKey);
     const model = detail.models.find((item) => item.modelId === 'gpt-4');
-    const capabilities = { reasoning: model.reasoning, input: model.input, imageGeneration: true };
-    const saved = await service.updateModelCapabilities(provider.providerKey, model.modelKey, capabilities);
+    const capabilities = {
+      reasoning: model.reasoning,
+      input: model.input,
+      imageGeneration: true,
+      contextWindow: 1000000,
+      maxTokens: 32768,
+    };
+    const saved = await service.updateModelConfiguration(provider.providerKey, model.modelKey, capabilities);
     assert.ok(
       saved.models.find((item) => item.modelId === model.modelId).capabilities.includes('image_generation')
     );
@@ -316,7 +409,14 @@ for (const withOverrides of [false, true]) {
     assert.ok(
       restored.models.find((item) => item.modelId === model.modelId).capabilities.includes('image_generation')
     );
-    const cleared = await reloaded.updateModelCapabilities(provider.providerKey, model.modelKey, {
+    assert.equal(restored.models.find((item) => item.modelId === model.modelId).contextWindow, 1000000);
+    assert.equal(restored.models.find((item) => item.modelId === model.modelId).maxTokens, 32768);
+    assert.equal(
+      restored.models.find((item) => item.modelId === model.modelId).contextWindowConfigured,
+      true
+    );
+    assert.equal(restored.models.find((item) => item.modelId === model.modelId).maxTokensConfigured, true);
+    const cleared = await reloaded.updateModelConfiguration(provider.providerKey, model.modelKey, {
       ...capabilities,
       imageGeneration: false,
     });
@@ -326,6 +426,8 @@ for (const withOverrides of [false, true]) {
     );
     const document = JSON.parse(await readFile(path, 'utf8'));
     assert.equal(document.providers.openai.models, undefined);
+    assert.equal(document.providers.openai.modelOverrides[model.modelId].contextWindow, 1000000);
+    assert.equal(document.providers.openai.modelOverrides[model.modelId].maxTokens, 32768);
     assert.deepEqual(document.octopusModelCapabilities.openai, {
       [model.modelId]: { imageGeneration: false },
     });

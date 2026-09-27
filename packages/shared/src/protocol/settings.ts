@@ -11,7 +11,7 @@ export type ModelCapability = 'reasoning' | 'image_input' | 'image_generation';
 /** Host classification; `other` never enters Pi's native input/output modalities. */
 export type ModelInterface = 'chat' | 'image' | 'other';
 
-export const UpdateModelCapabilitiesBodySchema = z
+export const UpdateModelConfigurationBodySchema = z
   .object({
     reasoning: z.boolean(),
     input: z
@@ -19,6 +19,8 @@ export const UpdateModelCapabilitiesBodySchema = z
       .min(1)
       .refine((input) => input.includes('text')),
     imageGeneration: z.boolean(),
+    contextWindow: z.number().int().positive().optional(),
+    maxTokens: z.number().int().positive().optional(),
     interfaces: z
       .array(z.enum(['chat', 'image', 'other']))
       .min(1)
@@ -28,7 +30,7 @@ export const UpdateModelCapabilitiesBodySchema = z
       .optional(),
   })
   .strict();
-export type UpdateModelCapabilitiesBody = z.infer<typeof UpdateModelCapabilitiesBodySchema>;
+export type UpdateModelConfigurationBody = z.infer<typeof UpdateModelConfigurationBodySchema>;
 
 export type ModelProviderProvenance = 'builtin' | 'models_json' | 'extension';
 export type ModelProviderAuthMethod = 'api_key' | 'oauth';
@@ -78,6 +80,8 @@ export interface ModelSettingsDto {
   interfaces: ModelInterface[];
   contextWindow?: number;
   maxTokens?: number;
+  contextWindowConfigured?: boolean;
+  maxTokensConfigured?: boolean;
   isDefault: boolean;
   configuration: 'inherited' | 'owned' | 'overridden';
 }

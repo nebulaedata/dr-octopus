@@ -15,7 +15,7 @@ import {
 } from '@octopus/ui/components/item';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/tooltip';
 import { useI18n } from '@/i18n/use-i18n';
-import { ModelCapabilitiesDialog } from './ModelCapabilitiesDialog';
+import { ModelConfigurationDialog } from './ModelConfigurationDialog';
 import type { ModelProviderDetailDto } from '@octopus/shared/protocol';
 
 /**
@@ -38,6 +38,19 @@ function ProviderModelRow({
         <ItemTitle className="text-xs">{model.name}</ItemTitle>
         <ItemDescription className="truncate text-xs">
           {model.modelId} · {model.api}
+          {model.interfaces.includes('chat') && model.contextWindow !== undefined && (
+            <>
+              {' · '}
+              {t('settings.providers.contextWindowShort', '{{size}} context', {
+                size: new Intl.NumberFormat('en', {
+                  notation: 'compact',
+                  maximumFractionDigits: 1,
+                }).format(model.contextWindow),
+              })}
+              {model.contextWindowConfigured === false &&
+                ` ${t('settings.providers.limitNotConfiguredShort', '(not set manually)')}`}
+            </>
+          )}
         </ItemDescription>
       </ItemContent>
       <ItemActions className="flex-wrap justify-end">
@@ -99,7 +112,7 @@ function ProviderModelRow({
           </Tooltip>
         )}
         {provider.provenance === 'models_json' && (
-          <ModelCapabilitiesDialog providerKey={provider.providerKey} model={model} />
+          <ModelConfigurationDialog providerKey={provider.providerKey} model={model} />
         )}
       </ItemActions>
     </Item>

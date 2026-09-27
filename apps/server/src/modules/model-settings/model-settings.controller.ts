@@ -2,7 +2,7 @@
  * @author Codex
  * @description Registers Settings model, default-model, and Provider authentication endpoints.
  * - GET /api/settings/model-providers
- * - PUT /api/settings/model-providers/:providerKey/models/:modelKey/capabilities
+ * - PUT /api/settings/model-providers/:providerKey/models/:modelKey/configuration
  * - GET /api/settings/model-providers/:providerKey
  * - DELETE /api/settings/model-providers/:providerKey
  * - GET /api/settings/default-model
@@ -24,7 +24,7 @@ import {
   CreateCustomProviderBodySchema,
   DetectCustomProviderBodySchema,
   UpdateDefaultModelBodySchema,
-  UpdateModelCapabilitiesBodySchema,
+  UpdateModelConfigurationBodySchema,
 } from '@octopus/shared/protocol';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import { registerErrorMessages } from '../../infrastructure/i18n/error-catalog.js';
@@ -78,13 +78,13 @@ export function registerSettingsController(server: FastifyInstance, service: Set
   );
 
   server.put<{ Params: ProviderParams & { modelKey: string } }>(
-    '/settings/model-providers/:providerKey/models/:modelKey/capabilities',
+    '/settings/model-providers/:providerKey/models/:modelKey/configuration',
     (request) => {
-      const body = UpdateModelCapabilitiesBodySchema.safeParse(request.body);
+      const body = UpdateModelConfigurationBodySchema.safeParse(request.body);
       if (!body.success) {
-        throw invalidSettingsRequest('The model capabilities are malformed.');
+        throw invalidSettingsRequest('The model configuration is malformed.');
       }
-      return service.updateModelCapabilities(request.params.providerKey, request.params.modelKey, body.data);
+      return service.updateModelConfiguration(request.params.providerKey, request.params.modelKey, body.data);
     }
   );
 
@@ -179,6 +179,10 @@ export const settingsErrorMessages: ErrorMessageCatalog = {
   MODEL_PROVIDER_CAPABILITY_UNSUPPORTED: {
     en: 'This operation is not supported by the selected provider or model.',
     'zh-CN': '所选提供商或模型不支持此操作。',
+  },
+  MODEL_CONFIGURATION_INVALID_LIMITS: {
+    en: 'Maximum output must be smaller than the context window of a chat model.',
+    'zh-CN': '最大输出必须小于对话模型的上下文窗口。',
   },
   INVALID_PERMISSION_CONFIG: {
     en: 'The permission configuration request is invalid.',

@@ -49,6 +49,8 @@ for (const width of [1280, 390, 320]) {
         available: true,
         contextWindow: 32000,
         maxTokens: 4096,
+        contextWindowConfigured: false,
+        maxTokensConfigured: false,
         isDefault: false,
         configuration: 'owned',
       };
@@ -76,6 +78,8 @@ for (const width of [1280, 390, 320]) {
             return route.fulfill({ status: 500, json: { message: 'Test save failed' } });
           }
           Object.assign(model, input, {
+            contextWindowConfigured: input.contextWindow !== undefined || model.contextWindowConfigured,
+            maxTokensConfigured: input.maxTokens !== undefined || model.maxTokensConfigured,
             capabilities: [
               ...(input.reasoning ? ['reasoning'] : []),
               ...(input.input.includes('image') ? ['image_input'] : []),
@@ -92,17 +96,27 @@ for (const width of [1280, 390, 320]) {
         waitUntil: 'domcontentloaded',
         timeout: 60000,
       });
-      const edit = page.getByRole('button', { name: 'Edit capabilities', exact: true });
+      const edit = page.getByRole('button', { name: 'Edit model configuration', exact: true });
       await expect(edit).toBeVisible({ timeout: 60000 });
       await edit.focus();
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('dialog');
       await expect(dialog).toBeVisible();
+      await expect(dialog.getByText('Not set manually; verify this value.')).toHaveCount(2);
+      failSave = false;
+      await dialog.getByRole('button', { name: 'Save configuration' }).click();
+      await expect(dialog).not.toBeVisible();
+      assert.equal(writes.at(-1).contextWindow, 32000);
+      assert.equal(writes.at(-1).maxTokens, 4096);
+      failSave = true;
+      await edit.click();
+      await expect(dialog.getByText('Not set manually; verify this value.')).toHaveCount(0);
       const reasoning = dialog.getByRole('checkbox', { name: 'Reasoning' });
       await reasoning.focus();
       await page.keyboard.press('Space');
       await dialog.getByRole('checkbox', { name: 'Image input' }).check();
-      await dialog.getByRole('button', { name: 'Image generation', exact: true }).click();
+      await dialog.getByRole('spinbutton', { name: 'Context window (tokens)' }).fill('1000000');
+      await dialog.getByRole('spinbutton', { name: 'Maximum output (tokens)' }).fill('32768');
       await dialog.getByRole('button', { name: 'Save configuration' }).click();
       await expect(dialog.getByText('Test save failed')).toBeVisible();
       await expect(reasoning).toBeChecked();
@@ -127,9 +141,21 @@ for (const width of [1280, 390, 320]) {
         reasoning: true,
         input: ['text', 'image'],
         imageGeneration: false,
-        interfaces: ['image'],
+        interfaces: ['chat'],
+        contextWindow: 1000000,
+        maxTokens: 32768,
       });
       await expect(edit).toBeFocused();
+      await edit.click();
+      await expect(dialog.getByRole('spinbutton', { name: 'Context window (tokens)' })).toHaveValue(
+        '1000000'
+      );
+      await expect(dialog.getByText('Not set manually; verify this value.')).toHaveCount(0);
+      await dialog.getByRole('button', { name: 'Image generation', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Save configuration' }).click();
+      await expect(dialog).not.toBeVisible();
+      assert.deepEqual(writes.at(-1).interfaces, ['image']);
+      assert.equal(writes.at(-1).contextWindow, undefined);
       await edit.click();
       await expect(dialog.getByRole('button', { name: 'Image generation', exact: true })).toHaveAttribute(
         'aria-pressed',
@@ -197,7 +223,7 @@ test('built-in image models show the same capability badges without an editor', 
     });
     await expect(page.getByText('GPT Image 1')).toBeVisible();
     await expect(page.getByLabel('Image generation')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Edit capabilities' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Edit model configuration' })).toHaveCount(0);
   } finally {
     await page.close();
   }

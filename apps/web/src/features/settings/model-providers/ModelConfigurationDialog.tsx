@@ -1,6 +1,6 @@
 /**
  * @author Codex
- * @description Edits custom model capabilities without discarding failed drafts.
+ * @description Edits custom model capabilities and token limits without discarding failed drafts.
  */
 import { useState } from 'react';
 import { Settings2Icon } from 'lucide-react';
@@ -18,17 +18,22 @@ import {
   DialogTrigger,
 } from '@octopus/ui/components/dialog';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
+import { Input } from '@octopus/ui/components/input';
 import { ToggleButtonGroup } from '@/components/ToggleButtonGroup';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
-import { updateModelCapabilities } from '@/api/model-capabilities';
+import { updateModelConfiguration } from '@/api/model-configuration';
 import { queryKeys } from '@/queries/core/query-keys';
 import { useI18n } from '@/i18n/use-i18n';
-import type { ModelInterface, ModelSettingsDto, UpdateModelCapabilitiesBody } from '@octopus/shared/protocol';
+import type {
+  ModelInterface,
+  ModelSettingsDto,
+  UpdateModelConfigurationBody,
+} from '@octopus/shared/protocol';
 
 /**
  * Keeps the trigger mounted so closing the editor restores keyboard focus to its model row.
  */
-export function ModelCapabilitiesDialog({
+export function ModelConfigurationDialog({
   providerKey,
   model,
 }: {
@@ -41,20 +46,22 @@ export function ModelCapabilitiesDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <Tooltip>
         <TooltipTrigger
-          aria-label="Edit capabilities"
+          aria-label="Edit model configuration"
           render={<DialogTrigger render={<Button variant="ghost" size="icon-sm" />} />}
         >
           <Settings2Icon />
         </TooltipTrigger>
-        <TooltipContent>{t('settings.providers.editCapabilities', 'Edit capabilities')}</TooltipContent>
+        <TooltipContent>
+          {t('settings.providers.editModelConfiguration', 'Edit model configuration')}
+        </TooltipContent>
       </Tooltip>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('settings.providers.modelCapabilities', 'Model capabilities')}</DialogTitle>
+          <DialogTitle>{t('settings.providers.modelConfiguration', 'Model configuration')}</DialogTitle>
           <DialogDescription className="break-all">{model.name}</DialogDescription>
         </DialogHeader>
         {open && (
-          <ModelCapabilitiesForm providerKey={providerKey} model={model} onSaved={() => setOpen(false)} />
+          <ModelConfigurationForm providerKey={providerKey} model={model} onSaved={() => setOpen(false)} />
         )}
       </DialogContent>
     </Dialog>
@@ -62,9 +69,9 @@ export function ModelCapabilitiesDialog({
 }
 
 /**
- * Persists the declared capabilities and refreshes provider and model-selection caches.
+ * Persists capabilities and token limits, then refreshes provider and model-selection caches.
  */
-function ModelCapabilitiesForm({
+function ModelConfigurationForm({
   providerKey,
   model,
   onSaved,
@@ -78,9 +85,10 @@ function ModelCapabilitiesForm({
 }) {
   const { t } = useI18n();
   const client = useQueryClient();
+  const [validationError, setValidationError] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: (input: UpdateModelCapabilitiesBody) =>
-      updateModelCapabilities(providerKey, model.modelKey, input),
+    mutationFn: (input: UpdateModelConfigurationBody) =>
+      updateModelConfiguration(providerKey, model.modelKey, input),
     onSuccess: async (provider) => {
       client.setQueryData(queryKeys.modelProvider(providerKey), provider);
       await Promise.all([
@@ -107,6 +115,8 @@ function ModelCapabilitiesForm({
       image: model.input.includes('image'),
       imageGeneration: model.capabilities.includes('image_generation'),
       interfaceType,
+      contextWindow: model.contextWindow?.toString() ?? '',
+      maxTokens: model.maxTokens?.toString() ?? '',
     },
     onSubmit: async ({ value }) => {
       let interfaces: ModelInterface[] = ['chat'];
@@ -117,12 +127,40 @@ function ModelCapabilitiesForm({
       } else if (value.interfaceType === 'both') {
         interfaces = ['chat', 'image'];
       }
+      let limits = {};
+      if (interfaces.includes('chat')) {
+        const contextWindow = Number(value.contextWindow);
+        const maxTokens = Number(value.maxTokens);
+        if (
+          !Number.isSafeInteger(contextWindow) ||
+          contextWindow <= 0 ||
+          !Number.isSafeInteger(maxTokens) ||
+          maxTokens <= 0 ||
+          maxTokens >= contextWindow
+        ) {
+          setValidationError(
+            t(
+              'settings.providers.invalidTokenLimits',
+              'Enter positive whole numbers; output must be below context.'
+            )
+          );
+          return;
+        }
+        limits = {
+          ...(contextWindow === model.contextWindow && model.contextWindowConfigured !== false
+            ? {}
+            : { contextWindow }),
+          ...(maxTokens === model.maxTokens && model.maxTokensConfigured !== false ? {} : { maxTokens }),
+        };
+      }
+      setValidationError(null);
       try {
         await mutation.mutateAsync({
           reasoning: value.reasoning,
           input: value.image ? ['text', 'image'] : ['text'],
           imageGeneration: value.imageGeneration,
           interfaces,
+          ...limits,
         });
       } catch {
         // The inline error preserves the draft for retry.
@@ -180,6 +218,70 @@ function ModelCapabilitiesForm({
             </Field>
           )}
         </form.Field>
+        <form.Subscribe selector={(state) => state.values.interfaceType}>
+          {(selectedInterface) =>
+            selectedInterface === 'chat' || selectedInterface === 'both' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <form.Field name="contextWindow">
+                  {(field) => (
+                    <Field>
+                      <FieldLabel htmlFor="model-context-window">
+                        {t('settings.providers.contextWindow', 'Context window (tokens)')}
+                      </FieldLabel>
+                      <Input
+                        id="model-context-window"
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        step="1"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value);
+                          setValidationError(null);
+                        }}
+                        disabled={mutation.isPending}
+                      />
+                      <FieldDescription>
+                        {model.contextWindowConfigured === false
+                          ? t('settings.providers.limitNotConfigured', 'Not set manually; verify this value.')
+                          : t('settings.providers.contextWindowHint', '1M context = 1000000 tokens.')}
+                      </FieldDescription>
+                    </Field>
+                  )}
+                </form.Field>
+                <form.Field name="maxTokens">
+                  {(field) => (
+                    <Field>
+                      <FieldLabel htmlFor="model-max-tokens">
+                        {t('settings.providers.maxOutputTokens', 'Maximum output (tokens)')}
+                      </FieldLabel>
+                      <Input
+                        id="model-max-tokens"
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        step="1"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value);
+                          setValidationError(null);
+                        }}
+                        disabled={mutation.isPending}
+                      />
+                      {model.maxTokensConfigured === false && (
+                        <FieldDescription>
+                          {t('settings.providers.limitNotConfigured', 'Not set manually; verify this value.')}
+                        </FieldDescription>
+                      )}
+                    </Field>
+                  )}
+                </form.Field>
+              </div>
+            ) : null
+          }
+        </form.Subscribe>
         <form.Field name="reasoning">
           {(field) => (
             <Field orientation="horizontal">
@@ -232,11 +334,22 @@ function ModelCapabilitiesForm({
           )}
         </form.Field>
       </FieldGroup>
+      {validationError && (
+        <Alert variant="destructive">
+          <AlertDescription>{validationError}</AlertDescription>
+        </Alert>
+      )}
       {mutation.error && (
         <Alert variant="destructive">
           <AlertDescription>{mutation.error.message}</AlertDescription>
         </Alert>
       )}
+      <p className="text-xs text-muted-foreground">
+        {t(
+          'settings.providers.modelLimitRestartHint',
+          'Active sessions may need to restart to use new limits.'
+        )}
+      </p>
       <Button type="submit" disabled={mutation.isPending}>
         {mutation.isPending
           ? t('settings.providers.local.saving', 'Saving…')

@@ -37,7 +37,7 @@ export class CustomProviderStore {
    * Adds persisted drafts and custom configuration to the Pi catalog without inventing available models.
    */
   public async project(providers: PiSettingsProvider[]): Promise<PiSettingsProvider[]> {
-    const { records, imageGeneration } = await readCustomProviderMetadata(this.path);
+    const { records, imageGeneration, configuredLimits } = await readCustomProviderMetadata(this.path);
     const result = new Map(providers.map((provider) => [provider.id, provider]));
     for (const [id, record] of Object.entries(records)) {
       const existing = result.get(id);
@@ -72,6 +72,20 @@ export class CustomProviderStore {
           })),
         });
       }
+    }
+    for (const [id, limits] of Object.entries(configuredLimits)) {
+      const provider = result.get(id);
+      if (provider?.provenance !== 'models_json') {
+        continue;
+      }
+      result.set(id, {
+        ...provider,
+        models: provider.models.map((model) => ({
+          ...model,
+          contextWindowConfigured: limits[model.id]?.contextWindow ?? false,
+          maxTokensConfigured: limits[model.id]?.maxTokens ?? false,
+        })),
+      });
     }
     return [...result.values()];
   }

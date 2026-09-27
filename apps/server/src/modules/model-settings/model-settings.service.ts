@@ -20,7 +20,7 @@ import type {
   ModelProviderSummaryDto,
   ModelCapability,
   ModelInterface,
-  UpdateModelCapabilitiesBody,
+  UpdateModelConfigurationBody,
 } from '@octopus/shared/protocol';
 import type { FSWatcher } from 'node:fs';
 import type {
@@ -107,6 +107,10 @@ function toModel(
     interfaces,
     ...(model.contextWindow === undefined ? {} : { contextWindow: model.contextWindow }),
     ...(model.maxTokens === undefined ? {} : { maxTokens: model.maxTokens }),
+    ...(model.contextWindowConfigured === undefined
+      ? {}
+      : { contextWindowConfigured: model.contextWindowConfigured }),
+    ...(model.maxTokensConfigured === undefined ? {} : { maxTokensConfigured: model.maxTokensConfigured }),
     isDefault:
       interfaces.includes('chat') &&
       defaultModel.providerId === provider.id &&
@@ -209,7 +213,7 @@ export class SettingsService {
   /**
    * Resolves an editable custom model before persisting its Pi capability metadata.
    */
-  public async updateModelCapabilities(key: string, modelKey: string, input: UpdateModelCapabilitiesBody) {
+  public async updateModelConfiguration(key: string, modelKey: string, input: UpdateModelConfigurationBody) {
     const provider = await this.requireProvider(key);
     const model = provider.models.find(
       (candidate) => opaqueKey(`${provider.id}\u0000${candidate.id}`) === modelKey
@@ -217,11 +221,27 @@ export class SettingsService {
     if (provider.provenance !== 'models_json' || !model) {
       throw new ApplicationError(
         'MODEL_PROVIDER_CAPABILITY_UNSUPPORTED',
-        'Model capabilities are not editable for this provider.',
+        'Model configuration is not editable for this provider.',
         { statusCode: 422 }
       );
     }
-    const result = await this.piSettings.updateModelCapabilities(provider.id, model.id, input);
+    const contextWindow = input.contextWindow ?? model.contextWindow;
+    const maxTokens = input.maxTokens ?? model.maxTokens;
+    const interfaces = input.interfaces ?? model.interfaces ?? ['chat'];
+    if (
+      (input.contextWindow !== undefined || input.maxTokens !== undefined) &&
+      (!interfaces.includes('chat') ||
+        contextWindow === undefined ||
+        maxTokens === undefined ||
+        maxTokens >= contextWindow)
+    ) {
+      throw new ApplicationError(
+        'MODEL_CONFIGURATION_INVALID_LIMITS',
+        'The maximum output must be smaller than the context window of a chat model.',
+        { statusCode: 422 }
+      );
+    }
+    const result = await this.piSettings.updateModelConfiguration(provider.id, model.id, input);
     this.#recordConfiguration(result);
     return this.getProvider(key);
   }
