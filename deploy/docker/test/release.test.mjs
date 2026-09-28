@@ -131,6 +131,7 @@ test(
       'SERVER_CORS_ORIGIN',
       'COMPOSE_PROJECT_NAME',
       'LOG_LEVEL',
+      'NPM_CONFIG_REGISTRY',
     ])
       delete env[name];
     const args = [
@@ -151,6 +152,7 @@ test(
     assert.equal(service.ports[0].host_ip, '0.0.0.0');
     assert.equal(service.ports[0].target, 3000);
     assert.equal(service.environment.SERVER_HOST, '0.0.0.0');
+    assert.equal(service.environment.NPM_CONFIG_REGISTRY, 'https://registry.npmjs.org');
     for (const name of ['server-data', 'agent-data', 'workspaces'])
       assert.equal(config.volumes[name].name, `dr-octopus_${name}`);
     assert.deepEqual(service.volumes.map((volume) => volume.target).sort(), [
@@ -158,6 +160,19 @@ test(
       '/home/node/.dr-octopus/server',
       '/workspaces',
     ]);
+    writeFileSync(
+      join(directory, '.env.example'),
+      'IMAGE_TAG=1.2.3-r1\nNPM_CONFIG_REGISTRY=https://registry.npmmirror.com\n'
+    );
+    const mirrored = JSON.parse(execFileSync('docker', args, { encoding: 'utf8', env }));
+    assert.equal(
+      mirrored.services['dr-octopus'].environment.NPM_CONFIG_REGISTRY,
+      'https://registry.npmmirror.com'
+    );
+    assert.equal(mirrored.services['dr-octopus'].image, service.image);
+    writeFileSync(join(directory, '.env.example'), 'IMAGE_TAG=1.2.3-r1\nNPM_CONFIG_REGISTRY=\n');
+    const empty = JSON.parse(execFileSync('docker', args, { encoding: 'utf8', env }));
+    assert.equal(empty.services['dr-octopus'].environment.NPM_CONFIG_REGISTRY, 'https://registry.npmjs.org');
     writeFileSync(join(directory, '.env.example'), '');
     const missing = spawnSync('docker', args, { encoding: 'utf8', env });
     assert.notEqual(missing.status, 0);

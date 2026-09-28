@@ -4,15 +4,29 @@
 
 ## 每一步在哪里执行
 
-| 步骤                            | 执行位置       | 做什么                                                            |
-| ------------------------------- | -------------- | ----------------------------------------------------------------- |
-| ① 执行 `pnpm release:publish`   | 维护者电脑     | 构建应用，发布 npm 包，然后创建 GitHub Release                    |
-| ② 自动触发 `docker-release.yml` | GitHub Actions | 收到 GitHub Release 发布事件，启动远程任务                        |
-| ③ 构建 Docker 镜像              | GitHub Actions | 检出对应 Git tag，安装已发布的 npm 确定版本及运行依赖             |
-| ④ 验证并发布                    | GitHub Actions | 验证启动和数据持久化，推送 Docker Hub，检查匿名拉取并上传安装 ZIP |
-| ⑤ 安装应用                      | 用户服务器     | 下载安装 ZIP，执行 `docker compose pull` 和 `docker compose up`   |
+| 步骤                            | 执行位置       | 做什么                                                             |
+| ------------------------------- | -------------- | ------------------------------------------------------------------ |
+| ① 执行 `pnpm release:publish`   | 维护者电脑     | 构建应用，发布 npm 包，然后创建 GitHub Release                     |
+| ② 自动触发 `docker-release.yml` | GitHub Actions | 收到 GitHub Release 发布事件，启动远程任务                         |
+| ③ 等待并构建 Docker 镜像        | GitHub Actions | 等待 npm 包公开可下载，由 Docker 官方组件构建精确版本镜像          |
+| ④ 验证并发布                    | GitHub Actions | 验证启动和数据持久化，官方组件推送镜像，检查匿名拉取并上传安装 ZIP |
+| ⑤ 安装应用                      | 用户服务器     | 下载安装 ZIP，执行 `docker compose pull` 和 `docker compose up`    |
 
 正常发布不需要维护者电脑安装 Docker。本地命令完成后，远程镜像任务可能还在执行，可在 GitHub 的 Actions 页面查看。这个工作流不登录用户服务器，不需要服务器 IP、SSH 账号或服务器密码。
+
+## 官方组件与项目脚本的分工
+
+| 文件或组件                   | 负责什么                                                                    |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| `docker-release.yml`         | 固定维护的流程定义，安排步骤，不是发布时生成的文件                          |
+| `docker/setup-buildx-action` | 准备构建器                                                                  |
+| `docker/build-push-action`   | 先构建并加载镜像供测试；测试通过后复用同一个构建器的缓存推送版本镜像        |
+| `docker/login-action`        | 使用 Secrets 登录 Docker Hub                                                |
+| `npm-ready.mjs`              | 限时等待 npm 精确版本及其下载包公开可用                                     |
+| `smoke.mjs`                  | 检查版本、启动、Web 和数据持久化                                            |
+| `release.mjs`                | 核对 Release、检查标签、准备安装文件、判断是否允许更新 `latest`；不执行推送 |
+
+`docker/*` 由 Docker 官方维护，运行在 GitHub Actions 平台上。流程采用 Docker 的[推送前测试方案](https://docs.docker.com/build/ci/github-actions/test-before-push/)：两次调用构建组件使用相同的基础镜像摘要、版本参数和构建器；第二次复用缓存并推送。匿名拉取后再次核对镜像 ID，通过后才上传安装包。工作流最后用可直接阅读的 `docker tag` / `docker push` 命令更新 `latest`，并且只有版本判断允许时才执行。
 
 ## 1. 准备 Docker Hub 账号和公开仓库
 
@@ -105,6 +119,20 @@ permissions:
 
 ## 6. 失败重试与手动补发
 
+### npm 审核或上架延迟
+
+npm 接收发布不等于该版本立即可以公开下载。新镜像构建前，工作流检查精确版本的 npm 元数据和 tarball 下载地址；尚不可用时每分钟重试，最多等待 15 分钟。404、限流、服务端错误和网络异常会重试；认证错误或版本信息不匹配会立即报错。已有版本镜像的重试直接复用镜像，不等待 npm。
+
+超过等待时间后，工作流明确报错并停止。审核完成后，先确认以下命令返回版本号（以 `0.0.10` 为例）：
+
+```bash
+npm view dr-octopus@0.0.10 version --registry=https://registry.npmjs.org
+```
+
+然后打开失败的运行记录，点击 **Re-run jobs → Re-run failed jobs**，或使用下面的 **Run workflow**。保持原 `tag` 和 `image_revision`，无需重新发布 npm、修改版本或删除 Release。npm 后续上架不会自动唤醒已经失败的运行。
+
+### 手动运行
+
 在 GitHub **Actions → Docker release → Run workflow** 中选择包含工作流的默认分支，填写：
 
 | 输入             | 示例      | 含义                                               |
@@ -114,6 +142,8 @@ permissions:
 | `image_revision` | `1`       | 显式镜像修订，生成 `0.0.10-r1` 镜像标签            |
 
 工作流最终检出填写的 Release tag，因此该 tag 本身必须包含 Docker 发布文件。仅推送 Git tag、不创建 GitHub Release，不会自动触发镜像发布。
+
+本次流程调整需随新的 Release tag 发布。重跑历史运行会沿用历史工作流；旧 tag 不包含新增脚本时，请在原运行记录中重跑，不要从新版默认分支手动运行旧 tag。
 
 固定镜像标签已存在时复用并验证，不覆盖；npm 已发布但 Docker 失败时，无需再次发布 npm。`latest` 仅向更新的稳定版本或镜像修订推进，不因旧版本补发而回退。
 

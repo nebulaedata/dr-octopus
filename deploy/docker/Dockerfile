@@ -3,11 +3,13 @@
 #  * @author Codex
 #  * @description Installs an exact npm release and native runtime for a non-root container.
 #  */
-FROM node:24-bookworm-slim
+ARG NODE_IMAGE=node:24-bookworm-slim
+FROM ${NODE_IMAGE}
 
 ARG DR_OCTOPUS_VERSION
 ARG IMAGE_REVISION=0
 ARG SOURCE_COMMIT
+ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org
 
 LABEL org.opencontainers.image.source="https://github.com/nebulaedata/dr-octopus" \
     org.opencontainers.image.licenses="MIT" \
@@ -19,7 +21,7 @@ RUN test -n "${DR_OCTOPUS_VERSION}" \
     && apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates git python3 make g++ ripgrep \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install --global "dr-octopus@${DR_OCTOPUS_VERSION}" --registry=https://registry.npmjs.org \
+    && npm install --global "dr-octopus@${DR_OCTOPUS_VERSION}" --registry="${NPM_CONFIG_REGISTRY}" \
     && npm cache clean --force \
     && mkdir -p /home/node/.dr-octopus/server /home/node/.dr-octopus/agent /workspaces \
     && chown -R node:node /home/node/.dr-octopus /workspaces
@@ -28,9 +30,10 @@ RUN test -n "${DR_OCTOPUS_VERSION}" \
 # Build and run as the same account; only application data is mounted as volumes.
 USER node
 WORKDIR /workspaces
-RUN dr-octopus deps install --registry https://registry.npmjs.org
+RUN dr-octopus deps install --registry "${NPM_CONFIG_REGISTRY}"
 
 ENV NODE_ENV=production \
+    NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} \
     SERVER_HOST=0.0.0.0 \
     SERVER_PORT=3000 \
     SERVER_DATA_DIR=/home/node/.dr-octopus/server \

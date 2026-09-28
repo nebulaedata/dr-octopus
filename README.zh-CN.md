@@ -47,7 +47,44 @@ dr-octopus deps install
 
 ## Docker 安装
 
-Linux AMD64 服务器可使用 Docker Hub 上的 `nebulaedata01/dr-octopus` 成品镜像。在 [GitHub Releases](https://github.com/nebulaedata/dr-octopus/releases) 下载对应版本的 Docker 安装 ZIP，按照 [Docker Compose 安装说明](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.zh-CN.md)运行。本机无需 Node.js、pnpm 或构建镜像。尚未提供 Docker ZIP 的 Release 不能视为 Docker 安装就绪。
+Linux AMD64 服务器可直接部署 [Docker Hub 成品镜像](https://hub.docker.com/r/nebulaedata01/dr-octopus)。需要 Docker Engine 和 Docker Compose v2.20 或更高版本，无需安装 Node.js、pnpm、克隆源码或构建镜像。目前不支持 ARM64。
+
+1. 打开 [GitHub Releases](https://github.com/nebulaedata/dr-octopus/releases)，在所选版本的 **Assets** 中下载 `dr-octopus-docker-<镜像标签>.zip`。选择 Docker 安装 ZIP，不是源码压缩包。安装包包含 Compose 配置并已固定镜像版本；尚未提供该 ZIP 的 Release 不能视为 Docker 安装就绪。
+2. 将 ZIP 解压到服务器上的独立目录，并在该目录打开终端。
+3. 创建配置并启动服务：
+
+   ```sh
+   cp .env.example .env
+   # 如需修改宿主机端口或绑定地址，先编辑 .env。
+   docker compose pull
+   docker compose up -d --wait --wait-timeout 660
+   ```
+
+仅首次安装复制 `.env.example`，避免覆盖已有配置。确认镜像拉取成功后再启动。首次启动可能联网下载扩展，需要几分钟，服务器需具备出站网络访问能力。
+
+在浏览器打开 **`http://服务器IP:3000`**，将“服务器IP”替换为服务器实际可访问的 IP，然后在 Web 界面配置模型提供商和凭据。服务器防火墙及云安全组需放行 TCP `3000` 端口。如果 Docker 运行在自己的电脑上，可访问 <http://localhost:3000>。
+
+| `.env` 配置           | 默认值                       | 用途                             |
+| --------------------- | ---------------------------- | -------------------------------- |
+| `IMAGE_TAG`           | 安装 ZIP 已固定              | 镜像标签，也支持 `latest`        |
+| `BIND_ADDRESS`        | `0.0.0.0`                    | 监听宿主机所有网卡，允许远程访问 |
+| `HTTP_PORT`           | `3000`                       | 浏览器访问的宿主机端口           |
+| `NPM_CONFIG_REGISTRY` | `https://registry.npmjs.org` | 扩展安装等运行时 npm 下载源      |
+
+国内部署可在 `.env` 中设置 `NPM_CONFIG_REGISTRY=https://registry.npmmirror.com`，再执行 `docker compose up -d --wait --wait-timeout 660`。无需重新构建镜像；Docker Hub 拉取和发布构建仍使用原有源。已有部署的配置方式见[国内 npm 下载源说明](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.zh-CN.md#国内-npm-下载源可选)。
+
+直接通过 IP 访问不需要反向代理。面向公网访问时，按照 [Docker Compose 安装说明](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.zh-CN.md#配置和远程访问)通过反向代理配置认证和 HTTPS；应用没有用于公网部署的内置登录边界。安装 ZIP 不包含反向代理或证书。
+
+在安装目录查看状态和日志：
+
+```sh
+docker compose ps
+docker compose logs -f --tail 100
+```
+
+Server 数据、Agent 配置和工作区分别保存在三个 Docker 持久化卷中。请在容器的 `/workspaces` 下创建工作区。`docker compose down` 保留数据卷；**`docker compose down -v` 会删除卷内数据**。
+
+升级前停止服务并备份三个卷和 `.env`，将 `IMAGE_TAG` 改为 Docker Hub 上已存在的版本（使用 `latest` 时保持不变以跟随稳定版），再依次执行 `docker compose pull` 和 `docker compose up -d --wait --wait-timeout 660`。Docker 部署使用这些 Compose 命令管理；下文的 npm 命令适用于本机直接安装。域名访问、备份和故障排查详见 [完整 Docker Compose 安装说明](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.zh-CN.md)。
 
 ## 快速开始
 
@@ -90,7 +127,9 @@ dr-octopus tui --yes --registry https://registry.npmmirror.com
 
 `deps install` 本身已代表同意安装，无需额外确认。裸命令及启动命令在非交互环境下缺少依赖时，必须提供 `--yes` 或 `--install-deps`；单独传 `--registry` 不代表同意安装。TUI 的安装参数放在 Agent 参数前，`--` 后的内容原样传给 Agent。
 
-源优先级为本次 `--registry`、已有 npm/pnpm 配置、包管理器默认源。镜像参数仅对本次运行依赖安装生效，不修改全局配置或发布锁文件；保留 scoped registry 与对应认证设置。不会检测地区、自动换源或额外重试。
+源优先级为本次 `--registry`、npm 官方环境变量 `NPM_CONFIG_REGISTRY`、已有 npm/pnpm 配置、包管理器默认源。镜像参数仅对本次运行依赖安装生效，不修改全局配置或发布锁文件；保留 scoped registry 与对应认证设置。不会检测地区、自动换源或额外重试。
+
+项目统一使用 npm 官方环境变量 `NPM_CONFIG_REGISTRY` 配置运行依赖和 Pi 扩展的下载源。源码开发时在根目录 `.env` 设置 `NPM_CONFIG_REGISTRY=https://registry.npmmirror.com`，然后重启开发进程；Docker 部署则在安装目录 `.env` 设置同名变量。单独执行 npm 或 CLI 命令时，需要在 Shell 中设置该环境变量；npm 不会自动读取项目 `.env`。
 
 “非交互”不表示关闭日志：安装仍输出进度与错误，失败返回非零退出码。原生模块可能从其他站点下载二进制或需要本机编译，换 npm 源不一定能解决这些错误。请根据失败阶段检查网络、凭据、下载目标或编译工具链。
 

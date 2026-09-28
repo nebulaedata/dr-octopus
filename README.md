@@ -47,7 +47,44 @@ Runtime dependencies include native modules. If a compatible prebuilt binary is 
 
 ## Docker installation
 
-For Linux AMD64 servers, use the prebuilt image from `nebulaedata01/dr-octopus` on Docker Hub. Download the versioned Docker installation ZIP from [GitHub Releases](https://github.com/nebulaedata/dr-octopus/releases), then follow the [Docker Compose guide](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.md). No local Node.js, pnpm or image build is required. A release without the Docker ZIP is not yet ready for Docker installation.
+Deploy the prebuilt [Docker Hub image](https://hub.docker.com/r/nebulaedata01/dr-octopus) on a Linux AMD64 server with Docker Engine and Docker Compose v2.20 or later. No local Node.js, pnpm, source checkout or image build is required. ARM64 is not currently supported.
+
+1. Open [GitHub Releases](https://github.com/nebulaedata/dr-octopus/releases) and download `dr-octopus-docker-<image-tag>.zip` from the chosen release's **Assets**. Choose the Docker ZIP, not the source code archive. The ZIP contains Compose configuration and a pinned image version; a release without it is not yet ready for Docker installation.
+2. Extract the ZIP into a dedicated directory on your server and open a terminal in that directory.
+3. Create the configuration and start the service:
+
+   ```sh
+   cp .env.example .env
+   # Edit .env if you need a different host port or binding address.
+   docker compose pull
+   docker compose up -d --wait --wait-timeout 660
+   ```
+
+Copy `.env.example` only on first installation to avoid overwriting your settings. Continue to startup only after the image pull succeeds. Initial startup may download extensions and take several minutes; the server needs outbound network access.
+
+Open **`http://SERVER_IP:3000`** in your browser, replacing `SERVER_IP` with your server's reachable IP address. Configure your model provider and credentials in the Web interface. Allow TCP port `3000` through the server firewall and cloud security group. When Docker runs on your own computer, use <http://localhost:3000>.
+
+| Setting in `.env`     | Default                        | Purpose                                         |
+| --------------------- | ------------------------------ | ----------------------------------------------- |
+| `IMAGE_TAG`           | Pinned by the installation ZIP | Image tag; `latest` is also supported           |
+| `BIND_ADDRESS`        | `0.0.0.0`                      | Listen on all host interfaces for remote access |
+| `HTTP_PORT`           | `3000`                         | Host port used in the browser URL               |
+| `NPM_CONFIG_REGISTRY` | `https://registry.npmjs.org`   | Runtime npm downloads, including extensions     |
+
+For deployments in China, set `NPM_CONFIG_REGISTRY=https://registry.npmmirror.com` in `.env`, then run `docker compose up -d --wait --wait-timeout 660`. This changes runtime npm downloads without rebuilding the image; Docker Hub pulls and the release build still use their existing sources. See the [npm mirror setup](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.md#optional-npm-mirror-for-china) for existing installations.
+
+Direct IP access does not require a reverse proxy. For public access, configure authentication and HTTPS through a reverse proxy as described in the [Docker Compose guide](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.md#configuration-and-remote-access); the application has no built-in public login boundary. The installation ZIP does not include a reverse proxy or certificates.
+
+Check status and logs from the installation directory:
+
+```sh
+docker compose ps
+docker compose logs -f --tail 100
+```
+
+Server data, Agent configuration and workspaces are stored in three persistent Docker volumes. Create workspaces under `/workspaces` inside the container. `docker compose down` preserves these volumes; **`docker compose down -v` deletes their data**.
+
+To upgrade, stop the service and back up the three volumes and `.env`, then set `IMAGE_TAG` to an existing Docker Hub version (or keep `latest` to follow stable releases) and run `docker compose pull` followed by `docker compose up -d --wait --wait-timeout 660`. Use these Compose commands for Docker deployments; the npm commands below apply to native installations. See the [full Docker Compose guide](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.md) for domain access, backups and troubleshooting.
 
 ## Quick start
 
@@ -90,7 +127,9 @@ dr-octopus tui --yes --registry https://registry.npmmirror.com
 
 `deps install` already authorizes installation and requires no additional confirmation. When dependencies are missing in a non-interactive environment, the bare command and startup commands require `--yes` or `--install-deps`; `--registry` alone does not authorize installation. Place TUI installation options before Agent arguments. Everything after `--` is passed unchanged to the Agent.
 
-Registry precedence is: the current `--registry` option, existing npm/pnpm configuration, then the package manager's default registry. The mirror option applies only to this runtime dependency installation. It does not change global configuration or the release lockfile, and preserves scoped registries and their authentication settings. There is no region detection, automatic registry switching, or additional retry behavior.
+Registry precedence is: the current `--registry` option, the official `NPM_CONFIG_REGISTRY` environment variable, existing npm/pnpm configuration, then the package manager's default registry. The mirror option applies only to this runtime dependency installation. It does not change global configuration or the release lockfile, and preserves scoped registries and their authentication settings. There is no region detection, automatic registry switching, or additional retry behavior.
+
+The project uses npm’s official `NPM_CONFIG_REGISTRY` variable for runtime dependency and Pi extension downloads. For source development, set `NPM_CONFIG_REGISTRY=https://registry.npmmirror.com` in the root `.env` and restart the development process; for Docker, use the same variable in the installation directory’s `.env`. When running standalone npm or CLI commands, export this variable in your shell; npm does not automatically load the project `.env`.
 
 Non-interactive installation still prints progress and errors, and exits with a nonzero code on failure. Native modules may download binaries from other sites or require local compilation, so switching npm registries may not resolve those failures. Check the network, credentials, download destination, or build toolchain based on the failing step.
 

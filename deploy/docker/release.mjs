@@ -111,7 +111,7 @@ function output(values) {
 }
 
 /**
- * Executes one release boundary: preflight, guarded push, installer generation, or monotonic latest promotion.
+ * Prepares release metadata and installer files; registry writes belong to the workflow.
  */
 async function main(command) {
   const identity = releaseIdentity(process.env.RELEASE_TAG, process.env.IMAGE_REVISION ?? '0');
@@ -141,15 +141,17 @@ async function main(command) {
       digest: digest ?? '',
       prerelease: identity.prerelease || release.prerelease,
     });
-  } else if (command === 'push') {
+  } else if (command === 'check-tag') {
     // The workflow serializes this repository; recheck immediately before pushing to catch external publishers.
     if (await registryDigest(identity.imageTag))
       throw new Error('Exact image tag already exists; rerun to reuse it instead of overwriting.');
-    docker('push', reference);
   } else if (command === 'installer') {
     prepareInstaller('deploy/docker', process.env.INSTALLER_DIR, identity);
-  } else if (command === 'latest') {
-    if (process.env.RELEASE_PRERELEASE === 'true' || identity.prerelease) return;
+  } else if (command === 'latest-plan') {
+    if (process.env.RELEASE_PRERELEASE === 'true' || identity.prerelease) {
+      output({ promote: false });
+      return;
+    }
     const digest = await registryDigest('latest');
     let current;
     if (digest) {
@@ -163,11 +165,7 @@ async function main(command) {
       };
       if (current.revision === undefined) throw new Error('latest is missing image revision metadata.');
     }
-    if (shouldPromote(identity, current)) {
-      docker('tag', reference, `${image}:latest`);
-      docker('push', `${image}:latest`);
-      console.log(`latest now references ${identity.imageTag}`);
-    } else console.log('latest already references this or a newer stable image.');
+    output({ promote: shouldPromote(identity, current), reference: `${image}:latest` });
   } else throw new Error(`Unknown release command: ${command}`);
 }
 
