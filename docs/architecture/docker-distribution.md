@@ -27,7 +27,7 @@ flowchart TD
 
 ## 文件与职责
 
-公开 `deploy/docker/` 中的 Dockerfile、Compose、配置示例、双语安装说明及测试；工作流位于 `.github/workflows/docker-release.yml`，发布辅助脚本位于 `deploy/docker/`。真实 `.env` 和凭据不提交。只维护 Docker Hub，不提供国内仓库或同步流程。
+公开 `deploy/docker/` 中的 Dockerfile、Compose、配置示例、双语安装说明及测试；工作流位于 `.github/workflows/docker-release.yml`，发布辅助脚本位于 `deploy/docker/`。真实 `.env` 和凭据不提交。官方发布只维护 Docker Hub；内部 Harbor 通过独立的 `sync-harbor.mjs` 手动同步，不参与公开 Release 的成功条件。同步固定源摘要并校验目标摘要；部署使用可选 `IMAGE_REPOSITORY` 切换仓库，默认仍为 Docker Hub。操作步骤见 [Harbor 同步说明](../../deploy/docker/HARBOR.md)。
 
 Docker 官方 `setup-buildx-action`、`build-push-action`、`login-action` 分别负责构建器、构建及版本镜像推送、登录。`npm-ready.mjs` 只等待 npm 可用，`smoke.mjs` 只验证容器，`release.mjs` 只保留项目规则与安装文件准备，不执行注册表写入。`latest` 的标签和推送命令直接写在工作流中，仍受稳定版本比较结果约束。
 

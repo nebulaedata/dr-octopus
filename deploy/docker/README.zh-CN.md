@@ -89,6 +89,10 @@ docker compose up -d --wait --wait-timeout 660
 
 从原来的服务器本地构建方案迁移时，先备份，再替换 Compose，并在原 `.env` 增加 `IMAGE_TAG`。保留端口和域名设置。如果已有 `.env` 设置了 `BIND_ADDRESS=127.0.0.1`，需要直接远程访问时将其改为 `0.0.0.0`。`DR_OCTOPUS_VERSION` 不再作为成品镜像部署输入；部署 `.env` 中的 `NPM_CONFIG_REGISTRY` 控制运行时 npm 下载，自行构建则通过同名 build arg 配置。保持原项目名（包括自行设置的 `-p` / `COMPOSE_PROJECT_NAME`）及卷映射，才能复用旧数据；不要并行启动两套配置。
 
+## 内部 Harbor 镜像
+
+镜像同步后，可在部署 `.env` 设置 `IMAGE_REPOSITORY=harbor.n.nebulaedata.com/nebulae/dr-octopus`；不设置或留空时仍使用 Docker Hub。`IMAGE_TAG` 填写已同步标签，私有项目需先在部署机器执行 `docker login`。账号准备、同步脚本、摘要校验及旧 Compose 的修改方式见[Harbor 同步说明](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/HARBOR.md)。
+
 ## 维护者说明
 
 维护者本地执行现有 npm 发布，创建 GitHub Release 后由 GitHub Actions 远程构建镜像，本地不需要 Docker。具体执行位置见[设计文档中的步骤表格](https://github.com/nebulaedata/dr-octopus/blob/main/docs/architecture/docker-distribution.md)。Dockerfile、发布辅助脚本和测试公开在 Git 中，但不包含在用户安装 ZIP 中。

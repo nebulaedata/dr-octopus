@@ -45,6 +45,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test && pnpm run test:docker",
+    "docker:sync": "node deploy/docker/sync-harbor.mjs",
     "test:docker": "node --test deploy/docker/test/*.test.mjs",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""

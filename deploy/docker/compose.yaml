@@ -2,7 +2,7 @@ name: dr-octopus
 
 services:
   dr-octopus:
-    image: docker.io/nebulaedata01/dr-octopus:${IMAGE_TAG:?Set IMAGE_TAG in .env}
+    image: ${IMAGE_REPOSITORY:-docker.io/nebulaedata01/dr-octopus}:${IMAGE_TAG:?Set IMAGE_TAG in .env}
     init: true
     restart: unless-stopped
     stop_grace_period: 60s

@@ -89,6 +89,10 @@ Replacement briefly interrupts this single-instance service. A failed pull does 
 
 When switching from the former locally-built Docker deployment, back up first, replace Compose, and add `IMAGE_TAG` to the existing `.env`. Retain your port/origin settings. If the existing `.env` has `BIND_ADDRESS=127.0.0.1`, change it to `0.0.0.0` for direct remote access. `DR_OCTOPUS_VERSION` is no longer an input for prebuilt-image deployment; `NPM_CONFIG_REGISTRY` in the deployment `.env` controls runtime npm downloads, while custom builds use the build arg of the same name. Keep the original project name (including any custom `-p` / `COMPOSE_PROJECT_NAME`) and volume mappings to reuse data. Do not run both configurations concurrently.
 
+## Internal Harbor mirror
+
+After synchronizing an image, set `IMAGE_REPOSITORY=harbor.n.nebulaedata.com/nebulae/dr-octopus` in the deployment `.env`. It defaults to Docker Hub when unset or empty. Keep `IMAGE_TAG` as the synchronized tag. Private projects require `docker login` on the deployment machine. The [Harbor synchronization guide (Chinese)](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/HARBOR.md) covers login, the maintainer script, verification and older Compose files.
+
 ## Maintainers
 
 Images are built on GitHub Actions after the npm package and GitHub Release are published; maintainers do not need local Docker. See the [execution steps and release design](https://github.com/nebulaedata/dr-octopus/blob/main/docs/architecture/docker-distribution.md). Dockerfile, release helpers and tests are kept in Git for reproducibility, but are not included in the user installation ZIP.

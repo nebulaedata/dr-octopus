@@ -126,6 +126,7 @@ test(
     const env = { ...process.env };
     for (const name of [
       'IMAGE_TAG',
+      'IMAGE_REPOSITORY',
       'BIND_ADDRESS',
       'HTTP_PORT',
       'SERVER_CORS_ORIGIN',
@@ -173,6 +174,14 @@ test(
     writeFileSync(join(directory, '.env.example'), 'IMAGE_TAG=1.2.3-r1\nNPM_CONFIG_REGISTRY=\n');
     const empty = JSON.parse(execFileSync('docker', args, { encoding: 'utf8', env }));
     assert.equal(empty.services['dr-octopus'].environment.NPM_CONFIG_REGISTRY, 'https://registry.npmjs.org');
+    writeFileSync(
+      join(directory, '.env.example'),
+      'IMAGE_TAG=latest\nIMAGE_REPOSITORY=harbor.n.nebulaedata.com/nebulae/dr-octopus\n'
+    );
+    const internal = JSON.parse(execFileSync('docker', args, { encoding: 'utf8', env }));
+    assert.equal(internal.services['dr-octopus'].image, 'harbor.n.nebulaedata.com/nebulae/dr-octopus:latest');
+    assert.deepEqual(internal.volumes, config.volumes);
+    assert.deepEqual(internal.services['dr-octopus'].volumes, service.volumes);
     writeFileSync(join(directory, '.env.example'), '');
     const missing = spawnSync('docker', args, { encoding: 'utf8', env });
     assert.notEqual(missing.status, 0);
