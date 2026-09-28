@@ -48,7 +48,9 @@ node deploy/docker/sync-harbor.mjs --tag 0.0.10
 | ④ 同步确认    | 展示实际源摘要与目标地址，确认后才推送    |
 | ⑤ 验证        | 校验目标摘要，成功后显示结果              |
 
-按 Ctrl+C 或拒绝确认会结束向导，不推送镜像。`--dry-run` 跳过交互和登录，直接预览参数指定的目标。
+读取源摘要、同步镜像、核实中断后的目标状态、校验摘要和重试等待期间，向导会显示带计时的 Clack spinner。当前没有可靠的字节传输总量，因此不显示百分比进度条。登录和确认输入期间暂停动画，终端交给 Docker 或输入框。
+
+推送前按 Ctrl+C 或拒绝确认会结束向导，不推送镜像；推送开始后按 Ctrl+C 会停止当前命令及后续重试，但目标可能已有部分数据，需要核实 Harbor 状态。`--dry-run` 跳过交互和登录，直接预览参数指定的目标；它和 `--yes` 保留普通日志输出。
 
 源标签必须已在 Docker Hub 发布。脚本先将源标签解析成不可变摘要，然后通过 Docker Buildx 复制清单和镜像层，最后检查目标标签的摘要。只有摘要一致才输出 `Verified`。采用 [`imagetools create --prefer-index=false`](https://docs.docker.com/reference/cli/docker/buildx/imagetools/create/) 保留源清单格式；不会重新构建，也不会根据本机 CPU 架构筛选平台，源镜像目前为 Linux AMD64。
 
@@ -68,6 +70,14 @@ node deploy/docker/sync-harbor.mjs --project nebulae --tag latest --yes
 ```
 
 网络、认证、推送或摘要校验失败都会以非零状态退出。修复后可以重跑；如果失败前已上传部分数据，脚本不会删除这些数据或自动回滚标签。预览成功只证明源标签可读取，不能代替真实同步验证。该脚本不会定时运行，每次需要更新内部镜像时手动执行。
+
+### Docker Hub 令牌请求出现 EOF
+
+如果 Harbor 显示登录成功，随后在 `https://auth.docker.io/token` 出现 `EOF`，表示 Docker Hub 令牌请求的连接中断，不能据此判定 Harbor 密码错误。源清单读取成功也不保证后续每次令牌或镜像层请求都成功。
+
+脚本对已识别的断线、连接超时、限流和临时服务错误最多尝试 3 次，重试间隔为 2 秒、5 秒。同步始终使用确认时固定的源摘要，不会在重试时重新解析 `latest`。推送中断后先读取目标摘要：目标已一致则继续最终校验；明确不存在或仍指向其他摘要时才重试复制。无法核实目标状态时停止自动重推。认证拒绝、证书错误、用户取消和摘要不一致不会自动重试。
+
+若仍失败，检查执行机器到 `auth.docker.io`、`registry-1.docker.io` 和 Harbor 的访问及终端代理设置，然后重新运行 `pnpm docker:sync`。无需重新发布 npm 包，也不要通过关闭 TLS 校验来绕过网络问题。
 
 ## 3. 国内服务器从 Harbor 部署
 

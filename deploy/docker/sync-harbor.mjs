@@ -2,7 +2,8 @@
  * @author Codex
  * @description Copies a published Docker Hub image to Harbor by digest using existing Docker credentials.
  */
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -59,21 +60,55 @@ export function syncOptions(args) {
 /**
  * Runs Docker without shell expansion and exposes progress/errors without reading or storing credentials.
  */
-function docker(args) {
-  return execFileSync('docker', args, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'inherit'],
-    windowsHide: true,
-    timeout: 1_800_000,
-    maxBuffer: 4 * 1024 * 1024,
-  }).trim();
+function docker(args, { signal, quiet = false } = {}) {
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      'docker',
+      args,
+      {
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 1_800_000,
+        maxBuffer: 4 * 1024 * 1024,
+        signal,
+      },
+      (error, stdout, stderr) => {
+        if (error) {
+          error.stderr = stderr;
+          reject(error);
+        } else resolve(stdout.trim());
+      }
+    );
+    child.stdin.end();
+    if (!quiet) child.stderr.on('data', (chunk) => process.stderr.write(chunk));
+  });
+}
+
+/**
+ * Retries only evidenced transport/service failures; invalid credentials, certificates and cancellation stop.
+ */
+function transientRegistryError(error) {
+  if (error.killed || error.signal) return false;
+  const detail = String(error.stderr || error.message);
+  if (
+    /unauthorized|forbidden|denied|invalid credentials|incorrect username|x509|certificate|\b(?:401|403|404)\b/i.test(
+      detail
+    )
+  )
+    return false;
+  return /\b(?:EOF|ECONNRESET|ETIMEDOUT|EAI_AGAIN)\b|connection reset|i\/o timeout|TLS handshake timeout|timeout awaiting response headers|\b(?:429|500|502|503|504)\b/i.test(
+    detail
+  );
 }
 
 /**
  * Pins the source once, copies its manifest/layers and verifies the destination tag against that snapshot.
- * A dry run only reads source metadata. Failures stop immediately and never report synchronization success.
+ * A dry run only reads source metadata. Network retries preserve the snapshot and verify ambiguous writes.
  */
-export async function syncHarbor(args, { run = docker, log = console.log, confirm = async () => true } = {}) {
+export async function syncHarbor(
+  args,
+  { run = docker, log = console.log, confirm = async () => true, pause = sleep, status, signal } = {}
+) {
   const options = syncOptions(args);
   if (options.help) {
     log(help);
@@ -83,7 +118,37 @@ export async function syncHarbor(args, { run = docker, log = console.log, confir
   const target = `${options.registry}/${options.project}/dr-octopus:${options.tag}`;
   const inspect = ['buildx', 'imagetools', 'inspect'];
   const format = ['--format', '{{.Manifest.Digest}}'];
-  const digest = run([...inspect, source, ...format]).trim();
+
+  /**
+   * Bounds retries to three attempts; writes require a successful destination-state check before retrying.
+   */
+  async function request(command, message, recover) {
+    for (let attempt = 0; ; attempt++) {
+      signal?.throwIfAborted();
+      status?.(`${message}（第 ${attempt + 1}/3 次）`);
+      try {
+        const result = await run(command, { signal, quiet: Boolean(status) });
+        signal?.throwIfAborted();
+        return result;
+      } catch (error) {
+        signal?.throwIfAborted();
+        if (!transientRegistryError(error)) throw error;
+        if (recover && (await recover())) return '';
+        if (attempt >= 2)
+          throw new Error(
+            'Registry network request failed after 3 attempts. Check access/proxy settings for auth.docker.io, registry-1.docker.io and Harbor, then retry.',
+            { cause: error }
+          );
+        const delay = [2000, 5000][attempt];
+        const message = `镜像仓库连接暂时失败，${delay / 1000} 秒后重试（第 ${attempt + 2}/3 次）。`;
+        log(message);
+        status?.(message);
+        await pause(delay, undefined, { signal });
+      }
+    }
+  }
+
+  const digest = (await request([...inspect, source, ...format], '正在读取 Docker Hub 源镜像摘要')).trim();
   if (!/^sha256:[a-f0-9]{64}$/.test(digest)) throw new Error('Source returned an invalid image digest.');
   const pinned = `${image}@${digest}`;
   log(`Source: ${source}\nSnapshot: ${pinned}\nDestination: ${target}`);
@@ -94,8 +159,35 @@ export async function syncHarbor(args, { run = docker, log = console.log, confir
   if (!(await confirm({ source: pinned, target, digest })))
     return { source: pinned, target, digest, copied: false, cancelled: true };
   // Preserve single-platform manifests too, rather than wrapping them in a new index.
-  run(['buildx', 'imagetools', 'create', '--prefer-index=false', '--tag', target, pinned]);
-  const actual = run([...inspect, target, ...format]).trim();
+  await request(
+    ['buildx', 'imagetools', 'create', '--prefer-index=false', '--tag', target, pinned],
+    '正在同步镜像到 Harbor',
+    async () => {
+      let current;
+      try {
+        current = (
+          await request([...inspect, target, ...format], '连接中断，正在核实 Harbor 目标状态')
+        ).trim();
+      } catch (error) {
+        signal?.throwIfAborted();
+        const detail = String(error.stderr || error.message);
+        if (
+          /manifest unknown|no such manifest|: not found\s*$/i.test(detail) &&
+          !/unauthorized|forbidden|denied|credential/i.test(detail)
+        )
+          return false;
+        throw new Error(
+          'Copy interrupted and destination state could not be verified; no automatic re-push. Check Harbor access and retry manually.',
+          { cause: error }
+        );
+      }
+      if (!/^sha256:[a-f0-9]{64}$/.test(current))
+        throw new Error('Destination returned an invalid image digest; no automatic re-push.');
+      if (current === digest) log('连接中断后核对到目标摘要已一致，将继续最终校验。');
+      return current === digest;
+    }
+  );
+  const actual = (await request([...inspect, target, ...format], '正在校验 Harbor 目标摘要')).trim();
   if (actual !== digest)
     throw new Error(
       `Harbor digest mismatch: expected ${digest}, received ${actual}. Synchronization unverified.`

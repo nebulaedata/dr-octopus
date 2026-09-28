@@ -16,11 +16,14 @@ const target = 'harbor.n.nebulaedata.com/team/dr-octopus';
 function commands(results) {
   const calls = [];
   const logs = [];
+  const pauses = [];
   return {
     calls,
     logs,
+    pauses,
     options: {
       log: (message) => logs.push(message),
+      pause: async (delay) => pauses.push(delay),
       run: (args) => {
         calls.push(args);
         assert.ok(results.length, 'Unexpected registry operation');
@@ -31,6 +34,89 @@ function commands(results) {
     },
   };
 }
+
+/**
+ * Models execFile's separate stderr, including the Docker Hub token failure seen during a real copy.
+ */
+function tokenEof() {
+  return Object.assign(new Error('Command failed: docker buildx imagetools create'), {
+    stderr:
+      'ERROR: failed to authorize: failed to fetch oauth token: Post "https://auth.docker.io/token": EOF',
+  });
+}
+
+test('token EOF retries the confirmed snapshot only after checking the destination', async () => {
+  const missing = new Error(`ERROR: ${target}:latest: not found`);
+  const state = commands([digest, tokenEof(), missing, '', digest]);
+  let confirmations = 0;
+  const result = await syncHarbor(['--project', 'team'], {
+    ...state.options,
+    confirm: async () => {
+      confirmations++;
+      return true;
+    },
+  });
+  assert.equal(result.copied, true);
+  assert.equal(confirmations, 1);
+  assert.deepEqual(state.pauses, [2000]);
+  assert.deepEqual(
+    state.calls.map((command) => command[2]),
+    ['inspect', 'create', 'inspect', 'create', 'inspect']
+  );
+  assert.deepEqual(state.calls[1], state.calls[3]);
+  assert.equal(state.calls[3].at(-1), `${source}@${digest}`);
+});
+
+test('an already completed copy is verified after EOF without pushing it again', async () => {
+  const state = commands([digest, tokenEof(), digest, digest]);
+  assert.equal((await syncHarbor(['--project', 'team'], state.options)).copied, true);
+  assert.equal(state.calls.filter((command) => command[2] === 'create').length, 1);
+  assert.deepEqual(state.pauses, []);
+});
+
+test('unknown destination state stops automatic re-push after an interrupted copy', async () => {
+  const state = commands([digest, tokenEof(), new Error('403 Forbidden')]);
+  await assert.rejects(syncHarbor(['--project', 'team'], state.options), /no automatic re-push/);
+  assert.equal(state.calls.filter((command) => command[2] === 'create').length, 1);
+  assert.deepEqual(state.pauses, []);
+  assert.ok(state.logs.every((message) => !message.startsWith('Verified:')));
+});
+
+test('repeated token EOF is bounded to three copy attempts', async () => {
+  const missing = new Error(`ERROR: ${target}:latest: not found`);
+  const state = commands([digest, tokenEof(), missing, tokenEof(), missing, tokenEof(), missing]);
+  await assert.rejects(syncHarbor(['--project', 'team'], state.options), /after 3 attempts/);
+  assert.equal(state.calls.filter((command) => command[2] === 'create').length, 3);
+  assert.deepEqual(state.pauses, [2000, 5000]);
+  assert.ok(state.logs.every((message) => !message.startsWith('Verified:')));
+});
+
+test('source and verification network retries do not repeat a successful copy', async () => {
+  const state = commands([
+    new Error('TLS handshake timeout'),
+    digest,
+    '',
+    new Error('connection reset'),
+    digest,
+  ]);
+  assert.equal((await syncHarbor(['--project', 'team'], state.options)).copied, true);
+  assert.equal(state.calls.filter((command) => command[2] === 'create').length, 1);
+  assert.deepEqual(state.pauses, [2000, 2000]);
+});
+
+test('credentials, TLS trust failures and killed commands are never retried', async () => {
+  for (const failure of [
+    new Error('failed to authorize: 401 Unauthorized'),
+    new Error('403 Forbidden'),
+    new Error('x509: certificate signed by unknown authority'),
+    Object.assign(new Error('EOF'), { killed: true, signal: 'SIGTERM' }),
+  ]) {
+    const state = commands([digest, failure]);
+    await assert.rejects(syncHarbor(['--project', 'team'], state.options));
+    assert.equal(state.calls.length, 2);
+    assert.deepEqual(state.pauses, []);
+  }
+});
 
 test('copies the resolved snapshot instead of re-resolving a mutable source tag', async () => {
   const state = commands([digest, '', digest]);

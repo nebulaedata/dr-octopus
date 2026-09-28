@@ -23,6 +23,31 @@ export async function interactiveSync(options, { ui, login = loginHarbor, sync, 
   const prompts = ui ?? (await import('@clack/prompts'));
   const cancelled = Symbol('cancelled');
   const selected = { ...options };
+  const controller = new AbortController();
+  let pushing = false;
+  let spinning = false;
+  const progress = prompts.spinner({
+    indicator: 'timer',
+    cancelMessage: '正在停止同步',
+    onCancel: () => controller.abort(),
+  });
+
+  /**
+   * Releases the spinner's terminal ownership before logging or asking for input.
+   */
+  function clearProgress() {
+    progress.clear();
+    spinning = false;
+  }
+
+  /**
+   * Keeps a single animated status active across requests and retry waits.
+   */
+  function status(message) {
+    if (spinning) progress.message(message);
+    else progress.start(message);
+    spinning = true;
+  }
 
   /**
    * Converts Clack's cancellation sentinel into one exit path before any subsequent side effect.
@@ -76,21 +101,36 @@ export async function interactiveSync(options, { ui, login = loginHarbor, sync, 
     await field('tag', '需要同步的 Docker Hub 标签');
     const args = ['--registry', selected.registry, '--project', selected.project, '--tag', selected.tag];
     const result = await sync(args, {
-      log: (message) => prompts.log.info(message),
+      signal: controller.signal,
+      status,
+      log: (message) => {
+        clearProgress();
+        prompts.log.info(message);
+      },
       confirm: async ({ source, target, digest }) => {
+        clearProgress();
         prompts.note(
           `源：${source}\n目标：${target}\n摘要：${digest}\n已有目标标签会更新为此镜像。`,
           '确认同步内容'
         );
-        return answer(await prompts.confirm({ message: '开始同步？', initialValue: false }));
+        pushing = answer(await prompts.confirm({ message: '开始同步？', initialValue: false }));
+        return pushing;
       },
     });
     if (result.cancelled) throw cancelled;
     prompts.outro(`同步完成，摘要校验通过：${result.target}`);
     return result;
   } catch (error) {
-    if (error !== cancelled) throw error;
-    prompts.cancel('已取消同步，未推送镜像。');
+    if (error !== cancelled && !controller.signal.aborted) {
+      progress.error('同步失败');
+      throw error;
+    }
+    clearProgress();
+    prompts.cancel(
+      pushing ? '已停止同步；目标可能已有部分数据，请核实 Harbor 状态。' : '已取消同步，未推送镜像。'
+    );
     return { cancelled: true, copied: false };
+  } finally {
+    clearProgress();
   }
 }
