@@ -56,6 +56,7 @@ function defaultIsEditableTarget(target: EventTarget | null): boolean {
  */
 export class ShortcutKeyRegister {
   static readonly VOICE_TOGGLE = 'voice.toggle' as const;
+  static readonly VOICE_CANCEL = 'voice.cancel' as const;
   static readonly FOCUS_COMPOSER = 'composer.focus' as const;
   static readonly SEND_MESSAGE = 'composer.send' as const;
   static readonly INSERT_NEWLINE = 'composer.newline' as const;

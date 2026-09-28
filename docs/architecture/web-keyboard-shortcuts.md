@@ -18,9 +18,9 @@
 - 各组件通过 `shortcutKey.register(commandId, handler)` 注册处理函数，通过 `shortcutKey.get(commandId)` 读取当前生效的按键展示文本；
 - 快捷键绑定支持用户自定义、单条清除、单条恢复默认、全部恢复默认，绑定覆盖持久化在本机；
 - 设置页支持按命令文案与按键文本搜索；
-- 首期命令清单（9 条，见 §4），其中「语音识别」为功能占位。
+- 当前命令目录共 11 条，包含语音输入的开始／停止与取消；语音命令按服务状态和录音生命周期注册。
 
-不在本期范围：参考图中的其他命令（打开设置、对话内搜索、全屏、唤起主窗口、字号缩放）、语音识别实际功能、快捷键的云端同步、macOS `Cmd` 体系适配（按 Windows/Linux 修饰键展示，结构预留）。
+不在本期范围：参考图中的其他命令（打开设置、对话内搜索、全屏、唤起主窗口、字号缩放）、快捷键的云端同步、macOS `Cmd` 体系适配（按 Windows/Linux 修饰键展示，结构预留）。
 
 ## 2. 现状盘点
 
@@ -65,17 +65,18 @@ stores/shortcuts（持久层）  zustand persist：用户绑定覆盖（override
 
 首期清单（默认值以需求文案为准；与参考图不一致处在 §13 列出）：
 
-| ID（`ShortcutKeyRegister` 静态常量）               | 命令（中文）       | 默认按键       | scope    | 备注                                                  |
-| -------------------------------------------------- | ------------------ | -------------- | -------- | ----------------------------------------------------- |
-| `VOICE_TOGGLE = 'voice.toggle'`                    | 语音识别开关       | `Ctrl+D`       | global   | **占位**：`status: 'placeholder'`，不派发、设置页只读 |
-| `SEND_MESSAGE = 'composer.send'`                   | 发送消息           | `Enter`        | composer | 由 Lexical 插件消费                                   |
-| `INSERT_NEWLINE = 'composer.newline'`              | 输入时换行         | `Shift+Enter`  | composer | 同上                                                  |
-| `STOP_GENERATION = 'session.stop'`                 | 停止生成           | `Shift+Esc`    | global   | `allowInEditable: true`（输入框聚焦时也要能停止）     |
-| `PREVIOUS_SESSION = 'session.previous'`            | 上一个会话         | `Ctrl+[`       | global   | 按 Sidebar 会话顺序相对导航                           |
-| `NEXT_SESSION = 'session.next'`                    | 下一个会话         | `Ctrl+]`       | global   | 同上                                                  |
-| `NEW_SESSION = 'session.new'`                      | 新会话             | `Alt+N`        | global   | 刻意避开浏览器保留键 `Ctrl+N`（§11）                  |
-| `TOGGLE_LEFT_SIDEBAR = 'layout.toggleLeftSidebar'` | 切换左侧栏         | `Ctrl+B`       | global   | 复用 `toggleSidebar`                                  |
-| `TOGGLE_RIGHT_PANEL = 'layout.toggleRightPanel'`   | 切换右侧资源管理栏 | `Ctrl+Shift+B` | global   | 目标固定为 `file-explorer`                            |
+| ID（`ShortcutKeyRegister` 静态常量）               | 命令（中文）       | 默认按键       | scope    | 备注                                                     |
+| -------------------------------------------------- | ------------------ | -------------- | -------- | -------------------------------------------------------- |
+| `VOICE_TOGGLE = 'voice.toggle'`                    | 开始／停止语音输入 | `Ctrl+D`       | global   | 语音服务启用且 Composer 可操作时注册；再次按下停止并识别 |
+| `VOICE_CANCEL = 'voice.cancel'`                    | 取消语音输入       | `Esc`          | global   | 仅等待授权、录音或识别期间注册；`allowInEditable: true`  |
+| `SEND_MESSAGE = 'composer.send'`                   | 发送消息           | `Enter`        | composer | 由 Lexical 插件消费                                      |
+| `INSERT_NEWLINE = 'composer.newline'`              | 输入时换行         | `Shift+Enter`  | composer | 同上                                                     |
+| `STOP_GENERATION = 'session.stop'`                 | 停止生成           | `Shift+Esc`    | global   | `allowInEditable: true`（输入框聚焦时也要能停止）        |
+| `PREVIOUS_SESSION = 'session.previous'`            | 上一个会话         | `Ctrl+[`       | global   | 按 Sidebar 会话顺序相对导航                              |
+| `NEXT_SESSION = 'session.next'`                    | 下一个会话         | `Ctrl+]`       | global   | 同上                                                     |
+| `NEW_SESSION = 'session.new'`                      | 新会话             | `Alt+N`        | global   | 刻意避开浏览器保留键 `Ctrl+N`（§11）                     |
+| `TOGGLE_LEFT_SIDEBAR = 'layout.toggleLeftSidebar'` | 切换左侧栏         | `Ctrl+B`       | global   | 复用 `toggleSidebar`                                     |
+| `TOGGLE_RIGHT_PANEL = 'layout.toggleRightPanel'`   | 切换右侧资源管理栏 | `Ctrl+Shift+B` | global   | 目标固定为 `file-explorer`                               |
 
 扩展新命令 = 在 catalog 增加一行 + 在 `useShortcutCommandLabels()` 补一条文案（TS 强制）+ 在接线层注册 handler，引擎与设置页零改动。
 
@@ -220,11 +221,11 @@ Card
 
 ## 13. 与参考图的差异（评审确认：参考图仅作布局证据，不作为数据/文案来源）
 
-| 项                                                   | 参考图                | 本期实现                        | 说明                                           |
-| ---------------------------------------------------- | --------------------- | ------------------------------- | ---------------------------------------------- |
-| 停止生成                                             | `Esc`                 | `Shift+Esc`                     | 按需求文案；裸 `Esc` 与编辑器/弹窗关闭手势冲突 |
-| 语音识别                                             | 语音录制开关 `Ctrl+D` | 语音识别开关 `Ctrl+D`，占位只读 | 功能未实现；默认键经评审确认                   |
-| 打开设置 / 对话内搜索 / 全屏 / 唤起主窗口 / 字号缩放 | 有                    | 不做                            | catalog 可后续扩展                             |
+| 项                                                   | 参考图                | 本期实现                                | 说明                                           |
+| ---------------------------------------------------- | --------------------- | --------------------------------------- | ---------------------------------------------- |
+| 停止生成                                             | `Esc`                 | `Shift+Esc`                             | 按需求文案；裸 `Esc` 与编辑器/弹窗关闭手势冲突 |
+| 语音识别                                             | 语音录制开关 `Ctrl+D` | 开始／停止语音输入 `Ctrl+D`，取消 `Esc` | 仅在服务启用及相应生命周期生效                 |
+| 打开设置 / 对话内搜索 / 全屏 / 唤起主窗口 / 字号缩放 | 有                    | 不做                                    | catalog 可后续扩展                             |
 
 ## 14. i18n 约定
 
@@ -249,7 +250,8 @@ Card
 | `session.previous` / `session.next`  | 同上                                                            | 按 `sessions.data` 顺序相对当前 `params.sessionId` 导航；无活动会话或已到端点 → 返回 `false` 不消费                    |
 | `session.stop`                       | `features/session/Composer.tsx`                                 | `enabled: running` 时调用现有 `stop()`                                                                                 |
 | `composer.send` / `composer.newline` | `Composer.tsx` → `AgentComposerEditor` → `SubmitShortcutPlugin` | 见 §8（send 判定含 Alt 备选；newline 语义见 §8 第三条）                                                                |
-| `voice.toggle`                       | 无                                                              | 占位，不注册                                                                                                           |
+| `voice.toggle`                       | `features/session/Composer.tsx`                                 | 空闲时开始录音；录音时停止并识别；授权与识别期间消费但不重复执行                                                       |
+| `voice.cancel`                       | 同上                                                            | 语音进行中取消并将焦点返回 Composer；设置弹窗打开时停用语音快捷键                                                      |
 
 ## 17. 文件清单
 
@@ -290,7 +292,7 @@ apps/web/src/i18n/locales/en.json                     # pnpm i18n:extract 生成
 ## 18. 测试计划
 
 - `shortcut-combo.test.mjs`：规范化（字母大写、`Ctrl+Shift+B`、`Shift+Esc`、`Ctrl+[`、`Space`、纯修饰键返回 `null`、Shift+标点按物理键稳定）、`comboMatches`、非法串校验。
-- `shortcut-key-register.test.mjs`：注入 fake EventTarget —— register/注销、LIFO 与消费语义、命中即 preventDefault、守卫（composing / repeat / suspended / 可编辑目标 / `allowInEditable` 例外）、`syncOverrides` 后按新绑定派发、placeholder 不派发、`get/getCombo/list` 视图正确。
+- `shortcut-key-register.test.mjs`：注入 fake EventTarget —— register/注销、LIFO 与消费语义、命中即 preventDefault、守卫（composing / repeat / suspended / 可编辑目标 / `allowInEditable` 例外）、`syncOverrides` 后按新绑定派发、语音切换及取消的处理器生命周期、`get/getCombo/list` 视图正确。
 - `shortcuts-store.test.mjs`：`setBinding/clearBinding/resetBinding/resetAll`、生效绑定解析（override 优先、`null` 清除语义）、rehydrate 净化（未知 ID / 非法组合被丢弃）。
 - `shortcut-search.test.mjs`：命令文案与按键文本（含去 `+`/去空格归一）的双通道匹配、大小写不敏感。
 - 交付前运行：`pnpm --filter @octopus/web test`、`pnpm lint`、`pnpm typecheck`。
@@ -299,6 +301,6 @@ apps/web/src/i18n/locales/en.json                     # pnpm i18n:extract 生成
 
 1. 参考图仅作布局参考，不作为数据/文案来源；停止生成默认键按需求文案取 `Shift+Esc`。
 2. 新会话默认键采用 `Alt+N`，放弃浏览器保留键 `Ctrl+N`。
-3. 语音识别占位行展示 `Ctrl+D`，只读、不派发、不参与冲突检测 —— 符合预期。
+3. 语音快捷键支持编辑、清除、重置和冲突检测；Ctrl+D 开始／停止，Esc 取消。按钮提示与 aria-keyshortcuts 使用当前有效绑定。关闭语音服务时不注册处理器，保留浏览器原有行为。
 4. 冲突处理采用「提示冲突 + 一键替换（清除原占用方）」。
 5. 右侧栏切换目标固定为文件资源面板（`file-explorer`），不含属性面板。

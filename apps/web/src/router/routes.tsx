@@ -463,6 +463,25 @@ export function ShortcutsSettingsRoute() {
 const LazyJevSettingsPage = lazy(() =>
   import('../features/settings').then((module) => ({ default: module.JevSettingsPage }))
 );
+const LazySpeechSettingsPage = lazy(() =>
+  import('../features/settings').then((module) => ({ default: module.SpeechSettingsPage }))
+);
+/**
+ * Renders speech settings through the shared feature entrypoint.
+ */
+export function SpeechSettingsRoute() {
+  const { t } = useI18n();
+  const navigate = useNavigate({ from: '/settings/speech' });
+  const search = useSearch({ from: '/workbench/settings/speech' });
+  return (
+    <Suspense fallback={<LoadingFallback message={t('speech.loading', 'Loading speech settings…')} />}>
+      <LazySpeechSettingsPage
+        provider={search.provider}
+        onProviderChange={(provider) => void navigate({ search: { provider }, replace: true })}
+      />
+    </Suspense>
+  );
+}
 /**
  * Render Jev settings through the shared feature entrypoint.
  */

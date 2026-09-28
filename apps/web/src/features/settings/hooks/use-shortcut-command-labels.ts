@@ -19,7 +19,8 @@ import type { ShortcutCommandId } from '@/lib/shortcuts';
 export function useShortcutCommandLabels(): Record<ShortcutCommandId, string> {
   const { t } = useI18n();
   return {
-    'voice.toggle': t('settings.shortcuts.commands.voiceToggle', 'Voice input toggle'),
+    'voice.toggle': t('settings.shortcuts.commands.voiceToggle', 'Start / stop voice input'),
+    'voice.cancel': t('settings.shortcuts.commands.voiceCancel', 'Cancel voice input'),
     'composer.focus': t('settings.shortcuts.commands.focusComposer', 'Focus composer'),
     'composer.send': t('settings.shortcuts.commands.sendMessage', 'Send message'),
     'composer.newline': t('settings.shortcuts.commands.insertNewline', 'Insert newline while typing'),

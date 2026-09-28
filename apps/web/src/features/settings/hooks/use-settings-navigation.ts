@@ -13,6 +13,7 @@ import {
   LanguagesIcon,
   LibraryIcon,
   MessageSquareTextIcon,
+  MicIcon,
   NetworkIcon,
   PaletteIcon,
   ServerIcon,
@@ -103,6 +104,13 @@ function getSettingsNavigation(t: Translate): SettingsNavigationGroup[] {
           description: t('settings.nav.jev.description', 'Configure the Jev model and API key.'),
           path: '/settings/jev',
           icon: SparklesIcon,
+          pageType: 'complete',
+        },
+        {
+          label: t('speech.title', 'Speech service'),
+          description: t('speech.navDescription', 'Enable voice input and configure the ASR model.'),
+          path: '/settings/speech',
+          icon: MicIcon,
           pageType: 'complete',
         },
         {

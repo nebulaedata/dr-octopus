@@ -7,6 +7,7 @@ import type { SkillScope } from '@/api/skills';
 
 export const queryKeys = {
   settingsRoot: ['settings'] as const,
+  speech: ['settings', 'speech'] as const,
   modelProvidersRoot: ['settings', 'model-providers'] as const,
   modelProviders: ['settings', 'model-providers', 'catalog'] as const,
   modelProvider: (providerKey: string) => ['settings', 'model-providers', providerKey] as const,

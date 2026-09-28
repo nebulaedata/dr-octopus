@@ -1,6 +1,6 @@
 /**
  * @author Claude
- * @description Verifies the ShortcutKeyRegister dispatch loop: registration lifecycle, LIFO consumption, guards, override sync, and placeholder exclusion.
+ * @description Verifies the shortcut dispatch loop: registration lifecycle, LIFO consumption, guards, override sync, and speech controls.
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -182,17 +182,38 @@ test('a cleared binding (override null) disables dispatch', () => {
   assert.equal(event.defaultPrevented, false);
 });
 
-test('placeholder commands never dispatch even with a handler registered', () => {
+test('voice toggle dispatches inside the editor and suppresses the browser bookmark action', () => {
   const { register, target } = createRegister();
   const calls = [];
   register.register(ShortcutKeyRegister.VOICE_TOGGLE, () => {
     calls.push('voice');
     return true;
   });
-  const event = keyEvent({ key: 'd', code: 'KeyD', ctrlKey: true });
+  const event = keyEvent({ key: 'd', code: 'KeyD', ctrlKey: true, target: EDITABLE });
   target.emit(event);
-  assert.deepEqual(calls, []);
-  assert.equal(event.defaultPrevented, false);
+  assert.deepEqual(calls, ['voice']);
+  assert.equal(event.defaultPrevented, true);
+  target.emit(keyEvent({ key: 'd', code: 'KeyD', ctrlKey: true, repeat: true }));
+  target.emit(keyEvent({ key: 'd', code: 'KeyD', ctrlKey: true, isComposing: true }));
+  assert.equal(calls.length, 1);
+});
+
+test('voice cancellation consumes Escape only while its handler is registered', () => {
+  const { register, target } = createRegister();
+  let calls = 0;
+  const dispose = register.register(ShortcutKeyRegister.VOICE_CANCEL, () => {
+    calls++;
+    return true;
+  });
+  const event = keyEvent({ key: 'Escape', code: 'Escape', target: EDITABLE });
+  target.emit(event);
+  assert.equal(calls, 1);
+  assert.equal(event.defaultPrevented, true);
+  dispose();
+  const idleEvent = keyEvent({ key: 'Escape', code: 'Escape', target: EDITABLE });
+  target.emit(idleEvent);
+  assert.equal(calls, 1);
+  assert.equal(idleEvent.defaultPrevented, false);
 });
 
 test('get/getCombo/list expose effective bindings and metadata', () => {
@@ -203,8 +224,9 @@ test('get/getCombo/list expose effective bindings and metadata', () => {
   assert.equal(register.get(ShortcutKeyRegister.NEW_SESSION).binding, null);
   assert.equal(register.get(ShortcutKeyRegister.NEW_SESSION).defaultBinding, 'Alt+N');
   assert.equal(register.get(ShortcutKeyRegister.TOGGLE_LEFT_SIDEBAR).binding, 'Ctrl+Shift+L');
-  assert.equal(register.list().length, 10);
-  assert.equal(register.get(ShortcutKeyRegister.VOICE_TOGGLE).status, 'placeholder');
+  assert.equal(register.list().length, 11);
+  assert.equal(register.get(ShortcutKeyRegister.VOICE_TOGGLE).status, 'active');
+  assert.equal(register.getCombo(ShortcutKeyRegister.VOICE_CANCEL), 'Esc');
   assert.throws(() => register.get('nope'));
 });
 

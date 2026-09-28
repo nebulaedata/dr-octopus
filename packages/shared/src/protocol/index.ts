@@ -30,3 +30,4 @@ export * from './background-tasks.js';
 export * from './conversation-start.js';
 export * from './jev.js';
 export * from './imagegen.js';
+export * from './speech.js';

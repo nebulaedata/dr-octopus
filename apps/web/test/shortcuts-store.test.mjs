@@ -76,11 +76,11 @@ test('actions persist overrides into the storage record', () => {
   store.resetAll();
 });
 
-test('findBindingConflict is scope-aware and ignores placeholders and the edited command', () => {
+test('findBindingConflict is scope-aware and includes active voice shortcuts', () => {
   assert.equal(findBindingConflict({}, 'session.new', 'Ctrl+B'), 'layout.toggleLeftSidebar');
   assert.equal(findBindingConflict({}, 'layout.toggleLeftSidebar', 'Ctrl+B'), undefined);
-  // Placeholder voice.toggle is excluded even though it displays Ctrl+D.
-  assert.equal(findBindingConflict({}, 'session.new', 'Ctrl+D'), undefined);
+  assert.equal(findBindingConflict({}, 'session.new', 'Ctrl+D'), 'voice.toggle');
+  assert.equal(findBindingConflict({}, 'session.new', 'Esc'), 'voice.cancel');
   // Composer scope is a separate namespace from global.
   assert.equal(findBindingConflict({}, 'composer.send', 'Ctrl+B'), undefined);
   assert.equal(findBindingConflict({}, 'composer.newline', 'Enter'), 'composer.send');

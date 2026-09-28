@@ -79,3 +79,4 @@ export { ShortcutRecorder } from './shortcuts/ShortcutRecorder';
 export type { ShortcutRecorderProps } from './shortcuts/ShortcutRecorder';
 export { ShortcutsSettingsPage } from './shortcuts/ShortcutsSettingsPage';
 export { SnippetsSettingsPage } from './snippets/SnippetsSettingsPage';
+export { SpeechSettingsPage } from './speech/SpeechSettingsPage';

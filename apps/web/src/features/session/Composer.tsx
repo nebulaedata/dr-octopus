@@ -6,7 +6,7 @@
 import { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useMemoizedFn } from 'ahooks';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowUpIcon, AtSignIcon, PaperclipIcon, SquareSlashIcon, TargetIcon } from 'lucide-react';
 import { useStore } from 'zustand';
@@ -32,6 +32,9 @@ import { comboMatches, ShortcutKeyRegister, toAriaKeyShortcuts } from '@/lib/sho
 import { useShortcut, useShortcutBinding } from '@/hooks/use-shortcut';
 import { toComposerAttachment } from '@/features/session/utils/attachment-projection';
 import { ComposerAttachments } from './ComposerAttachments';
+import { ComposerSpeechInput } from './ComposerSpeechInput';
+import { useSpeechInput } from './hooks/use-speech-input';
+import { useSpeechSettings } from '@/queries/speech-queries';
 import { RunningMessageControls } from './RunningMessageControls';
 import { ContextUsageIndicator } from './ContextUsageIndicator';
 import { ModelThinkingSelect } from './ModelThinkingSelect';
@@ -169,6 +172,7 @@ export function Composer({
   const pendingWorkMode = useStore(store, (state) => state.pendingWorkMode);
   const running = runtimeState === 'running';
   const navigate = useNavigate();
+  const settingsOpen = useSearch({ strict: false, select: (search) => Boolean(search.settings) });
   const sendBinding = useShortcutBinding(ShortcutKeyRegister.SEND_MESSAGE);
   const newlineBinding = useShortcutBinding(ShortcutKeyRegister.INSERT_NEWLINE);
   let sendButtonTitle: string | undefined;
@@ -228,7 +232,15 @@ export function Composer({
   const [publishing, setPublishing] = useState(false);
   const publishingRef = useRef(false);
   const interactionDisabled = publishing || firstSubmitPending;
-  const sendingDisabled = submitDisabled || interactionDisabled || pendingWorkMode !== undefined;
+  const speechSettings = useSpeechSettings();
+  const speech = useSpeechInput(
+    Boolean(speechSettings.data?.enabled) && !interactionDisabled,
+    sessionId,
+    (text) => editorRef.current?.insertText(text)
+  );
+  const speechBusy = speech.state !== 'idle';
+  const sendingDisabled =
+    submitDisabled || interactionDisabled || pendingWorkMode !== undefined || speechBusy;
   const controlsLoaded = Boolean(onFirstSubmit) || (runtimeId !== undefined && epoch !== undefined);
   const workMode = draftControls?.workMode ?? planMode.workMode;
   const knowledgeState: KnowledgeModeState | undefined = onDraftControlsChange
@@ -492,6 +504,49 @@ export function Composer({
       return true;
     },
     { enabled: running }
+  );
+
+  const speechShortcutsEnabled =
+    Boolean(speechSettings.data?.enabled) &&
+    !interactionDisabled &&
+    !settingsOpen &&
+    !renameOpen &&
+    !planExitOpen;
+  useShortcut(
+    ShortcutKeyRegister.VOICE_TOGGLE,
+    (event) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest('[role="dialog"], [role="alertdialog"]') &&
+        (!speechBusy || !event.target.closest('[data-speech-dialog]'))
+      ) {
+        return true;
+      }
+      if (speech.state === 'idle') {
+        void speech.start();
+      } else if (speech.state === 'recording') {
+        speech.stop();
+      }
+      // Permission and transcription phases consume the key without starting another request.
+      return true;
+    },
+    { enabled: speechShortcutsEnabled }
+  );
+  useShortcut(
+    ShortcutKeyRegister.VOICE_CANCEL,
+    (event) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest('[role="dialog"], [role="alertdialog"]') &&
+        (!speechBusy || !event.target.closest('[data-speech-dialog]'))
+      ) {
+        return true;
+      }
+      speech.cancel();
+      editorRef.current?.focus();
+      return true;
+    },
+    { enabled: speechShortcutsEnabled && speechBusy }
   );
 
   /**
@@ -830,6 +885,11 @@ export function Composer({
           onSubmit={handleEditorSubmit}
           onCommand={handleCommand}
         />
+        {speech.error && (
+          <div role="alert" className="px-4 pb-2 text-xs text-destructive">
+            {speech.error}
+          </div>
+        )}
         <div role="toolbar" className="flex flex-nowrap items-center gap-1 p-2 md:flex-wrap">
           <div className="hidden items-center gap-1 md:flex">
             <Upload
@@ -936,6 +996,13 @@ export function Composer({
             onValueChange={handlePermissionModeChange}
           />
           <div className="ml-auto flex shrink-0 items-center gap-1">
+            {speechSettings.data?.enabled && (
+              <ComposerSpeechInput
+                speech={speech}
+                disabled={interactionDisabled}
+                onReturnFocus={() => editorRef.current?.focus()}
+              />
+            )}
             <div className="hidden md:block">
               <ContextUsageIndicator
                 usage={contextUsage}

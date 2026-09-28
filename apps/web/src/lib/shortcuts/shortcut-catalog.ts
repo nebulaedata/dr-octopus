@@ -11,13 +11,14 @@ import { isValidCombo } from './shortcut-combo';
 export type ShortcutScope = 'global' | 'composer';
 
 /**
- * Lifecycle status: `placeholder` commands (e.g. voice input) are display-only — never dispatched, editable, or conflicting.
+ * Lifecycle status: `placeholder` commands are display-only — never dispatched, editable, or conflicting.
  */
 export type ShortcutStatus = 'active' | 'placeholder';
 
 /** Stable command IDs; double as persistence keys, so rename is a breaking change. */
 export const SHORTCUT_COMMAND_IDS = [
   'voice.toggle',
+  'voice.cancel',
   'composer.focus',
   'composer.send',
   'composer.newline',
@@ -53,7 +54,14 @@ export const SHORTCUT_CATALOG: readonly ShortcutCommandDefinition[] = [
     id: 'voice.toggle',
     defaultBinding: 'Ctrl+D',
     scope: 'global',
-    status: 'placeholder',
+    status: 'active',
+  },
+  {
+    id: 'voice.cancel',
+    defaultBinding: 'Esc',
+    scope: 'global',
+    status: 'active',
+    allowInEditable: true,
   },
   {
     id: 'composer.focus',

@@ -58,6 +58,29 @@ export function EditorHandlePlugin({ handleRef }: EditorHandlePluginProps) {
           });
         });
       },
+      /**
+       * Preserves the current draft and its mention nodes when inserting dictated text.
+       */
+      insertText(text: string): void {
+        if (!editor.isEditable()) {
+          return;
+        }
+        editor.focus(
+          () => {
+            editor.update(() => {
+              const selection = $getSelection();
+              if ($isRangeSelection(selection)) {
+                const before = selection.anchor.getNode().getTextContent().slice(0, selection.anchor.offset);
+                const prefix = /\S$/.test(before) && /^\S/.test(text) ? ' ' : '';
+                selection.insertText(`${prefix}${text}`);
+              } else {
+                $getRoot().selectEnd().insertText(text);
+              }
+            });
+          },
+          { defaultSelection: 'rootEnd' }
+        );
+      },
     }),
     [editor]
   );

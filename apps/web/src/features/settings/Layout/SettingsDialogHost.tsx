@@ -26,6 +26,7 @@ import { KnowledgeSettingsPage } from '../knowledge/KnowledgeSettingsPage';
 import { LanguageSettingsPage } from '../language/LanguageSettingsPage';
 import { MemorySettingsPage } from '../memory/MemorySettingsPage';
 import { JevSettingsPage } from '../JevSettingsPage';
+import { SpeechSettingsPage } from '../speech/SpeechSettingsPage';
 import { ShortcutsSettingsPage } from '../shortcuts/ShortcutsSettingsPage';
 import { SnippetsSettingsPage } from '../snippets/SnippetsSettingsPage';
 import { useI18n } from '@/i18n/use-i18n';
@@ -48,6 +49,16 @@ export function SettingsDialogHost({ location }: SettingsDialogHostProps) {
    * Replaces the current masked entry without losing the underlying Workbench location.
    */
   const replaceSettingsLocation = (next: SettingsModalLocation): void => {
+    if (next.path === '/settings/speech') {
+      const provider = next.provider === 'openai' || next.provider === 'qwen' ? next.provider : undefined;
+      void navigate({
+        to: '.',
+        search: (previous) => ({ ...previous, settings: { ...next, provider } }),
+        replace: true,
+        mask: { to: '/settings/speech', search: { provider }, unmaskOnReload: true },
+      });
+      return;
+    }
     if (next.path === '/settings/model-providers') {
       void navigate({
         to: '.',
@@ -88,6 +99,9 @@ export function SettingsDialogHost({ location }: SettingsDialogHostProps) {
         <SettingsFrame pathname={location.path} onNavigate={(path) => replaceSettingsLocation({ path })}>
           <SettingsDialogPage
             location={location}
+            onSpeechProviderChange={(provider) =>
+              replaceSettingsLocation({ path: '/settings/speech', provider })
+            }
             onProviderChange={(provider) =>
               replaceSettingsLocation({ path: '/settings/model-providers', provider })
             }
@@ -104,9 +118,14 @@ export function SettingsDialogHost({ location }: SettingsDialogHostProps) {
 function SettingsDialogPage({
   location,
   onProviderChange,
+  onSpeechProviderChange,
 }: {
   location: SettingsModalLocation;
   onProviderChange(provider?: string): void;
+  /**
+   * Navigates speech tabs without changing the persisted active service.
+   */
+  onSpeechProviderChange(provider: 'openai' | 'qwen'): void;
 }): ReactNode {
   switch (location.path) {
     case '/settings/about':
@@ -131,6 +150,15 @@ function SettingsDialogPage({
       return <KnowledgeSettingsPage />;
     case '/settings/jev':
       return <JevSettingsPage />;
+    case '/settings/speech':
+      return (
+        <SpeechSettingsPage
+          provider={
+            location.provider === 'openai' || location.provider === 'qwen' ? location.provider : undefined
+          }
+          onProviderChange={onSpeechProviderChange}
+        />
+      );
     case '/settings/memory':
       return <MemorySettingsPage />;
     case '/settings/appearance/language':

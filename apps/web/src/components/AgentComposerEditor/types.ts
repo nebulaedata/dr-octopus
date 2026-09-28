@@ -19,6 +19,10 @@ export interface AgentComposerEditorHandle {
    * Focuses the editor and inserts one complete slash command at its current selection.
    */
   insertCommand(commandName: string): void;
+  /**
+   * Inserts plain text at the current caret without replacing structured mentions or submitting.
+   */
+  insertText(text: string): void;
 }
 
 export interface ComposerReference {
