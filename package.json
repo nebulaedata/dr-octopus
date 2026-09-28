@@ -44,7 +44,8 @@
     "skills:link": "node scripts/link-agent-skills.mjs",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test && pnpm run test:docker",
+    "test:docker": "node --test deploy/docker/test/*.test.mjs",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },

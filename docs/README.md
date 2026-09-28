@@ -13,6 +13,8 @@
 
 ## 专项设计
 
+- [Docker 成品镜像发布与安装](./architecture/docker-distribution.md) — 本地 npm 发布、GitHub Actions 远程构建、Docker Hub 分发及用户安装的执行步骤表格
+
 - [受管后台任务实施契约](./architecture/background-tasks-implementation.md) — 阶段 B 的具体模块、控制协议、平台实现、权限与验收记录
 
 - [受管后台进程设计](./architecture/background-tasks.md) — 阶段 B 已实施；background_task 工具、进程所有权、停止屏障、防脱管边界与分阶段验收

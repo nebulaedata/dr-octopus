@@ -45,6 +45,10 @@ dr-octopus deps install
 
 Runtime dependencies include native modules. If a compatible prebuilt binary is unavailable, you will need a build toolchain for your platform.
 
+## Docker installation
+
+For Linux AMD64 servers, use the prebuilt image from `nebulaedata01/dr-octopus` on Docker Hub. Download the versioned Docker installation ZIP from [GitHub Releases](https://github.com/nebulaedata/dr-octopus/releases), then follow the [Docker Compose guide](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.md). No local Node.js, pnpm or image build is required. A release without the Docker ZIP is not yet ready for Docker installation.
+
 ## Quick start
 
 Start the Web interface:

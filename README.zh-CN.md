@@ -45,6 +45,10 @@ dr-octopus deps install
 
 运行依赖包含原生模块；没有适用的预编译包时，需要目标平台的编译工具链。
 
+## Docker 安装
+
+Linux AMD64 服务器可使用 Docker Hub 上的 `nebulaedata01/dr-octopus` 成品镜像。在 [GitHub Releases](https://github.com/nebulaedata/dr-octopus/releases) 下载对应版本的 Docker 安装 ZIP，按照 [Docker Compose 安装说明](https://github.com/nebulaedata/dr-octopus/blob/main/deploy/docker/README.zh-CN.md)运行。本机无需 Node.js、pnpm 或构建镜像。尚未提供 Docker ZIP 的 Release 不能视为 Docker 安装就绪。
+
 ## 快速开始
 
 启动 Web 界面：

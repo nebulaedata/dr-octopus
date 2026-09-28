@@ -1,0 +1,38 @@
+name: dr-octopus
+
+services:
+  dr-octopus:
+    image: docker.io/nebulaedata01/dr-octopus:${IMAGE_TAG:?Set IMAGE_TAG in .env}
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    ports:
+      - '${BIND_ADDRESS:-0.0.0.0}:${HTTP_PORT:-3000}:3000'
+    environment:
+      NODE_ENV: production
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: '3000'
+      SERVER_CORS_ORIGIN: ${SERVER_CORS_ORIGIN:-}
+      SERVER_DATA_DIR: /home/node/.dr-octopus/server
+      DR_OCTOPUS_CODING_AGENT_DIR: /home/node/.dr-octopus/agent
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - server-data:/home/node/.dr-octopus/server
+      - agent-data:/home/node/.dr-octopus/agent
+      - workspaces:/workspaces
+    healthcheck:
+      test: ['CMD', 'dr-octopus', 'gateway', 'health', '--json']
+      interval: 15s
+      timeout: 10s
+      start_period: 600s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: '20m'
+        max-file: '3'
+
+volumes:
+  server-data:
+  agent-data:
+  workspaces:

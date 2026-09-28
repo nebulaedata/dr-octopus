@@ -85,3 +85,4 @@
 | [ADR-0068](./0068-command-completion.md) | Accepted | 指令完成独立于业务输出，通过响应后状态确认与请求/运行时隔离收尾 |
 | [ADR-0069](./0069-optional-jev-evaluation.md) | Accepted | 可选 Jev SDK 判断能力，环境变量凭据与保守记忆筛选 |
 | [ADR-0070](./0070-web-feature-entrypoints.md) | Accepted | 纯 feature 入口、局部 Hook/工具归属、私有工具注册与保持惰性页面加载 |
+| [ADR-0071](./0071-docker-hub-distribution.md) | Accepted | 本地发布 npm，GitHub Actions 构建并验证 Docker Hub 成品镜像，用户通过 Compose 安装 |
