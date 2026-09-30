@@ -23,9 +23,9 @@ import { Spinner } from '@octopus/ui/components/spinner';
 import { Switch } from '@octopus/ui/components/switch';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
+import { McpSettingsCard } from './McpSettingsCard';
 import { McpServerForm } from './McpServerForm';
 import { getMcpServerSourceLabel } from '@/features/settings/utils/mcp-server-labels';
-import { Separator } from '@octopus/ui/components/separator';
 import type { McpServerConfigurationInput, McpServerDetailDto } from '@octopus/shared/protocol';
 
 export interface McpServerDetailsProps {
@@ -37,8 +37,8 @@ export interface McpServerDetailsProps {
   mutationError?: string;
   onBack(): void;
   onRetry(): void;
-  onCreate(name: string, value: McpServerConfigurationInput): Promise<void>;
-  onUpdate(serverKey: string, value: McpServerConfigurationInput): Promise<void>;
+  onCreate(name: string, value: McpServerConfigurationInput): Promise<McpServerDetailDto | undefined>;
+  onUpdate(serverKey: string, value: McpServerConfigurationInput): Promise<McpServerDetailDto | undefined>;
   onActivation(serverKey: string, enabled: boolean): Promise<void>;
   onRemove(serverKey: string): Promise<void>;
 }
@@ -98,27 +98,13 @@ export function McpServerDetails(props: McpServerDetailsProps) {
    */
   function renderContent() {
     if (props.creating) {
-      return (
-        <section className="flex flex-col gap-4">
-          <div>
-            <h3 className="text-sm font-semibold">{t('settings.mcp.connectionTitle', 'Connection')}</h3>
-            <p className="text-xs text-muted-foreground">
-              {t(
-                'settings.mcp.connectionCreateDescription',
-                'Add a local process, HTTP, or Socket MCP server.'
-              )}
-            </p>
-          </div>
-          <McpServerForm pending={props.mutationPending} onSubmit={props.onCreate} />
-        </section>
-      );
+      return <McpServerForm key="new" pending={props.mutationPending} onSubmit={props.onCreate} />;
     } else if (server) {
       return (
         <>
-          <section className="flex flex-col gap-4">
+          <McpSettingsCard title={t('settings.mcp.enableTitle', 'Enable server')}>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="text-sm font-semibold">{t('settings.mcp.enableTitle', 'Enable server')}</h3>
                 <p className="text-xs text-muted-foreground">
                   {t(
                     'settings.mcp.enableDescription',
@@ -127,24 +113,17 @@ export function McpServerDetails(props: McpServerDetailsProps) {
                 </p>
               </div>
               <Switch
+                aria-label="Enable MCP server"
                 checked={server.enabled}
                 disabled={!server.capabilities.toggle || props.mutationPending}
                 onCheckedChange={(enabled) => void props.onActivation(server.serverKey, enabled)}
               />
             </div>
-          </section>
-          <section className="flex flex-col gap-4">
-            <div>
-              <h3 className="text-sm font-semibold">{t('settings.mcp.connectionTitle', 'Connection')}</h3>
-              <p className="text-xs text-muted-foreground">
-                {t(
-                  'settings.mcp.connectionEditDescription',
-                  'Local process, HTTP, or Socket MCP server configuration.'
-                )}
-              </p>
-            </div>
+          </McpSettingsCard>
+          <div className="flex flex-col gap-4">
             {server.capabilities.edit ? (
               <McpServerForm
+                key={server.serverKey}
                 server={server}
                 pending={props.mutationPending}
                 onSubmit={(_name, value) => props.onUpdate(server.serverKey, value)}
@@ -161,8 +140,7 @@ export function McpServerDetails(props: McpServerDetailsProps) {
                 </AlertDescription>
               </Alert>
             )}
-            <Separator />
-            {server.secretBindings.length > 0 ? (
+            {!server.capabilities.edit && server.secretBindings.length > 0 ? (
               <section className="flex flex-col gap-3">
                 <div>
                   <h3 className="text-sm font-semibold">
@@ -184,26 +162,22 @@ export function McpServerDetails(props: McpServerDetailsProps) {
                 </div>
               </section>
             ) : null}
-          </section>
-          <Separator />
+          </div>
           {server.capabilities.remove ? (
-            <section className="flex flex-col gap-3">
-              <div>
-                <h3 className="text-sm font-semibold">
-                  {t('settings.mcp.removeTitle', 'Remove configuration')}
-                </h3>
+            <McpSettingsCard title={t('settings.mcp.removeTitle', 'Remove configuration')}>
+              <div className="flex flex-col gap-3">
                 <p className="text-xs text-muted-foreground">
                   {t(
                     'settings.mcp.removeDescription',
                     'After removing the global definition or override, a lower-level configuration with the same name may reappear.'
                   )}
                 </p>
+                <Button variant="destructive" className="self-start" onClick={() => setRemoveOpen(true)}>
+                  <Trash2Icon data-icon="inline-start" />
+                  {t('settings.mcp.removeHostButton', 'Remove Host configuration')}
+                </Button>
               </div>
-              <Button variant="destructive" className="w-full" onClick={() => setRemoveOpen(true)}>
-                <Trash2Icon data-icon="inline-start" />
-                {t('settings.mcp.removeHostButton', 'Remove Host configuration')}
-              </Button>
-            </section>
+            </McpSettingsCard>
           ) : null}
           <Dialog open={removeOpen} onOpenChange={setRemoveOpen}>
             <DialogContent>

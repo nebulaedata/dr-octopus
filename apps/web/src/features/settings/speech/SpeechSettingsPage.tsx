@@ -387,7 +387,7 @@ function SpeechProviderForm({
                   }}
                 />
                 <FieldLabel htmlFor={`${prefix}-clear-key`}>
-                  {t('speech.clearKey', 'Remove saved API key on save')}
+                  {t('speech.clearKey', 'Clear this service’s API key (takes effect after saving)')}
                 </FieldLabel>
               </Field>
             )}

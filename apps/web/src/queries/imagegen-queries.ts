@@ -1,36 +1,25 @@
 /**
  * @author Codex
- * @description Owns image model server state and mutation cache synchronization.
+ * @description Owns independent image-service server state and mutation cache synchronization.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getImagegenCandidates, getImagegenSettings, saveImagegenSettings } from '@/api/imagegen';
+import { getImagegenSettings, saveImagegenSettings } from '@/api/imagegen';
 import { queryKeys } from './core/query-keys';
-
 /**
- * Loads the independent default and candidate list in parallel.
+ * Loads the credential-free settings projection.
  */
 export function useImagegenSettings() {
-  const current = useQuery({
-    queryKey: queryKeys.imagegen,
-    queryFn: ({ signal }) => getImagegenSettings(signal),
-  });
-  const candidates = useQuery({
-    queryKey: queryKeys.imagegenCandidates,
-    queryFn: ({ signal }) => getImagegenCandidates(signal),
-  });
-  return { current, candidates };
+  return useQuery({ queryKey: queryKeys.imagegen, queryFn: ({ signal }) => getImagegenSettings(signal) });
 }
-
 /**
- * Saves the next-call default and updates dependent settings views.
+ * Updates the cache only after a confirmed revision-fenced save.
  */
 export function useSaveImagegenSettings() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: saveImagegenSettings,
-    async onSuccess(value) {
+    onSuccess: (value) => {
       client.setQueryData(queryKeys.imagegen, value);
-      await client.invalidateQueries({ queryKey: queryKeys.imagegenCandidates });
     },
   });
 }

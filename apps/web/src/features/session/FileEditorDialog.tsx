@@ -37,6 +37,7 @@ const FILE_PREVIEW_KINDS: Record<string, FileContentPreviewKind> = {
   '.md': 'markdown',
   '.html': 'html',
   '.htm': 'html',
+  '.svg': 'html',
 };
 
 type FileView = 'editor' | 'preview';

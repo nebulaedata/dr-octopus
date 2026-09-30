@@ -3,6 +3,7 @@
  * @description Synchronizes every model exposed by a custom local or remote service.
  */
 import { useEffect, useRef } from 'react';
+import { RefreshCwIcon } from 'lucide-react';
 import { useForm } from '@tanstack/react-form';
 import { ConfigureCustomProviderBodySchema } from '@octopus/shared/protocol';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
@@ -19,21 +20,27 @@ import {
 } from '@octopus/ui/components/select';
 import { useCustomProviderMutations } from '@/queries/custom-provider-queries';
 import { useI18n } from '@/i18n/use-i18n';
-import type { CustomProviderConfigurationDto, ModelServiceApi } from '@octopus/shared/protocol';
+import { ProviderModelList } from './ProviderModelList';
+import type {
+  CustomProviderConfigurationDto,
+  ModelProviderDetailDto,
+  ModelServiceApi,
+} from '@octopus/shared/protocol';
 
 /**
  * Keeps model synchronization tied to the current address, protocol and credential.
  */
 export function CustomProviderForm({
-  providerKey,
+  provider,
   configuration,
   keyConfigured,
 }: {
-  providerKey: string;
+  provider: ModelProviderDetailDto;
   configuration: CustomProviderConfigurationDto;
   keyConfigured: boolean;
 }) {
   const { t } = useI18n();
+  const relay = configuration.runtime === 'mr-token';
   const local = ['ollama', 'vllm', 'lmstudio'].includes(configuration.runtime);
   const runtimeHelp: Record<string, string> = {
     ollama: t(
@@ -53,6 +60,12 @@ export function CustomProviderForm({
     'settings.providers.local.endpointHelpRemote',
     'Enter the provider’s OpenAI-compatible base URL and any required path prefix.'
   );
+  if (relay) {
+    endpointHelp = t(
+      'settings.providers.local.endpointHelpRelay',
+      'Enter the relay API base URL. Each model uses its original model’s protocol.'
+    );
+  }
   if (local) {
     endpointHelp = t(
       'settings.providers.local.endpointHelpOpenAI',
@@ -76,14 +89,14 @@ export function CustomProviderForm({
         'settings.providers.local.noRemoteModels',
         'Connected, but this provider returned no models. Check the API Key and endpoint, then try again.'
       );
-  const { configure } = useCustomProviderMutations(providerKey);
+  const { configure } = useCustomProviderMutations(provider.providerKey);
   const busy = configure.isPending;
   const synchronizing = useRef(false);
   const initialDiscovery = useRef(false);
   const form = useForm({
     defaultValues: {
       baseUrl: configuration.baseUrl,
-      api: (configuration.api ?? 'openai-completions') as ModelServiceApi,
+      api: relay ? undefined : ((configuration.api ?? 'openai-completions') as ModelServiceApi),
       apiKey: '',
     },
     onSubmit: async ({ value }) => {
@@ -97,7 +110,7 @@ export function CustomProviderForm({
       synchronizing.current = true;
       configure.reset();
       try {
-        await configure.mutateAsync(value);
+        await configure.mutateAsync(relay ? { baseUrl: value.baseUrl, apiKey: value.apiKey } : value);
         form.setFieldValue('apiKey', '');
       } catch {
         /* Show the mutation error below. */
@@ -113,171 +126,186 @@ export function CustomProviderForm({
     }
   });
   return (
-    <section className="flex flex-col gap-4">
-      <h3 className="text-sm font-semibold">
-        {t('settings.providers.local.title', 'Model service configuration')}
-      </h3>
-      {local && (
-        <Alert>
-          <AlertDescription>
-            {runtimeHelp[configuration.runtime]}{' '}
-            {t(
-              'settings.providers.local.helpSuffix',
-              'The local address refers to the machine running Dr.Octopus Server.'
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          void form.handleSubmit();
-        }}
-      >
-        <FieldGroup>
-          <form.Field
-            name="baseUrl"
-            validators={{ onChange: ConfigureCustomProviderBodySchema.shape.baseUrl }}
-          >
-            {(field) => (
-              <Field data-invalid={field.state.meta.errors.length > 0}>
-                <FieldLabel htmlFor="custom-provider-endpoint">
-                  {t('settings.providers.local.endpointLabel', 'Endpoint')}
-                </FieldLabel>
-                <Input
-                  id="custom-provider-endpoint"
-                  value={field.state.value}
-                  disabled={busy}
-                  aria-invalid={field.state.meta.errors.length > 0}
-                  onBlur={() => {
-                    field.handleBlur();
-                    void form.handleSubmit();
-                  }}
-                  onChange={(event) => {
-                    field.handleChange(event.target.value);
-                    configure.reset();
-                  }}
-                />
-                <FieldDescription>{endpointHelp}</FieldDescription>
-                <FieldError errors={field.state.meta.errors} />
-              </Field>
-            )}
-          </form.Field>
-          {!local && (
-            <form.Field name="api">
+    <>
+      <section className="flex flex-col gap-4">
+        <h3 className="text-sm font-semibold">
+          {t('settings.providers.local.title', 'Model service configuration')}
+        </h3>
+        {local && (
+          <Alert>
+            <AlertDescription>
+              {runtimeHelp[configuration.runtime]}{' '}
+              {t(
+                'settings.providers.local.helpSuffix',
+                'The local address refers to the machine running Dr.Octopus Server.'
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void form.handleSubmit();
+          }}
+        >
+          <FieldGroup>
+            <form.Field
+              name="baseUrl"
+              validators={{ onChange: ConfigureCustomProviderBodySchema.shape.baseUrl }}
+            >
               {(field) => (
-                <Field>
-                  <FieldLabel htmlFor="model-service-api">
-                    {t('settings.providers.local.apiLabel', 'API protocol')}
+                <Field data-invalid={field.state.meta.errors.length > 0}>
+                  <FieldLabel htmlFor="custom-provider-endpoint">
+                    {t('settings.providers.local.endpointLabel', 'Endpoint')}
                   </FieldLabel>
-                  <Select
+                  <Input
+                    id="custom-provider-endpoint"
                     value={field.state.value}
-                    items={[
-                      { value: 'openai-completions', label: completionsLabel },
-                      { value: 'openai-responses', label: responsesLabel },
-                    ]}
-                    onValueChange={(value) => {
-                      if (value) {
-                        field.handleChange(value as ModelServiceApi);
-                        configure.reset();
-                        queueMicrotask(() => void form.handleSubmit());
-                      }
-                    }}
                     disabled={busy}
-                  >
-                    <SelectTrigger id="model-service-api" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="openai-completions">{completionsLabel}</SelectItem>
-                        <SelectItem value="openai-responses">{responsesLabel}</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                    aria-invalid={field.state.meta.errors.length > 0}
+                    onBlur={() => {
+                      field.handleBlur();
+                      void form.handleSubmit();
+                    }}
+                    onChange={(event) => {
+                      field.handleChange(event.target.value);
+                      configure.reset();
+                    }}
+                  />
+                  <FieldDescription>{endpointHelp}</FieldDescription>
+                  <FieldError errors={field.state.meta.errors} />
                 </Field>
               )}
             </form.Field>
-          )}
-          <form.Field name="apiKey">
-            {(field) => (
-              <Field>
-                <FieldLabel htmlFor="model-service-api-key">
-                  {t('settings.providers.local.apiKeyLabel', 'API Key')}
-                </FieldLabel>
-                <Input
-                  id="model-service-api-key"
-                  name="apiKey"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder={
-                    keyConfigured ? t('settings.providers.local.keyConfigured', '******** (configured)') : ''
-                  }
-                  value={field.state.value}
-                  onBlur={() => {
-                    field.handleBlur();
-                    void form.handleSubmit();
-                  }}
-                  onChange={(event) => {
-                    field.handleChange(event.target.value);
-                    configure.reset();
-                  }}
-                  disabled={busy}
-                  spellCheck={false}
-                />
-                <FieldDescription>
-                  {local
-                    ? t('settings.providers.local.keyOptional', 'Optional for local services.')
-                    : t(
-                        'settings.providers.local.keyRequired',
-                        'Required when first configuring a remote service. Leave blank later to keep the saved key.'
-                      )}
-                </FieldDescription>
-              </Field>
+            {!local && !relay && (
+              <form.Field name="api">
+                {(field) => (
+                  <Field>
+                    <FieldLabel htmlFor="model-service-api">
+                      {t('settings.providers.local.apiLabel', 'API protocol')}
+                    </FieldLabel>
+                    <Select
+                      value={field.state.value}
+                      items={[
+                        { value: 'openai-completions', label: completionsLabel },
+                        { value: 'openai-responses', label: responsesLabel },
+                      ]}
+                      onValueChange={(value) => {
+                        if (value) {
+                          field.handleChange(value as ModelServiceApi);
+                          configure.reset();
+                          queueMicrotask(() => void form.handleSubmit());
+                        }
+                      }}
+                      disabled={busy}
+                    >
+                      <SelectTrigger id="model-service-api" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="openai-completions">{completionsLabel}</SelectItem>
+                          <SelectItem value="openai-responses">{responsesLabel}</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
+              </form.Field>
             )}
-          </form.Field>
-        </FieldGroup>
-        {configure.data && configure.data.models.length === 0 && (
-          <Alert>
-            <AlertDescription>{emptyModelsMessage}</AlertDescription>
-          </Alert>
-        )}
-        {configure.error && (
-          <Alert variant="destructive">
-            <AlertDescription>{configure.error.message}</AlertDescription>
-          </Alert>
-        )}
-        {configure.isSuccess && (
-          <p role="status" className="text-sm text-muted-foreground">
-            {t('settings.providers.local.modelsSynced', 'Model list updated.')}
-          </p>
-        )}
-        <form.Subscribe selector={(state) => state.values}>
-          {({ baseUrl, apiKey, api }) => (
-            <Button
-              type="submit"
-              className="self-start"
-              disabled={
-                busy ||
-                !ConfigureCustomProviderBodySchema.safeParse({ baseUrl, apiKey, api }).success ||
-                (!local && !apiKey.trim() && !keyConfigured)
-              }
-            >
-              {configure.isPending
-                ? t('settings.providers.local.detecting', 'Getting models…')
-                : t('settings.providers.local.detect', 'Get models')}
-            </Button>
+            <form.Field name="apiKey">
+              {(field) => (
+                <Field>
+                  <FieldLabel htmlFor="model-service-api-key">
+                    {t('settings.providers.local.apiKeyLabel', 'API Key')}
+                  </FieldLabel>
+                  <Input
+                    id="model-service-api-key"
+                    name="apiKey"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={
+                      keyConfigured
+                        ? t('settings.providers.local.keyConfigured', '******** (configured)')
+                        : ''
+                    }
+                    value={field.state.value}
+                    onBlur={() => {
+                      field.handleBlur();
+                      void form.handleSubmit();
+                    }}
+                    onChange={(event) => {
+                      field.handleChange(event.target.value);
+                      configure.reset();
+                    }}
+                    disabled={busy}
+                    spellCheck={false}
+                  />
+                  <FieldDescription>
+                    {local
+                      ? t('settings.providers.local.keyOptional', 'Optional for local services.')
+                      : t(
+                          'settings.providers.local.keyRequired',
+                          'Required when first configuring a remote service. Leave blank later to keep the saved key.'
+                        )}
+                  </FieldDescription>
+                </Field>
+              )}
+            </form.Field>
+          </FieldGroup>
+          {configure.data && configure.data.models.length === 0 && (
+            <Alert>
+              <AlertDescription>{emptyModelsMessage}</AlertDescription>
+            </Alert>
           )}
-        </form.Subscribe>
-        <p className="text-xs text-muted-foreground">
-          {t(
-            'settings.providers.local.modelsHint',
-            'All models returned by this service appear in the list below and can be used as the default model.'
+          {configure.error && (
+            <Alert variant="destructive">
+              <AlertDescription>{configure.error.message}</AlertDescription>
+            </Alert>
           )}
-        </p>
-      </form>
-    </section>
+        </form>
+      </section>
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold">{t('settings.providers.modelsTitle', 'Models')}</h3>
+            <p className="text-xs text-muted-foreground" role="status">
+              {configure.isSuccess && `${t('settings.providers.local.modelsSynced', 'Model list updated.')} `}
+              {t(
+                'settings.providers.modelsAvailable',
+                '{{available}} of {{total}} models currently available',
+                {
+                  available: provider.availableModelCount,
+                  total: provider.modelCount,
+                }
+              )}
+            </p>
+          </div>
+          <form.Subscribe selector={(state) => state.values}>
+            {({ baseUrl, apiKey, api }) => (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={
+                  busy ||
+                  !ConfigureCustomProviderBodySchema.safeParse({ baseUrl, apiKey, api }).success ||
+                  (!local && !apiKey.trim() && !keyConfigured)
+                }
+                onClick={() => void form.handleSubmit()}
+              >
+                <RefreshCwIcon aria-hidden="true" className={busy ? 'motion-safe:animate-spin' : undefined} />
+                {busy
+                  ? t('settings.providers.local.detecting', 'Getting models…')
+                  : t('settings.providers.local.detect', 'Get models')}
+              </Button>
+            )}
+          </form.Subscribe>
+        </div>
+        <ProviderModelList provider={provider} />
+      </section>
+    </>
   );
 }

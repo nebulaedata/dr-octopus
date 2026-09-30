@@ -203,6 +203,15 @@ function getConnectivityPresentation(
       className: 'bg-destructive',
     };
   }
+  if (props.status === 'unsupported') {
+    return {
+      label: t(
+        'settings.mcp.connectivity.unsupported',
+        'Verify this authentication or transport configuration in the Agent'
+      ),
+      className: 'bg-warning',
+    };
+  }
   return {
     label: t('settings.mcp.connectivity.failed', 'Connectivity check failed'),
     className: 'bg-destructive',

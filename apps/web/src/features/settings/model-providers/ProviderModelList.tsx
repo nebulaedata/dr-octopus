@@ -2,7 +2,7 @@
  * @author Codex
  * @description Displays every provider model inline in the existing settings detail.
  */
-import { AstroidIcon, CircleSlashIcon, ImageIcon, LightbulbIcon, SquareSparklesIcon } from 'lucide-react';
+import { AstroidIcon, CircleSlashIcon, ImageIcon, LightbulbIcon } from 'lucide-react';
 import { Badge } from '@octopus/ui/components/badge';
 import {
   Item,
@@ -15,7 +15,7 @@ import {
 } from '@octopus/ui/components/item';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/tooltip';
 import { useI18n } from '@/i18n/use-i18n';
-import { ModelConfigurationDialog } from './ModelConfigurationDialog';
+import { ModelAssociationDialog } from './ModelAssociationDialog';
 import type { ModelProviderDetailDto } from '@octopus/shared/protocol';
 
 /**
@@ -29,6 +29,14 @@ function ProviderModelRow({
   model: ModelProviderDetailDto['models'][number];
 }) {
   const { t } = useI18n();
+  const adaptationReasons = {
+    not_found: t('settings.providers.adaptation.not_found', 'Model unavailable: no built-in model match'),
+    ambiguous: t('settings.providers.adaptation.ambiguous', 'Model unavailable: ambiguous original provider'),
+    incomplete: t(
+      'settings.providers.adaptation.incomplete',
+      'Model unavailable: incomplete compatibility configuration'
+    ),
+  };
   return (
     <Item variant="outline" size="sm">
       <ItemMedia variant="icon">
@@ -37,8 +45,9 @@ function ProviderModelRow({
       <ItemContent className="min-w-0">
         <ItemTitle className="text-xs">{model.name}</ItemTitle>
         <ItemDescription className="truncate text-xs">
-          {model.modelId} · {model.api}
-          {model.interfaces.includes('chat') && model.contextWindow !== undefined && (
+          {model.modelId}
+          {model.api && <> · {model.api}</>}
+          {model.contextWindow !== undefined && (
             <>
               {' · '}
               {t('settings.providers.contextWindowShort', '{{size}} context', {
@@ -47,19 +56,11 @@ function ProviderModelRow({
                   maximumFractionDigits: 1,
                 }).format(model.contextWindow),
               })}
-              {model.contextWindowConfigured === false &&
-                ` ${t('settings.providers.limitNotConfiguredShort', '(not set manually)')}`}
             </>
           )}
         </ItemDescription>
       </ItemContent>
       <ItemActions className="flex-wrap justify-end">
-        {model.interfaces.includes('other') && (
-          <Badge variant="outline">{t('settings.providers.otherInterface', 'Other')}</Badge>
-        )}
-        {!model.interfaces.includes('chat') && model.interfaces.includes('image') && (
-          <Badge variant="outline">{t('settings.providers.imageOnly', 'Image only')}</Badge>
-        )}
         {model.capabilities.includes('reasoning') && (
           <Tooltip>
             <TooltipTrigger aria-label="Reasoning">
@@ -84,18 +85,6 @@ function ProviderModelRow({
             </TooltipContent>
           </Tooltip>
         )}
-        {model.capabilities.includes('image_generation') && (
-          <Tooltip>
-            <TooltipTrigger aria-label="Image generation">
-              <Badge variant="secondary">
-                <SquareSparklesIcon />
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent className="text-xs">
-              {t('settings.providers.imageGeneration', 'Image generation')}
-            </TooltipContent>
-          </Tooltip>
-        )}
         {model.isDefault && (
           <Badge className="text-[11px]">{t('settings.providers.defaultBadge', 'Default')}</Badge>
         )}
@@ -107,12 +96,14 @@ function ProviderModelRow({
               </Badge>
             </TooltipTrigger>
             <TooltipContent className="text-xs">
-              {t('settings.providers.unavailable', 'Model unavailable')}
+              {model.adaptation?.status === 'unadapted'
+                ? adaptationReasons[model.adaptation.reason]
+                : t('settings.providers.unavailable', 'Model unavailable')}
             </TooltipContent>
           </Tooltip>
         )}
-        {provider.provenance === 'models_json' && (
-          <ModelConfigurationDialog providerKey={provider.providerKey} model={model} />
+        {provider.local?.runtime === 'mr-token' && (
+          <ModelAssociationDialog providerKey={provider.providerKey} model={model} />
         )}
       </ItemActions>
     </Item>

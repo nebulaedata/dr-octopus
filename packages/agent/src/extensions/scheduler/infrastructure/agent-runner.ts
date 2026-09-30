@@ -87,7 +87,13 @@ export class AgentSchedulerRunner implements SchedulerRunner {
         settleTimeoutMs: 5000,
         stopTimeoutMs: 3000,
       }),
-    private readonly profileId: string = ''
+    private readonly profileId: string = '',
+    private readonly readDefaultModel: () => Promise<{ provider?: string; modelId?: string }> = async () => {
+      const { SettingsManager } = await import('@earendil-works/pi-coding-agent');
+      const settings = SettingsManager.create(agentDir, agentDir, { projectTrusted: false });
+      await settings.reload();
+      return { provider: settings.getDefaultProvider(), modelId: settings.getDefaultModel() };
+    }
   ) {}
 
   /**
@@ -196,6 +202,33 @@ export class AgentSchedulerRunner implements SchedulerRunner {
           summary: ready?.reason ?? 'Permission initialization did not complete.',
           errorCode: ready?.code ?? 'SCHEDULE_AUTHORIZATION_UNAVAILABLE',
         };
+      }
+      const configured = await this.readDefaultModel();
+      const available = await process.execute({ type: 'get_available_models' });
+      if (
+        !configured.provider ||
+        !configured.modelId ||
+        available.command !== 'get_available_models' ||
+        !available.data.models.some(
+          (model) => model.provider === configured.provider && model.id === configured.modelId
+        )
+      ) {
+        return {
+          status: 'needs_attention',
+          summary:
+            'The configured default model is unavailable. Choose an available default model before running this task.',
+          errorCode: 'SCHEDULE_MODEL_UNAVAILABLE',
+        };
+      }
+      // Select the configured identity explicitly; never let Pi's startup fallback change unattended work.
+      await process.execute({
+        type: 'set_model',
+        provider: configured.provider,
+        modelId: configured.modelId,
+      });
+      signal.throwIfAborted();
+      if (outcome) {
+        return outcome;
       }
       const state = process.getLastSessionState();
       if (!state?.sessionFile || state.sessionId !== sessionId) {

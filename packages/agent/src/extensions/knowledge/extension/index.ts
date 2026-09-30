@@ -2,7 +2,8 @@
  * @author Codex
  * @description Composes ordinary Session knowledge controls and scoped built-in tool registrations.
  */
-import { registerKnowledgeMode } from './mode.js';
+import { createKnowledgeMode } from './mode.js';
+import { registerKnowledgeEvents } from './events.js';
 import { registerKnowledgeTools } from './tools.js';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
@@ -11,7 +12,8 @@ import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
  */
 export function createKnowledgeExtension(options: { agentDir: string; workspaceId: string; cwd: string }) {
   return (pi: ExtensionAPI): void => {
-    const mode = registerKnowledgeMode(pi);
+    const mode = createKnowledgeMode(pi);
+    registerKnowledgeEvents(pi, mode);
     registerKnowledgeTools(pi, options, () => mode.selection());
   };
 }

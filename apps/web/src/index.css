@@ -4,6 +4,7 @@
  */
 
 @import '@octopus/ui/globals.css';
+@source '../../../packages/custom-ui/src/**/*.{ts,tsx}';
 
 /* Inline expansion resolves duration on each title instead of the root theme scope. */
 @theme inline {

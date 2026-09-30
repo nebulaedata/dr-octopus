@@ -2,14 +2,11 @@
  * @author Codex
  * @description Registers Settings model, default-model, and Provider authentication endpoints.
  * - GET /api/settings/model-providers
- * - PUT /api/settings/model-providers/:providerKey/models/:modelKey/configuration
+ * - GET /api/settings/model-providers/:providerKey/associations
+ * - PUT /api/settings/model-providers/:providerKey/models/:modelKey/association
  * - GET /api/settings/model-providers/:providerKey
  * - DELETE /api/settings/model-providers/:providerKey
  * - GET /api/settings/default-model
- * - GET /api/settings/imagegen
- * - GET /api/settings/imagegen/candidates
- * - PUT /api/settings/imagegen
- * - DELETE /api/settings/imagegen
  * - GET /api/settings/default-model/candidates
  * - PUT /api/settings/default-model
  * - DELETE /api/settings/model-providers/:providerKey/auth
@@ -19,12 +16,11 @@
  * - DELETE /api/settings/model-providers/:providerKey/auth-sessions/:authSessionId
  */
 import {
-  ImagegenConfigSchema,
   ConfigureCustomProviderBodySchema,
   CreateCustomProviderBodySchema,
   DetectCustomProviderBodySchema,
   UpdateDefaultModelBodySchema,
-  UpdateModelConfigurationBodySchema,
+  UpdateModelAssociationBodySchema,
 } from '@octopus/shared/protocol';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import { registerErrorMessages } from '../../infrastructure/i18n/error-catalog.js';
@@ -48,18 +44,11 @@ interface ProviderParams {
  * @param service Settings application use cases.
  */
 export function registerSettingsController(server: FastifyInstance, service: SettingsService): void {
-  server.get('/settings/imagegen', () => service.getImagegenSettings());
-  server.get('/settings/imagegen/candidates', () => service.listImagegenCandidates());
-  server.put('/settings/imagegen', (request) => {
-    const parsed = ImagegenConfigSchema.safeParse(request.body);
-    if (!parsed.success) {
-      throw invalidSettingsRequest('The image model selection is malformed.');
-    }
-    return service.saveImagegenSettings(parsed.data);
-  });
-  server.delete('/settings/imagegen', () => service.saveImagegenSettings(null));
   registerCustomProviderController(server, service);
   server.get('/settings/model-providers', () => service.listProviders());
+  server.get<{ Params: ProviderParams }>('/settings/model-providers/:providerKey/associations', (request) =>
+    service.listModelAssociations(request.params.providerKey)
+  );
 
   server.get<{ Params: ProviderParams }>('/settings/model-providers/:providerKey', async (request, reply) => {
     const provider = await service.getProvider(request.params.providerKey);
@@ -78,13 +67,13 @@ export function registerSettingsController(server: FastifyInstance, service: Set
   );
 
   server.put<{ Params: ProviderParams & { modelKey: string } }>(
-    '/settings/model-providers/:providerKey/models/:modelKey/configuration',
+    '/settings/model-providers/:providerKey/models/:modelKey/association',
     (request) => {
-      const body = UpdateModelConfigurationBodySchema.safeParse(request.body);
+      const body = UpdateModelAssociationBodySchema.safeParse(request.body);
       if (!body.success) {
         throw invalidSettingsRequest('The model configuration is malformed.');
       }
-      return service.updateModelConfiguration(request.params.providerKey, request.params.modelKey, body.data);
+      return service.updateModelAssociation(request.params.providerKey, request.params.modelKey, body.data);
     }
   );
 
@@ -172,17 +161,13 @@ function invalidRequest() {
  * Settings-domain message variants keyed by stable error code.
  */
 export const settingsErrorMessages: ErrorMessageCatalog = {
-  IMAGEGEN_MODEL_UNAVAILABLE: {
-    en: 'The image model is unavailable. Check its API Key, capability and protocol.',
-    'zh-CN': '生图模型不可用，请检查 API Key、模型能力和生图协议。',
+  MODEL_ASSOCIATION_INVALID: {
+    en: 'Choose a compatible Pi model.',
+    'zh-CN': '请选择可关联的原模型。',
   },
   MODEL_PROVIDER_CAPABILITY_UNSUPPORTED: {
     en: 'This operation is not supported by the selected provider or model.',
     'zh-CN': '所选提供商或模型不支持此操作。',
-  },
-  MODEL_CONFIGURATION_INVALID_LIMITS: {
-    en: 'Maximum output must be smaller than the context window of a chat model.',
-    'zh-CN': '最大输出必须小于对话模型的上下文窗口。',
   },
   INVALID_PERMISSION_CONFIG: {
     en: 'The permission configuration request is invalid.',

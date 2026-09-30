@@ -7,30 +7,22 @@ import { z } from 'zod';
 import type { ThinkingLevel } from './runtime.js';
 import type { CustomProviderConfigurationDto } from './settings-custom-provider.js';
 
-export type ModelCapability = 'reasoning' | 'image_input' | 'image_generation';
-/** Host classification; `other` never enters Pi's native input/output modalities. */
-export type ModelInterface = 'chat' | 'image' | 'other';
-
-export const UpdateModelConfigurationBodySchema = z
+export type ModelCapability = 'reasoning' | 'image_input';
+export const ModelAssociationSchema = z
   .object({
-    reasoning: z.boolean(),
-    input: z
-      .array(z.enum(['text', 'image']))
-      .min(1)
-      .refine((input) => input.includes('text')),
-    imageGeneration: z.boolean(),
-    contextWindow: z.number().int().positive().optional(),
-    maxTokens: z.number().int().positive().optional(),
-    interfaces: z
-      .array(z.enum(['chat', 'image', 'other']))
-      .min(1)
-      .max(2)
-      .refine((interfaces) => new Set(interfaces).size === interfaces.length)
-      .refine((interfaces) => !interfaces.includes('other') || interfaces.length === 1)
-      .optional(),
+    providerId: z.string().trim().min(1).max(512),
+    modelId: z.string().trim().min(1).max(512),
   })
   .strict();
-export type UpdateModelConfigurationBody = z.infer<typeof UpdateModelConfigurationBodySchema>;
+export type ModelAssociation = z.infer<typeof ModelAssociationSchema>;
+export const UpdateModelAssociationBodySchema = z
+  .object({ source: ModelAssociationSchema.nullable() })
+  .strict();
+export type UpdateModelAssociationBody = z.infer<typeof UpdateModelAssociationBodySchema>;
+export interface ModelAssociationCandidate extends ModelAssociation {
+  name: string;
+  api: string;
+}
 
 export type ModelProviderProvenance = 'builtin' | 'models_json' | 'extension';
 export type ModelProviderAuthMethod = 'api_key' | 'oauth';
@@ -66,7 +58,13 @@ export interface ModelProviderSummaryDto {
   defaultModelId?: string;
 }
 
+export type ModelAdaptation =
+  | { status: 'adapted'; source: { providerId: string; modelId: string; api: string } }
+  | { status: 'unadapted'; reason: 'not_found' | 'ambiguous' | 'incomplete' };
+
 export interface ModelSettingsDto {
+  adaptation?: ModelAdaptation;
+  association?: ModelAssociation | null;
   modelKey: string;
   modelId: string;
   name: string;
@@ -76,12 +74,8 @@ export interface ModelSettingsDto {
   input: Array<'text' | 'image'>;
   /** Unified display capabilities from Pi catalogs or user-managed model metadata. */
   capabilities: ModelCapability[];
-  /** Supported interfaces from the catalog or explicit custom model configuration. */
-  interfaces: ModelInterface[];
   contextWindow?: number;
   maxTokens?: number;
-  contextWindowConfigured?: boolean;
-  maxTokensConfigured?: boolean;
   isDefault: boolean;
   configuration: 'inherited' | 'owned' | 'overridden';
 }

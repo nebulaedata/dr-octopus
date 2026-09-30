@@ -4,7 +4,11 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { registerKnowledgeMode } from '../dist/extensions/knowledge/extension/mode.js';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { relative } from 'node:path';
+import { createKnowledgeMode } from '../dist/extensions/knowledge/extension/mode.js';
+import { registerKnowledgeEvents } from '../dist/extensions/knowledge/extension/events.js';
 import { scopeKnowledgeClient } from '../dist/extensions/knowledge/services/mode-policy.js';
 import { modelToolNames } from '../dist/extensions/knowledge/definitions/model-tool-schemas.js';
 
@@ -20,6 +24,7 @@ function fixture() {
   let active = ['read', 'bash', 'custom_tool', 'knowledge_search'];
   let model = { provider: 'local', id: 'base' };
   const ctx = {
+    cwd: process.cwd(),
     mode: 'rpc',
     hasUI: true,
     isIdle: () => true,
@@ -54,7 +59,7 @@ function fixture() {
       emit: (name, data) => events.get(name)?.forEach((fn) => fn(data)),
     },
   };
-  registerKnowledgeMode(pi);
+  registerKnowledgeEvents(pi, createKnowledgeMode(pi));
   return {
     pi,
     ctx,
@@ -73,12 +78,14 @@ test('ordinary session disables knowledge tools; switch preserves model/history 
   await f.command('config {"collectionIds":["policies"]}');
   await f.command('on');
   assert.equal(f.ctx.model.id, 'base');
-  assert.equal(f.pi.getActiveTools().length, 11);
+  assert.equal(f.pi.getActiveTools().length, 12);
   assert.ok(
-    f.pi.getActiveTools().every((name) => name.startsWith('knowledge_') || modelToolNames.includes(name))
+    f.pi
+      .getActiveTools()
+      .every((name) => name === 'read' || name.startsWith('knowledge_') || modelToolNames.includes(name))
   );
   assert.match(f.handlers.get('before_agent_start')({}, f.ctx).systemPrompt, /policies/);
-  assert.match(f.handlers.get('before_agent_start')({}, f.ctx).systemPrompt, /反问/);
+  assert.match(f.handlers.get('before_agent_start')({}, f.ctx).systemPrompt, /knowledge Skill/);
   assert.equal(f.handlers.get('tool_call')({ toolName: 'bash' }).block, true);
   assert.equal(f.handlers.get('tool_call')({ toolName: 'knowledge_search' }), undefined);
   const attempt = { session: f.ctx.sessionManager, group: 'agent-workflow', busy: false };
@@ -112,10 +119,7 @@ test('exited mode supplies current policy on every turn and restore, without rep
     }
   }
   await f.command('on');
-  assert.doesNotMatch(
-    f.handlers.get('before_agent_start')(event, f.ctx).systemPrompt,
-    /Current Agent policy/
-  );
+  assert.match(f.handlers.get('before_agent_start')(event, f.ctx).systemPrompt, /Current Agent policy/);
   assert.ok(f.pi.getActiveTools().includes('knowledge_search'));
 });
 
@@ -224,4 +228,41 @@ test('selected sources fence list/search/import/read/job and deny collection cre
   await assert.rejects(client.call('jobs.get', { id: 'old' }), /选定集合/);
   await client.call('search', { collectionIds: ['selected'], query: 'q' });
   await scopeKnowledgeClient(base, () => []).call('search', { collectionIds: ['visible'], query: 'q' });
+});
+
+test('knowledge skill is registered without body injection and mode reads only its bundled file', async () => {
+  const f = fixture();
+  const skillPath = fileURLToPath(
+    new URL('../dist/extensions/knowledge/skills/knowledge/SKILL.md', import.meta.url)
+  );
+  const body = (await readFile(skillPath, 'utf8')).replace(/^---[\s\S]*?---\s*/u, '');
+  for (const reason of ['startup', 'reload']) {
+    assert.deepEqual(f.handlers.get('resources_discover')({ reason }).skillPaths, [
+      fileURLToPath(new URL('../dist/extensions/knowledge/skills/knowledge/', import.meta.url)),
+    ]);
+  }
+  await f.handlers.get('session_start')({}, f.ctx);
+  await f.command('on');
+  const base = 'Base policy and <available_skills>catalogue</available_skills>';
+  const prompt = f.handlers.get('before_agent_start')({ systemPrompt: base }, f.ctx).systemPrompt;
+  assert.ok(prompt.startsWith(base));
+  assert.equal(prompt.includes(body), false);
+  for (const path of [skillPath, relative(f.ctx.cwd, skillPath)]) {
+    assert.equal(f.handlers.get('tool_call')({ toolName: 'read', input: { path } }, f.ctx), undefined);
+  }
+  for (const path of [
+    undefined,
+    '',
+    skillPath + '.other',
+    skillPath.replace('SKILL.md', 'secrets.txt'),
+    f.ctx.cwd,
+  ]) {
+    assert.equal(f.handlers.get('tool_call')({ toolName: 'read', input: { path } }, f.ctx).block, true);
+  }
+  assert.equal(f.handlers.get('tool_call')({ toolName: 'bash', input: {} }, f.ctx).block, true);
+  await f.command('off');
+  assert.equal(
+    f.handlers.get('tool_call')({ toolName: 'read', input: { path: 'ordinary.txt' } }, f.ctx),
+    undefined
+  );
 });

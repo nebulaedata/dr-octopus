@@ -79,10 +79,11 @@ export function McpServersPage() {
           }}
           onRetry={() => void detail.refetch()}
           onCreate={async (name, value) => {
-            const result = await mutations.create.mutateAsync({ name, revision, ...value });
+            const result = await mutations.create
+              .mutateAsync({ name, revision, ...value })
+              .finally(mutations.create.reset);
             toast.add({
               title: t('settings.mcp.created', 'MCP server created'),
-              description: t('settings.mcp.restartDescription', 'Takes effect after restarting the Agent.'),
               type: 'success',
             });
             setCreating(false);
@@ -90,15 +91,18 @@ export function McpServersPage() {
             if (result.server !== undefined) {
               await connectivity.probeServer(result.server.serverKey, result.revision);
             }
+            return result.server;
           }}
           onUpdate={async (serverKey, value) => {
-            const result = await mutations.update.mutateAsync({ serverKey, input: { revision, ...value } });
+            const result = await mutations.update
+              .mutateAsync({ serverKey, input: { revision, ...value } })
+              .finally(mutations.update.reset);
             toast.add({
               title: t('settings.mcp.saved', 'MCP configuration saved'),
-              description: t('settings.mcp.restartDescription', 'Takes effect after restarting the Agent.'),
               type: 'success',
             });
             await connectivity.probeServer(serverKey, result.revision);
+            return result.server;
           }}
           onActivation={async (serverKey, enabled) => {
             const result = await mutations.activation.mutateAsync({

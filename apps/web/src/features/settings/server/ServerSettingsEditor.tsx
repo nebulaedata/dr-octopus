@@ -2,6 +2,7 @@
  * @author Codex
  * @description Presents Server configuration, storage intent and explicit restart within both Settings surfaces.
  */
+import { ChevronRightIcon } from 'lucide-react';
 import { useRef } from 'react';
 import { useSafeState } from 'ahooks';
 import { useForm } from '@tanstack/react-form';
@@ -238,8 +239,12 @@ export function ServerSettingsEditor({
                           >
                             {(field) =>
                               name === 'SERVER_CORS_ORIGIN' ? (
-                                <details>
-                                  <summary className="cursor-pointer text-sm">
+                                <details className="group/advanced">
+                                  <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden text-sm">
+                                    <ChevronRightIcon
+                                      aria-hidden
+                                      className="size-4 shrink-0 group-open/advanced:rotate-90"
+                                    />
                                     {t('settings.server.advancedSettings', 'Advanced settings')}
                                   </summary>
                                   <div className="mt-4">

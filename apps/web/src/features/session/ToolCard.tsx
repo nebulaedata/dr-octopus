@@ -3,11 +3,13 @@
  * @description 展示 Agent 工具执行参数、流式结果与终态
  */
 
-import { CheckCircle2Icon, ChevronDownIcon, XCircleIcon } from 'lucide-react';
+import { CheckCircle2Icon, ChevronRightIcon, XCircleIcon } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '@octopus/ui/components/badge';
+import { TimelineItem } from '@octopus/custom-ui/components/timeline';
+import { formatDuration } from '@octopus/custom-ui/components/elapsed-time';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@octopus/ui/components/collapsible';
 import { Spinner } from '@octopus/ui/components/spinner';
+import { Marker, MarkerContent } from '@octopus/ui/components/marker';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
 import { ToolRenderer } from './ToolRenderers/ToolRenderer';
@@ -37,7 +39,7 @@ function toolStatusLabel(t: Translate, status: ToolProjection['status']): string
  */
 export function ToolCard({ tool }: { tool: ToolProjection }) {
   return (
-    <ToolRenderer toolName={tool.name}>
+    <ToolRenderer tool={tool}>
       {(renderer) => <ToolCardView tool={tool} renderer={renderer} />}
     </ToolRenderer>
   );
@@ -49,7 +51,8 @@ function ToolCardView({ tool, renderer }: { tool: ToolProjection; renderer: Tool
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const Renderer = renderer.component;
-  const ToolIcon = renderer.icon;
+  const label =
+    renderer.getLabel?.(tool, t) ?? customToolLabel(t, tool.name) ?? renderer.label?.[tool.name] ?? tool.name;
   const summary = renderer.summarize?.(tool, t);
   let StatusIcon;
   if (tool.status === 'running') {
@@ -60,38 +63,71 @@ function ToolCardView({ tool, renderer }: { tool: ToolProjection; renderer: Tool
     StatusIcon = XCircleIcon;
   }
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="overflow-hidden rounded-xl border bg-card">
-      <CollapsibleTrigger
-        title={tool.name}
-        className="group flex w-full items-center gap-3 px-4 py-3 text-left"
-      >
-        <span className="flex size-6 items-center justify-center rounded-sm bg-accent text-accent-foreground">
-          {ToolIcon === undefined ? null : <ToolIcon className="size-4" />}
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-medium text-accent-foreground font-geist">
-            {customToolLabel(t, tool.name) ?? renderer.label?.[tool.name] ?? tool.name}
-          </span>
-          {summary === undefined ? null : (
-            <span className="truncate text-xs text-muted-foreground">{summary}</span>
-          )}
-        </span>
-        <Badge
-          variant={tool.status === 'error' ? 'destructive' : 'secondary'}
-          className={cn(tool.status === 'success' && 'bg-success text-muted')}
+    <TimelineItem
+      density="compact"
+      extendLine={open}
+      icon={<StatusIcon className={tool.status === 'running' ? 'motion-reduce:animate-none' : undefined} />}
+      iconClassName={cn(
+        tool.status === 'success' && 'text-success',
+        tool.status === 'error' && 'text-destructive'
+      )}
+    >
+      <Collapsible open={open} onOpenChange={setOpen} className="min-w-0">
+        <CollapsibleTrigger
+          title={label === tool.name ? tool.name : `${label} · ${tool.name}`}
+          className="group flex min-h-9 w-full min-w-0 items-center gap-2 rounded-md py-2 pr-2 text-left text-xs outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <StatusIcon data-icon="inline-start" />
-          {toolStatusLabel(t, tool.status)}
-        </Badge>
-        <ChevronDownIcon className="size-4 text-muted-foreground group-data-panel-open:rotate-180" />
-      </CollapsibleTrigger>
-      <CollapsibleContent keepMounted={false} className="border-t">
-        {open ? (
-          <div className="p-4">
-            <Renderer tool={tool} />
-          </div>
-        ) : null}
-      </CollapsibleContent>
-    </Collapsible>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+            <Marker
+              render={<span />}
+              className={cn(
+                'min-w-0 w-auto text-xs font-medium text-foreground',
+                summary !== undefined && 'sm:max-w-1/2 sm:shrink-0'
+              )}
+            >
+              <MarkerContent className={cn('truncate', tool.status === 'running' && 'shimmer')}>
+                {label}
+              </MarkerContent>
+            </Marker>
+            {summary === undefined ? null : (
+              <span className="min-w-0 truncate text-muted-foreground sm:flex-1" title={summary}>
+                {summary}
+              </span>
+            )}
+          </span>
+          <span
+            className={cn(
+              'shrink-0 text-muted-foreground',
+              tool.status === 'success' && 'sr-only',
+              tool.status === 'error' && 'text-destructive'
+            )}
+          >
+            {toolStatusLabel(t, tool.status)}
+          </span>
+          {tool.startedAt > 0 &&
+          tool.endedAt !== undefined &&
+          tool.endedAt > tool.startedAt &&
+          Number.isFinite(tool.endedAt - tool.startedAt) ? (
+            <span
+              className="shrink-0 text-muted-foreground tabular-nums"
+              title={t('session.toolTimeline.durationHint', 'Elapsed time from recorded timestamps')}
+            >
+              {formatDuration(tool.endedAt - tool.startedAt)}
+            </span>
+          ) : null}
+          <ChevronRightIcon
+            aria-hidden
+            className="size-3.5 shrink-0 text-muted-foreground motion-safe:transition-transform group-data-panel-open:rotate-90"
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent keepMounted={false}>
+          {open ? (
+            <div className="min-w-0 px-2 pt-2 pb-4">
+              <Renderer tool={tool} />
+            </div>
+          ) : null}
+        </CollapsibleContent>
+      </Collapsible>
+    </TimelineItem>
   );
 }

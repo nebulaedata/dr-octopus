@@ -202,7 +202,7 @@ export async function memorySdkFixture(t) {
     });
     await resourceLoader.reload();
     const extension = resourceLoader.getExtensions().extensions[0];
-    assert.equal(extension.handlers.has('resources_discover'), false);
+    assert.equal(extension.handlers.has('resources_discover'), true);
     const shutdown = () =>
       Promise.all(
         extension.handlers.get('session_shutdown').map((handler) => handler({ type: 'session_shutdown' }, {}))

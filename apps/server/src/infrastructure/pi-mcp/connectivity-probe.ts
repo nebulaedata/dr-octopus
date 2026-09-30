@@ -14,7 +14,7 @@ import {
   StreamableHTTPClientTransport,
   UnauthorizedError,
 } from '@modelcontextprotocol/client';
-import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import type { McpServerConnectivityDto, McpServerConnectivityStatus } from '@octopus/shared/protocol';
 import type { JSONRPCMessage, Transport } from '@modelcontextprotocol/client';
 import type { PiMcpServerEntry } from './types.js';
@@ -151,6 +151,16 @@ async function probeMcpServer(entry: PiMcpServerEntry, cwd: string, agentDir: st
   );
   const signal = AbortSignal.timeout(timeout);
   if (typeof entry.url === 'string') {
+    if (
+      entry.caFile ||
+      entry.requestHeadersCommand ||
+      entry.bearerTokenStore ||
+      entry.auth === 'oauth' ||
+      Object.values(entry.headers ?? {}).some((value) => value.startsWith('!')) ||
+      entry.bearerToken?.startsWith('!')
+    ) {
+      return { status: 'unsupported' };
+    }
     return probeHttp(entry, timeout, signal);
   }
   let transport: Transport;
@@ -159,7 +169,7 @@ async function probeMcpServer(entry: PiMcpServerEntry, cwd: string, agentDir: st
       command: interpolate(entry.command),
       args: (entry.args ?? []).map(interpolate),
       cwd: resolveOptionalPath(entry.cwd, cwd),
-      env: resolveEnvironment(entry.env, agentDir),
+      env: resolveEnvironment(entry.env, agentDir, entry.inheritEnv !== false),
       stderr: 'pipe',
     });
   } else {
@@ -254,11 +264,14 @@ function resolveHttpHeaders(entry: PiMcpServerEntry): Headers {
 /** Builds the same inherited process environment shape used by stdio MCP servers. */
 function resolveEnvironment(
   overrides: Record<string, string> | undefined,
-  agentDir: string
+  agentDir: string,
+  inheritEnv: boolean
 ): Record<string, string> {
-  const environment = Object.fromEntries(
-    Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
-  );
+  const environment = inheritEnv
+    ? Object.fromEntries(
+        Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
+      )
+    : getDefaultEnvironment();
   for (const [name, value] of Object.entries(overrides ?? {})) {
     environment[name] = interpolate(value);
   }

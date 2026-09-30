@@ -5,6 +5,7 @@
 
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
+import { PiMcpConfigError } from './types.js';
 import type {
   McpServerConfigurationInput,
   McpServerConnectionDto,
@@ -25,11 +26,13 @@ const MANAGED_FIELDS = [
   'command',
   'args',
   'cwd',
+  'inheritEnv',
   'url',
   'socket',
   'env',
   'headers',
   'requestHeadersCommand',
+  'caFile',
   'httpTransport',
   'disabled',
   'lifecycle',
@@ -178,10 +181,25 @@ export function projectMcpServerDetail(
     toolPrefix: entry.toolPrefix ?? 'server',
     includeTools: entry.includeTools ?? [],
     excludeTools: entry.excludeTools ?? [],
+    inheritEnv: entry.inheritEnv !== false,
+    debug: entry.debug ?? false,
+    trace: entry.trace ?? false,
+    searchKeywords: entry.searchKeywords ?? {},
+    externalFields: [
+      ...['caFile', 'requestHeadersCommand', 'approveTools', 'pluginDataDir', 'literalEnv'].filter(
+        (field) => entry[field as keyof PiMcpServerEntry] !== undefined
+      ),
+      ...Object.keys(entry.oauth || {})
+        .filter((field) => !['clientId', 'clientSecret', 'scope'].includes(field))
+        .map((field) => `oauth.${field}`),
+    ],
     auth: {
       type: authType,
       ...(typeof entry.bearerTokenEnv === 'string' ? { bearerTokenEnv: entry.bearerTokenEnv } : {}),
       bearerTokenStored: entry.bearerTokenStore === true,
+      bearerTokenConfigured: typeof entry.bearerToken === 'string',
+      oauthClientSecretConfigured:
+        typeof entry.oauth === 'object' && typeof entry.oauth.clientSecret === 'string',
       ...(typeof entry.oauth === 'object' && typeof entry.oauth.clientId === 'string'
         ? { oauthClientId: entry.oauth.clientId }
         : {}),
@@ -235,19 +253,19 @@ export function applyMcpConfiguration(
       args: input.connection.args,
       ...(input.connection.cwd ? { cwd: input.connection.cwd } : {}),
     });
-    if (sameStdioCommand && existing.env !== undefined) {
-      next.env = existing.env;
-    }
+    next.inheritEnv = input.inheritEnv ?? (sameStdioCommand ? existing.inheritEnv : undefined);
+    next.env = applyBindings(sameStdioCommand ? existing.env : undefined, input.environment, false);
   } else if (input.connection.type === 'http') {
     Object.assign(next, {
       url: input.connection.url,
       ...(input.connection.transport === 'auto' ? {} : { httpTransport: input.connection.transport }),
     });
-    if (sameHttpEndpoint && existing.headers !== undefined) {
-      next.headers = existing.headers;
-    }
+    next.headers = applyBindings(sameHttpEndpoint ? existing.headers : undefined, input.headers, true);
     if (sameHttpEndpoint && existing.requestHeadersCommand !== undefined) {
       next.requestHeadersCommand = existing.requestHeadersCommand;
+    }
+    if (sameHttpEndpoint && existing.caFile !== undefined) {
+      next.caFile = existing.caFile;
     }
   } else {
     next.socket = input.connection.socket;
@@ -283,11 +301,55 @@ export function applyMcpConfiguration(
     next.excludeTools = input.excludeTools;
   }
   applyAuth(next, existing, input, sameHttpEndpoint);
+  if (input.debug !== undefined) {
+    next.debug = input.debug;
+  }
+  if (input.trace !== undefined) {
+    next.trace = input.trace;
+  }
+  if (input.searchKeywords !== undefined) {
+    next.searchKeywords = input.searchKeywords;
+  }
+  if (
+    input.auth.type === 'bearer' &&
+    Object.keys(next.headers ?? {}).some((name) => name.toLowerCase() === 'authorization')
+  ) {
+    throw new PiMcpConfigError(
+      'MCP_AUTH_HEADER_CONFLICT',
+      'Bearer authentication conflicts with an Authorization header.',
+      422
+    );
+  }
   return next;
 }
 
 /**
- * Applies the non-secret authentication selection and preserves existing opaque secret values.
+ * Applies an explicit binding list without ever projecting its existing values.
+ * Missing values may only reuse a same-target, same-name binding.
+ */
+function applyBindings(
+  existing: Record<string, string> | undefined,
+  input: Array<{ name: string; value?: string }> | undefined,
+  caseInsensitive: boolean
+): Record<string, string> | undefined {
+  if (input === undefined) {
+    return existing;
+  }
+  const entries = input.map(({ name, value }) => {
+    const oldName = Object.keys(existing ?? {}).find((key) =>
+      caseInsensitive ? key.toLowerCase() === name.toLowerCase() : key === name
+    );
+    const resolved = value ?? (oldName === undefined ? undefined : existing?.[oldName]);
+    if (resolved === undefined) {
+      throw new PiMcpConfigError('MCP_BINDING_VALUE_REQUIRED', 'A new binding requires a value.', 422);
+    }
+    return [name, resolved] as const;
+  });
+  return Object.fromEntries(entries);
+}
+
+/**
+ * Applies the authentication mode and write-only credential changes for the same endpoint.
  */
 function applyAuth(
   next: PiMcpServerEntry,
@@ -296,9 +358,6 @@ function applyAuth(
   preserveHttpSecrets: boolean
 ): void {
   if (input.auth.type === 'auto' && preserveHttpSecrets) {
-    if (existing.auth !== undefined) {
-      next.auth = existing.auth;
-    }
     if (existing.oauth !== undefined) {
       next.oauth = existing.oauth;
     }
@@ -318,14 +377,21 @@ function applyAuth(
   if (input.auth.type === 'oauth') {
     next.auth = 'oauth';
     next.oauth = {
-      ...(preserveHttpSecrets &&
-      typeof existing.oauth === 'object' &&
-      typeof existing.oauth.clientSecret === 'string'
-        ? { clientSecret: existing.oauth.clientSecret }
-        : {}),
-      ...(input.auth.oauthClientId ? { clientId: input.auth.oauthClientId } : {}),
-      ...(input.auth.oauthScope ? { scope: input.auth.oauthScope } : {}),
+      ...(preserveHttpSecrets && typeof existing.oauth === 'object' ? existing.oauth : {}),
     };
+    delete next.oauth.clientId;
+    delete next.oauth.scope;
+    if (input.auth.oauthClientId) {
+      next.oauth.clientId = input.auth.oauthClientId;
+    }
+    if (input.auth.oauthScope) {
+      next.oauth.scope = input.auth.oauthScope;
+    }
+    if (input.auth.oauthClientSecret === null) {
+      delete next.oauth.clientSecret;
+    } else if (input.auth.oauthClientSecret !== undefined) {
+      next.oauth.clientSecret = input.auth.oauthClientSecret;
+    }
   }
   if (input.auth.type === 'bearer') {
     next.auth = 'bearer';
@@ -335,8 +401,18 @@ function applyAuth(
     if (input.auth.bearerTokenStored) {
       next.bearerTokenStore = true;
     }
-    if (preserveHttpSecrets && typeof existing.bearerToken === 'string') {
+    if (
+      !input.auth.bearerTokenEnv &&
+      !input.auth.bearerTokenStored &&
+      preserveHttpSecrets &&
+      typeof existing.bearerToken === 'string'
+    ) {
       next.bearerToken = existing.bearerToken;
+    }
+    if (input.auth.bearerToken === null) {
+      delete next.bearerToken;
+    } else if (input.auth.bearerToken !== undefined) {
+      next.bearerToken = input.auth.bearerToken;
     }
   }
 }

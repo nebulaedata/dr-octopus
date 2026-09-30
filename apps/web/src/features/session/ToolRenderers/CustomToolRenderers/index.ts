@@ -10,3 +10,7 @@ export { SchedulerToolRenderer } from './SchedulerToolRenderer';
 export { KnowledgeToolRenderer } from './KnowledgeToolRenderer';
 export { MemoryToolRenderer } from './MemoryToolRenderer';
 export { ImagegenToolRenderer } from './ImagegenToolRenderer';
+
+export { McpToolRenderer } from './McpToolRenderer';
+
+export { SkillToolRenderer } from './SkillToolRenderer';

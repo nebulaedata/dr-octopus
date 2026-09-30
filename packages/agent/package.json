@@ -21,7 +21,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/infra-copy.mjs && node scripts/scheduler-db-migrations-copy.mjs && node scripts/knowledge-db-migrations-copy.mjs && node scripts/permission-db-migrations-copy.mjs && node scripts/memory-db-migrations-copy.mjs && node scripts/chmod-bin.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/infra-copy.mjs && node scripts/imagegen-skills-copy.mjs && node scripts/scheduler-db-migrations-copy.mjs && node scripts/knowledge-db-migrations-copy.mjs && node scripts/permission-db-migrations-copy.mjs && node scripts/memory-db-migrations-copy.mjs && node scripts/chmod-bin.mjs",
     "db:knowledge:generate": "drizzle-kit generate --config=drizzle.knowledge.config.ts",
     "db:knowledge:check": "drizzle-kit check --config=drizzle.knowledge.config.ts",
     "db:scheduler:generate": "drizzle-kit generate --config=drizzle.scheduler.config.ts",

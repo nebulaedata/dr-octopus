@@ -7,9 +7,9 @@ import { watch } from 'node:fs';
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
+import { listModelAssociationCandidates } from '../../infrastructure/pi-settings/model-adaptation.js';
 import { MODEL_CONFIG_ROUTE } from '../../infrastructure/runtime-config/config-routes.js';
 import type {
-  ImagegenConfig,
   ConfigureCustomProviderBody,
   CreateCustomProviderBody,
   DefaultModelCandidateDto,
@@ -19,8 +19,7 @@ import type {
   ModelProviderDetailDto,
   ModelProviderSummaryDto,
   ModelCapability,
-  ModelInterface,
-  UpdateModelConfigurationBody,
+  UpdateModelAssociationBody,
 } from '@octopus/shared/protocol';
 import type { FSWatcher } from 'node:fs';
 import type {
@@ -91,30 +90,19 @@ function toModel(
   if (model.input.includes('image')) {
     capabilities.push('image_input');
   }
-  if (model.imageGeneration) {
-    capabilities.push('image_generation');
-  }
-  const interfaces: ModelInterface[] = model.interfaces ?? ['chat'];
   return {
     modelKey: opaqueKey(`${provider.id}\u0000${model.id}`),
     modelId: model.id,
     name: model.name,
     api: model.api,
     available: model.available,
+    ...(model.adaptation ? { adaptation: model.adaptation, association: model.association ?? null } : {}),
     reasoning: model.reasoning,
     input: model.input,
     capabilities,
-    interfaces,
     ...(model.contextWindow === undefined ? {} : { contextWindow: model.contextWindow }),
     ...(model.maxTokens === undefined ? {} : { maxTokens: model.maxTokens }),
-    ...(model.contextWindowConfigured === undefined
-      ? {}
-      : { contextWindowConfigured: model.contextWindowConfigured }),
-    ...(model.maxTokensConfigured === undefined ? {} : { maxTokensConfigured: model.maxTokensConfigured }),
-    isDefault:
-      interfaces.includes('chat') &&
-      defaultModel.providerId === provider.id &&
-      defaultModel.modelId === model.id,
+    isDefault: defaultModel.providerId === provider.id && defaultModel.modelId === model.id,
     configuration: model.configuration,
   };
 }
@@ -123,43 +111,6 @@ function toModel(
  * Owns Settings HTTP application behavior while Pi state remains in the Agent SDK.
  */
 export class SettingsService {
-  /**
-   * Returns image configuration for the next tool invocation.
-   */
-  public getImagegenSettings() {
-    return this.piSettings.getImagegenSettings();
-  }
-
-  /**
-   * Returns supported image candidates including unavailable authentication states.
-   */
-  public async listImagegenCandidates() {
-    return { candidates: await this.piSettings.listImagegenCandidates() };
-  }
-
-  /**
-   * Validates the complete selection before saving; null explicitly clears it.
-   */
-  public async saveImagegenSettings(config: ImagegenConfig | null) {
-    if (
-      config !== null &&
-      !(await this.piSettings.listImagegenCandidates()).some(
-        (candidate) =>
-          candidate.providerId === config.providerId &&
-          candidate.modelId === config.modelId &&
-          candidate.adapter === config.adapter &&
-          candidate.available
-      )
-    ) {
-      throw new ApplicationError(
-        'IMAGEGEN_MODEL_UNAVAILABLE',
-        'The image model is unavailable. Check its API Key, capability and protocol.',
-        { statusCode: 422 }
-      );
-    }
-    await this.piSettings.saveImagegenSettings(config);
-    return this.piSettings.getImagegenSettings();
-  }
   /**
    * Creates the application service.
    *
@@ -211,37 +162,42 @@ export class SettingsService {
     return this.piSettings.detectCustomProvider(provider.id, baseUrl, apiKey);
   }
   /**
-   * Resolves an editable custom model before persisting its Pi capability metadata.
+   * Offers native templates across protocols for manual correction of a managed relay.
    */
-  public async updateModelConfiguration(key: string, modelKey: string, input: UpdateModelConfigurationBody) {
+  public async listModelAssociations(key: string) {
+    const provider = await this.requireProvider(key);
+    if (provider.local?.runtime !== 'mr-token') {
+      throw new ApplicationError(
+        'MODEL_PROVIDER_CAPABILITY_UNSUPPORTED',
+        'Only Mr.Token models support association.',
+        { statusCode: 422 }
+      );
+    }
+    return { candidates: listModelAssociationCandidates() };
+  }
+
+  /**
+   * Persists only a native association; capability flags and token overrides are no longer editable.
+   */
+  public async updateModelAssociation(key: string, modelKey: string, input: UpdateModelAssociationBody) {
     const provider = await this.requireProvider(key);
     const model = provider.models.find(
       (candidate) => opaqueKey(`${provider.id}\u0000${candidate.id}`) === modelKey
     );
-    if (provider.provenance !== 'models_json' || !model) {
-      throw new ApplicationError(
-        'MODEL_PROVIDER_CAPABILITY_UNSUPPORTED',
-        'Model configuration is not editable for this provider.',
-        { statusCode: 422 }
-      );
-    }
-    const contextWindow = input.contextWindow ?? model.contextWindow;
-    const maxTokens = input.maxTokens ?? model.maxTokens;
-    const interfaces = input.interfaces ?? model.interfaces ?? ['chat'];
+    const { candidates } = await this.listModelAssociations(key);
     if (
-      (input.contextWindow !== undefined || input.maxTokens !== undefined) &&
-      (!interfaces.includes('chat') ||
-        contextWindow === undefined ||
-        maxTokens === undefined ||
-        maxTokens >= contextWindow)
+      !model ||
+      (input.source &&
+        !candidates.some(
+          (candidate) =>
+            candidate.providerId === input.source?.providerId && candidate.modelId === input.source.modelId
+        ))
     ) {
-      throw new ApplicationError(
-        'MODEL_CONFIGURATION_INVALID_LIMITS',
-        'The maximum output must be smaller than the context window of a chat model.',
-        { statusCode: 422 }
-      );
+      throw new ApplicationError('MODEL_ASSOCIATION_INVALID', 'Choose a compatible Pi model.', {
+        statusCode: 422,
+      });
     }
-    const result = await this.piSettings.updateModelConfiguration(provider.id, model.id, input);
+    const result = await this.piSettings.updateModelAssociation(provider.id, model.id, input.source);
     this.#recordConfiguration(result);
     return this.getProvider(key);
   }
@@ -281,8 +237,7 @@ export class SettingsService {
       );
     }
     const current = await this.piSettings.getDefaultModel();
-    const imageDefault = await this.piSettings.getImagegenSettings?.();
-    if (current.providerId === provider.id || imageDefault?.config?.providerId === provider.id) {
+    if (current.providerId === provider.id) {
       throw new ApplicationError(
         'MODEL_PROVIDER_DEFAULT_IN_USE',
         'Choose another default model before deleting this provider.',
@@ -353,13 +308,13 @@ export class SettingsService {
             modelId: model.id,
           }),
       configured: configured.providerId !== undefined && configured.modelId !== undefined,
-      available: Boolean(model?.available && (model.interfaces ?? ['chat']).includes('chat')),
+      available: Boolean(model?.available),
       effect: 'new_sessions',
     };
   }
 
   /**
-   * Removes explicitly non-chat models while leaving runtime availability and extension models to Pi.
+   * Removes unadapted relay models while leaving runtime availability and extension models to Pi.
    * Preserves input order and model metadata, independent of the Host's credential snapshot.
    */
   public async filterChatModels<T extends { provider: string; id: string }>(models: T[]): Promise<T[]> {
@@ -367,11 +322,25 @@ export class SettingsService {
     const excluded = new Set(
       providers.flatMap((provider) =>
         provider.models
-          .filter((model) => model.interfaces !== undefined && !model.interfaces.includes('chat'))
+          .filter((model) => model.adaptation?.status === 'unadapted')
           .map((model) => `${provider.id}\u0000${model.id}`)
       )
     );
-    return models.filter((model) => !excluded.has(`${model.provider}\u0000${model.id}`));
+    const relays = new Map(
+      providers
+        .filter((provider) => provider.local?.runtime === 'mr-token')
+        .map((provider) => [provider.id, provider])
+    );
+    return models.filter((model) => {
+      const relay = relays.get(model.provider);
+      if (
+        relay &&
+        !relay.models.some((entry) => entry.id === model.id && entry.adaptation?.status === 'adapted')
+      ) {
+        return false;
+      }
+      return !excluded.has(`${model.provider}\u0000${model.id}`);
+    });
   }
 
   /**
@@ -383,7 +352,7 @@ export class SettingsService {
     const providers = await this.piSettings.listProviders();
     const candidates: DefaultModelCandidateDto[] = providers.flatMap((provider) =>
       provider.models
-        .filter((model) => model.available && (model.interfaces ?? ['chat']).includes('chat'))
+        .filter((model) => model.available)
         .map((model) => ({
           providerKey: opaqueKey(provider.id),
           providerId: provider.id,
@@ -412,7 +381,7 @@ export class SettingsService {
     const model = provider?.models.find(
       (candidate) => opaqueKey(`${provider.id}\u0000${candidate.id}`) === modelKey
     );
-    if (provider === undefined || model === undefined || !(model.interfaces ?? ['chat']).includes('chat')) {
+    if (provider === undefined || model === undefined || model.adaptation?.status === 'unadapted') {
       throw new Error('The selected default model no longer exists.');
     }
     await this.piSettings.setDefaultModel(provider.id, model.id);
@@ -520,8 +489,6 @@ export class ModelConfigMonitor {
     );
     const parsed = JSON.parse(settings!) as Record<string, unknown>;
     const runtimeModels = JSON.parse(models!) as Record<string, unknown>;
-    // Host capabilities refresh candidate catalogs without changing Pi's inference configuration.
-    delete runtimeModels['octopusModelCapabilities'];
     const modelVersion = digest([runtimeModels, auth]);
     const version = digest([models, auth, parsed['defaultProvider'], parsed['defaultModel']]);
     if (version !== this.#version) {

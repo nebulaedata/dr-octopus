@@ -1,35 +1,18 @@
 /**
  * @author Codex
- * @description Exposes the independent image model settings endpoints.
+ * @description Reads redacted independent image settings and sends revision-fenced updates.
  */
-import { request } from '../utils/request';
-import type { ImagegenCandidate, ImagegenConfig, ImagegenSettingsDto } from '@octopus/shared/protocol';
-
+import { request } from '@/utils/request';
+import type { ImagegenSettingsDto, ImagegenSettingsUpdate } from '@octopus/shared/protocol';
 /**
- * Reads the effective image default and its availability.
+ * Loads service settings without credentials.
  */
 export function getImagegenSettings(signal?: AbortSignal) {
-  return request<ImagegenSettingsDto>({ url: '/settings/imagegen', method: 'GET', signal });
+  return request<ImagegenSettingsDto>({ url: '/settings/imagegen', signal });
 }
-
 /**
- * Lists supported image models with authentication and reference input status.
+ * Saves one provider or activation choice without modifying conversation defaults.
  */
-export function getImagegenCandidates(signal?: AbortSignal) {
-  return request<{ candidates: ImagegenCandidate[] }>({
-    url: '/settings/imagegen/candidates',
-    method: 'GET',
-    signal,
-  });
-}
-
-/**
- * Explicitly saves or clears the image default.
- */
-export function saveImagegenSettings(config: ImagegenConfig | null) {
-  return request<ImagegenSettingsDto>({
-    url: '/settings/imagegen',
-    method: config === null ? 'DELETE' : 'PUT',
-    ...(config === null ? {} : { data: config }),
-  });
+export function saveImagegenSettings(data: ImagegenSettingsUpdate) {
+  return request<ImagegenSettingsDto>({ url: '/settings/imagegen', method: 'PUT', data });
 }

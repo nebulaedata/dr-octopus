@@ -200,8 +200,8 @@ for (const [runtime, api] of [
     await assert.rejects(service.detectCustomProvider(created.providerKey, baseUrl, 'invalid'), {
       code: 'MODEL_DISCOVERY_AUTH_FAILED',
     });
-    assert.equal(saved.local.api, api);
-    assert.equal(saved.availableModelCount, 2);
+    assert.equal(saved.local.api, runtime === 'mr-token' ? undefined : api);
+    assert.equal(saved.availableModelCount, runtime === 'mr-token' ? 0 : 2);
     assert.deepEqual(
       saved.models.map((model) => model.modelId),
       ['example-model', 'other-model']
@@ -210,45 +210,36 @@ for (const [runtime, api] of [
     const modelsText = await readFile(join(agentDir, 'models.json'), 'utf8');
     assert.equal(modelsText.includes('sk-test-secret'), false);
     const document = JSON.parse(modelsText);
-    assert.equal(document.providers[created.providerId].api, api);
+    assert.equal(document.providers[created.providerId].api, runtime === 'mr-token' ? undefined : api);
     assert.equal(document.providers[created.providerId].baseUrl, baseUrl);
     assert.deepEqual(
       document.providers[created.providerId].models.map((model) => model.id),
-      ['example-model', 'other-model']
+      runtime === 'mr-token' ? [] : ['example-model', 'other-model']
     );
-    await service.updateModelConfiguration(created.providerKey, saved.models[0].modelKey, {
-      reasoning: true,
-      input: ['text', 'image'],
-      imageGeneration: true,
-    });
-    await service.updateModelConfiguration(created.providerKey, saved.models[1].modelKey, {
-      reasoning: false,
-      input: ['text'],
-      imageGeneration: false,
-    });
     offeredModels = [{ id: 'example-model' }, { id: 'fresh-model' }];
     const refreshed = await service.configureCustomProvider(created.providerKey, { baseUrl, api });
     assert.deepEqual(
       refreshed.models.map((model) => model.modelId),
       ['example-model', 'fresh-model']
     );
-    assert.equal(refreshed.models[0].reasoning, true);
-    assert.deepEqual(refreshed.models[0].input, ['text', 'image']);
-    assert.deepEqual(refreshed.models[0].capabilities, ['reasoning', 'image_input', 'image_generation']);
-    assert.deepEqual(refreshed.models[1].capabilities, []);
-    assert.deepEqual(refreshed.models[0].interfaces, ['chat']);
+    assert.equal(refreshed.models[0].reasoning, false);
+    assert.deepEqual(refreshed.models[0].input, ['text']);
+    assert.deepEqual(refreshed.models[0].capabilities, []);
+    assert.equal(refreshed.models[0].interfaces, undefined);
     const refreshedDocument = JSON.parse(await readFile(join(agentDir, 'models.json'), 'utf8'));
-    assert.deepEqual(refreshedDocument.octopusModelCapabilities[created.providerId], {
-      'example-model': { imageGeneration: true },
-    });
+    assert.equal(refreshedDocument.octopusModelCapabilities, undefined);
     const reloaded = (await createPiSettingsStore({ agentDir }).listProviders()).find(
       (provider) => provider.id === created.providerId
     );
     assert.equal(reloaded.auth.source, 'stored');
-    await store.setDefaultModel(created.providerId, 'example-model');
-    await assert.rejects(service.deleteCustomProvider(created.providerKey), {
-      code: 'MODEL_PROVIDER_DEFAULT_IN_USE',
-    });
+    if (runtime === 'mr-token') {
+      await assert.rejects(store.setDefaultModel(created.providerId, 'example-model'));
+    } else {
+      await store.setDefaultModel(created.providerId, 'example-model');
+      await assert.rejects(service.deleteCustomProvider(created.providerKey), {
+        code: 'MODEL_PROVIDER_DEFAULT_IN_USE',
+      });
+    }
     await writeFile(join(agentDir, 'settings.json'), '{}');
     assert.deepEqual(await service.deleteCustomProvider(created.providerKey), { deleted: true });
     assert.equal(await service.getProvider(created.providerKey), undefined);

@@ -632,7 +632,7 @@ test('an older warm bootstrap snapshot cannot overwrite newer streamed output', 
   assert.deepEqual(state.messagesById['assistant-a'].content, [{ type: 'text', text: 'newer' }]);
 });
 
-test('assistant reasoning streams to the first text delta then settles on durable message time', () => {
+test('assistant reasoning timing excludes request waiting and preserves the first text boundary on completion', () => {
   const store = createSessionStore('session-a');
   store.getState().hydrate(createSnapshot());
   /**
@@ -669,7 +669,7 @@ test('assistant reasoning streams to the first text delta then settles on durabl
   });
 
   const streaming = store.getState().messagesById['assistant-a'];
-  assert.equal(streaming.thinkingStartedAt, Date.parse('2026-01-01T00:00:00.000Z'));
+  assert.equal(streaming.thinkingStartedAt, Date.parse('2026-01-01T00:00:00.500Z'));
   assert.equal(streaming.thinkingEndedAt, Date.parse('2026-01-01T00:00:02.000Z'));
   assert.equal(store.getState().currentAssistantId, 'assistant-a');
 
@@ -686,9 +686,127 @@ test('assistant reasoning streams to the first text delta then settles on durabl
   });
 
   const completed = store.getState().messagesById['assistant-a'];
-  assert.equal(completed.thinkingStartedAt, Date.parse('2026-01-01T00:00:00.000Z'));
-  assert.equal(completed.thinkingEndedAt, Date.parse('2026-01-01T00:00:04.000Z'));
+  assert.equal(completed.thinkingStartedAt, Date.parse('2026-01-01T00:00:00.500Z'));
+  assert.equal(completed.thinkingEndedAt, Date.parse('2026-01-01T00:00:02.000Z'));
   assert.equal(store.getState().currentAssistantId, undefined);
+});
+
+test('live reasoning uses explicit phase ends and text or tool boundaries across providers', () => {
+  for (const boundary of ['thinking_end', 'text_start', 'toolcall_start', 'toolcall_delta']) {
+    const store = createSessionStore('session-a');
+    store.getState().hydrate(createSnapshot());
+    /**
+     * Delivers one observed phase boundary with a deterministic timestamp.
+     */
+    const apply = (sequence, payload) => {
+      store.getState().applyEvent({
+        type: 'agent.event',
+        runtimeId: 'runtime-a',
+        epoch: 1,
+        workspaceId: 'workspace-a',
+        sessionId: 'session-a',
+        sequence,
+        timestamp: `2026-01-01T00:00:0${sequence}.000Z`,
+        payload,
+      });
+    };
+    apply(1, { type: 'message_start', message: { id: 'assistant-a', role: 'assistant', content: [] } });
+    apply(2, {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'thinking_start', contentIndex: 0 },
+    });
+    apply(3, {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'thinking_delta', contentIndex: 0, delta: 'Plan' },
+    });
+    apply(4, {
+      type: 'message_update',
+      assistantMessageEvent: { type: boundary, contentIndex: 0 },
+    });
+    apply(5, {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', contentIndex: 1, delta: 'Answer' },
+    });
+    apply(6, {
+      type: 'message_end',
+      message: {
+        id: 'assistant-a',
+        role: 'assistant',
+        content: [
+          { type: 'thinking', thinking: 'Plan' },
+          { type: 'text', text: 'Answer' },
+        ],
+      },
+    });
+    const message = store.getState().messagesById['assistant-a'];
+    assert.equal(message.thinkingStartedAt, Date.parse('2026-01-01T00:00:02.000Z'), boundary);
+    assert.equal(message.thinkingEndedAt, Date.parse('2026-01-01T00:00:04.000Z'), boundary);
+  }
+});
+
+test('reasoning duration stays unknown without observed boundaries and closes interrupted reasoning-only output', () => {
+  for (const scenario of [
+    'final-only',
+    'missing-end',
+    'missing-tool-boundary',
+    'interrupted-thinking',
+    'text-only',
+  ]) {
+    const store = createSessionStore('session-a');
+    store.getState().hydrate(createSnapshot());
+    /**
+     * Applies one event without inferring missing phase boundaries.
+     */
+    const apply = (sequence, payload) => {
+      store.getState().applyEvent({
+        type: 'agent.event',
+        runtimeId: 'runtime-a',
+        epoch: 1,
+        workspaceId: 'workspace-a',
+        sessionId: 'session-a',
+        sequence,
+        timestamp: `2026-01-01T00:00:0${sequence}.000Z`,
+        payload,
+      });
+    };
+    apply(1, { type: 'message_start', message: { id: 'assistant-a', role: 'assistant', content: [] } });
+    if (
+      scenario === 'missing-end' ||
+      scenario === 'missing-tool-boundary' ||
+      scenario === 'interrupted-thinking'
+    ) {
+      apply(2, {
+        type: 'message_update',
+        assistantMessageEvent: { type: 'thinking_delta', contentIndex: 0, delta: 'Plan' },
+      });
+    }
+    apply(3, {
+      type: 'message_end',
+      message: {
+        id: 'assistant-a',
+        role: 'assistant',
+        timestamp: Date.parse('2026-01-01T00:00:01.000Z'),
+        stopReason: scenario === 'interrupted-thinking' ? 'aborted' : 'stop',
+        content: [
+          ...(scenario === 'text-only' ? [] : [{ type: 'thinking', thinking: 'Plan' }]),
+          ...(scenario === 'interrupted-thinking'
+            ? []
+            : scenario === 'missing-tool-boundary'
+              ? [{ type: 'toolCall', id: 'tool-a', name: 'read', arguments: { path: 'a.ts' } }]
+              : [{ type: 'text', text: 'Answer' }]),
+        ],
+      },
+    });
+    const message = store.getState().messagesById['assistant-a'];
+    assert.equal(
+      message.thinkingEndedAt,
+      scenario === 'interrupted-thinking' ? Date.parse('2026-01-01T00:00:03.000Z') : undefined,
+      scenario
+    );
+    if (scenario === 'final-only' || scenario === 'text-only') {
+      assert.equal(message.thinkingStartedAt, undefined, scenario);
+    }
+  }
 });
 
 test('manual compaction is projected as a visible lifecycle row through failure', () => {
@@ -995,7 +1113,7 @@ test('aborted assistant output is interrupted before agent settled without a mod
   assert.equal(store.getState().messagesById['assistant-aborted'].interrupted, true);
 });
 
-test('hydration rebuilds interleaved tools and reasoning time from durable messages', () => {
+test('hydration rebuilds interleaved tools without inventing reasoning time from durable messages', () => {
   const store = createSessionStore('session-a');
   store.getState().hydrate({
     ...createSnapshot(),
@@ -1045,8 +1163,11 @@ test('hydration rebuilds interleaved tools and reasoning time from durable messa
     { type: 'tool', id: 'tool-a', turnId: 'turn-message-user-a' },
     { type: 'message', id: 'assistant-b', turnId: 'turn-message-user-a' },
   ]);
-  assert.equal(state.messagesById['assistant-a'].thinkingStartedAt, Date.parse('2026-01-01T00:00:01.000Z'));
-  assert.equal(state.messagesById['assistant-a'].thinkingEndedAt, Date.parse('2026-01-01T00:00:03.000Z'));
+  assert.equal(state.messagesById['assistant-a'].thinkingStartedAt, undefined);
+  assert.equal(state.messagesById['assistant-a'].thinkingEndedAt, undefined);
+  assert.deepEqual(state.messagesById['assistant-a'].content, [
+    { type: 'thinking', text: 'I should read it.' },
+  ]);
   assert.deepEqual(state.toolsById['tool-a'], {
     id: 'tool-a',
     name: 'read',

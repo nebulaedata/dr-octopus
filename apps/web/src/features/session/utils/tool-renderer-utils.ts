@@ -58,6 +58,22 @@ export function summarizePath(tool: ToolProjection): string | undefined {
 }
 
 /**
+ * Describes the write input size without implying that execution has succeeded.
+ */
+export function summarizeWrite(tool: ToolProjection, t: Translate): string | undefined {
+  const path = summarizePath(tool);
+  const content = isRecord(tool.arguments) ? tool.arguments['content'] : undefined;
+  if (typeof content !== 'string') {
+    return path;
+  }
+  const size = t('session.builtinTool.characterCount', '{{count}} characters', {
+    count: content.length,
+    defaultValue_one: '{{count}} character',
+  });
+  return path === undefined ? size : `${path} · ${size}`;
+}
+
+/**
  * Uses the shell command as the collapsed card summary.
  */
 export function summarizeCommand(tool: ToolProjection): string | undefined {

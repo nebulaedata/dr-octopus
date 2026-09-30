@@ -37,7 +37,7 @@ export { MemoryServiceCard } from './memory/MemoryServiceCard';
 export { MemorySettingsPage } from './memory/MemorySettingsPage';
 export { AddCustomProviderDialog } from './model-providers/AddCustomProviderDialog';
 export { CustomProviderForm } from './model-providers/CustomProviderForm';
-export { ModelConfigurationDialog } from './model-providers/ModelConfigurationDialog';
+export { ModelAssociationDialog } from './model-providers/ModelAssociationDialog';
 export { ModelProvidersPage } from './model-providers/ModelProvidersPage';
 export type { ModelProvidersPageProps } from './model-providers/ModelProvidersPage';
 export { ProviderAuthForm } from './model-providers/ProviderAuthForm';
@@ -80,3 +80,5 @@ export type { ShortcutRecorderProps } from './shortcuts/ShortcutRecorder';
 export { ShortcutsSettingsPage } from './shortcuts/ShortcutsSettingsPage';
 export { SnippetsSettingsPage } from './snippets/SnippetsSettingsPage';
 export { SpeechSettingsPage } from './speech/SpeechSettingsPage';
+
+export { ImagegenSettingsPage } from './imagegen/ImagegenSettingsPage';

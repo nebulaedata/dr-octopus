@@ -16,7 +16,6 @@ export const queryKeys = {
   defaultModel: ['settings', 'default-model'] as const,
   defaultModelCandidates: ['settings', 'default-model', 'candidates'] as const,
   imagegen: ['settings', 'imagegen'] as const,
-  imagegenCandidates: ['settings', 'imagegen', 'candidates'] as const,
   mcpServersRoot: ['settings', 'mcp-servers'] as const,
   mcpServers: ['settings', 'mcp-servers', 'catalog'] as const,
   mcpServer: (serverKey: string) => ['settings', 'mcp-servers', serverKey] as const,

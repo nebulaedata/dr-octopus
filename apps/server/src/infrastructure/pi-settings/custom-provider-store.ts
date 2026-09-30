@@ -37,7 +37,7 @@ export class CustomProviderStore {
    * Adds persisted drafts and custom configuration to the Pi catalog without inventing available models.
    */
   public async project(providers: PiSettingsProvider[]): Promise<PiSettingsProvider[]> {
-    const { records, imageGeneration, configuredLimits } = await readCustomProviderMetadata(this.path);
+    const { records, relayModels } = await readCustomProviderMetadata(this.path);
     const result = new Map(providers.map((provider) => [provider.id, provider]));
     for (const [id, record] of Object.entries(records)) {
       const existing = result.get(id);
@@ -56,36 +56,31 @@ export class CustomProviderStore {
           runtime: record.runtime,
           baseUrl: record.baseUrl,
           ...(record.modelId ? { modelId: record.modelId } : {}),
-          ...(record.api ? { api: record.api } : {}),
+          ...(record.runtime !== 'mr-token' && record.api ? { api: record.api } : {}),
         },
       });
     }
-    for (const [id, marked] of Object.entries(imageGeneration)) {
+    for (const [id, entries] of Object.entries(relayModels)) {
       const provider = result.get(id);
-      if (provider) {
-        result.set(id, {
-          ...provider,
-          models: provider.models.map((model) => ({
-            ...model,
-            imageGeneration: marked[model.id]?.imageGeneration ?? model.imageGeneration,
-            interfaces: marked[model.id]?.interfaces ?? model.interfaces ?? ['chat'],
-          })),
-        });
-      }
-    }
-    for (const [id, limits] of Object.entries(configuredLimits)) {
-      const provider = result.get(id);
-      if (provider?.provenance !== 'models_json') {
+      if (!provider || records[id]?.runtime !== 'mr-token') {
         continue;
       }
-      result.set(id, {
-        ...provider,
-        models: provider.models.map((model) => ({
-          ...model,
-          contextWindowConfigured: limits[model.id]?.contextWindow ?? false,
-          maxTokensConfigured: limits[model.id]?.maxTokens ?? false,
-        })),
-      });
+      const executable = new Map(provider.models.map((model) => [model.id, model]));
+      provider.models = entries.map((entry) => ({
+        ...(executable.get(entry.id) ?? {
+          id: entry.id,
+          name: entry.name ?? entry.id,
+          api: entry.adaptation.status === 'adapted' ? entry.adaptation.source.api : '',
+          baseUrl: records[id]!.baseUrl,
+          reasoning: false,
+          input: ['text'],
+          configuration: 'owned',
+          available: false,
+        }),
+        adaptation: entry.adaptation,
+        available: entry.adaptation.status === 'adapted' && (executable.get(entry.id)?.available ?? false),
+        association: entry.source ?? null,
+      }));
     }
     return [...result.values()];
   }
@@ -197,7 +192,7 @@ export class CustomProviderStore {
         name: record.name,
         runtime: record.runtime,
         baseUrl,
-        api: input.api ?? record.api ?? 'openai-completions',
+        ...(record.runtime === 'mr-token' ? {} : { api: input.api ?? record.api ?? 'openai-completions' }),
       },
       detection.models
     );

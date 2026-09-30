@@ -2,7 +2,7 @@
  * @author Codex
  * @description Session-scoped memory activation, cancellation and settled-run curation.
  */
-import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { publishMemoryStatus } from './ui.js';
 import { createPiMemoryCurator } from '../lib/curator.js';
 import { selectMemoryRun } from '../services/run-policy.js';
@@ -13,10 +13,7 @@ import type { MemorySource, MemoryStatus } from '../definitions/types.js';
 import type { MemoryBudget } from './tools.js';
 import type { MemoryScreenResult } from '../lib/jev-screen.js';
 const CONTEXT = 'octopus-memory-context';
-const skill = readFileSync(new URL('../skills/memory/SKILL.md', import.meta.url), 'utf8').replace(
-  /^---[\s\S]*?---\s*/u,
-  ''
-);
+const skillDirectory = fileURLToPath(new URL('../skills/memory/', import.meta.url));
 /**
  * Register lazy initialization, transient context and a tracked ten-second curator task.
  */
@@ -27,6 +24,7 @@ export function registerMemoryEvents(
   log: (event: string, error?: unknown, details?: MemoryDiagnosticDetails) => void = () => {},
   screen?: (sources: MemorySource[], signal: AbortSignal) => Promise<MemoryScreenResult>
 ) {
+  pi.on('resources_discover', () => ({ skillPaths: [skillDirectory] }));
   let budget: MemoryBudget = { calls: 0, pages: 0, searches: 0, bytes: 0 };
   let closed = false;
   let generation = 0;
@@ -81,7 +79,7 @@ export function registerMemoryEvents(
         unavailable(ctx);
       });
   });
-  pi.on('before_agent_start', async (event, ctx) => {
+  pi.on('before_agent_start', async (_event, ctx) => {
     await running;
     if (closed) {
       return;
@@ -90,12 +88,6 @@ export function registerMemoryEvents(
     budget = { calls: 0, pages: 0, searches: 0, bytes: 0 };
     successful = false;
     baseline = new Set(ctx.sessionManager.getBranch().map((entry) => entry.id));
-    if (allowed()) {
-      return {
-        systemPrompt: event.systemPrompt + '\n\n' + skill,
-      };
-    }
-    return;
   });
   pi.on('context', async (event, ctx) => {
     const current = generation;

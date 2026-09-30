@@ -4,6 +4,8 @@
   "type": "module",
   "private": true,
   "exports": {
+    "./components/code-block": "./src/components/code-block/index.tsx",
+    "./components/timeline": "./src/components/timeline/index.tsx",
     "./components/elapsed-time": "./src/components/elapsed-time/index.ts"
   },
   "scripts": {

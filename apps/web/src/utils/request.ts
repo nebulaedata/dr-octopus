@@ -5,8 +5,6 @@
 
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
-import type { ApiErrorDto } from '@octopus/shared/protocol';
-import type { AttachmentErrorResponse } from '@octopus/shared/protocol/attachments';
 
 const api = axios.create({
   baseURL: '/api',
@@ -83,17 +81,21 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
     const response = await api.request<T>(config);
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError<ApiErrorDto | AttachmentErrorResponse>(error)) {
+    if (axios.isAxiosError<unknown>(error)) {
       const response = error.response;
       const statusCode = response?.status;
       const payload = response?.data;
-      const projected = payload !== undefined && 'error' in payload ? payload.error : payload;
-      const code = projected?.code ?? 'NETWORK_ERROR';
-      const message = projected?.message ?? error.message;
+      const envelope = isErrorRecord(payload) && 'error' in payload ? payload.error : payload;
+      const projected = isErrorRecord(envelope) ? envelope : undefined;
+      const code = typeof projected?.code === 'string' ? projected.code : 'NETWORK_ERROR';
+      const message =
+        typeof projected?.message === 'string' && projected.message.trim()
+          ? projected.message
+          : error.message;
       const DEFAULT_RETRYABLE_STATUS = [429, 500, 502, 503, 504];
       const DEFAULT_RETRYABLE = statusCode === undefined || DEFAULT_RETRYABLE_STATUS.includes(statusCode);
-      const retryable = projected?.retryable ?? DEFAULT_RETRYABLE;
-      const requestId = projected?.requestId;
+      const retryable = typeof projected?.retryable === 'boolean' ? projected.retryable : DEFAULT_RETRYABLE;
+      const requestId = typeof projected?.requestId === 'string' ? projected.requestId : undefined;
       throw new ApiRequestError(code, message, {
         ...(statusCode === undefined ? {} : { statusCode }),
         ...(requestId === undefined ? {} : { requestId }),
@@ -103,4 +105,11 @@ export async function request<T>(config: AxiosRequestConfig): Promise<T> {
     }
     throw error;
   }
+}
+
+/**
+ * Narrows proxy and API error bodies before reading fields, including empty and non-JSON responses.
+ */
+function isErrorRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

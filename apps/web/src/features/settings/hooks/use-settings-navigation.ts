@@ -14,6 +14,7 @@ import {
   LibraryIcon,
   MessageSquareTextIcon,
   MicIcon,
+  ImageIcon,
   NetworkIcon,
   PaletteIcon,
   ServerIcon,
@@ -104,6 +105,13 @@ function getSettingsNavigation(t: Translate): SettingsNavigationGroup[] {
           description: t('settings.nav.jev.description', 'Configure the Jev model and API key.'),
           path: '/settings/jev',
           icon: SparklesIcon,
+          pageType: 'complete',
+        },
+        {
+          label: t('imagegen.title', 'Image service'),
+          description: t('imagegen.navDescription', 'Configure OpenAI and Qwen image generation.'),
+          path: '/settings/imagegen',
+          icon: ImageIcon,
           pageType: 'complete',
         },
         {

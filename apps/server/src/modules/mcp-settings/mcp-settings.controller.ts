@@ -17,6 +17,7 @@ import {
   UpdateMcpServerActivationBodySchema,
   UpdateMcpServerBodySchema,
 } from '@octopus/shared/protocol';
+import { registerErrorMessages } from '../../infrastructure/i18n/error-catalog.js';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import {
   MutationIdempotencyLedger,
@@ -127,4 +128,20 @@ function executeMutation<T>(
 /** Creates the stable request validation error. */
 function invalidRequest(message: string): ApplicationError {
   return new ApplicationError('INVALID_SETTINGS_REQUEST', message, { statusCode: 400 });
+}
+
+/**
+ * Registers safe, localized MCP credential validation messages.
+ */
+export function registerMcpSettingsErrorMessages(): void {
+  registerErrorMessages('mcp-settings', {
+    MCP_BINDING_VALUE_REQUIRED: {
+      en: 'A new binding requires a value.',
+      'zh-CN': '新增或重命名的绑定需要输入值。',
+    },
+    MCP_AUTH_HEADER_CONFLICT: {
+      en: 'Bearer authentication conflicts with an Authorization header.',
+      'zh-CN': 'Bearer 认证不能同时配置 Authorization 请求头。',
+    },
+  });
 }

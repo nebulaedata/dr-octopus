@@ -2,6 +2,7 @@
  * @author Codex
  * @description Inspect complete memory and provenance before an explicit edit or revision-checked forget.
  */
+import { ChevronRightIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -53,7 +54,9 @@ export function MemoryDetail({ reference, onClose }: { reference: MemoryRef; onC
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {confirming ? t('memory.detail.confirmTitle', 'Forget this memory?') : (result.data?.indexText ?? t('memory.detail.viewTitle', 'View memory'))}
+            {confirming
+              ? t('memory.detail.confirmTitle', 'Forget this memory?')
+              : (result.data?.indexText ?? t('memory.detail.viewTitle', 'View memory'))}
           </DialogTitle>
           <DialogDescription>
             {confirming
@@ -73,8 +76,9 @@ export function MemoryDetail({ reference, onClose }: { reference: MemoryRef; onC
         {result.data && !confirming && (
           <div className="flex max-h-[55vh] flex-col gap-4 overflow-auto">
             <p className="whitespace-pre-wrap wrap-anywhere text-sm leading-6">{result.data.bodyMd}</p>
-            <details className="text-xs text-muted-foreground">
-              <summary>
+            <details className="group/source text-xs text-muted-foreground">
+              <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                <ChevronRightIcon aria-hidden className="size-4 shrink-0 group-open/source:rotate-90" />
                 {t('memory.detail.sourcesVersion', 'Sources & version · v{{revision}}', {
                   revision: result.data.revision,
                 })}

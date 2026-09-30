@@ -131,6 +131,13 @@ export class SessionsService {
       onMessageActivity: (sessionId, timestamp) => this.#sessions.recordLastMessageAt(sessionId, timestamp),
     });
     this.#commands = new RuntimeCommands({
+      ...(this.#modelSettings
+        ? {
+            assertModelAllowed: async (_sessionId: string, model: { provider: string; id: string }) => {
+              await this.#assertChatModel({ type: 'set_model', provider: model.provider, modelId: model.id });
+            },
+          }
+        : {}),
       withRuntime: async (sessionId, operation) => this.#withSessionRuntime(sessionId, operation),
       onCommandSucceeded: (sessionId, command, timestamp) =>
         this.#projectSuccessfulCommand(sessionId, command, timestamp),
@@ -332,6 +339,12 @@ export class SessionsService {
     expected: RuntimeGenerationTarget = {}
   ): Promise<unknown> {
     this.#assertInteractive(sessionId);
+    if (['prompt', 'steer', 'follow_up', 'compact'].includes(command.type)) {
+      const row = this.#requireSessionRow(sessionId);
+      if (row.provider && row.model) {
+        await this.#assertChatModel({ type: 'set_model', provider: row.provider, modelId: row.model });
+      }
+    }
     if (command.type === 'prompt') {
       await this.#refreshConfiguration();
       if (this.#runtime.getControl(sessionId).restartRequired) {

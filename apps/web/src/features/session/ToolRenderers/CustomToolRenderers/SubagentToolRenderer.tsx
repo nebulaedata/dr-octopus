@@ -18,7 +18,7 @@ import { SubagentAvatar } from '@/features/session/SubagentAvatar';
 import { SubagentStatusBadge } from '@/features/session/SubagentStatusBadge';
 import { ElapsedOdometer } from '@octopus/custom-ui/components/elapsed-time';
 import { useI18n } from '@/i18n/use-i18n';
-import { ToolContent, ToolSection } from '../ToolRendererParts';
+import { ToolCodeBlock, ToolContent, ToolSection } from '../ToolRendererParts';
 import { formatToolValue } from '@/features/session/utils/tool-renderer-utils';
 import { projectSubagentDetails } from '@/features/session/utils/subagent-projection';
 import type { SubagentChildProjection } from '@/features/session/utils/subagent-projection';
@@ -124,14 +124,12 @@ function SubagentChildRow({ child, toolId }: { child: SubagentChildProjection; t
         </SubagentStatusBadge>
       </div>
       {child.error === undefined ? null : (
-        <pre className="max-h-32 overflow-auto rounded-md bg-muted p-2 text-xs whitespace-pre-wrap text-destructive">
+        <ToolCodeBlock maxHeight={128} className="text-destructive">
           {formatToolValue(child.error)}
-        </pre>
+        </ToolCodeBlock>
       )}
       {child.output === undefined ? null : (
-        <pre className="max-h-40 overflow-auto rounded-md bg-muted p-2 text-xs whitespace-pre-wrap">
-          {formatToolValue(child.output)}
-        </pre>
+        <ToolCodeBlock maxHeight={160}>{formatToolValue(child.output)}</ToolCodeBlock>
       )}
     </section>
   );

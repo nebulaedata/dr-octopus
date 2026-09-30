@@ -8,7 +8,13 @@ import { normalizeToolResult } from './tool-result-projection';
 import { normalizeTokenUsage } from './token-usage';
 import { projectPersistedRetries } from './persisted-retry-projection';
 import { MessageAttachmentSchema } from '@octopus/shared/protocol/attachments';
-import type { ContentBlock, MessageProjection, ToolProjection, TranscriptItem, TurnProjection } from '../type';
+import type {
+  ContentBlock,
+  MessageProjection,
+  ToolProjection,
+  TranscriptItem,
+  TurnProjection,
+} from '../type';
 
 export interface PersistedTranscriptProjection {
   messages: MessageProjection[];
@@ -51,7 +57,6 @@ export function normalizeMessage(value: unknown, fallbackId: string): MessagePro
     typeof message['errorMessage'] === 'string' && message['errorMessage'].trim().length > 0
       ? message['errorMessage'].trim()
       : undefined;
-  const hasThinking = content.some((block) => block.type === 'thinking' && block.text.length > 0);
   const attachments = Array.isArray(message['attachments'])
     ? message['attachments'].flatMap((item) => {
         const parsed = MessageAttachmentSchema.safeParse(item);
@@ -80,8 +85,6 @@ export function normalizeMessage(value: unknown, fallbackId: string): MessagePro
       : {}),
     ...(timestamp === undefined ? {} : { timestamp }),
     ...(persistedAt === undefined ? {} : { persistedAt }),
-    ...(hasThinking && timestamp !== undefined ? { thinkingStartedAt: timestamp } : {}),
-    ...(hasThinking && persistedAt !== undefined ? { thinkingEndedAt: persistedAt } : {}),
     ...(typeof message['entryId'] === 'string' ? { entryId: message['entryId'] } : {}),
     ...(stopReason === undefined ? {} : { stopReason }),
     // Cancellation diagnostics are not model failures; message_end is already terminal.

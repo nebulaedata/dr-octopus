@@ -5,24 +5,27 @@
 import { mkdir, readFile, rename, writeFile, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { adaptRelayModel, readBuiltinModelCatalog } from './model-adaptation.js';
 import type {
-  UpdateModelConfigurationBody,
+  ModelAssociation,
   CustomProviderConfigurationDto,
-  ModelInterface,
+  ModelAdaptation,
 } from '@octopus/shared/protocol';
 
 export interface CustomProviderRecord extends CustomProviderConfigurationDto {
   name: string;
 }
+export interface RelayModelRecord {
+  id: string;
+  name?: string;
+  adaptation: ModelAdaptation;
+  source?: ModelAssociation;
+}
 interface ModelDocument {
+  octopusRelayModels?: Record<string, RelayModelRecord[]>;
   providers: Record<string, Record<string, unknown>>;
   /** Persisted Pi document key used by existing installations. */
   octopusLocalProviders?: Record<string, CustomProviderRecord>;
-  /** Host model capabilities kept outside Pi's inference model schema. */
-  octopusModelCapabilities?: Record<
-    string,
-    Record<string, { imageGeneration: boolean; interfaces?: ModelInterface[] }>
-  >;
 }
 const queues = new Map<string, Promise<unknown>>();
 
@@ -57,49 +60,6 @@ async function readDocument(path: string): Promise<ModelDocument> {
 export async function readCustomProviderMetadata(path: string) {
   const document = await readDocument(path);
   const records = { ...document.octopusLocalProviders };
-  const configuredLimits: Record<string, Record<string, { contextWindow: boolean; maxTokens: boolean }>> = {};
-  for (const [providerId, provider] of Object.entries(document.providers)) {
-    const definitions: unknown[] = Array.isArray(provider.models) ? provider.models : [];
-    const overrides =
-      provider.modelOverrides &&
-      typeof provider.modelOverrides === 'object' &&
-      !Array.isArray(provider.modelOverrides)
-        ? (provider.modelOverrides as Record<string, unknown>)
-        : {};
-    configuredLimits[providerId] = {};
-    for (const definition of definitions) {
-      if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
-        continue;
-      }
-      const candidate = definition as Record<string, unknown>;
-      const modelId = candidate.id;
-      if (typeof modelId !== 'string') {
-        continue;
-      }
-      const rawOverride = overrides[modelId];
-      const override =
-        rawOverride && typeof rawOverride === 'object' && !Array.isArray(rawOverride)
-          ? (rawOverride as Record<string, unknown>)
-          : undefined;
-      configuredLimits[providerId][modelId] = {
-        contextWindow:
-          typeof candidate.contextWindow === 'number' || typeof override?.contextWindow === 'number',
-        maxTokens: typeof candidate.maxTokens === 'number' || typeof override?.maxTokens === 'number',
-      };
-    }
-    for (const [modelId, rawOverride] of Object.entries(overrides)) {
-      if (!configuredLimits[providerId][modelId]) {
-        const override =
-          rawOverride && typeof rawOverride === 'object' && !Array.isArray(rawOverride)
-            ? (rawOverride as Record<string, unknown>)
-            : undefined;
-        configuredLimits[providerId][modelId] = {
-          contextWindow: typeof override?.contextWindow === 'number',
-          maxTokens: typeof override?.maxTokens === 'number',
-        };
-      }
-    }
-  }
   for (const runtime of ['ollama', 'vllm', 'lmstudio'] as const) {
     const id = `octopus-${runtime}`;
     const provider = document.providers[id];
@@ -113,7 +73,10 @@ export async function readCustomProviderMetadata(path: string) {
       };
     }
   }
-  return { records, imageGeneration: document.octopusModelCapabilities ?? {}, configuredLimits };
+  return {
+    records,
+    relayModels: document.octopusRelayModels ?? {},
+  };
 }
 
 /**
@@ -124,7 +87,7 @@ export async function readCustomProviders(path: string): Promise<Record<string, 
 }
 
 /**
- * Persists every discovered model, preserving capability edits for matching IDs; legacy single-model records remain readable.
+ * Persists discovered models and retained source associations.
  * @returns Whether the persisted Pi Provider configuration changed; metadata-only drafts return false.
  */
 export async function saveCustomProvider(
@@ -134,45 +97,84 @@ export async function saveCustomProvider(
   discoveredModels?: ReadonlyArray<{ id: string; name?: string }>
 ): Promise<boolean> {
   return updateProviderDocument(path, id, (document) => {
-    document.octopusLocalProviders = { ...document.octopusLocalProviders, [id]: record };
-    const models = discoveredModels ?? (record.modelId ? [{ id: record.modelId }] : undefined);
-    if (models !== undefined) {
-      const root = record.baseUrl.replace(/\/+$/, '');
-      const local = ['ollama', 'vllm', 'lmstudio'].includes(record.runtime);
-      const existingModels = document.providers[id]?.models as Array<Record<string, unknown>> | undefined;
-      const previousById = new Map(existingModels?.map((model) => [model.id, model]) ?? []);
-      document.providers[id] = {
-        ...document.providers[id],
-        name: record.name,
-        baseUrl: local && !root.endsWith('/v1') ? `${root}/v1` : root,
-        api: record.api ?? 'openai-completions',
-        ...(local
-          ? { apiKey: id, compat: { supportsDeveloperRole: false, supportsReasoningEffort: false } }
-          : {}),
-        models: models.map((model) => ({
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-          ...(previousById.get(model.id) ?? {
-            reasoning: false,
-            input: ['text'],
-          }),
-          id: model.id,
-          name: model.name ?? (local ? `${model.id} (Local)` : model.id),
-        })),
-      };
-      const marked = document.octopusModelCapabilities?.[id];
-      if (discoveredModels && marked && document.octopusModelCapabilities) {
-        const discoveredIds = new Set(discoveredModels.map((model) => model.id));
-        const remaining = Object.fromEntries(
-          Object.entries(marked).filter(([modelId]) => discoveredIds.has(modelId))
-        );
-        if (Object.keys(remaining).length > 0) {
-          document.octopusModelCapabilities[id] = remaining;
-        } else {
-          delete document.octopusModelCapabilities[id];
-        }
-      }
-    }
+    applyCustomProvider(document, id, record, discoveredModels);
   });
+}
+
+/**
+ * Merges discovered models into the latest locked document, preserving source associations and local definitions.
+ */
+function applyCustomProvider(
+  document: ModelDocument,
+  id: string,
+  record: CustomProviderRecord,
+  discoveredModels?: ReadonlyArray<{ id: string; name?: string }>
+): void {
+  document.octopusLocalProviders = {
+    ...document.octopusLocalProviders,
+    [id]:
+      record.runtime === 'mr-token'
+        ? { name: record.name, runtime: record.runtime, baseUrl: record.baseUrl }
+        : record,
+  };
+  const models = discoveredModels;
+  if (models !== undefined) {
+    const root = record.baseUrl.replace(/\/+$/, '');
+    const local = ['ollama', 'vllm', 'lmstudio'].includes(record.runtime);
+    const existingModels = document.providers[id]?.models as Array<Record<string, unknown>> | undefined;
+    const previousById = new Map(existingModels?.map((model) => [model.id, model]) ?? []);
+    document.providers[id] = {
+      ...document.providers[id],
+      name: record.name,
+      baseUrl: local && !root.endsWith('/v1') ? `${root}/v1` : root,
+      api: record.api ?? 'openai-completions',
+      ...(record.runtime !== 'mr-token'
+        ? {
+            compat: {
+              supportsDeveloperRole: false,
+              supportsReasoningEffort: false,
+              ...(document.providers[id]?.compat as object),
+            },
+          }
+        : {}),
+      ...(local ? { apiKey: id } : {}),
+      models: models.map((model) => ({
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        ...(previousById.get(model.id) ?? {
+          reasoning: false,
+          input: ['text'],
+        }),
+        id: model.id,
+        name: model.name ?? (local ? `${model.id} (Local)` : model.id),
+      })),
+    };
+    if (record.runtime === 'mr-token') {
+      const catalog = readBuiltinModelCatalog();
+      const previous = new Map(document.octopusRelayModels?.[id]?.map((model) => [model.id, model]));
+      const definitions: Record<string, unknown>[] = [];
+      const relayModels = models.map((model): RelayModelRecord => {
+        const source = previous.get(model.id)?.source;
+        const adapted = adaptRelayModel(model.id, catalog, source);
+        const previousModel = previousById.get(model.id);
+        if (adapted.definition) {
+          definitions.push({
+            ...adapted.definition,
+            id: model.id,
+            name: model.name ?? model.id,
+            cost: previousModel?.cost ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          });
+        }
+        return { ...model, adaptation: adapted.adaptation, ...(source ? { source } : {}) };
+      });
+      document.octopusRelayModels ??= {};
+      document.octopusRelayModels[id] = relayModels;
+      document.providers[id].models = definitions;
+      // Relay request parameters belong to the associated Pi model, never to a provider overlay.
+      delete document.providers[id].api;
+      delete document.providers[id].compat;
+      delete document.providers[id].modelOverrides;
+    }
+  }
 }
 
 /**
@@ -183,52 +185,46 @@ export async function deleteCustomProvider(path: string, id: string): Promise<bo
     if (document.octopusLocalProviders) {
       delete document.octopusLocalProviders[id];
     }
-    if (document.octopusModelCapabilities) {
-      delete document.octopusModelCapabilities[id];
+    if (document.octopusRelayModels) {
+      delete document.octopusRelayModels[id];
     }
     delete document.providers[id];
   });
 }
 
 /**
- * Updates Pi capabilities and preserves Host interface declarations separately from inference settings.
+ * Corrects one relay association or restores automatic matching under the document write lock.
  */
-export async function saveModelConfiguration(
+export async function saveModelAssociation(
   path: string,
   id: string,
   modelId: string,
-  input: UpdateModelConfigurationBody
+  source: ModelAssociation | null
 ): Promise<boolean> {
   return updateProviderDocument(path, id, (document) => {
-    const { imageGeneration, interfaces, ...piConfiguration } = input;
-    const provider = document.providers[id];
-    if (!provider) {
-      throw new Error('Provider configuration no longer exists.');
+    const record = document.octopusLocalProviders?.[id];
+    const entries = document.octopusRelayModels?.[id];
+    const entry = entries?.find((model) => model.id === modelId);
+    if (record?.runtime !== 'mr-token' || !entry || !entries) {
+      throw new Error('Relay model no longer exists.');
     }
-    const models = provider.models as Array<Record<string, unknown>> | undefined;
-    const model = models?.find((candidate) => candidate.id === modelId);
-    if (model) {
-      Object.assign(model, piConfiguration);
-      if (document.octopusLocalProviders?.[id]) {
-        model.compat = { ...(model.compat as object), supportsReasoningEffort: input.reasoning };
-      }
+    if (
+      source &&
+      adaptRelayModel(modelId, readBuiltinModelCatalog(), source).adaptation.status !== 'adapted'
+    ) {
+      throw new Error('The selected Pi model is incompatible with this provider.');
     }
-    document.octopusModelCapabilities ??= {};
-    const marked = { ...document.octopusModelCapabilities[id] };
-    marked[modelId] = {
-      ...marked[modelId],
-      imageGeneration,
-      ...(interfaces === undefined ? {} : { interfaces }),
-    };
-    if (Object.keys(marked).length > 0) {
-      document.octopusModelCapabilities[id] = marked;
+    if (source) {
+      entry.source = source;
     } else {
-      delete document.octopusModelCapabilities[id];
+      delete entry.source;
     }
-    const overrides = (provider.modelOverrides ?? {}) as Record<string, object>;
-    if (!model || overrides[modelId]) {
-      provider.modelOverrides = { ...overrides, [modelId]: { ...overrides[modelId], ...piConfiguration } };
-    }
+    applyCustomProvider(
+      document,
+      id,
+      record,
+      entries.map(({ id, name }) => ({ id, name }))
+    );
   });
 }
 
@@ -243,7 +239,11 @@ async function updateProviderDocument(
   const operation = (queues.get(path) ?? Promise.resolve()).then(async () => {
     const document = await readDocument(path);
     const previous = JSON.stringify(document.providers[id]);
+    const previousDocument = JSON.stringify(document);
     update(document);
+    if (previousDocument === JSON.stringify(document)) {
+      return false;
+    }
     await mkdir(dirname(path), { recursive: true });
     const temporary = `${path}.${randomUUID()}.tmp`;
     try {
@@ -281,5 +281,33 @@ function localProviderName(provider: { name?: unknown }, runtime: string): strin
         return 'Ollama';
       }
     }
+  }
+}
+
+/**
+ * Reconciles persisted relay definitions during startup or explicit catalog refresh, without network calls.
+ * Unadapted discoveries remain in Host metadata but never enter Pi's executable model catalog.
+ */
+export async function reconcileRelayModels(path: string): Promise<void> {
+  const metadata = await readCustomProviderMetadata(path);
+  for (const id of Object.keys(metadata.records)) {
+    if (metadata.records[id]?.runtime !== 'mr-token') {
+      continue;
+    }
+    await updateProviderDocument(path, id, (document) => {
+      const record = document.octopusLocalProviders?.[id];
+      if (record?.runtime !== 'mr-token') {
+        return;
+      }
+      const models = document.octopusRelayModels?.[id];
+      if (models) {
+        applyCustomProvider(
+          document,
+          id,
+          record,
+          models.map(({ id, name }) => ({ id, ...(name ? { name } : {}) }))
+        );
+      }
+    });
   }
 }

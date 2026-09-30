@@ -17,7 +17,7 @@ function curationRequests(f) {
   );
 }
 
-test('real Pi injects the skill, commits the first user request and recalls it in another workspace', async (t) => {
+test('real Pi discovers the skill, commits the first user request and recalls it in another workspace', async (t) => {
   const f = await memorySdkFixture(t);
   const a = await f.open();
   await a.prompt('记住：QA_MEMORY 我偏好中文和简短回答。');
@@ -27,9 +27,10 @@ test('real Pi injects the skill, commits the first user request and recalls it i
     .filter((m) => m.role === 'system' || m.role === 'developer')
     .map((m) => m.content)
     .join('\n');
-  assert.match(policy, /at most twice/);
-  assert.match(policy, /host reports committed saves separately/);
-  assert.doesNotMatch(policy, /skills[\\/]memory[\\/]SKILL\.md/);
+  assert.match(policy, /<name>memory<\/name>/);
+  assert.doesNotMatch(policy, /at most twice/);
+  assert.doesNotMatch(policy, /host reports committed saves separately/);
+  assert.match(policy, /skills[\\/]memory[\\/]SKILL\.md/);
   assert.ok(
     a.messages.some((m) => m.customType === 'octopus-memory-operation' && m.content.includes('已保存 1 条'))
   );

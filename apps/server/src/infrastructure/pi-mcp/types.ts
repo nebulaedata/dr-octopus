@@ -39,6 +39,8 @@ export class PiMcpConfigError extends Error {
   public constructor(
     public readonly code:
       | 'MCP_CONFIG_INVALID'
+      | 'MCP_BINDING_VALUE_REQUIRED'
+      | 'MCP_AUTH_HEADER_CONFLICT'
       | 'MCP_CONFIG_REVISION_CONFLICT'
       | 'MCP_SERVER_NOT_FOUND'
       | 'MCP_SERVER_CONFLICT'

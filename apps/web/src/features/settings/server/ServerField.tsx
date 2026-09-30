@@ -2,6 +2,7 @@
  * @author Codex
  * @description Renders a typed Server setting with explicit inheritance and runtime source details.
  */
+import { ChevronRightIcon } from 'lucide-react';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@octopus/ui/components/field';
 import { Input } from '@octopus/ui/components/input';
 import { Button } from '@octopus/ui/components/button';
@@ -155,8 +156,9 @@ export function ServerField({
       </div>
       {renderFieldContent()}
       <FieldError errors={error ? [{ message: error }] : []} />
-      <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer">
+      <details className="group/source text-xs text-muted-foreground">
+        <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <ChevronRightIcon aria-hidden className="size-4 shrink-0 group-open/source:rotate-90" />
           {value === null
             ? t('settings.server.inheritedSourceSummary', 'Inherited · Source and runtime values')
             : t('settings.server.overrideSourceSummary', 'File override · Source and runtime values')}

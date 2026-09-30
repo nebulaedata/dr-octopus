@@ -40,6 +40,10 @@ export interface RuntimeGenerationTarget {
 
 export interface RuntimeCommandsOptions {
   /**
+   * Checks the current model under the same runtime lease before inference or model selection.
+   */
+  assertModelAllowed?: (sessionId: string, model: { provider: string; id: string }) => Promise<void>;
+  /**
    * Reads the session-owned detached task projection for stop confirmation.
    */
   readSubagentFleet?: (sessionId: string) => SubagentFleetSnapshotDto | undefined;
@@ -76,6 +80,7 @@ export interface RuntimeCommandsOptions {
  * Concentrates command ordering, exact runtime targeting, and successful-command notification.
  */
 export class RuntimeCommands {
+  readonly #assertModelAllowed: RuntimeCommandsOptions['assertModelAllowed'];
   readonly #stops = new Map<string, Promise<unknown>>();
   readonly #blocked = new Map<string, string>();
   readonly #readBackgroundTasks: RuntimeCommandsOptions['readBackgroundTasks'];
@@ -90,6 +95,7 @@ export class RuntimeCommands {
    * Creates Session command orchestration with optional application projection callbacks.
    */
   public constructor(options: RuntimeCommandsOptions) {
+    this.#assertModelAllowed = options.assertModelAllowed;
     this.#withRuntime = (sessionId, operation) => options.withRuntime(sessionId, operation);
     this.#onCommandSucceeded = options.onCommandSucceeded ?? (() => undefined);
     this.#onCommandCompleted = options.onCommandCompleted ?? (() => undefined);
@@ -358,6 +364,18 @@ export class RuntimeCommands {
     sessionId: string,
     command: ManagedSessionCommand
   ): Promise<unknown> {
+    if (this.#assertModelAllowed) {
+      if (command.type === 'set_model') {
+        await this.#assertModelAllowed(sessionId, { provider: command.provider, id: command.modelId });
+      } else if (['prompt', 'steer', 'follow_up', 'compact'].includes(command.type)) {
+        const state = responseData<{ model?: { provider: string; id: string } }>(
+          await target.execute({ type: 'get_state' })
+        );
+        if (state?.model) {
+          await this.#assertModelAllowed(sessionId, state.model);
+        }
+      }
+    }
     const response = await target.execute(command);
     if (responseSucceeded(response)) {
       this.#onCommandSucceeded(sessionId, command, this.#now().toISOString());

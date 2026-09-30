@@ -3,11 +3,18 @@
  * @description Defines the Server-owned port for reading and mutating Pi user-scope model settings.
  */
 
-import type { ThinkingLevel, CustomProviderConfigurationDto, ModelInterface } from '@octopus/shared/protocol';
+import type {
+  ModelAdaptation,
+  ThinkingLevel,
+  CustomProviderConfigurationDto,
+  ModelAssociation,
+} from '@octopus/shared/protocol';
 
 export type PiSettingsProviderProvenance = 'builtin' | 'models_json' | 'extension';
 
 export interface PiSettingsModel {
+  adaptation?: ModelAdaptation;
+  association?: ModelAssociation | null;
   thinkingLevels?: ThinkingLevel[];
   id: string;
   name: string;
@@ -15,12 +22,8 @@ export interface PiSettingsModel {
   baseUrl: string;
   reasoning: boolean;
   input: Array<'text' | 'image'>;
-  interfaces?: ModelInterface[];
-  imageGeneration?: boolean;
   contextWindow?: number;
   maxTokens?: number;
-  contextWindowConfigured?: boolean;
-  maxTokensConfigured?: boolean;
   available: boolean;
   configuration: 'inherited' | 'owned' | 'overridden';
 }

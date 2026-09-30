@@ -46,14 +46,12 @@ test('model repository distinguishes draft, unchanged configuration and a new en
     const path = join(root, 'models.json');
     const record = { name: 'Local', runtime: 'ollama', baseUrl: 'http://localhost:11434' };
     assert.equal(await saveCustomProvider(path, 'local', record), false);
-    assert.equal(await saveCustomProvider(path, 'local', { ...record, modelId: 'model' }), true);
-    assert.equal(await saveCustomProvider(path, 'local', { ...record, modelId: 'model' }), false);
+    assert.equal(await saveCustomProvider(path, 'local', record, [{ id: 'model' }]), true);
+    assert.equal(await saveCustomProvider(path, 'local', record, [{ id: 'model' }]), false);
     assert.equal(
-      await saveCustomProvider(path, 'local', {
-        ...record,
-        modelId: 'model',
-        baseUrl: 'http://localhost:11435',
-      }),
+      await saveCustomProvider(path, 'local', { ...record, baseUrl: 'http://localhost:11435' }, [
+        { id: 'model' },
+      ]),
       true
     );
   } finally {

@@ -26,18 +26,13 @@ export function normalizeTokenUsage(value: unknown): TokenUsage | undefined {
 }
 
 /**
- * Counts each assistant message once, including intermediate tool-call responses and billed retries.
+ * Counts each assistant message once, including its latest streaming usage, tool-call responses and billed retries.
  */
 export function selectTurnTokenUsage(state: SessionProjectionState, turnId: string): TokenUsage | undefined {
   let total: TokenUsage | undefined;
   const seen = new Set<string>();
   for (const item of state.transcriptItems) {
-    if (
-      item.type !== 'message' ||
-      item.turnId !== turnId ||
-      item.id === state.currentAssistantId ||
-      seen.has(item.id)
-    ) {
+    if (item.type !== 'message' || item.turnId !== turnId || seen.has(item.id)) {
       continue;
     }
     seen.add(item.id);

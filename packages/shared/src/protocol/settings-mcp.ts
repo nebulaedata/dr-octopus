@@ -36,7 +36,7 @@ export interface McpServerCatalogDto {
   revision: string;
 }
 
-export type McpServerConnectivityStatus = 'connected' | 'failed' | 'needs_auth' | 'disabled';
+export type McpServerConnectivityStatus = 'connected' | 'failed' | 'needs_auth' | 'disabled' | 'unsupported';
 
 export interface McpServerConnectivityDto {
   revision: string;
@@ -66,6 +66,11 @@ export interface McpServerDetailDto extends McpServerSummaryDto {
   toolPrefix: 'server' | 'short' | 'none' | 'mcp';
   includeTools: string[];
   excludeTools: string[];
+  inheritEnv?: boolean;
+  debug?: boolean;
+  trace?: boolean;
+  searchKeywords?: Record<string, string[]>;
+  externalFields?: string[];
   auth: {
     type: 'none' | 'oauth' | 'bearer' | 'auto';
     bearerTokenEnv?: string;
@@ -73,6 +78,8 @@ export interface McpServerDetailDto extends McpServerSummaryDto {
     oauthClientId?: string;
     oauthScope?: string;
     secretConfigured: boolean;
+    bearerTokenConfigured?: boolean;
+    oauthClientSecretConfigured?: boolean;
   };
   secretBindings: Array<{ kind: 'environment' | 'header' | 'oauth_client_secret'; name: string }>;
   capabilities: { edit: boolean; remove: boolean; toggle: boolean };
@@ -98,6 +105,31 @@ export interface McpServerMutationDto {
 
 const BoundedStringSchema = z.string().trim().min(1).max(2_048);
 const ToolPatternSchema = z.string().trim().min(1).max(256);
+const SecretValueSchema = z
+  .string()
+  .max(16_384)
+  .refine((value) => !value.startsWith('!'), {
+    message: 'Executable secret expressions must be managed outside this form.',
+  });
+const SecretUpdateSchema = SecretValueSchema.pipe(z.string().min(1)).nullable().optional();
+const EnvironmentBindingSchema = z
+  .object({
+    name: z
+      .string()
+      .max(128)
+      .regex(/^[A-Za-z_][A-Za-z0-9_]*$/u),
+    value: SecretValueSchema.optional(),
+  })
+  .strict();
+const HeaderBindingSchema = z
+  .object({
+    name: z
+      .string()
+      .regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u)
+      .max(256),
+    value: SecretValueSchema.refine((value) => !/[\r\n]/u.test(value)).optional(),
+  })
+  .strict();
 
 export const McpServerKeySchema = z.string().regex(/^mcp1_[A-Za-z0-9_-]{43}$/u);
 
@@ -138,6 +170,15 @@ export const McpServerConfigurationInputSchema = z
     toolPrefix: z.enum(['server', 'short', 'none', 'mcp']).default('server'),
     includeTools: z.array(ToolPatternSchema).max(256).default([]),
     excludeTools: z.array(ToolPatternSchema).max(256).default([]),
+    inheritEnv: z.boolean().optional(),
+    environment: z.array(EnvironmentBindingSchema).max(128).optional(),
+    headers: z.array(HeaderBindingSchema).max(128).optional(),
+    debug: z.boolean().optional(),
+    trace: z.boolean().optional(),
+    searchKeywords: z
+      .record(ToolPatternSchema, z.array(ToolPatternSchema).max(64))
+      .refine((value) => Object.keys(value).length <= 256)
+      .optional(),
     auth: z
       .object({
         type: z.enum(['none', 'oauth', 'bearer', 'auto']).default('auto'),
@@ -147,15 +188,76 @@ export const McpServerConfigurationInputSchema = z
           .regex(/^[A-Za-z_][A-Za-z0-9_]*$/u)
           .optional(),
         bearerTokenStored: z.boolean().default(false),
+        bearerToken: SecretUpdateSchema.refine(
+          (value) => value === null || value === undefined || !/[\r\n]/u.test(value)
+        ),
+        oauthClientSecret: SecretUpdateSchema,
         oauthClientId: z.string().trim().max(512).optional(),
         oauthScope: z.string().trim().max(2_048).optional(),
       })
       .strict()
       .default({ type: 'auto', bearerTokenStored: false }),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    const invalid = (path: string, message: string) =>
+      ctx.addIssue({ code: 'custom', path: [path], message });
+    if (
+      value.connection.type !== 'stdio' &&
+      (value.environment !== undefined || value.inheritEnv !== undefined)
+    ) {
+      invalid('connection', 'Process environment requires stdio.');
+    }
+    if (
+      value.connection.type !== 'http' &&
+      (value.headers !== undefined ||
+        !['none', 'auto'].includes(value.auth.type) ||
+        value.auth.bearerToken !== undefined ||
+        value.auth.oauthClientSecret !== undefined ||
+        value.auth.bearerTokenEnv !== undefined ||
+        value.auth.bearerTokenStored ||
+        value.auth.oauthClientId !== undefined ||
+        value.auth.oauthScope !== undefined)
+    ) {
+      invalid('auth', 'HTTP credentials require HTTP transport.');
+    }
+    if (
+      (value.auth.bearerToken && (value.auth.bearerTokenEnv || value.auth.bearerTokenStored)) ||
+      (value.auth.bearerTokenEnv && value.auth.bearerTokenStored)
+    ) {
+      invalid('auth', 'Choose one Bearer credential source.');
+    }
+    if (
+      value.auth.type !== 'bearer' &&
+      (value.auth.bearerToken !== undefined || value.auth.bearerTokenEnv || value.auth.bearerTokenStored)
+    ) {
+      invalid('auth', 'Bearer credentials require Bearer authentication.');
+    }
+    if (
+      value.auth.type !== 'oauth' &&
+      (value.auth.oauthClientSecret !== undefined || value.auth.oauthClientId || value.auth.oauthScope)
+    ) {
+      invalid('auth', 'OAuth credentials require OAuth authentication.');
+    }
+    for (const [field, entries] of [
+      ['environment', value.environment],
+      ['headers', value.headers],
+    ] as const) {
+      const names =
+        entries?.map((entry) => (field === 'headers' ? entry.name.toLowerCase() : entry.name)) ?? [];
+      if (new Set(names).size !== names.length) {
+        invalid(field, 'Duplicate binding names.');
+      }
+    }
+    if (
+      value.auth.type === 'bearer' &&
+      value.headers?.some((entry) => entry.name.toLowerCase() === 'authorization')
+    ) {
+      invalid('headers', 'Bearer authentication cannot also supply an Authorization header.');
+    }
+  });
 
-export const CreateMcpServerBodySchema = McpServerConfigurationInputSchema.extend({
+export const CreateMcpServerBodySchema = McpServerConfigurationInputSchema.safeExtend({
   name: z
     .string()
     .trim()
@@ -165,7 +267,7 @@ export const CreateMcpServerBodySchema = McpServerConfigurationInputSchema.exten
   revision: z.string().min(1).max(128),
 });
 
-export const UpdateMcpServerBodySchema = McpServerConfigurationInputSchema.extend({
+export const UpdateMcpServerBodySchema = McpServerConfigurationInputSchema.safeExtend({
   revision: z.string().min(1).max(128),
 });
 

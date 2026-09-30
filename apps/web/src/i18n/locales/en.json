@@ -19,6 +19,7 @@
     "confirm": "Confirm",
     "copyFailedDescription": "Select the text and copy it manually",
     "copyFailedTitle": "Copy failed",
+    "dismiss": "Dismiss",
     "edit": "Edit",
     "export": "Export",
     "loading": "Loading…",
@@ -79,7 +80,46 @@
     },
     "readyTitle": "I'm Dr.Octopus — what would you like to do today?",
     "separateDraft": "Keep input in a separate conversation",
+    "snippets": {
+      "fill": "Click to fill",
+      "send": "Run now",
+      "title": "Quick start"
+    },
     "statusUnavailable": "Submission status is unavailable. Retry to check the same request."
+  },
+  "imagegen": {
+    "apiKey": "API Key",
+    "baseUrl": "API base URL",
+    "clearKey": "Clear this service’s API key (takes effect after saving)",
+    "description": "Configure image generation independently from chat models. Changes apply to the next image request.",
+    "enabled": "Enable image generation",
+    "invalidUrl": "Enter an HTTP(S) API base URL without credentials, query or fragment.",
+    "keyConfigured": "******** (configured)",
+    "keyHelp": "Leave blank to keep this service’s saved API key.",
+    "keyPlaceholder": "Enter an API key",
+    "keyRequired": "Add an API key before enabling this service.",
+    "loadFailed": "Could not load image settings.",
+    "loading": "Loading imagegen settings…",
+    "model": "Image model",
+    "modelRequired": "Enter an image generation model name (up to 200 characters).",
+    "navDescription": "Configure OpenAI and Qwen image generation.",
+    "off": "Off",
+    "offHelp": "Image generation is off. Configure a service, then turn it on above.",
+    "on": "On",
+    "openai": "OpenAI",
+    "protocol": "OpenAI Images API base URL, including /v1.",
+    "qwen": "Qwen Bailian",
+    "qwenKeyHelp": "A Bailian API key is required. Leave blank to keep this service’s saved key.",
+    "qwenModelHelp": "Supports Qwen Image models using the Bailian image generation API.",
+    "qwenUrlHelp": "Use the Bailian API base URL for your API key’s region. Beijing is prefilled; workspace URLs ending in /api/v1 are also supported.",
+    "reload": "Reload settings",
+    "save": "Save settings",
+    "saveAndUse": "Save and use",
+    "saved": "Image settings saved.",
+    "saving": "Saving…",
+    "selected": "Selected service:",
+    "tabsHelp": "Each service keeps its own configuration. Viewing a tab does not switch the selected service.",
+    "title": "Image service"
   },
   "knowledge": {
     "batchActions": {
@@ -764,6 +804,8 @@
     },
     "builtinTool": {
       "changes": "Changes",
+      "characterCount_one": "{{count}} character",
+      "characterCount_other": "{{count}} characters",
       "command": "Command",
       "content": "Content",
       "results": "Results",
@@ -771,8 +813,7 @@
       "truncationLimited_one": "Limited to {{count}} results.",
       "truncationLimited_other": "Limited to {{count}} results.",
       "truncationLines": "Showing {{outputLines}} of {{totalLines}} lines.",
-      "wroteCharacters_one": "Wrote {{count}} characters.",
-      "wroteCharacters_other": "Wrote {{count}} characters."
+      "writeContent": "Write content"
     },
     "composer": {
       "attachFiles": "Attach files",
@@ -908,6 +949,10 @@
       "slideLabel": "Slide {{slide}}",
       "slidesOnly": "Slides {{ranges}}"
     },
+    "error": {
+      "operationFailed": "Operation failed",
+      "unavailable": "Session unavailable"
+    },
     "execution": {
       "attentionTitle": "This run needs attention",
       "history": "Run history",
@@ -1038,14 +1083,14 @@
     },
     "imageAttachment": {
       "alt": "Image attachment",
+      "preview": "Preview image",
       "unsupported": "Unsupported attachment"
     },
     "imagegen": {
       "alt": "Generated image",
       "download": "Download",
       "filePath": "File path",
-      "missing": "This image is missing or cannot be previewed.",
-      "viewOriginal": "View original"
+      "missing": "This image is missing or cannot be previewed."
     },
     "knowledgeEvidence": {
       "citationLabel": "Citation ID",
@@ -1064,7 +1109,7 @@
     "knowledgeMode": {
       "apply": "Apply source settings",
       "auto": "Auto-match",
-      "autoBadge": "Auto-match",
+      "autoBadge": "Auto-match sources",
       "autoDescription": "The Agent picks relevant materials from the current workspace and global knowledge bases, and confirms with you first when the topic is unclear.",
       "clearSelection": "Clear selection",
       "dialogDescription": "By default the Agent matches collections; once sources are specified, retrieval stays within the selected scope.",
@@ -1124,6 +1169,9 @@
       "searchEmptyTitle": "No related materials found yet",
       "searchTitle": "Knowledge search",
       "unavailableBadge": "Temporarily unavailable"
+    },
+    "mcpTool": {
+      "imageTitle": "MCP image {{number}}"
     },
     "memoryProjection": {
       "errorSummary": "Request incomplete · expand for details",
@@ -1191,8 +1239,7 @@
       "previewFailed": "Unable to open preview"
     },
     "messageRow": {
-      "interrupted": "Interrupted",
-      "you": "You"
+      "interrupted": "Interrupted"
     },
     "messageToolbar": {
       "badResponse": "Bad response",
@@ -1273,6 +1320,19 @@
       "description": "The current task will be interrupted; saved chat history and file changes are kept. Restart this session?",
       "errorTitle": "Restart failed",
       "pending": "Restarting…"
+    },
+    "retry": {
+      "attempt": "Retry {{attempt}}",
+      "attemptOf": "Retry {{attempt}} of {{max}}",
+      "failed_one": "Failed after {{count}} retry",
+      "failed_other": "Failed after {{count}} retries",
+      "inProgress": "{{progress}} in progress…",
+      "recovered_one": "Recovered after {{count}} retry",
+      "recovered_other": "Recovered after {{count}} retries",
+      "stop": "Stop retry",
+      "stopFailed": "Could not stop retry.",
+      "stopping": "Stopping…",
+      "waiting": "{{progress}} in {{seconds}}s…"
     },
     "runningControls": {
       "guideDescription": "Influence the next Agent turn. Press Enter.",
@@ -1374,7 +1434,12 @@
       "unnamedTask": "Unnamed task",
       "warnings": "Reminders"
     },
-    "startAccepted": "Your first message is saved and is being delivered.",
+    "skill": {
+      "command": "Use skill",
+      "instructions": "Skill instructions",
+      "load": "Load skill"
+    },
+    "startAccepted": "Your message is saved. Preparing delivery…",
     "startAttachmentsUnavailable": "Some saved attachments are unavailable. Your original submission is still saved.",
     "startCancelled": "Preparation cancelled. Your message is saved.",
     "startDispatching": "Sending your first message…",
@@ -1439,6 +1504,15 @@
       "noOutput": "No output returned.",
       "toolOutputAlt": "Tool output"
     },
+    "toolTimeline": {
+      "completed": "Completed",
+      "durationHint": "Elapsed time from recorded timestamps",
+      "error": "Contains errors",
+      "multipleCalls": "{{total}} calls",
+      "running": "Running",
+      "singleCall": "1 call",
+      "title": "Tool calls"
+    },
     "turnDuration": {
       "processed": "Processed",
       "processing": "Processing",
@@ -1472,12 +1546,15 @@
     },
     "defaultModel": {
       "currentTitle": "Current default model",
+      "description": "Choose the model used by new sessions. Existing sessions keep their current model.",
       "fieldLabel": "Provider / Model",
       "loadFailed": "Failed to load the default model",
+      "noCandidates": "Configure an available model in Model services first.",
+      "noMatches": "No matching models",
       "notConfigured": "Not configured",
       "save": "Save default model",
       "saveFailed": "Save failed",
-      "selectPlaceholder": "Select a default model",
+      "searchPlaceholder": "Search provider, model name or ID",
       "selectRequired": "Select an available model.",
       "selectTitle": "Choose a default model",
       "unavailable": "Unavailable",
@@ -1547,22 +1624,6 @@
       "navigationTitle": "Settings navigation",
       "titleFallback": "Settings"
     },
-    "imagegen": {
-      "choose": "Choose an image model",
-      "clear": "Clear image model",
-      "description": "Used for image generation and reference image editing. Changes apply to the next image request.",
-      "editing": "Reference images supported",
-      "loadFailed": "Could not load image model settings.",
-      "model": "Provider / image model",
-      "noCandidates": "Configure a supported provider and mark its model as image generation in Model providers.",
-      "protocol": "Use the OpenAI Images protocol for this service (generation and edits).",
-      "required": "Choose an available image model.",
-      "save": "Save image model",
-      "saved": "Image model updated",
-      "textOnly": "Text to image only",
-      "title": "Image model",
-      "unavailable": "Unavailable"
-    },
     "jev": {
       "apiKey": "API Key",
       "description": "TypeSafe model configuration.",
@@ -1580,7 +1641,7 @@
       "modelsLoading": "Loading models…",
       "modelsRetry": "Retry loading models",
       "probeSuccess": "Connected to {{model}} ({{ms}} ms).",
-      "removeKey": "Remove key",
+      "removeKey": "Clear API Key",
       "save": "Save settings",
       "saved": "Jev settings saved",
       "saveKey": "Save API key",
@@ -1679,60 +1740,98 @@
       "title": "Language"
     },
     "mcp": {
+      "addBinding": "Add binding",
       "addServer": "MCP Server",
       "addTitle": "Add MCP server",
-      "argsLabel": "Arguments",
-      "argsPlaceholder": "One argument per line",
+      "advanced": "Advanced configuration",
+      "argsLabel": "Arguments (one per line)",
+      "authLabel": "Authentication",
+      "auto": "Automatic",
       "backToList": "Back to list",
       "badgeDisabled": "Disabled",
+      "basicTitle": "Basic information",
+      "bearerEnv": "Environment variable name",
+      "bearerSource": "Token source",
+      "bearerToken": "Access token",
+      "bindingHint": "Existing values are hidden. Leave them untouched to keep them; remove a row to delete the binding.",
+      "bindingName": "Name",
+      "bindingValue": "Value",
+      "clearSecret": "Clear this saved secret (takes effect after saving)",
       "confirmRemove": "Confirm removal",
-      "connectionCreateDescription": "Add a local process, HTTP, or Socket MCP server.",
       "connectionEditDescription": "Local process, HTTP, or Socket MCP server configuration.",
+      "connectionSaveHint": "Connection tested after saving. Restart the Agent if changes do not apply.",
       "connectionTitle": "Connection",
       "connectivity": {
         "checking": "Checking connectivity",
         "connected": "Connected",
         "disabled": "Disabled; connectivity not checked",
         "failed": "Connectivity check failed",
-        "needsAuth": "Connection failed: authentication required"
+        "needsAuth": "Connection failed: authentication required",
+        "unsupported": "Verify this authentication or transport configuration in the Agent"
       },
       "created": "MCP server created",
       "createServer": "Create server",
+      "customHeaders": "Custom request headers",
+      "cwdLabel": "Working directory",
+      "debugLabel": "Show server stderr in Agent logs",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Briefly describe what this MCP server does",
-      "directToolsDescription": "Registers each of this server's MCP tools directly into the Agent tool list without retrieval through the mcp proxy first. More tools consume more context.",
+      "diagnosticsTitle": "Advanced and diagnostics",
+      "directAll": "Register all tools",
+      "directOff": "Use MCP proxy",
+      "directPatternLabel": "Direct tool patterns (one per line)",
+      "directPatterns": "Register matching tools",
+      "directSearch": "Register after search",
       "directToolsLabel": "Register tools",
-      "directToolsSearchHint": "Currently registers tools on demand after search. Saving other settings keeps this mode; turning off the switch disables direct registration.",
       "empty": "No MCP servers",
       "emptyDescription": "Use the button below to add the first configuration.",
       "enableDescription": "Does not start or stop the current Agent Runtime; restart the Agent after saving.",
       "enableTitle": "Enable server",
+      "enterSecret": "Enter a secret",
+      "environmentLabel": "Process environment variables",
+      "environmentSecret": "Server environment variable",
       "excludeToolsLabel": "Exclude tools",
-      "exposeResourcesDescription": "Maps MCP Resources provided by the server to callable read_<resource> tools. When off, these resource tools are no longer exposed.",
       "exposeResourcesLabel": "Expose MCP resources as tools",
+      "externalFields": "Additional settings are managed outside this page: {{fields}}",
+      "headersLabel": "HTTP headers",
+      "httpTransportLabel": "HTTP transport",
+      "idleTimeoutLabel": "Idle timeout (minutes)",
       "includeToolsLabel": "Include tools",
+      "inheritEnvLabel": "Inherit Server environment",
+      "invalidForm": "Check the name, connection, authentication, numbers and JSON. Binding names must be unique; header values cannot contain line breaks.",
+      "lifecycleLabel": "Connection lifecycle",
       "loadFailed": "Failed to load MCP configuration",
       "managementTitle": "Management permission",
+      "manualSecret": "Enter token",
       "nameLabel": "Name",
-      "nameRequired": "Enter a name.",
+      "noAuth": "No authentication",
       "noMatch": "No matching results",
       "noMatchDescription": "Try searching by name, transport, or source.",
+      "oauthClientId": "OAuth client ID",
+      "oauthClientSecret": "OAuth client secret",
+      "oauthFlowHint": "Authorization is completed by the Agent when connecting. This page saves the client configuration only.",
+      "oauthScope": "OAuth scope",
       "operationFailed": "MCP operation failed",
+      "protocolLabel": "Protocol negotiation",
       "readOnlyDescription": "This definition comes from {{source}}; only the allowed global enable/disable override can be created.",
       "readOnlyTitle": "Source is read-only",
+      "removeBinding": "Remove binding",
       "removed": "MCP configuration removed",
       "removeDescription": "After removing the global definition or override, a lower-level configuration with the same name may reappear.",
       "removeDialogDescription": "This only removes the Host-level global definition or override.",
       "removeDialogTitle": "Remove {{name}}?",
       "removeHostButton": "Remove Host configuration",
       "removeTitle": "Remove configuration",
-      "restartDescription": "Takes effect after restarting the Agent.",
+      "requestTimeoutLabel": "Request timeout (milliseconds)",
+      "runtimeTitle": "Connection behavior",
       "saveChanges": "Save changes",
       "saved": "MCP configuration saved",
       "saveFailed": "Failed to save MCP configuration",
+      "searchKeywordsLabel": "Tool search keywords (JSON: pattern to keyword array)",
       "searchPlaceholder": "Search MCP servers…",
+      "secretConfigured": "******** (configured)",
       "secretsDescription": "Bound environment variables, HTTP headers, or OAuth client secrets.",
       "secretsTitle": "Secret bindings",
+      "secretStorage": "Leave blank to keep the current value. Saved in the Server configuration file; existing values are never displayed.",
       "selectDescription": "Pick one from the catalog to view its source, connection, and tool exposure.",
       "selectTitle": "Select an MCP server",
       "source": {
@@ -1746,12 +1845,16 @@
       "sourceTitle": "Configuration source",
       "stateDisabled": "Disabled",
       "stateEnabled": "Enabled",
-      "targetDescription": "stdio takes a command, HTTP a URL, and Socket a socket address.",
+      "storedSecret": "Existing credential store",
       "targetLabel": "Command or address",
-      "targetRequired": "Enter a connection target.",
-      "toolsPlaceholder": "One tool pattern per line",
+      "targetSecretWarning": "Changing the target clears existing credentials and bindings. Enter new values to use them at the new target.",
+      "timeoutHint": "Blank inherits the default. Idle timeout 0 disables idle cleanup; request timeout 0 uses the SDK default.",
+      "toolPrefixLabel": "Tool name prefix",
+      "toolsTitle": "Tools and resources",
+      "traceLabel": "Trace protocol metadata",
       "transportLabel": "Transport",
-      "transportStdio": "stdio (local process)"
+      "transportStdio": "stdio (local process)",
+      "undoClear": "Cancel clearing"
     },
     "nav": {
       "about": {
@@ -1818,7 +1921,7 @@
         "label": "Keyboard shortcuts"
       },
       "snippets": {
-        "description": "Snippet configuration is not available yet.",
+        "description": "Configure up to 4 quick phrases and their Agent modes.",
         "label": "Snippets"
       },
       "theme": {
@@ -2010,8 +2113,28 @@
       "title": "{{module}} is not available yet"
     },
     "providers": {
+      "adaptation": {
+        "ambiguous": "Model unavailable: ambiguous original provider",
+        "incomplete": "Model unavailable: incomplete compatibility configuration",
+        "not_found": "Model unavailable: no built-in model match"
+      },
       "addProvider": "Model provider",
       "apiAddress": "API address",
+      "association": {
+        "ambiguous": "Not associated: more than one original model matches. Select the correct one.",
+        "auto": "Automatic matching",
+        "empty": "No matching models",
+        "hint": "Automatic matching finds the same model ID. If no match is found, the model stays unavailable. You can select the corresponding original model manually.",
+        "incomplete": "Not associated: the original model lacks the required compatibility settings.",
+        "notAssociated": "Not associated",
+        "notFound": "Not associated: no original model with the same ID was found.",
+        "retry": "Retry",
+        "save": "Save association",
+        "savedSource": "Saved association: {{model}}",
+        "search": "Search provider or model",
+        "source": "Original model",
+        "title": "Model association"
+      },
       "auth": {
         "answerDescription": "Wait for the provider to return the next step after submitting.",
         "answerRequired": "Fill in the authentication information.",
@@ -2082,12 +2205,8 @@
       "authTitle": "Authentication",
       "avatarAlt": "{{name}} avatar",
       "backToList": "Back to list",
-      "bothInterfaces": "Chat and image generation",
-      "chatInterface": "Chat",
       "configured": "Configured",
       "confirmDelete": "Delete provider",
-      "contextWindow": "Context window (tokens)",
-      "contextWindowHint": "1M context = 1000000 tokens.",
       "contextWindowShort": "{{size}} context",
       "defaultBadge": "Default",
       "delete": "Delete provider",
@@ -2095,18 +2214,11 @@
       "deleteDescription": "This removes the provider and its model configuration. Select another default model first if this provider is currently the default.",
       "deleteTitle": "Delete {{name}}?",
       "detailsLoadFailed": "Failed to load provider details",
-      "editModelConfiguration": "Edit model configuration",
       "empty": "No model providers",
       "emptyDescription": "Use the button below to add a local model provider.",
       "endpointDescription": "API access address of the model provider",
       "endpointTitle": "Endpoint",
-      "imageGeneration": "Image generation",
       "imageInput": "Image input",
-      "imageInterface": "Image generation",
-      "imageOnly": "Image only",
-      "invalidTokenLimits": "Enter positive whole numbers; output must be below context.",
-      "limitNotConfigured": "Not set manually; verify this value.",
-      "limitNotConfiguredShort": "(not set manually)",
       "loadFailed": "Failed to load model providers",
       "local": {
         "addDescription": "Add a model service, then configure its endpoint, model, and API Key.",
@@ -2119,13 +2231,13 @@
         "detecting": "Getting models…",
         "endpointHelpOllama": "Models are discovered via /api/tags; inference uses /v1.",
         "endpointHelpOpenAI": "Loaded models are discovered via the OpenAI-compatible /v1/models.",
+        "endpointHelpRelay": "Enter the relay API base URL. Each model uses its original model’s protocol.",
         "endpointHelpRemote": "Enter the provider’s OpenAI-compatible base URL and any required path prefix.",
         "endpointLabel": "Endpoint",
         "helpSuffix": "The local address refers to the machine running Dr.Octopus Server.",
         "keyConfigured": "******** (configured)",
         "keyOptional": "Optional for local services.",
         "keyRequired": "Required when first configuring a remote service. Leave blank later to keep the saved key.",
-        "modelsHint": "All models returned by this service appear in the list below and can be used as the default model.",
         "modelsSynced": "Model list updated.",
         "nameLabel": "Provider name",
         "namePlaceholder": "e.g. My Ollama",
@@ -2139,21 +2251,14 @@
         },
         "runtimeLabel": "Provider type",
         "runtimesFailed": "Failed to load provider types.",
-        "save": "Save configuration",
         "saving": "Saving…",
         "title": "Model service configuration"
       },
-      "maxOutputTokens": "Maximum output (tokens)",
-      "modelConfiguration": "Model configuration",
-      "modelInterfaces": "Model interfaces",
-      "modelInterfacesHint": "Only models supporting chat can be selected for agents.",
-      "modelLimitRestartHint": "Active sessions may need to restart to use new limits.",
       "modelsAvailable": "{{available}} of {{total}} models currently available",
       "modelsAvailableShort": "{{available}}/{{total}} models available",
       "modelsTitle": "Models",
       "noMatch": "No matching results",
       "noMatchDescription": "Try another name or Provider ID.",
-      "otherInterface": "Other",
       "pendingConfiguration": "Pending configuration",
       "readonlySuffix": " (readonly)",
       "reasoning": "Reasoning",
@@ -2321,7 +2426,7 @@
         "toggleLeftSidebar": "Toggle left sidebar",
         "toggleRightPanel": "Toggle right file panel",
         "voiceCancel": "Cancel voice input",
-        "voiceToggle": "Voice input toggle"
+        "voiceToggle": "Start / stop voice input"
       },
       "conflict": "Conflicts with “{{command}}”",
       "description": "View and customize keyboard shortcuts. Changes apply immediately and are stored on this device.",
@@ -2345,7 +2450,7 @@
       "cardTitle": "Card title",
       "count_one": "{{count}} / 4 phrases",
       "count_other": "{{count}} / 4 phrases",
-      "description": "Save up to 4 phrases on this device. Click a home card to send its message in the selected Agent mode.",
+      "description": "Save up to 4 phrases on this device. Choose an Agent mode and whether clicking sends the message or fills the composer.",
       "empty": "Your next conversation, one click away",
       "emptyDescription": "Add a frequently used request and choose how your Agent should handle it.",
       "fill": "Fill",
@@ -2498,7 +2603,7 @@
     "apiKey": "API Key",
     "baseUrl": "API base URL",
     "cancel": "Cancel voice input",
-    "clearKey": "Remove saved API key on save",
+    "clearKey": "Clear this service’s API key (takes effect after saving)",
     "description": "Record in the Composer and turn speech into an editable draft. Audio is sent to your configured service only when you finish recording.",
     "dialogHelp": "Speak naturally. Your words will become an editable draft.",
     "enabled": "Enable voice input",

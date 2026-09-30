@@ -8,7 +8,9 @@ import { CircleCheckIcon, CircleXIcon, RefreshCwIcon, SquareIcon } from 'lucide-
 import { useInterval } from 'ahooks';
 import { v4 as uuidv4 } from 'uuid';
 import { useStore } from 'zustand';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { useI18n } from '@/i18n/use-i18n';
+import { cn } from '@octopus/ui/lib/utils';
+import { formatRetryTitle } from './utils/retry-presentation';
 import { Button } from '@octopus/ui/components/button';
 import { Spinner } from '@octopus/ui/components/spinner';
 import { useRealtimeCommand } from '@/hooks/use-realtime';
@@ -67,11 +69,12 @@ function RetryNotice({
 }) {
   const store = sessionStores.ensure(sessionId);
   const send = useRealtimeCommand();
+  const { t } = useI18n();
   const [now, setNow] = useState(Date.now);
   const [stopping, setStopping] = useState(false);
   const waiting = retry.status === 'waiting';
   useInterval(() => setNow(Date.now()), waiting ? 1_000 : undefined, { immediate: true });
-  const title = formatRetryTitle(retry, now);
+  const title = formatRetryTitle(retry, now, t);
   const failed = retry.status === 'failed';
   let detail: string | undefined;
   if (failed) {
@@ -80,6 +83,15 @@ function RetryNotice({
     detail = undefined;
   } else {
     detail = retry.errorMessage;
+  }
+  let tone = 'bg-muted/30';
+  let iconTone = 'bg-muted text-muted-foreground';
+  if (failed) {
+    tone = 'border-destructive/20 bg-destructive/5';
+    iconTone = 'bg-destructive/10 text-destructive';
+  } else if (retry.status === 'succeeded') {
+    tone = 'border-success/20 bg-success/5';
+    iconTone = 'bg-success/10 text-success';
   }
   let Icon;
   if (failed) {
@@ -108,50 +120,48 @@ function RetryNotice({
       });
     } catch (error) {
       setStopping(false);
-      store.getState().setError(error instanceof Error ? error.message : 'Could not stop retry.');
+      store
+        .getState()
+        .setError(
+          error instanceof Error ? error.message : t('session.retry.stopFailed', 'Could not stop retry.')
+        );
     }
   }
 
   return (
-    <Alert variant={failed ? 'destructive' : 'default'}>
-      <Icon className={active ? 'animate-spin' : undefined} />
-      <AlertTitle>{title}</AlertTitle>
-      {detail !== undefined || (active && waiting) ? (
-        <AlertDescription className="flex items-start justify-between gap-3">
-          {detail === undefined ? null : <span className="min-w-0 wrap-break-word">{detail}</span>}
-          {active && waiting ? (
-            <Button variant="destructive" size="sm" disabled={stopping} onClick={stopRetry}>
-              {stopping ? <Spinner /> : <SquareIcon fill="currentColor" />}
-              {stopping ? 'Stopping…' : 'Stop retry'}
+    <div
+      role={failed ? 'alert' : 'status'}
+      className={cn('flex min-w-0 items-start gap-2 rounded-lg border px-3 py-2 text-xs', tone)}
+    >
+      <span className={cn('flex size-5 shrink-0 items-center justify-center rounded-full', iconTone)}>
+        <Icon
+          aria-hidden
+          className={cn(
+            'size-3.5',
+            active && (waiting || retry.status === 'retrying') && 'motion-safe:animate-spin'
+          )}
+        />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 py-0.5">
+        <p className="wrap-anywhere">{title}</p>
+        {detail !== undefined && (
+          <p className="max-h-32 overflow-auto text-xs whitespace-pre-wrap text-muted-foreground wrap-anywhere">
+            {detail}
+          </p>
+        )}
+        {active && waiting && (
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" disabled={stopping} onClick={stopRetry}>
+              {stopping ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <SquareIcon data-icon="inline-start" fill="currentColor" />
+              )}
+              {stopping ? t('session.retry.stopping', 'Stopping…') : t('session.retry.stop', 'Stop retry')}
             </Button>
-          ) : null}
-        </AlertDescription>
-      ) : null}
-    </Alert>
+          </div>
+        )}
+      </div>
+    </div>
   );
-}
-
-/**
- * Formats retry counts according to Pi semantics, where attempt counts retries after the initial request.
- *
- * @param retry Retry episode to describe.
- * @param now Current browser time used for the backoff countdown.
- * @returns Concise user-facing retry status.
- */
-function formatRetryTitle(retry: AutoRetryProjection, now: number): string {
-  if (retry.status === 'succeeded') {
-    return `Recovered after ${String(retry.attempt)} ${retry.attempt === 1 ? 'retry' : 'retries'}`;
-  }
-  if (retry.status === 'failed') {
-    return `Retry failed after ${String(retry.attempt)} ${retry.attempt === 1 ? 'retry' : 'retries'}`;
-  }
-  const progress =
-    retry.maxAttempts === undefined
-      ? `Retry ${String(retry.attempt)}`
-      : `Retry ${String(retry.attempt)} of ${String(retry.maxAttempts)}`;
-  if (retry.status === 'retrying') {
-    return `${progress} in progress…`;
-  }
-  const remainingSeconds = Math.max(0, Math.ceil((retry.scheduledAt + (retry.delayMs ?? 0) - now) / 1_000));
-  return `${progress} in ${String(remainingSeconds)}s…`;
 }

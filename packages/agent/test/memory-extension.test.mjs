@@ -8,6 +8,7 @@ import test from 'node:test';
 import { mkdtemp, rm, access, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DefaultResourceLoader, SettingsManager } from '@earendil-works/pi-coding-agent';
 import { createMemoryExtension } from '../dist/extensions/memory/index.js';
 import { createMemoryService } from '../dist/extensions/memory/sdk/index.js';
@@ -79,36 +80,26 @@ test('built factory loads with actual Pi resource loader and bundled skill/migra
   assert.ok(extension);
   assert.ok(extension.commands.has('memory'));
   assert.equal(extension.tools.size, 2);
-  assert.equal(extension.handlers.has('resources_discover'), false);
+  assert.equal(extension.handlers.has('resources_discover'), true);
   await access(new URL('../dist/assets/memory-migrations/meta/_journal.json', import.meta.url));
   await access(new URL('../dist/extensions/memory/skills/memory/SKILL.md', import.meta.url));
 });
 for (const mode of ['tui', 'rpc'])
-  test(mode + ' injects the full built-in memory skill on every run without a model file read', async (t) => {
+  test(mode + ' registers the bundled memory skill without injecting its body on each run', async (t) => {
     const { events, ctx, messages, pi } = await fixture(t, mode);
     ctx.hasUI = false;
-    await events.get('session_start')({}, ctx);
-    const skill = await readFile(
-      new URL('../dist/extensions/memory/skills/memory/SKILL.md', import.meta.url),
-      'utf8'
-    );
-    const body = skill.split('---').slice(2).join('---').trim();
-    assert.ok(body.length > 0);
-    const event = { systemPrompt: 'Existing Agent and extension policies.' };
-    for (let run = 0; run < 2; run++) {
-      const result = await events.get('before_agent_start')(event, ctx);
-      assert.ok(result.systemPrompt.startsWith(event.systemPrompt + '\n\n'));
-      assert.ok(result.systemPrompt.trimEnd().endsWith(body));
-      assert.match(result.systemPrompt, /at most twice/);
-      assert.match(result.systemPrompt, /Acknowledge memory requests without claiming persistence/);
-      assert.doesNotMatch(result.systemPrompt, /name: memory|SKILL\.md/);
-      assert.equal(result.message, undefined);
+    const directory = fileURLToPath(new URL('../dist/extensions/memory/skills/memory/', import.meta.url));
+    for (const reason of ['startup', 'reload']) {
+      const discovered = events.get('resources_discover')({ reason });
+      assert.deepEqual(discovered.skillPaths, [directory]);
+      assert.match(await readFile(join(directory, 'SKILL.md'), 'utf8'), /name: memory/);
     }
-    assert.deepEqual(messages, []);
-    for (const activeTools of [[], ['memory_read'], ['memory_recall']]) {
+    const event = { systemPrompt: 'Existing Agent and extension policies.' };
+    for (const activeTools of [['memory_read', 'memory_recall'], [], ['memory_read'], ['memory_recall']]) {
       pi.getActiveTools = () => activeTools;
       assert.equal(await events.get('before_agent_start')(event, ctx), undefined);
     }
+    assert.deepEqual(messages, []);
   });
 for (const mode of ['tui', 'rpc'])
   test(mode + ' completes remember/read/forget without a Server or model', async (t) => {

@@ -4,40 +4,37 @@
  */
 
 import { SettingContainer } from '../Layout/SettingContainer';
-import { ImagegenSettings } from './ImagegenSettings';
 import { useEffect } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@octopus/ui/components/card';
-import { Field, FieldError, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@octopus/ui/components/card';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@octopus/ui/components/select';
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@octopus/ui/components/combobox';
 import { Skeleton } from '@octopus/ui/components/skeleton';
 import { Spinner } from '@octopus/ui/components/spinner';
 import { toast } from '@octopus/ui/components/toast';
 import { useDefaultModelSettings, useUpdateDefaultModel } from '@/queries/settings-queries';
 import { useI18n } from '@/i18n/use-i18n';
-import type { DefaultModelCandidateDto } from '@octopus/shared/protocol';
 
 interface DefaultModelFormValues {
   selection: string;
 }
 
 /**
- * Encodes two opaque keys into one Select value without exposing Provider IDs.
+ * Encodes two opaque keys into one selection value without exposing Provider IDs.
  *
  * @param providerKey Opaque Provider key.
  * @param modelKey Opaque model key.
- * @returns Select-safe JSON value.
+ * @returns Selection-safe JSON value.
  */
 function encodeSelection(providerKey: string, modelKey: string): string {
   return JSON.stringify([providerKey, modelKey]);
@@ -46,28 +43,12 @@ function encodeSelection(providerKey: string, modelKey: string): string {
 /**
  * Decodes the selected opaque pair.
  *
- * @param selection Select value emitted by the form.
+ * @param selection selection value emitted by the form.
  * @returns Provider and model keys.
  */
 function decodeSelection(selection: string): { providerKey: string; modelKey: string } {
   const [providerKey, modelKey] = JSON.parse(selection) as [string, string];
   return { providerKey, modelKey };
-}
-
-/**
- * Groups candidates by Provider without requiring an ES2024 runtime.
- *
- * @param candidates Flat candidate catalog.
- * @returns Insertion-ordered Provider groups.
- */
-function groupCandidates(candidates: DefaultModelCandidateDto[]): Map<string, DefaultModelCandidateDto[]> {
-  const groups = new Map<string, DefaultModelCandidateDto[]>();
-  for (const candidate of candidates) {
-    const group = groups.get(candidate.providerName) ?? [];
-    group.push(candidate);
-    groups.set(candidate.providerName, group);
-  }
-  return groups;
 }
 
 /**
@@ -98,9 +79,7 @@ export function DefaultModelPage() {
   if (current.isPending || candidates.isPending) {
     return (
       <SettingContainer classNames={{ content: 'mx-0 max-w-none gap-4' }}>
-        <Skeleton className="h-32 w-full max-w-3xl" />
         <Skeleton className="h-64 w-full max-w-3xl" />
-        <ImagegenSettings />
       </SettingContainer>
     );
   }
@@ -112,15 +91,16 @@ export function DefaultModelPage() {
           <AlertTitle>{t('settings.defaultModel.loadFailed', 'Failed to load the default model')}</AlertTitle>
           <AlertDescription>{queryError.message}</AlertDescription>
         </Alert>
-        <ImagegenSettings />
       </SettingContainer>
     );
   }
 
   const availableCandidates = candidates.data?.candidates ?? [];
-  const grouped = groupCandidates(availableCandidates);
   const selectItems = availableCandidates.map((candidate) => ({
-    label: `${candidate.modelName} (${candidate.modelId})`,
+    label: `${candidate.providerName} / ${candidate.modelName} (${candidate.modelId})`,
+    modelName: candidate.modelName,
+    modelId: candidate.modelId,
+    providerName: candidate.providerName,
     value: encodeSelection(candidate.providerKey, candidate.modelKey),
   }));
   const currentSelection =
@@ -132,26 +112,30 @@ export function DefaultModelPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">
-            {t('settings.defaultModel.currentTitle', 'Current default model')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground">
-            {current.data?.providerId ?? t('settings.defaultModel.notConfigured', 'Not configured')} /{' '}
-            {current.data?.modelId ?? t('settings.defaultModel.notConfigured', 'Not configured')}
-          </span>
-          {!current.data?.available && (
-            <Badge variant="destructive">{t('settings.defaultModel.unavailable', 'Unavailable')}</Badge>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">
             {t('settings.defaultModel.selectTitle', 'Choose a default model')}
           </CardTitle>
+          <CardDescription>
+            {t(
+              'settings.defaultModel.description',
+              'Choose the model used by new sessions. Existing sessions keep their current model.'
+            )}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3">
+            <span className="text-xs text-muted-foreground">
+              {t('settings.defaultModel.currentTitle', 'Current default model')}
+            </span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="break-all text-sm font-medium">
+                {current.data?.providerId ?? t('settings.defaultModel.notConfigured', 'Not configured')}
+                {current.data?.modelId ? ` / ${current.data.modelId}` : ''}
+              </span>
+              {currentSelection && !current.data?.available ? (
+                <Badge variant="destructive">{t('settings.defaultModel.unavailable', 'Unavailable')}</Badge>
+              ) : null}
+            </div>
+          </div>
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -171,44 +155,59 @@ export function DefaultModelPage() {
               >
                 {(field) => (
                   <Field data-invalid={field.state.meta.errors.length > 0 || undefined}>
-                    <FieldLabel className="text-xs">
+                    <FieldLabel htmlFor="default-model-selection">
                       {t('settings.defaultModel.fieldLabel', 'Provider / Model')}
                     </FieldLabel>
-                    <Select
+                    <Combobox
                       items={selectItems}
-                      value={field.state.value || null}
-                      onValueChange={(value) => field.handleChange(value ?? '')}
+                      value={selectItems.find((item) => item.value === field.state.value) ?? null}
+                      onValueChange={(item) => field.handleChange(item?.value ?? '')}
+                      itemToStringLabel={(item) => item.label}
+                      itemToStringValue={(item) => item.value}
+                      isItemEqualToValue={(item, value) => item.value === value.value}
+                      disabled={update.isPending || selectItems.length === 0}
                     >
-                      <SelectTrigger
+                      <ComboboxInput
+                        id="default-model-selection"
                         className="w-full"
+                        placeholder={t(
+                          'settings.defaultModel.searchPlaceholder',
+                          'Search provider, model name or ID'
+                        )}
                         aria-invalid={field.state.meta.errors.length > 0 || undefined}
                         onBlur={field.handleBlur}
-                      >
-                        <SelectValue
-                          placeholder={t('settings.defaultModel.selectPlaceholder', 'Select a default model')}
-                        >
-                          {(value: string) =>
-                            selectItems.find((item) => item.value === value)?.label ??
-                            t('settings.defaultModel.selectPlaceholder', 'Select a default model')
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[...grouped.entries()].map(([providerName, models]) => (
-                          <SelectGroup key={providerName}>
-                            <SelectLabel>{providerName}</SelectLabel>
-                            {models.map((candidate) => (
-                              <SelectItem
-                                key={candidate.modelKey}
-                                value={encodeSelection(candidate.providerKey, candidate.modelKey)}
-                              >
-                                {candidate.modelName} ({candidate.modelId})
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      />
+                      <ComboboxContent>
+                        <ComboboxEmpty>
+                          {t('settings.defaultModel.noMatches', 'No matching models')}
+                        </ComboboxEmpty>
+                        <ComboboxList>
+                          {(item: (typeof selectItems)[number]) => (
+                            <ComboboxItem key={item.value} value={item}>
+                              <div className="flex min-w-0 flex-col gap-0.5 py-1">
+                                <span className="truncate" title={item.modelName}>
+                                  {item.modelName}
+                                </span>
+                                <span
+                                  className="truncate text-xs text-muted-foreground"
+                                  title={`${item.providerName} / ${item.modelId}`}
+                                >
+                                  {item.providerName} / {item.modelId}
+                                </span>
+                              </div>
+                            </ComboboxItem>
+                          )}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </Combobox>
+                    {selectItems.length === 0 ? (
+                      <FieldDescription>
+                        {t(
+                          'settings.defaultModel.noCandidates',
+                          'Configure an available model in Model services first.'
+                        )}
+                      </FieldDescription>
+                    ) : null}
                     <FieldError errors={field.state.meta.errors.map((message) => ({ message }))} />
                   </Field>
                 )}
@@ -227,27 +226,28 @@ export function DefaultModelPage() {
                 })}
               >
                 {({ canSubmit, isSubmitting, selection }) => (
-                  <Button
-                    type="submit"
-                    disabled={
-                      !canSubmit ||
-                      isSubmitting ||
-                      update.isPending ||
-                      selection.length === 0 ||
-                      selection === currentSelection ||
-                      (candidates.data?.candidates.length ?? 0) === 0
-                    }
-                  >
-                    {isSubmitting || update.isPending ? <Spinner data-icon="inline-start" /> : null}
-                    {t('settings.defaultModel.save', 'Save default model')}
-                  </Button>
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={
+                        !canSubmit ||
+                        isSubmitting ||
+                        update.isPending ||
+                        selection.length === 0 ||
+                        selection === currentSelection ||
+                        (candidates.data?.candidates.length ?? 0) === 0
+                      }
+                    >
+                      {isSubmitting || update.isPending ? <Spinner data-icon="inline-start" /> : null}
+                      {t('settings.defaultModel.save', 'Save default model')}
+                    </Button>
+                  </div>
                 )}
               </form.Subscribe>
             </FieldGroup>
           </form>
         </CardContent>
       </Card>
-      <ImagegenSettings />
     </SettingContainer>
   );
 }

@@ -333,7 +333,7 @@ function JevCredentialForm({ settings }: { settings: JevSettingsSnapshot }) {
                 disabled={pending || !settings.hasStoredApiKey}
                 onClick={() => void saveKey(null)}
               >
-                {t('settings.jev.removeKey', 'Remove key')}
+                {t('settings.jev.removeKey', 'Clear API Key')}
               </Button>
             </div>
           </FieldGroup>

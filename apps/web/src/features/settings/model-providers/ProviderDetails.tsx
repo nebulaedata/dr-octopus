@@ -124,7 +124,7 @@ export function ProviderDetails(props: ProviderDetailsProps) {
         {provider.local ? (
           <CustomProviderForm
             key={provider.providerKey}
-            providerKey={provider.providerKey}
+            provider={provider}
             configuration={provider.local}
             keyConfigured={provider.auth.source === 'stored'}
           />
@@ -191,25 +191,27 @@ export function ProviderDetails(props: ProviderDetailsProps) {
             </section>
           </>
         )}
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold">{t('settings.providers.modelsTitle', 'Models')}</h3>
-              <p className="text-xs text-muted-foreground">
-                {t(
-                  'settings.providers.modelsAvailable',
-                  '{{available}} of {{total}} models currently available',
-                  {
-                    available: provider.availableModelCount,
-                    total: provider.modelCount,
-                  }
-                )}
-              </p>
+        {!provider.local && (
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">{t('settings.providers.modelsTitle', 'Models')}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'settings.providers.modelsAvailable',
+                    '{{available}} of {{total}} models currently available',
+                    {
+                      available: provider.availableModelCount,
+                      total: provider.modelCount,
+                    }
+                  )}
+                </p>
+              </div>
+              <Badge variant="secondary">{provider.modelCount}</Badge>
             </div>
-            <Badge variant="secondary">{provider.modelCount}</Badge>
-          </div>
-          <ProviderModelList provider={provider} />
-        </section>
+            <ProviderModelList provider={provider} />
+          </section>
+        )}
       </div>
     </ScrollArea>
   );

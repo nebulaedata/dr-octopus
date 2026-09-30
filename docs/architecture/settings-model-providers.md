@@ -504,3 +504,33 @@ Provider/Model 删除对全局默认项的依赖阻断、replacement 顺序和�
 - [Pi Providers](https://pi.dev/docs/latest/providers)
 - [Pi Custom Models](https://pi.dev/docs/latest/models)
 - [Pi SDK](https://pi.dev/docs/latest/sdk)
+
+## 2026-09-30：Mr.Token 原模型关联与生图服务分离（Pi 0.85.1）
+
+本节覆盖旧的模型能力编辑、接口分类和生图候选设计，优先于本文旧版本的相关描述。
+
+Mr.Token 获取模型后自动精确匹配 Pi 原厂模型。界面以带内置搜索的“原模型” Combobox 提供“自动匹配 / 手动选择原模型”，手动纠正用于模型别名或来源冲突；恢复自动匹配会移除手动来源。仍使用原模型行、配置按钮、不可用图标及 Tooltip，不新增能力编辑步骤。
+
+### 关联与执行
+
+- 自动关联要求完整 ID 相同，并以模型家族的原厂 Provider 归属排除同名聚合商。区域模板不等价时视为关联不明确。
+- Mr.Token 不配置提供商级 API 协议；自动或手动关联后，每个模型独立继承 Pi 原厂模型的 API 协议。手动来源必须是 Pi 内置原厂模型。Completions 模板必须明确角色、store、推理格式等关键协议字段。失败不能绕过校验进入可执行目录。
+- 完整继承 Pi 的 api、reasoning、input、contextWindow、maxTokens、compat、thinkingLevelMap、samplingParams。请求仍由 Pi 构造，保持中转实际模型 ID、地址和鉴权，不复制原厂凭证或 headers。
+- Mr.Token 旧能力和 token 覆盖不再参与合成。未收录、模板不完整或无法确定来源的模型不可用。
+- 本地 Ollama/vLLM/LM Studio 和通用 OpenAI-compatible 保留通用接口接入，不要求关联。手写 Pi models.json 的合法配置继续由 Pi 解释。
+
+### 持久化、契约与准入
+
+`models.json` 的 `octopusRelayModels` 保存全部发现项、适配结果和可选手动 `source: { providerId, modelId }`。只有适配成功的定义进入 `providers[id].models`。启动和刷新按已安装 Pi 模板重算，保留手动来源，相同结果不重复写文件；模型被远端删除时移除其关联。人工来源在 Pi 升级后消失或不兼容时标记不可用，不静默改为其他来源。
+
+`GET /api/settings/model-providers/:providerKey/associations` 返回跨协议可选模板；`PUT /api/settings/model-providers/:providerKey/models/:modelKey/association` 接受 `{ source: null | { providerId, modelId } }`。旧 `/configuration`、reasoning/input 生图标记、接口类型和 token 编辑链路移除。仅使用新关联元数据，不读取、迁移或清理旧能力标记。
+
+普通会话、默认模型和定时任务继续验证模型可用性。Agent 定时执行校验配置的默认模型并显式选定；缺失时返回 `SCHEDULE_MODEL_UNAVAILABLE`，不静默回退。已适配只表示模板可迁移，不代表上游授权、余额和网络正常。
+
+### 独立生图
+
+默认模型页只配置对话。生图位于 `/settings/imagegen`，沿用语音服务的独立 OpenAI/Qwen 页签、密钥隐藏和显式启用方式，详见 [生图设计](./imagegen.md)。对话提供商不再合并 Pi Images 目录，也不再根据用户标记构造生图候选。
+
+### 验证
+
+覆盖所有接受的 Completions 模板与原厂 Pi 请求体一致、自动与手动来源、逐模型协议继承、恢复自动匹配、当前目录重建、重复刷新、别名保持实际请求 ID、本地未知模型以及旧能力编辑接口失效。生图配置和请求使用隔离目录与模拟上游，不调用真实收费接口。

@@ -13,6 +13,7 @@ export const settingsPaths = [
   '/settings/memory',
   '/settings/jev',
   '/settings/speech',
+  '/settings/imagegen',
   '/settings/schedules',
   '/settings/appearance/theme',
   '/settings/appearance/language',

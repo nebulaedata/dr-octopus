@@ -1,12 +1,12 @@
 # Settings MCP 服务器配置设计
 
 > 状态：Implemented  
-> 目标版本：`pi-mcp-adapter@2.31.0`  
-> 最后更新：2026-09-04
+> 目标版本：`pi-mcp-adapter@2.34.0`
+> 最后更新：2026-09-29
 
 ## 1. 目标与范围
 
-Settings 增加可用的“MCP 服务器”页面，以 `pi-mcp-adapter@2.31.0` 作为 MCP 配置语义权威，并保持 Pi MCP 文件仍是唯一事实源。
+Settings 增加可用的“MCP 服务器”页面，以 `pi-mcp-adapter@2.34.0` 作为 MCP 配置语义权威，并保持 Pi MCP 文件仍是唯一事实源。
 
 首版负责：
 
@@ -29,7 +29,7 @@ Settings 增加可用的“MCP 服务器”页面，以 `pi-mcp-adapter@2.31.0` 
 
 ## 2. 已验证的上游能力
 
-Agent 的 `extensions-install.ts` 与 `apps/server` 项目依赖均固定为 `pi-mcp-adapter@2.31.0`。该版本公开：
+Agent 的 `extensions-install.ts` 与 `apps/server` 项目依赖均固定为 `pi-mcp-adapter@2.34.0`。该版本公开：
 
 - `pi-mcp-adapter/config`：`loadMcpConfig()`、`getServerProvenance()`、`getMcpDiscoverySummary()`、路径与写入辅助函数；
 - `ServerEntry` / `McpConfig`：stdio、HTTP、Unix socket、认证、生命周期、工具过滤等配置；
@@ -46,7 +46,7 @@ flowchart LR
     Query --> HTTP[Settings MCP HTTP Controller]
     HTTP --> Service[MCP Settings Service]
     Service --> Port[Server MCP Config Port]
-    Port --> Adapter[project dependency: pi-mcp-adapter/config 2.31.0]
+    Port --> Adapter[project dependency: pi-mcp-adapter/config 2.34.0]
     Adapter --> Global[shared user-global MCP files]
     Adapter --> PiGlobal[agentDir/mcp.json]
     Service --> Probe[Server Host Connectivity Probe]
@@ -58,7 +58,7 @@ flowchart LR
 
 1. Web 只依赖 `@octopus/shared/protocol` DTO，不理解 adapter 文件格式。
 2. Server Service 拥有用例、权限和安全投影，不直接拼接第三方模块路径。
-3. `apps/server` 直接依赖 `pi-mcp-adapter@2.31.0`，Server config port 静态导入公开的 `pi-mcp-adapter/config`；不读取或定位 Agent 用户扩展安装目录。
+3. `apps/server` 直接依赖 `pi-mcp-adapter@2.34.0`，Server config port 静态导入公开的 `pi-mcp-adapter/config`；不读取或定位 Agent 用户扩展安装目录。
 4. 配置读取调用 adapter；写入只允许 `<agentDir>/mcp.json`，保留未知根字段、`settings`、`imports` 和非目标 Server。
 5. Catalog/detail GET 绝不连接或启动 MCP Server；组件加载后通过独立 POST 显式触发有副作用的连通性探测。
 
@@ -106,7 +106,7 @@ interface McpServerSummaryDto {
 
 interface McpServerCatalogDto {
   servers: McpServerSummaryDto[];
-  adapter: { package: 'pi-mcp-adapter'; version: '2.31.0'; available: boolean };
+  adapter: { package: 'pi-mcp-adapter'; version: '2.34.0'; available: boolean };
   revision: string;
 }
 ```
@@ -175,7 +175,7 @@ Server 名称创建后不可原地重命名；重命名使用 create + delete，
 
 ## 7. 输入安全
 
-首版不接受 literal secret。表单只允许：
+初版仅保留已有秘密字段，不提供输入入口。后续配置补齐采用第 12 节的只写秘密字段契约；普通详情响应仍禁止返回任何 literal secret。非秘密引用支持：
 
 - env/header 值引用 `${ENV_NAME}`；
 - `bearerTokenEnv`；
@@ -223,7 +223,7 @@ Server 名称创建后不可原地重命名；重命名使用 create + delete，
 
 - `packages/shared/src/protocol/`：MCP Settings DTO 和闭集 Zod mutation schema；
 - `apps/server/src/lib/pi-mcp/`：
-  - 直接依赖固定版本的 `pi-mcp-adapter@2.31.0`；
+  - 直接依赖固定版本的 `pi-mcp-adapter@2.34.0`；
   - 静态导入 package public export `pi-mcp-adapter/config`；
   - 封装 user-scope snapshot 与 Pi global 保留字段 mutation；
   - 使用公开 MCP Client SDK 创建短生命周期连接并调用 `tools/list`，且始终关闭 transport；
@@ -252,15 +252,64 @@ Server 名称创建后不可原地重命名；重命名使用 create + delete，
 
 | 风险                               | 缓解                                                                                     |
 | ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| adapter 升级改变配置语义           | Server 与 Agent 扩展均固定 2.31.0、contract fixtures                                     |
+| adapter 升级改变配置语义           | Server 与 Agent 扩展均固定 2.34.0、contract fixtures                                     |
 | Web 与 adapter 重复实现 precedence | precedence/provenance 只在 Server adapter port 中计算                                    |
 | 外部编辑与 Server mutation 竞态    | revision precondition、进程内 queue、原子 rename、写后重读；明确跨进程 last-writer-wins  |
-| secret 从通用配置泄露              | secret-free DTO、禁止 literal secret mutation、日志闭集测试                              |
+| secret 从通用配置泄露              | secret-free DTO、只写秘密更新、请求体不记录、日志闭集测试                                |
 | 自动探测产生过多外部连接           | Server + revision single-flight、30 秒缓存、并发和超时上限；mutation 后只探测目标 Server |
 | 探测状态被误解为 Runtime 状态      | DTO、界面文案和架构边界明确标记为 Server Host 独立连接                                   |
 | user/global 与 project scope 混淆  | control-plane cwd 隔离；project scope 延后到 Workspace 功能                              |
 
-## 12. 关联决策
+## 12. MCP 配置入口补齐设计（2026-09-29）
+
+### 12.1 审计范围与字段覆盖
+
+以仓库固定的 `pi-mcp-adapter@2.34.0` `ServerEntry` 为权威，补齐用户全局单个 Server 配置。所有改动归 Web、Server 与 shared 协议；无需修改 `packages/agent`。全局 adapter settings、import/discovery 与 Workspace 配置有不同归属，不混入单个 Server 表单。
+
+| 配置                                                                                                  | 原入口                                      | 本轮处理                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| command / args / url / socket / disabled / description                                                | 已有                                        | 保留；切换传输清除无关字段                                                                                                      |
+| cwd / inheritEnv / env                                                                                | cwd 仅保留，env 仅名称展示                  | stdio 工作目录、继承环境开关、环境变量增改删；值只写                                                                            |
+| httpTransport / headers                                                                               | transport 隐式保留，headers 只读            | HTTP 自动/Streamable HTTP/SSE 选择、请求头增改删；值只写                                                                        |
+| auth / bearerToken / bearerTokenEnv / bearerTokenStore                                                | 默认 auto，已有值隐式保留                   | 自动/无认证/Bearer/OAuth；Bearer 手动密钥或环境变量；已有 OS store 引用保留并可切换                                             |
+| oauth.clientId / scope / clientSecret                                                                 | ID/scope 隐式保留，secret 无入口            | ID/scope 可编辑、客户端密钥只写；同地址修改保留其余 OAuth 扩展字段                                                              |
+| lifecycle / idleTimeout / requestTimeoutMs / protocolVersion                                          | 隐式保留                                    | 高级配置区提供枚举与数值输入，空值继承、0 的语义按 adapter 保留                                                                 |
+| directTools / toolPrefix / includeTools / excludeTools / exposeResources                              | directTools 被压缩为开关，其余部分已有      | 关闭/全部/搜索后注册/指定模式四种完整模式；工具前缀与筛选                                                                       |
+| debug / trace / searchKeywords                                                                        | 无入口                                      | 高级选项补齐 stderr 调试、协议元数据跟踪、工具搜索关键词映射                                                                    |
+| caFile / requestHeadersCommand                                                                        | caFile 可能跨地址残留；命令无法在探测中复现 | 本轮不新增执行命令或自定义 TLS 的页面入口；显示外部配置提示，保留同地址已有配置，换地址清除；独立探测明确不验证这些高级认证方式 |
+| OAuth grantType / metadata URL / authorizationParams / redirectUri / clientName / clientUri / logoUri | 未投影                                      | 显示外部扩展配置提示，同地址保留；完整 OAuth 授权交互和元数据管理另属认证流程                                                   |
+| skipIssuerMetadataValidation                                                                          | 未投影                                      | 不提供弱化验证开关，保持外部配置的原语义                                                                                        |
+| approveTools                                                                                          | 无入口                                      | 保留外部配置；需先建立 Dr.Octopus 的 adapter approval event 交互，不能提供保存成功但调用必失败的开关                            |
+| pluginDataDir / literalEnv                                                                            | 插件内部字段                                | 不作为用户入口，保留 adapter 管理                                                                                               |
+
+暂未提供编辑入口的已有字段必须在详情中可见其名称及外部管理提示，不能声称覆盖完整 adapter 配置。不得静默丢弃未知字段。
+
+### 12.2 秘密更新与存储契约
+
+- 在已有 create/update 原子配置写入中增加只写输入。`auth.bearerToken`、`auth.oauthClientSecret`：省略表示保留，非空字符串替换，`null` 表示清除。值不进入任何 GET、mutation 返回值或错误信息。
+- env/header 采用 `{ name, value? }[]`：未提供集合保留；提供集合表示完整名单；省略某行 value 保留同名已有值；提供 value（允许空字符串）替换；从名单移除表示删除。无值的新名字拒绝，header 名不区分大小写查重与匹配。详情只返回名称。
+- 不在 UI 回填、复制或显示既有密钥。密码框默认空，已配置用占位符提示；留空不等于清除。清除按钮使用 destructive，可在提交前撤销。
+- 密钥与 env/header 值继续存入 adapter 原生 `mcp.json`，与当前架构一致；这不是加密存储。页面说明保存在 Server 本机配置文件，不暗示 OS credential store。写文件沿用 0600 临时文件及原子 rename；Windows 权限继承所属用户目录。
+- 只写字段拒绝 leading `!` 的 executable secret expression；保留已有表达式但不通过此入口新增执行命令。Bearer literal 与 env/store 互斥，切换来源清除旧来源，避免旧 token 优先级覆盖新配置。
+- 换 command/url 不迁移既有 env/header/credential。新输入的显式值可写入新目标；空密码框不授权把旧秘密复制给新目标。界面提前提示目标变化会清除原绑定，已存在的无值行不随新目标提交。
+- 非 HTTP 拒绝 HTTP 认证/请求头输入，非 stdio 拒绝 env/继承环境输入。HTTP header 名、CR/LF、重复名、字段长度、集合大小、数字范围在服务端 schema 校验。Bearer 与 Authorization header 冲突拒绝。
+- 通用日志不得包含请求体，输入校验只返回固定错误；idempotency ledger 只保存请求散列及 secret-free 结果。前端含秘密 mutation 设置 `gcTime: 0` 并在结束后 reset，失败保留表单草稿但不保留请求异常中的配置。
+
+### 12.3 页面与保存行为
+
+表单使用独立功能卡片：基本信息、连接、认证、HTTP 请求头或进程环境、工具与资源、连接行为、高级配置与诊断；启用状态和删除操作各自独立。条件显示当前传输相关字段，宽面板工具筛选并排，窄面板单列。所有卡片共用一个草稿与保存操作，底部保存栏在滚动时保持可达。沿用 TanStack Form 和既有 Field/Select/Input/Switch；常用连接、认证和超时直接可见，诊断字段折叠。字段有标签、英文 accessible name、密码不自动补全；参数与工具模式按行输入。
+
+保存成功后清空秘密草稿并刷新连接检测；失败时保留输入并就近展示错误。后台查询刷新不得覆盖未提交表单。Server 切换重新初始化独立草稿。更改配置仅影响新建/重启的 Agent Runtime，不自动重启现有会话。
+
+### 12.4 验证与完成标准
+
+- Schema：非法传输组合、重复 header、CR/LF、空新绑定、无效数值、未知字段与命令表达式均拒绝。
+- Store：创建/替换/保留/清除秘密，切换认证来源、切换 URL/command、保留 OAuth 扩展与未知配置，旧 revision 不写入；所有返回 JSON 无测试秘密。
+- 探测：手动 Bearer/header 可连接；inheritEnv=false 不继承 Host 私有环境；涉及 OS store/OAuth/命令/TLS 的独立探测返回 `unsupported`，页面提示需在智能体中验证，不冒充完成授权。
+- Web：四种 directTools 无损往返；数字/映射输入校验；成功清空秘密、失败保留草稿、背景刷新不丢草稿；桌面与窄屏可操作。
+- 聚焦验证后执行 shared/server/web 的相关 test、lint、typecheck，并记录未验证范围。
+
+## 13. 关联决策
 
 - [ADR-0036：以固定版本 Pi MCP Adapter 作为 Settings MCP 配置语义权威](../adr/0036-use-pi-mcp-adapter-for-settings-config.md)
 - [ADR-0026：Settings 独立于 Workspace](../adr/0026-global-settings-and-pi-resource-management.md)

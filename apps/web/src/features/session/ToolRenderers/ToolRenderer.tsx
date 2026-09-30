@@ -19,7 +19,9 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {
+  SkillToolRenderer,
   ImagegenToolRenderer,
+  McpToolRenderer,
   KnowledgeToolRenderer,
   MemoryToolRenderer,
   GoalToolRenderer,
@@ -27,6 +29,8 @@ import {
   SchedulerToolRenderer,
   SubagentToolRenderer,
 } from './CustomToolRenderers';
+import { projectSkillRead } from '../utils/skill-projection';
+import { mcpToolLabel } from '../utils/mcp-tool-projection';
 import { summarizeMemoryTool } from '@/features/session/utils/memory-tool-projection';
 import { summarizeKnowledgeTool } from '@/features/session/utils/knowledge-projection';
 import { summarizeGoalTool } from '@/features/session/utils/goal-projection';
@@ -54,6 +58,7 @@ import {
   summarizeCommand,
   summarizePath,
   summarizeSearch,
+  summarizeWrite,
 } from '@/features/session/utils/tool-renderer-utils';
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
@@ -64,8 +69,16 @@ import type { ToolRendererProps } from './ToolRendererParts';
 
 interface ToolRendererDefinition {
   names: readonly string[];
+  /**
+   * Narrows registrations that specialize a built-in tool by its recorded arguments.
+   */
+  matches?: (tool: ToolProjection) => boolean;
   component: ComponentType<ToolRendererProps>;
   label?: Record<string, string>;
+  /**
+   * Resolves a structured invocation title without teaching the shell about individual tools.
+   */
+  getLabel?: (tool: ToolProjection, t: Translate) => string | undefined;
   icon?: LucideIcon;
   /**
    * Collapsed-card summary callback; the tool stays first so existing `(tool)` implementations
@@ -78,6 +91,15 @@ interface ToolRendererDefinition {
  * Add custom tool renderers here; entries take precedence over Pi built-ins and the fallback renderer.
  */
 const CUSTOM_TOOL_RENDERERS: readonly ToolRendererDefinition[] = [
+  {
+    names: ['read'],
+    matches: (tool) => projectSkillRead(tool) !== undefined,
+    component: SkillToolRenderer,
+    icon: BookOpenIcon,
+    getLabel: (_tool, t) => t('session.skill.load', 'Load skill'),
+    summarize: (tool) => projectSkillRead(tool)?.name,
+  },
+  { names: ['mcp'], component: McpToolRenderer, icon: NetworkIcon, getLabel: mcpToolLabel },
   { names: ['image_generate'], component: ImagegenToolRenderer, icon: ImageIcon },
   {
     names: ['memory_recall'],
@@ -169,7 +191,7 @@ const BUILTIN_TOOL_RENDERERS: readonly ToolRendererDefinition[] = [
   { names: ['bash'], component: BashToolRenderer, icon: TerminalIcon, summarize: summarizeCommand },
   { names: ['read'], component: ReadToolRenderer, icon: FileTextIcon, summarize: summarizePath },
   { names: ['edit'], component: EditToolRenderer, icon: FilePenLineIcon, summarize: summarizePath },
-  { names: ['write'], component: WriteToolRenderer, icon: FileUpIcon, summarize: summarizePath },
+  { names: ['write'], component: WriteToolRenderer, icon: FileUpIcon, summarize: summarizeWrite },
   { names: ['grep'], component: SearchToolRenderer, icon: FileSearchIcon, summarize: summarizeSearch },
   { names: ['find'], component: SearchToolRenderer, icon: FolderSearchIcon, summarize: summarizeSearch },
   { names: ['ls'], component: SearchToolRenderer, icon: ListTreeIcon, summarize: summarizePath },
@@ -186,23 +208,27 @@ const TOOL_RENDERERS = [...CUSTOM_TOOL_RENDERERS, ...BUILTIN_TOOL_RENDERERS];
 /**
  * Resolves the first explicitly registered renderer and otherwise returns the safe fallback.
  *
- * @param toolName - Exact Pi tool name.
+ * @param tool - Recorded Pi invocation including streamed arguments.
  * @returns Renderer definition for the tool.
  */
-function resolveToolRenderer(toolName: string): ToolRendererDefinition {
-  return TOOL_RENDERERS.find((renderer) => renderer.names.includes(toolName)) ?? FALLBACK_TOOL_RENDERER;
+function resolveToolRenderer(tool: ToolProjection): ToolRendererDefinition {
+  return (
+    TOOL_RENDERERS.find(
+      (renderer) => renderer.names.includes(tool.name) && (!renderer.matches || renderer.matches(tool))
+    ) ?? FALLBACK_TOOL_RENDERER
+  );
 }
 
-export type ToolRendererSelection = Omit<ToolRendererDefinition, 'names'>;
+export type ToolRendererSelection = Omit<ToolRendererDefinition, 'names' | 'matches'>;
 /**
  * Supplies the selected presentation to the generic tool-card shell without publishing the registry.
  */
 export function ToolRenderer({
-  toolName,
+  tool,
   children,
 }: {
-  toolName: string;
+  tool: ToolProjection;
   children: (renderer: ToolRendererSelection) => ReactNode;
 }) {
-  return children(resolveToolRenderer(toolName));
+  return children(resolveToolRenderer(tool));
 }

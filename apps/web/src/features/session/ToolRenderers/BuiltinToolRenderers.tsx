@@ -4,8 +4,9 @@
  */
 
 import { readString, isRecord } from '@/features/session/utils/tool-renderer-utils';
-import { ToolContent, ToolSection } from './ToolRendererParts';
-import { Highlight } from '@/components/Highlight/index';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@octopus/ui/components/collapsible';
+import { ChevronRightIcon } from 'lucide-react';
+import { ToolCodeBlock, ToolContent, ToolSection } from './ToolRendererParts';
 import { getHighlightLanguage } from '@/components/Highlight/languages';
 import { useI18n } from '@/i18n/use-i18n';
 import type { ToolRendererProps } from '@/features/session/ToolRenderers/ToolRendererParts';
@@ -20,11 +21,13 @@ export function BashToolRenderer({ tool }: ToolRendererProps) {
     <div className="flex flex-col gap-3">
       {command === undefined ? null : (
         <ToolSection title={t('session.builtinTool.command', 'Command')}>
-          <Highlight language="bash">{command}</Highlight>
+          <ToolCodeBlock language="bash" maxHeight={192} streaming={tool.status === 'running'}>
+            {command}
+          </ToolCodeBlock>
         </ToolSection>
       )}
       <ToolSection title={t('session.schedulerTool.statusTitle.output', 'Output')}>
-        <ToolContent blocks={tool.content} terminal />
+        <ToolContent blocks={tool.content} />
       </ToolSection>
       <TruncationNotice details={tool.details} />
     </div>
@@ -40,7 +43,11 @@ export function ReadToolRenderer({ tool }: ToolRendererProps) {
   return (
     <div className="flex flex-col gap-3">
       <ToolSection title={t('session.builtinTool.content', 'Content')}>
-        <ToolContent blocks={tool.content} language={getHighlightLanguage(path)} />
+        <ToolContent
+          blocks={tool.content}
+          language={getHighlightLanguage(path)}
+          streaming={tool.status === 'running'}
+        />
       </ToolSection>
       <TruncationNotice details={tool.details} />
     </div>
@@ -64,28 +71,42 @@ export function EditToolRenderer({ tool }: ToolRendererProps) {
       {diff === undefined ? (
         <ToolContent blocks={tool.content} />
       ) : (
-        <Highlight className="max-h-128" language="diff">
+        <ToolCodeBlock maxHeight={512} language="diff" streaming={tool.status === 'running'}>
           {diff}
-        </Highlight>
+        </ToolCodeBlock>
       )}
     </ToolSection>
   );
 }
 
 /**
- * Summarizes a write without repeating the potentially large file body argument.
+ * Offers the input file body on demand while keeping the actual write result visible.
  */
 export function WriteToolRenderer({ tool }: ToolRendererProps) {
   const { t } = useI18n();
-  const content = readString(tool.arguments, 'content');
+  const content = isRecord(tool.arguments) ? tool.arguments['content'] : undefined;
+  const path = readString(tool.arguments, 'path');
   return (
     <div className="flex flex-col gap-3">
-      {content === undefined ? null : (
-        <p className="text-sm text-muted-foreground">
-          {t('session.builtinTool.wroteCharacters', 'Wrote {{count}} characters.', {
-            count: content.length,
-          })}
-        </p>
+      {typeof content !== 'string' ? null : (
+        <Collapsible defaultOpen={false} className="min-w-0">
+          <CollapsibleTrigger className="group/write-content flex min-h-8 w-full items-center gap-1.5 rounded-md px-1 text-left text-xs font-medium text-muted-foreground outline-none hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+            <ChevronRightIcon
+              aria-hidden
+              className="size-3.5 shrink-0 motion-safe:transition-transform group-data-panel-open/write-content:rotate-90"
+            />
+            {t('session.builtinTool.writeContent', 'Write content')}
+          </CollapsibleTrigger>
+          <CollapsibleContent keepMounted={false} className="pt-2">
+            <ToolCodeBlock
+              language={getHighlightLanguage(path)}
+              maxHeight={384}
+              streaming={tool.status === 'running'}
+            >
+              {content}
+            </ToolCodeBlock>
+          </CollapsibleContent>
+        </Collapsible>
       )}
       {tool.content.length === 0 ? null : (
         <ToolSection title={t('session.schedulerTool.statusTitle.output', 'Output')}>
@@ -114,7 +135,7 @@ export function SearchToolRenderer({ tool }: ToolRendererProps) {
 /**
  * Displays a compact warning when Pi reports truncated or limited output.
  */
-function TruncationNotice({ details }: { details: unknown }) {
+export function TruncationNotice({ details }: { details: unknown }) {
   const { t } = useI18n();
   if (!isRecord(details)) {
     return null;

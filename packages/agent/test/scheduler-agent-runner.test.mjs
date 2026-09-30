@@ -44,6 +44,14 @@ function fakeProcess(onPrompt = () => undefined) {
       },
       async execute(command) {
         commands.push(command);
+        if (command.type === 'get_available_models') {
+          return {
+            type: 'response',
+            command: command.type,
+            success: true,
+            data: { models: [{ provider: 'test', id: 'test-model' }] },
+          };
+        }
         if (command.type === 'prompt') {
           for (const listener of eventListeners) listener({ type: 'agent_start' });
           onPrompt({ eventListeners, lifecycleListeners });
@@ -119,10 +127,16 @@ test('Runner persists barriers before resolving a bounded successful summary', a
     });
   });
   const barriers = [];
-  const runner = new AgentSchedulerRunner('D:\\agent', 'D:\\agent\\scheduler', (_work, sessionId) => {
-    fake.setSessionId(sessionId);
-    return fake.process;
-  });
+  const runner = new AgentSchedulerRunner(
+    'D:\\agent',
+    'D:\\agent\\scheduler',
+    (_work, sessionId) => {
+      fake.setSessionId(sessionId);
+      return fake.process;
+    },
+    '',
+    async () => ({ provider: 'test', modelId: 'test-model' })
+  );
   const outcome = await runner.run(work(), new AbortController().signal, {
     dispatch(evidence) {
       barriers.push(['dispatch', evidence]);
@@ -136,6 +150,18 @@ test('Runner persists barriers before resolving a bounded successful summary', a
 
   assert.equal(outcome.status, 'succeeded');
   assert.equal(outcome.summary, 'Completed repository review.');
+  assert.deepEqual(
+    fake.commands.find((item) => item.type === 'set_model'),
+    {
+      type: 'set_model',
+      provider: 'test',
+      modelId: 'test-model',
+    }
+  );
+  assert.ok(
+    fake.commands.findIndex((item) => item.type === 'set_model') <
+      fake.commands.findIndex((item) => item.type === 'prompt')
+  );
   assert.deepEqual(
     barriers.map((item) => item[0]),
     ['dispatch', 'running']
@@ -152,10 +178,16 @@ test('interactive requests settle as needs_attention and cancel the pending Pi p
       }
     });
   });
-  const runner = new AgentSchedulerRunner('D:\\agent', 'D:\\agent\\scheduler', (_work, sessionId) => {
-    fake.setSessionId(sessionId);
-    return fake.process;
-  });
+  const runner = new AgentSchedulerRunner(
+    'D:\\agent',
+    'D:\\agent\\scheduler',
+    (_work, sessionId) => {
+      fake.setSessionId(sessionId);
+      return fake.process;
+    },
+    '',
+    async () => ({ provider: 'test', modelId: 'test-model' })
+  );
   const outcome = await runner.run(work(), new AbortController().signal, {
     dispatch: () => true,
     running: () => true,
@@ -169,10 +201,16 @@ test('interactive requests settle as needs_attention and cancel the pending Pi p
 
 test('absolute execution timeout aborts and closes a non-settling Runner', async () => {
   const fake = fakeProcess();
-  const runner = new AgentSchedulerRunner('D:\\agent', 'D:\\agent\\scheduler', (_work, sessionId) => {
-    fake.setSessionId(sessionId);
-    return fake.process;
-  });
+  const runner = new AgentSchedulerRunner(
+    'D:\\agent',
+    'D:\\agent\\scheduler',
+    (_work, sessionId) => {
+      fake.setSessionId(sessionId);
+      return fake.process;
+    },
+    '',
+    async () => ({ provider: 'test', modelId: 'test-model' })
+  );
   const outcome = await runner.run(work({ timeoutMs: 10 }), new AbortController().signal, {
     dispatch: () => true,
     running: () => true,
@@ -191,10 +229,16 @@ test('missing permission readiness stops before dispatch and prompt', async () =
     command.type === 'get_entries'
       ? { type: 'response', command: 'get_entries', success: true, data: { entries: [] } }
       : execute(command);
-  const runner = new AgentSchedulerRunner('D:\\agent', 'D:\\agent\\scheduler', (_work, sessionId) => {
-    fake.setSessionId(sessionId);
-    return fake.process;
-  });
+  const runner = new AgentSchedulerRunner(
+    'D:\\agent',
+    'D:\\agent\\scheduler',
+    (_work, sessionId) => {
+      fake.setSessionId(sessionId);
+      return fake.process;
+    },
+    '',
+    async () => ({ provider: 'test', modelId: 'test-model' })
+  );
   const outcome = await runner.run(work(), new AbortController().signal, {
     dispatch: () => {
       assert.fail('must not dispatch without permission readiness');
@@ -203,6 +247,36 @@ test('missing permission readiness stops before dispatch and prompt', async () =
   });
   assert.equal(outcome.status, 'failed');
   assert.equal(outcome.errorCode, 'SCHEDULE_AUTHORIZATION_UNAVAILABLE');
+  assert.equal(
+    fake.commands.some((command) => command.type === 'prompt'),
+    false
+  );
+  assert.equal(fake.stopped(), 1);
+});
+
+test('missing configured model stops before dispatch instead of using a startup fallback', async () => {
+  const fake = fakeProcess();
+  let dispatched = false;
+  const runner = new AgentSchedulerRunner(
+    'D:\\agent',
+    'D:\\scheduler',
+    (_work, sessionId) => {
+      fake.setSessionId(sessionId);
+      return fake.process;
+    },
+    '',
+    async () => ({ provider: 'relay', modelId: 'unadapted' })
+  );
+  const outcome = await runner.run(work(), new AbortController().signal, {
+    dispatch: () => {
+      dispatched = true;
+      return true;
+    },
+    running: () => true,
+  });
+  assert.equal(outcome.errorCode, 'SCHEDULE_MODEL_UNAVAILABLE');
+  assert.equal(outcome.status, 'needs_attention');
+  assert.equal(dispatched, false);
   assert.equal(
     fake.commands.some((command) => command.type === 'prompt'),
     false

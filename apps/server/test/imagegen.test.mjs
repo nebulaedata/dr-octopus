@@ -10,55 +10,61 @@ import { tmpdir } from 'node:os';
 import sharp from 'sharp';
 import Fastify from 'fastify';
 import { SettingsService } from '../dist/modules/model-settings/model-settings.service.js';
-import { registerSettingsController } from '../dist/modules/model-settings/model-settings.controller.js';
+import { registerImagegenSettingsController } from '../dist/modules/imagegen-settings/imagegen-settings.controller.js';
 import { WorkspacesService } from '../dist/modules/workspaces/workspaces.service.js';
 import { registerWorkspacesController } from '../dist/modules/workspaces/workspaces.controller.js';
 
-const config = { providerId: 'custom', modelId: 'image-model', adapter: 'openai-images' };
-
-test('image settings routes validate, save and clear independently', async (t) => {
-  let current = null;
-  let available = true;
-  const service = new SettingsService({
-    listImagegenCandidates: async () => [
-      {
-        ...config,
-        name: 'Image',
-        providerName: 'Custom',
-        available,
-        supportsReferenceImages: true,
-        requiresProtocolConfirmation: true,
-      },
-    ],
-    getImagegenSettings: async () => ({
-      config: current,
-      available: available && current !== null,
-      effect: 'next_call',
-    }),
-    saveImagegenSettings: async (value) => {
-      current = value;
-    },
-  });
+test('image settings have independent credentials, redacted responses and revision validation', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'octopus-image-settings-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
   const app = Fastify();
   t.after(() => app.close());
-  registerSettingsController(app, service);
+  registerImagegenSettingsController(app, directory);
+  const current = (await app.inject('/settings/imagegen')).json();
+  assert.equal(current.enabled, false);
+  const payload = {
+    revision: current.revision,
+    enabled: true,
+    provider: {
+      id: 'openai',
+      baseUrl: 'https://example.test/v1',
+      model: 'gpt-image-1.5',
+      apiKey: 'private-key',
+    },
+  };
+  const saved = await app.inject({ method: 'PUT', url: '/settings/imagegen', payload });
+  assert.equal(saved.statusCode, 200, saved.body);
+  assert.equal(saved.json().providers.openai.hasApiKey, true);
+  assert.equal(saved.body.includes('private-key'), false);
+  for (const baseUrl of [
+    'not a url',
+    'https://user:secret@example.test/v1',
+    'https://example.test/v1?key=secret',
+  ]) {
+    const invalid = await app.inject({
+      method: 'PUT',
+      url: '/settings/imagegen',
+      payload: { ...payload, revision: saved.json().revision, provider: { ...payload.provider, baseUrl } },
+    });
+    assert.equal(invalid.statusCode, 400);
+    assert.equal(invalid.body.includes('private-key'), false);
+  }
+  assert.equal((await app.inject({ method: 'PUT', url: '/settings/imagegen', payload })).statusCode, 409);
   assert.equal(
-    (await app.inject({ method: 'PUT', url: '/settings/imagegen', payload: config })).statusCode,
-    200
-  );
-  assert.deepEqual((await app.inject('/settings/imagegen')).json().config, config);
-  assert.equal(
-    (await app.inject({ method: 'PUT', url: '/settings/imagegen', payload: { ...config, adapter: 'chat' } }))
-      .statusCode,
+    (
+      await app.inject({
+        method: 'PUT',
+        url: '/settings/imagegen',
+        payload: { revision: saved.json().revision, activeProvider: 'google' },
+      })
+    ).statusCode,
     400
   );
-  available = false;
-  await assert.rejects(service.saveImagegenSettings(config), { code: 'IMAGEGEN_MODEL_UNAVAILABLE' });
-  assert.equal((await app.inject('/settings/imagegen')).json().available, false);
-  assert.equal((await app.inject({ method: 'DELETE', url: '/settings/imagegen' })).json().config, null);
+  assert.equal((await app.inject('/settings/imagegen/candidates')).statusCode, 404);
+  assert.equal((await app.inject({ method: 'DELETE', url: '/settings/imagegen' })).statusCode, 404);
 });
 
-test('a provider owning the image default cannot be deleted', async () => {
+test('independent image configuration does not prevent deleting a chat provider', async () => {
   let deleted = false;
   const service = new SettingsService({
     listProviders: async () => [
@@ -73,14 +79,14 @@ test('a provider owning the image default cannot be deleted', async () => {
       },
     ],
     getDefaultModel: async () => ({}),
-    getImagegenSettings: async () => ({ config }),
     deleteCustomProvider: async () => {
       deleted = true;
+      return { changed: true, synchronized: true };
     },
   });
   const key = (await service.listProviders()).providers[0].providerKey;
-  await assert.rejects(service.deleteCustomProvider(key), { code: 'MODEL_PROVIDER_DEFAULT_IN_USE' });
-  assert.equal(deleted, false);
+  await service.deleteCustomProvider(key);
+  assert.equal(deleted, true);
 });
 
 test('workspace previews validate image bytes, missing files and junction boundaries', async (t) => {

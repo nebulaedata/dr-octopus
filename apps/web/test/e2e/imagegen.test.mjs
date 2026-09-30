@@ -144,78 +144,77 @@ test(
 );
 
 test(
-  'image defaults require explicit custom protocol and can be saved and cleared',
+  'independent image settings keep service drafts and do not change chat defaults',
   { timeout: 180000 },
   async (t) => {
     const page = await browser.newPage({ locale: 'en-US', viewport: { width: 1280, height: 960 } });
     t.after(() => page.close());
-    const errors = [];
-    page.on('pageerror', (error) => errors.push(error.message));
     await installSessionFixture(page);
-    let config = null;
-    let candidatesAvailable = true;
-    const candidate = {
-      providerId: 'custom-images',
-      modelId: 'image-model',
-      adapter: 'openai-images',
-      name: 'Image fixture',
-      providerName: 'Custom images',
-      available: true,
-      supportsReferenceImages: true,
-      requiresProtocolConfirmation: true,
+    await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+    let config = {
+      enabled: false,
+      activeProvider: 'openai',
+      revision: 'initial',
+      providers: {
+        openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-image-1.5', hasApiKey: false },
+        qwen: {
+          baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+          model: 'qwen-image-3.0-pro',
+          hasApiKey: false,
+        },
+      },
     };
+    const writes = [];
     await page.route('**/api/settings/**', async (route) => {
       const request = route.request();
       const path = new URL(request.url()).pathname;
-      let json = {};
-      if (path === '/api/settings/default-model')
-        json = { configured: false, available: false, effect: 'new_sessions' };
-      if (path === '/api/settings/default-model/candidates') json = { candidates: [] };
-      if (path === '/api/settings/imagegen/candidates')
-        json = { candidates: candidatesAvailable ? [candidate] : [] };
       if (path === '/api/settings/imagegen') {
-        if (request.method() === 'PUT') config = request.postDataJSON();
-        if (request.method() === 'DELETE') config = null;
-        json = { config, available: config !== null, effect: 'next_call' };
+        if (request.method() === 'PUT') {
+          const change = request.postDataJSON();
+          writes.push(change);
+          if (change.provider) {
+            const { id, apiKey, ...fields } = change.provider;
+            config.providers[id] = {
+              ...fields,
+              hasApiKey: apiKey === undefined ? config.providers[id].hasApiKey : Boolean(apiKey),
+            };
+          }
+          config = {
+            ...config,
+            activeProvider: change.activeProvider ?? config.activeProvider,
+            enabled: change.enabled ?? config.enabled,
+            revision: String(writes.length),
+          };
+        }
+        return route.fulfill({ json: config });
       }
-      await route.fulfill({ json });
+      if (path.endsWith('/default-model/candidates')) return route.fulfill({ json: { candidates: [] } });
+      if (path.endsWith('/default-model'))
+        return route.fulfill({ json: { configured: false, available: false, effect: 'new_sessions' } });
+      return route.fulfill({ json: {} });
     });
-    await page.goto(`${baseURL}settings/default-model`, { waitUntil: 'domcontentloaded', timeout: 120000 });
-    await expect(page.getByText('Image model', { exact: true })).toBeVisible({ timeout: 120000 });
-    assert.match(page.url(), /settings\/default-model/);
-    assert.ok(await page.title());
-    const select = page.getByRole('combobox', { name: 'Provider / image model' });
-    await select.click();
-    await page.getByRole('option', { name: /Custom images/ }).click();
-    const save = page.getByRole('button', { name: 'Save image model', exact: true });
-    await expect(save).toBeDisabled();
-    await page.getByRole('checkbox').check();
-    await save.click();
-    await expect.poll(() => config?.modelId).toBe('image-model');
-    await expect(select).toContainText('Custom images / Image fixture');
-    await expect(page.getByText('custom-images / image-model', { exact: true })).toHaveCount(0);
-    assert.equal(config.adapter, 'openai-images');
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(select).toContainText('Custom images / Image fixture');
-    await expect(page.getByRole('checkbox')).toBeChecked();
-    await page.screenshot({ path: '.playwright-artifacts/imagegen-settings-desktop.png', fullPage: true });
-    await page.evaluate(() => globalThis.document.documentElement.classList.add('dark'));
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({
-      path: '.playwright-artifacts/imagegen-settings-mobile-dark.png',
-      fullPage: true,
-    });
-    assert.ok(
-      await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth)
+    await page.goto(`${baseURL}settings/imagegen`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    await page.getByRole('tab', { name: 'Qwen Bailian' }).click();
+    await page.getByRole('textbox', { name: 'Image model', exact: true }).fill('qwen-image-3.0');
+    await page.getByRole('tab', { name: 'OpenAI', exact: true }).click();
+    await page.getByRole('tab', { name: 'Qwen Bailian' }).click();
+    await expect(page.getByRole('textbox', { name: 'Image model', exact: true })).toHaveValue(
+      'qwen-image-3.0'
     );
-    candidatesAvailable = false;
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(select).toContainText('custom-images / image-model · Unavailable');
-    await expect(save).toBeDisabled();
-    await page.getByRole('button', { name: 'Clear image model', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Clear image model', exact: true })).toBeDisabled();
-    await expect(select).toContainText('Choose an image model');
-    assert.equal(config, null);
-    assert.deepEqual(errors, []);
+    assert.equal(config.activeProvider, 'openai');
+    await page.getByRole('button', { name: 'Save and use', exact: true }).click();
+    await expect(page.getByText('Image settings saved.')).toBeVisible();
+    assert.equal(config.activeProvider, 'qwen');
+    assert.equal(writes.at(-1).provider.model, 'qwen-image-3.0');
+    assert.equal(writes.at(-1).provider.apiKey, undefined);
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert.ok(
+        await page.evaluate(() => globalThis.document.documentElement.scrollWidth <= globalThis.innerWidth)
+      );
+    }
+    await page.goto(`${baseURL}settings/default-model`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('textbox', { name: 'Image model', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Qwen Bailian' })).toHaveCount(0);
   }
 );

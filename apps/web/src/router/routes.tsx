@@ -482,6 +482,25 @@ export function SpeechSettingsRoute() {
     </Suspense>
   );
 }
+const LazyImagegenSettingsPage = lazy(() =>
+  import('../features/settings').then((module) => ({ default: module.ImagegenSettingsPage }))
+);
+/**
+ * Renders imagegen settings through the shared feature entrypoint.
+ */
+export function ImagegenSettingsRoute() {
+  const { t } = useI18n();
+  const navigate = useNavigate({ from: '/settings/imagegen' });
+  const search = useSearch({ from: '/workbench/settings/imagegen' });
+  return (
+    <Suspense fallback={<LoadingFallback message={t('imagegen.loading', 'Loading imagegen settings…')} />}>
+      <LazyImagegenSettingsPage
+        provider={search.provider}
+        onProviderChange={(provider) => void navigate({ search: { provider }, replace: true })}
+      />
+    </Suspense>
+  );
+}
 /**
  * Render Jev settings through the shared feature entrypoint.
  */

@@ -43,7 +43,7 @@ OCR、Embedding、Reranker 仍只在 Settings → 知识库配置，使用后台
 
 进入时激活 8 个知识工具：list_collections、search、read、create_collection、add_text、import、import_attachment、job_status（均以 knowledge_ 为前缀）。正常问答只用前三个；写入工具仅在用户明确要求保存资料时使用，并继续经过现有权限系统。普通 Agent 模式不激活这些工具。所选集合非空时禁止创建新集合绕过范围。
 
-内置 `skills/knowledge/SKILL.md` 维护集合选择、证据检索、有限补检索、引用、无证据回答和附件入库指引。模式直接注入 Skill 正文，无需开放文件读取工具让模型发现 Skill。工具和领域校验负责硬约束，Skill 负责使用策略。
+内置 `skills/knowledge/SKILL.md` 维护集合选择、证据检索、有限补检索、引用、无证据回答和附件入库指引。扩展通过 `resources_discover` 自动注册技能；Pi 将名称、描述和路径加入技能目录，模型通过 `read` 按需加载正文，不再每轮注入完整 Skill。知识模式保留原有系统提示词和技能目录，只追加模式、集合范围及工具限制；`read` 在该模式下仅允许读取内置 `knowledge/SKILL.md`，其他文件读取仍由 `tool_call` 拦截。工具和领域校验负责硬约束，Skill 负责使用策略。
 
 每轮系统提示明确知识问答、仅用知识工具、旧历史仅作背景、结论来自本轮证据。文档内容视为不可信资料。检索失败与无命中分别呈现；不添加第二次模型调用修复引用。
 

@@ -26,6 +26,7 @@ import {
   MemorySettingsRoute,
   JevSettingsRoute,
   SpeechSettingsRoute,
+  ImagegenSettingsRoute,
   SchedulerSettingsRoute,
   SettingsLayoutRoute,
   SettingsPlaceholderRoute,
@@ -249,6 +250,12 @@ const speechSettingsRoute = createRoute({
   validateSearch: z.object({ provider: z.enum(['openai', 'qwen']).optional().catch(undefined) }),
   component: SpeechSettingsRoute,
 });
+const imagegenSettingsRoute = createRoute({
+  path: 'imagegen',
+  getParentRoute: () => settingsLayoutRoute,
+  validateSearch: z.object({ provider: z.enum(['openai', 'qwen']).optional().catch(undefined) }),
+  component: ImagegenSettingsRoute,
+});
 const serverSettingsRoute = createRoute({
   path: 'server',
   getParentRoute: () => settingsLayoutRoute,
@@ -280,6 +287,7 @@ const routeTree = rootRoute.addChildren([
       memorySettingsRoute,
       jevSettingsRoute,
       speechSettingsRoute,
+      imagegenSettingsRoute,
       languageSettingsRoute,
       shortcutsSettingsRoute,
       snippetsSettingsRoute,

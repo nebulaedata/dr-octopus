@@ -3,12 +3,12 @@
  * @description Projects normalized Session messages and tool executions into the conversation transcript.
  */
 
-import { useEffect } from 'react';
+import { Fragment, useEffect } from 'react';
 import { MessageSquareDashedIcon } from 'lucide-react';
 import { useStore } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
 import { MessageSkeleton } from '@/components/MessageSkeleton';
-import { Message, MessageContent } from '@octopus/ui/components/message';
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -26,10 +26,9 @@ import { ExtensionNotificationRow } from './ExtensionNotificationRow';
 import { MessageView } from './MessageView';
 import { MessageRow } from './MessageRow';
 import { RetryMarker } from './RetryMarker';
-import { ToolCard } from './ToolCard';
+import { ToolTimeline } from './ToolTimeline';
 import { TurnDurationMarker } from './TurnDurationMarker';
-import { getLastItemIndexByTurn } from '@/features/session/utils/turn-transcript-model';
-import type { ReactNode } from 'react';
+import { groupTranscriptRows, selectVisibleTranscriptMessageIds } from './utils/transcript-layout';
 import type { TranscriptItem } from '@/stores/session';
 import type { SessionDto, ConversationStartDto } from '@octopus/shared/protocol';
 
@@ -142,18 +141,24 @@ function TranscriptRows({
   session: SessionDto;
   sessionId: string;
 }) {
-  const rows: ReactNode[] = [];
-  const lastItemIndexByTurn = getLastItemIndexByTurn(items);
-  items.forEach((item, index) => {
-    const row = renderTranscriptRow(item, session, sessionId);
-    rows.push(row);
-    const turnId = 'turnId' in item ? item.turnId : undefined;
-    if (turnId !== undefined && lastItemIndexByTurn.get(turnId) === index) {
-      rows.push(<RetryMarker key={`retry:${turnId}`} sessionId={sessionId} turnId={turnId} />);
-      rows.push(<TurnDurationMarker key={`duration:${turnId}`} sessionId={sessionId} turnId={turnId} />);
+  const visibleMessageIds = useStore(
+    sessionStores.ensure(sessionId),
+    useShallow(selectVisibleTranscriptMessageIds)
+  );
+  return groupTranscriptRows(items, visibleMessageIds).map((row) => {
+    if (row.type === 'tools') {
+      return <ToolTimeline key={`tools:${row.id}`} sessionId={sessionId} toolIds={row.toolIds} />;
     }
+    if (row.type === 'turn-end') {
+      return (
+        <Fragment key={`end:${row.turnId}`}>
+          <RetryMarker sessionId={sessionId} turnId={row.turnId} />
+          <TurnDurationMarker sessionId={sessionId} turnId={row.turnId} />
+        </Fragment>
+      );
+    }
+    return renderTranscriptRow(row.item, session, sessionId);
   });
-  return rows;
 }
 
 /**
@@ -164,7 +169,11 @@ function TranscriptRows({
  * @param sessionId - Browser Session identity.
  * @returns The specialized transcript row.
  */
-function renderTranscriptRow(item: TranscriptItem, session: SessionDto, sessionId: string) {
+function renderTranscriptRow(
+  item: Exclude<TranscriptItem, { type: 'tool' }>,
+  session: SessionDto,
+  sessionId: string
+) {
   if (item.type === 'message') {
     return (
       <MessageRow
@@ -175,9 +184,6 @@ function renderTranscriptRow(item: TranscriptItem, session: SessionDto, sessionI
         turnId={item.turnId}
       />
     );
-  }
-  if (item.type === 'tool') {
-    return <ToolRow key={`tool:${item.id}`} sessionId={sessionId} toolId={item.id} />;
   }
   if (item.type === 'notification') {
     return (
@@ -216,20 +222,4 @@ function SubmittedMessageScroll({ sessionId }: { sessionId: string }) {
     return () => window.cancelAnimationFrame(frame);
   }, [latestRequestId, scrollToEnd]);
   return null;
-}
-
-/**
- * Subscribes to one tool projection so streaming output does not rerender the transcript shell.
- */
-function ToolRow({ sessionId, toolId }: { sessionId: string; toolId: string }) {
-  const tool = useStore(sessionStores.ensure(sessionId), (state) => state.toolsById[toolId]);
-  return tool === undefined ? null : (
-    <MessageScrollerItem>
-      <Message align="start">
-        <MessageContent>
-          <ToolCard tool={tool} />
-        </MessageContent>
-      </Message>
-    </MessageScrollerItem>
-  );
 }

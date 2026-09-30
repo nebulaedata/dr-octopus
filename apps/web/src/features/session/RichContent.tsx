@@ -4,6 +4,8 @@
  */
 
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { SkillMessageContent } from './SkillMessageContent';
+import { projectSkillCommand } from './utils/skill-projection';
 import { ThoughtDisclosureMarker } from './ThoughtDisclosureMarker';
 import type { MessageProjection } from '@/stores/session';
 
@@ -29,9 +31,14 @@ export function RichContent({ isStreaming, message }: { isStreaming: boolean; me
           text={thinkingText}
         />
       ) : null}
-      {textBlocks.map((block, index) => (
-        <MarkdownRenderer key={`text-${String(index)}`}>{block.text}</MarkdownRenderer>
-      ))}
+      {textBlocks.map((block, index) => {
+        const skill = message.role === 'user' ? projectSkillCommand(block.text) : undefined;
+        return skill ? (
+          <SkillMessageContent key={`text-${String(index)}`} skill={skill} />
+        ) : (
+          <MarkdownRenderer key={`text-${String(index)}`}>{block.text}</MarkdownRenderer>
+        );
+      })}
     </div>
   );
 }

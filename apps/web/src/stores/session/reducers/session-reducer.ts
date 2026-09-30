@@ -5,6 +5,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { normalizeMessage, shouldProjectMessage } from '@/stores/session/utils/normalizer';
+import { normalizeTokenUsage } from '@/stores/session/utils/token-usage';
 import {
   endAutoRetry,
   markActiveRetryRunning,
@@ -252,17 +253,14 @@ function reduceAgentEvent(
       ],
       messagesById: {
         ...retryingState.messagesById,
-        [message.id]:
-          message.role === 'assistant'
-            ? { ...message, timestamp, thinkingStartedAt: timestamp }
-            : { ...message, timestamp },
+        [message.id]: { ...message, timestamp },
       },
       currentAssistantId: message.role === 'assistant' ? message.id : retryingState.currentAssistantId,
     };
   }
   if (type === 'message_update' && state.currentAssistantId !== undefined) {
     const delta = isRecord(event['assistantMessageEvent']) ? event['assistantMessageEvent'] : undefined;
-    return reduceMessageUpdate(state, delta, eventTimestamp);
+    return reduceMessageUpdate(state, delta, event['usage'], eventTimestamp);
   }
   if (type === 'message_end') {
     return reduceMessageEnd(state, event['message'], requestId, eventTimestamp);
@@ -503,15 +501,17 @@ function reconcileOptimisticUserMessage(
  *
  * @param state - 当前投影状态。
  * @param delta - 当前消息内容增量。
+ * @param usage - Pi 为当前模型请求返回的累计用量快照，不是增量。
  * @param eventTimestamp - 此增量的服务端时间戳。
  * @returns 合并内容和思考生命周期后的投影。
  */
 function reduceMessageUpdate(
   state: SessionProjectionState,
   delta: Record<string, unknown> | undefined,
+  usage: unknown,
   eventTimestamp: number
 ): SessionProjectionState {
-  if (delta === undefined || state.currentAssistantId === undefined) {
+  if (state.currentAssistantId === undefined) {
     return state;
   }
   const current = state.messagesById[state.currentAssistantId];
@@ -519,8 +519,9 @@ function reduceMessageUpdate(
     return state;
   }
   const content = [...current.content];
-  const index = typeof delta['contentIndex'] === 'number' ? delta['contentIndex'] : 0;
-  const deltaType = String(delta['type'] ?? '');
+  const index = typeof delta?.['contentIndex'] === 'number' ? delta['contentIndex'] : 0;
+  const deltaType = String(delta?.['type'] ?? '');
+  const tokenUsage = normalizeTokenUsage(usage);
   if (deltaType === 'text_delta' || deltaType === 'thinking_delta') {
     const blockType = deltaType === 'thinking_delta' ? 'thinking' : 'text';
     while (content.length <= index) {
@@ -529,20 +530,36 @@ function reduceMessageUpdate(
     const previous = content[index];
     content[index] = {
       type: blockType,
-      text: `${previous?.type === blockType ? (previous.text ?? '') : ''}${String(delta['delta'] ?? '')}`,
+      text: `${previous?.type === blockType ? (previous.text ?? '') : ''}${String(delta?.['delta'] ?? '')}`,
     };
   }
   const timestamp = resolveTimestamp(eventTimestamp);
   const thinkingStartedAt =
-    deltaType === 'thinking_delta' ? (current.thinkingStartedAt ?? timestamp) : current.thinkingStartedAt;
+    deltaType === 'thinking_start' || deltaType === 'thinking_delta'
+      ? (current.thinkingStartedAt ?? timestamp)
+      : current.thinkingStartedAt;
+  const endsThinking =
+    deltaType === 'thinking_end' ||
+    deltaType === 'text_start' ||
+    deltaType === 'text_delta' ||
+    deltaType === 'toolcall_start' ||
+    deltaType === 'toolcall_delta';
   const thinkingEndedAt =
-    deltaType === 'text_delta' && current.thinkingEndedAt === undefined ? timestamp : current.thinkingEndedAt;
+    endsThinking && thinkingStartedAt !== undefined && current.thinkingEndedAt === undefined
+      ? timestamp
+      : current.thinkingEndedAt;
   return {
     ...state,
     ...advanceActiveTurn(state, timestamp),
     messagesById: {
       ...state.messagesById,
-      [current.id]: { ...current, content, thinkingStartedAt, thinkingEndedAt },
+      [current.id]: {
+        ...current,
+        content,
+        thinkingStartedAt,
+        thinkingEndedAt,
+        ...(tokenUsage === undefined ? {} : { tokenUsage }),
+      },
     },
   };
 }
@@ -577,12 +594,17 @@ function reduceMessageEnd(
   const streamingMessage = state.messagesById[id];
   const contextUsage = projectContextUsage(state, rawMessage);
   const persistedAt = finalMessage.persistedAt ?? resolveTimestamp(eventTimestamp);
-  const hasThinking = finalMessage.content.some(
-    (block) => block.type === 'thinking' && block.text.length > 0
-  );
-  const thinkingStartedAt =
-    streamingMessage?.thinkingStartedAt ??
-    (hasThinking ? (finalMessage.timestamp ?? persistedAt) : undefined);
+  // Only live phase boundaries establish timing; durable message timestamps include answer generation.
+  const thinkingStartedAt = streamingMessage?.thinkingStartedAt;
+  const rawContent = isRecord(rawMessage) ? rawMessage['content'] : undefined;
+  const thinkingEndedAt =
+    streamingMessage?.thinkingEndedAt ??
+    (thinkingStartedAt !== undefined &&
+    Array.isArray(rawContent) &&
+    rawContent.length > 0 &&
+    rawContent.every((block) => isRecord(block) && block['type'] === 'thinking')
+      ? persistedAt
+      : undefined);
   const turnId = state.activeTurnId;
   return {
     ...state,
@@ -602,7 +624,7 @@ function reduceMessageEnd(
         id,
         persistedAt,
         thinkingStartedAt,
-        thinkingEndedAt: thinkingStartedAt === undefined ? undefined : persistedAt,
+        thinkingEndedAt,
       },
     },
     currentAssistantId: finalMessage.role === 'assistant' ? undefined : state.currentAssistantId,

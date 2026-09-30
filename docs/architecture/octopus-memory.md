@@ -123,7 +123,7 @@ apps/web/src/features/session/ToolRenderers/CustomToolRenderers/
 - 在 `run-cli.ts` 的 `extensionFactories` 增加稳定名字 `octopus-memory`，设置 `hidden: true`；`AgentRpcProcess` 已通过 Octopus CLI 启动，无需 Server 另装一份扩展。
 - `hidden: true` 只说明这是受管内置扩展，不意味着其 tool events、模型能力或权限检查被隐藏。
 - 默认工厂独立加载时，由 memory 路径模块使用公开 `CONFIG_DIR_NAME` 与 `homedir()` 解析产品数据根；正常 Octopus 启动通过同一解析器提供记忆路径。记忆路径不依赖 `getAgentDir()`、`ctx.cwd`、`process.cwd()` 或 Workspace；当前项目只可作为来源和事实适用背景。
-- 内置 Skill 参照知识库扩展由模块直接读取并去除 frontmatter，在 `before_agent_start` 中默认注入完整正文；不通过 `resources_discover` 暴露路径，避免模型再调用 `read` 读取内置 `SKILL.md` 并触发权限请求。
+- 内置 Skill 通过 `resources_discover` 随扩展自动注册，启动和重载均由 Pi 加载技能目录；模型按需使用 `read` 读取 `SKILL.md`，不在每轮系统提示词中注入完整正文。文件读取遵守现有权限规则。
 - 构建将 `drizzle/memory/` 完整复制到 `dist/assets/memory-migrations/`，Skill 复制到对应 dist 扩展目录，验证运行时相对路径；细节见第 6.4 节。后续提供 Server 使用的公开 SDK 出口；不从包内私有路径跨包导入。
 - 仅 memory 的 terminal adapter 可使用 `pi-tui`；Service 和浏览器投影只处理普通数据。
 
@@ -205,7 +205,7 @@ TUI 与 Web 操作的是同一个全局策略；修改后所有会话在下一�
 
 ### 5.1 Context 注入
 
-`before_agent_start` 在记忆工具可用时默认追加去除 frontmatter 的完整内置 Skill 正文，并保留 `event.systemPrompt` 中其他扩展的内容。模型无需额外读取 Skill 文件。Skill 统一定义 Index 导航、按需读取记忆正文、检索与分页预算、历史数据的指令边界，以及宿主整理和提交回执规则；工具受模式限制不可用时不注入。
+`resources_discover` 注册内置 Skill 路径，Pi 提供名称、描述及位置，模型在相关任务中按需读取正文。`before_agent_start` 仅维护每轮预算与整理生命周期，不再修改系统提示词；动态记忆索引仍通过 `context` 提供。Skill 统一定义 Index 导航、按需读取记忆正文、检索与分页预算、历史数据的指令边界，以及宿主整理和提交回执规则；工具受模式限制不可用时，技能目录不赋予额外执行权限。
 
 动态 Index 通过 `context` 返回新的 `messages` 列表，使用带命名空间的临时 custom message，由 Pi 公共消息转换链转换为模型可读资料。只替换自身块，保留其他扩展变换，不调用虚构的 `ctx.systemContext.add`。
 

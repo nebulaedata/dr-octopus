@@ -168,10 +168,13 @@ test(
     assert.equal(sessionManager.getSessionId(), id);
     assert.equal(requests.length, 1);
     assert.equal(requests[0].model, 'answer');
-    assert.equal(requests[0].tools.length, 11);
+    assert.equal(requests[0].tools.length, 12);
     assert.ok(
       requests[0].tools.every(
-        (tool) => tool.function.name.startsWith('knowledge_') || modelToolNames.includes(tool.function.name)
+        (tool) =>
+          tool.function.name === 'read' ||
+          tool.function.name.startsWith('knowledge_') ||
+          modelToolNames.includes(tool.function.name)
       )
     );
     assert.match(JSON.stringify(requests[0].messages), /知识库问答助手/);

@@ -74,10 +74,10 @@ test('session model lists and switches honor the Host chat candidate catalog', a
         {
           id: 'custom',
           models: [
-            { id: 'chat', interfaces: ['chat'] },
-            { id: 'image', interfaces: ['image'] },
-            { id: 'both', interfaces: ['chat', 'image'] },
-            { id: 'other', interfaces: ['other'] },
+            { id: 'chat', adaptation: { status: 'adapted' } },
+            { id: 'image', adaptation: { status: 'unadapted', reason: 'not_found' } },
+            { id: 'both', adaptation: { status: 'adapted' } },
+            { id: 'other', adaptation: { status: 'unadapted', reason: 'not_found' } },
           ],
         },
       ],

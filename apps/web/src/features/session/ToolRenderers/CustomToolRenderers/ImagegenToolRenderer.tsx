@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { useParams } from '@tanstack/react-router';
-import { DownloadIcon, ExpandIcon, ImageOffIcon, ChevronDownIcon } from 'lucide-react';
+import { DownloadIcon, ImageOffIcon, ChevronRightIcon } from 'lucide-react';
 import { buttonVariants } from '@octopus/ui/components/button';
 import { useI18n } from '@/i18n/use-i18n';
 import { projectImagegen } from '@/features/session/utils/imagegen-projection';
@@ -47,18 +47,18 @@ function GeneratedImage({
   const base = `/api/workspaces/${encodeURIComponent(workspaceId)}/files`;
   const query = `?path=${encodeURIComponent(image.relativePath)}`;
   return (
-    <figure className="flex w-full min-w-0 flex-col overflow-hidden rounded-xl border bg-card">
+    <figure className="flex w-full min-w-0 max-w-md flex-col overflow-hidden rounded-xl border bg-card">
       {missing ? (
         <div
           role="status"
-          className="flex min-h-40 flex-col items-center justify-center gap-3 bg-muted/40 p-6 text-center text-sm text-muted-foreground"
+          className="flex h-56 shrink-0 flex-col items-center justify-center gap-3 bg-muted/40 p-6 text-center text-xs text-muted-foreground"
         >
           <ImageOffIcon className="size-6" aria-hidden />
           {t('session.imagegen.missing', 'This image is missing or cannot be previewed.')}
         </div>
       ) : (
         <a
-          className="group/image relative block aspect-4/3 w-full overflow-hidden bg-muted/40 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          className="relative block w-full shrink-0 cursor-zoom-in overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           href={`${base}/image${query}`}
           target="_blank"
           rel="noreferrer"
@@ -67,29 +67,16 @@ function GeneratedImage({
           <img
             src={`${base}/image${query}`}
             alt={t('session.imagegen.alt', 'Generated image')}
-            className="absolute inset-0 size-full object-cover transition-opacity duration-300 ease-in-out group-hover/image:opacity-0 group-focus-visible/image:opacity-0 motion-reduce:transition-none"
+            className="block h-auto w-full"
             width={image.width}
             height={image.height}
             loading="lazy"
             onError={() => setMissing(true)}
           />
-          <img
-            src={`${base}/image${query}`}
-            alt=""
-            aria-hidden
-            className="pointer-events-none absolute inset-0 size-full object-contain opacity-0 transition-opacity duration-300 ease-in-out group-hover/image:opacity-100 group-focus-visible/image:opacity-100 motion-reduce:transition-none"
-            width={image.width}
-            height={image.height}
-            loading="lazy"
-          />
-          <span className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-lg border bg-background/95 px-2.5 py-2 text-xs text-foreground shadow-sm">
-            <ExpandIcon className="size-3.5" aria-hidden />
-            {t('session.imagegen.viewOriginal', 'View original')}
-          </span>
         </a>
       )}
-      <figcaption className="flex min-w-0 flex-col gap-3 border-t p-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <figcaption className="flex min-w-0 flex-col gap-2 border-t px-3 py-2">
+        <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium" title={modelId}>
               {modelId}
@@ -103,7 +90,11 @@ function GeneratedImage({
             </p>
           </div>
           {!missing && (
-            <a className={buttonVariants({ variant: 'outline' })} href={`${base}/download${query}`} download>
+            <a
+              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+              href={`${base}/download${query}`}
+              download
+            >
               <DownloadIcon aria-hidden />
               {t('session.imagegen.download', 'Download')}
             </a>
@@ -111,7 +102,7 @@ function GeneratedImage({
         </div>
         <details className="group/path min-w-0 text-xs text-muted-foreground">
           <summary className="flex min-h-8 w-fit cursor-pointer list-none items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-            <ChevronDownIcon className="size-3.5 group-open/path:rotate-180" aria-hidden />
+            <ChevronRightIcon className="size-3.5 group-open/path:rotate-90" aria-hidden />
             {t('session.imagegen.filePath', 'File path')}
           </summary>
           <p className="mt-1 select-text break-all rounded-md bg-muted/50 p-2 font-mono">

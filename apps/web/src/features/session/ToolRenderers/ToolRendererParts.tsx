@@ -4,10 +4,15 @@
  */
 
 import { Separator } from '@octopus/ui/components/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@octopus/ui/components/collapsible';
+import { BracesIcon, ChevronRightIcon, TerminalIcon } from 'lucide-react';
+import { cn } from '@octopus/ui/lib/utils';
 import { Highlight } from '@/components/Highlight/index';
+import { CodeBlock } from '@octopus/custom-ui/components/code-block';
 import { ImageAttachment } from '../ImageAttachment';
 import { useI18n } from '@/i18n/use-i18n';
 import { formatToolValue } from '@/features/session/utils/tool-renderer-utils';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { ToolContentBlock, ToolProjection } from '@/stores/session';
 import type { HighlightLanguage } from '@/components/Highlight/index';
@@ -15,12 +20,92 @@ import type { HighlightLanguage } from '@/components/Highlight/index';
 /**
  * Renders a labelled region inside a tool result.
  */
-export function ToolSection({ children, title }: { children: ReactNode; title: string }) {
+export function ToolSection({
+  children,
+  title,
+  icon: Icon,
+}: {
+  children: ReactNode;
+  title: string;
+  icon?: LucideIcon;
+}) {
   return (
-    <section className="flex flex-col gap-1.5">
-      <h4 className="text-xs font-medium text-muted-foreground">{title}</h4>
+    <section className="flex min-w-0 flex-col gap-1.5">
+      <h4
+        className={cn(
+          'text-xs font-medium text-muted-foreground',
+          Icon && 'flex min-h-8 items-center gap-1.5 px-1'
+        )}
+      >
+        {Icon ? <Icon aria-hidden className="size-3.5 shrink-0" /> : null}
+        {title}
+      </h4>
       {children}
     </section>
+  );
+}
+
+/**
+ * Displays raw output immediately, with optional diagnostics in a closed disclosure below it.
+ * Mounted diagnostics retain scroll state while the enclosing tool row is open.
+ */
+export function ToolOutputSection({
+  children,
+  details,
+  streaming = false,
+}: {
+  children?: ReactNode;
+  details?: unknown;
+  streaming?: boolean;
+}) {
+  const { t } = useI18n();
+  return (
+    <ToolSection title={t('session.schedulerTool.statusTitle.output', 'Output')} icon={TerminalIcon}>
+      <div className="flex min-w-0 flex-col gap-3">
+        {children}
+        {details === undefined ? null : (
+          <Collapsible defaultOpen={false} className="min-w-0">
+            <CollapsibleTrigger className="group/tool-details flex min-h-8 w-full items-center gap-1.5 rounded-md px-1 text-left text-xs font-medium text-muted-foreground outline-none hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+              <ChevronRightIcon
+                aria-hidden
+                className="size-3.5 shrink-0 motion-safe:transition-transform group-data-panel-open/tool-details:rotate-90"
+              />
+              {t('session.toolParts.details', 'Details')}
+            </CollapsibleTrigger>
+            <CollapsibleContent keepMounted className="pt-2">
+              <ToolCodeBlock language="json" maxHeight={288} streaming={streaming}>
+                {formatToolValue(details)}
+              </ToolCodeBlock>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </div>
+    </ToolSection>
+  );
+}
+
+/**
+ * Composes the shared scroll surface and highlighter with tool-specific language and streaming policy.
+ */
+export function ToolCodeBlock({
+  children,
+  language = 'plaintext',
+  streaming = false,
+  maxHeight = 384,
+  className,
+}: {
+  children: string;
+  language?: HighlightLanguage;
+  streaming?: boolean;
+  maxHeight?: number;
+  className?: string;
+}) {
+  return (
+    <CodeBlock maxHeight={maxHeight} className={className} aria-label="Tool text">
+      <Highlight language={language} highlight={!streaming} className="overflow-visible rounded-none">
+        {children}
+      </Highlight>
+    </CodeBlock>
   );
 }
 
@@ -30,11 +115,11 @@ export function ToolSection({ children, title }: { children: ReactNode; title: s
 export function ToolContent({
   blocks,
   language,
-  terminal = false,
+  streaming = false,
 }: {
   blocks: ToolContentBlock[];
   language?: HighlightLanguage;
-  terminal?: boolean;
+  streaming?: boolean;
 }) {
   const { t } = useI18n();
   if (blocks.length === 0) {
@@ -53,24 +138,11 @@ export function ToolContent({
           title={t('session.toolParts.toolOutputAlt', 'Tool output')}
         />
       );
-    } else if (language === undefined) {
-      return (
-        <pre
-          key={`text-${String(index)}`}
-          className={
-            terminal
-              ? 'max-h-96 overflow-auto rounded-lg bg-muted p-3 font-mono text-xs whitespace-pre-wrap text-foreground'
-              : 'max-h-96 overflow-auto rounded-lg bg-muted p-3 text-xs whitespace-pre-wrap'
-          }
-        >
-          {block.text}
-        </pre>
-      );
     } else {
       return (
-        <Highlight key={`text-${String(index)}`} className="max-h-96" language={language}>
+        <ToolCodeBlock key={`text-${String(index)}`} language={language} streaming={streaming}>
           {block.text}
-        </Highlight>
+        </ToolCodeBlock>
       );
     }
   });
@@ -84,30 +156,25 @@ export function FallbackToolRenderer({ tool }: { tool: ToolProjection }) {
   return (
     <div className="flex flex-col gap-3">
       {tool.arguments === undefined ? null : (
-        <ToolSection title={t('session.toolParts.arguments', 'Arguments')}>
-          <pre className="max-h-48 overflow-auto rounded-lg bg-muted p-3 text-xs whitespace-pre-wrap">
+        <ToolSection title={t('session.toolParts.arguments', 'Arguments')} icon={BracesIcon}>
+          <ToolCodeBlock language="json" maxHeight={192} streaming={tool.status === 'running'}>
             {formatToolValue(tool.arguments)}
-          </pre>
+          </ToolCodeBlock>
         </ToolSection>
       )}
       {tool.arguments === undefined || (tool.content.length === 0 && tool.details === undefined) ? null : (
         <Separator />
       )}
-      {tool.content.length === 0 ? null : (
-        <ToolSection title={t('session.schedulerTool.statusTitle.output', 'Output')}>
-          <ToolContent blocks={tool.content} />
-        </ToolSection>
-      )}
-      {tool.details === undefined ? null : (
-        <>
-          {tool.content.length === 0 ? null : <Separator />}
-          <ToolSection title={t('session.toolParts.details', 'Details')}>
-            <pre className="max-h-72 overflow-auto rounded-lg bg-muted p-3 text-xs whitespace-pre-wrap">
-              {formatToolValue(tool.details)}
-            </pre>
-          </ToolSection>
-        </>
-      )}
+      <ToolOutputSection details={tool.details} streaming={tool.status === 'running'}>
+        {tool.content.length > 0 || tool.details === undefined ? (
+          <ToolContent
+            blocks={[
+              ...tool.content.filter((block) => block.type === 'image'),
+              ...tool.content.filter((block) => block.type === 'text'),
+            ]}
+          />
+        ) : null}
+      </ToolOutputSection>
     </div>
   );
 }

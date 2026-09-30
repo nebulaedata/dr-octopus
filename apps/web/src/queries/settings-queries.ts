@@ -214,8 +214,10 @@ export function useMcpServerMutations() {
   const queryClient = useQueryClient();
   const synchronize = async () => queryClient.invalidateQueries({ queryKey: queryKeys.mcpServersRoot });
   return {
-    create: useMutation({ mutationFn: createMcpServer, onSuccess: synchronize }),
+    create: useMutation({ mutationFn: createMcpServer, onSuccess: synchronize, gcTime: 0, retry: false }),
     update: useMutation({
+      gcTime: 0,
+      retry: false,
       mutationFn: ({
         serverKey,
         input,

@@ -4,7 +4,10 @@
  */
 import fp from 'fastify-plugin';
 import { createPiMcpStore } from '../../infrastructure/pi-mcp/index.js';
-import { registerMcpSettingsController } from './mcp-settings.controller.js';
+import {
+  registerMcpSettingsController,
+  registerMcpSettingsErrorMessages,
+} from './mcp-settings.controller.js';
 import { McpSettingsService } from './mcp-settings.service.js';
 import type { FastifyPluginCallback } from 'fastify';
 import type { BusinessModulesOptions } from '../../plugins/business-modules.plugin.js';
@@ -12,6 +15,7 @@ import type { BusinessModulesOptions } from '../../plugins/business-modules.plug
  * Registers the module's existing HTTP contract.
  */
 const plugin: FastifyPluginCallback<BusinessModulesOptions> = (server, options, done) => {
+  registerMcpSettingsErrorMessages();
   registerMcpSettingsController(
     server,
     new McpSettingsService(createPiMcpStore({ agentDir: options.config.agentDir }))

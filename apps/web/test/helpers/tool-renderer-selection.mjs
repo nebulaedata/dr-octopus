@@ -6,10 +6,10 @@ import { ToolRenderer } from '../../src/features/session/ToolRenderers/ToolRende
 /**
  * Exercises the same presentation selection used by ToolCard without exporting application internals.
  */
-export function resolveToolRenderer(toolName) {
+export function resolveToolRenderer(toolName, argumentsValue) {
   let selected;
   ToolRenderer({
-    toolName,
+    tool: { name: toolName, arguments: argumentsValue },
     children: (renderer) => {
       selected = renderer;
       return null;

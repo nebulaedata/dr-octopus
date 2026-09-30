@@ -41,6 +41,7 @@ export function MessageView({
     );
   }
   const isUserRole = message.role === 'user';
+  const timestamp = message.timestamp ?? message.persistedAt;
   const attachmentBlocks = message.content.filter(
     (block): block is Extract<ContentBlock, { type: 'image' } | { type: 'file' }> =>
       block.type === 'image' || block.type === 'file'
@@ -53,16 +54,11 @@ export function MessageView({
   return (
     <Message align={isUserRole ? 'end' : 'start'}>
       <MessageContent>
-        <MessageHeader>
-          <div className="flex items-center gap-2">
-            {isUserRole && (
-              <span className="text-[11px]">{message.timestamp && formatMessageTime(message.timestamp)}</span>
-            )}
-            <span className="text-primary font-semibold text-xs font-serif">
-              {isUserRole ? t('session.messageRow.you', 'You') : 'Dr.Octopus'}
-            </span>
-          </div>
-        </MessageHeader>
+        {isUserRole && timestamp !== undefined && (
+          <MessageHeader className="text-xs font-normal tabular-nums">
+            <time>{formatMessageTime(timestamp)}</time>
+          </MessageHeader>
+        )}
         {attachmentBlocks.map((block, index) =>
           block.type === 'image' ? (
             <ImageAttachment key={`attachment-${String(index)}`} block={block} />

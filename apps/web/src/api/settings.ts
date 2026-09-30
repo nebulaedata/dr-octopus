@@ -3,7 +3,7 @@
  * @description Exposes typed HTTP operations for model-provider and default-model Settings.
  */
 
-import { request } from '../utils/request';
+import { ApiRequestError, request } from '../utils/request';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   AnswerProviderAuthPromptBody,
@@ -212,7 +212,7 @@ export function createMcpServer(input: CreateMcpServerBody): Promise<McpServerMu
     method: 'POST',
     data: input,
     headers: mutationHeaders(),
-  });
+  }).catch(rethrowMcpMutationError);
 }
 
 /** Updates one Host-owned MCP Server definition. */
@@ -225,7 +225,21 @@ export function updateMcpServer(
     method: 'PUT',
     data: input,
     headers: mutationHeaders(),
-  });
+  }).catch(rethrowMcpMutationError);
+}
+
+/**
+ * Drops Axios causes containing write-only credentials before caching a mutation failure.
+ */
+function rethrowMcpMutationError(error: unknown): never {
+  if (error instanceof ApiRequestError) {
+    throw new ApiRequestError(error.code, error.message, {
+      statusCode: error.statusCode,
+      retryable: error.retryable,
+      requestId: error.requestId,
+    });
+  }
+  throw new Error('MCP configuration could not be saved.');
 }
 
 /** Changes the enabled override for one MCP Server. */

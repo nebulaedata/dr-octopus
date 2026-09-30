@@ -16,5 +16,9 @@ export * from './extensions/memory/sdk/index.js';
 export { JevSettingsStore, JevError } from './lib/jev/settings.js';
 export { evaluateJevChoice, listJevModels } from './lib/jev/client.js';
 export type { JevChoiceQuestion, JevChoiceResult } from './lib/jev/client.js';
-export { readImagegenConfig, saveImagegenConfig } from './extensions/imagegen/lib/configuration.js';
-export { getImagegenCatalog } from './extensions/imagegen/lib/catalog.js';
+export {
+  readImagegenConfig,
+  readImagegenSettings,
+  updateImagegenSettings,
+  ImagegenSettingsError,
+} from './extensions/imagegen/lib/configuration.js';

@@ -1,6 +1,6 @@
 /**
  * @author Codex
- * @description Adapts OpenAI Images and Gemini generation to Pi's public image contract.
+ * @description Adapts OpenAI Images and Qwen DashScope generation to Pi's public image contract.
  */
 import { imageHttpError } from './diagnostics.js';
 import type {
@@ -18,11 +18,10 @@ const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
 
 interface ImageProviderResponse {
   data?: Array<{ b64_json?: string; url?: string; revised_prompt?: string }>;
-  candidates?: Array<{
-    content?: { parts?: Array<{ text?: string; inlineData?: { data?: string; mimeType?: string } }> };
-  }>;
+  output?: { choices?: Array<{ message?: { content?: Array<{ text?: string; image?: string }> } }> };
+  code?: string;
+  message?: string;
   usage?: { input_tokens?: number; output_tokens?: number };
-  usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
 }
 
 /**
@@ -60,10 +59,8 @@ async function readResponse(response: Response, sensitive: readonly string[]): P
 /**
  * Merges resolved provider headers while respecting explicit null suppression.
  */
-function requestHeaders(model: ImagesModel<ImagesApi>, options: ImagesOptions, google: boolean): Headers {
-  const headers = new Headers(
-    google ? { 'x-goog-api-key': options.apiKey ?? '' } : { Authorization: `Bearer ${options.apiKey ?? ''}` }
-  );
+function requestHeaders(model: ImagesModel<ImagesApi>, options: ImagesOptions): Headers {
+  const headers = new Headers({ Authorization: `Bearer ${options.apiKey ?? ''}` });
   for (const [key, value] of Object.entries({ ...model.headers, ...options.headers })) {
     if (value === null) {
       headers.delete(key);
@@ -99,15 +96,18 @@ function usage(input: number | undefined, output: number | undefined): Usage | u
 }
 
 /**
- * Executes one non-retried generation or edit with a provider-neutral return shape.
+ * Executes generation or editing; retries a single-image field only after an explicit pre-execution rejection.
  */
 export async function generateDirectImages(
   model: ImagesModel<ImagesApi>,
   context: ImagesContext,
   options: ImagesOptions = {}
 ): Promise<AssistantImages> {
-  const google = model.api === 'google-gemini';
-  const headers = requestHeaders(model, options, google);
+  if (!['openai-images', 'qwen-images'].includes(model.api)) {
+    throw new Error('Unsupported image protocol.');
+  }
+  const qwen = model.api === 'qwen-images';
+  const headers = requestHeaders(model, options);
   const prompt = context.input
     .filter((part): part is TextContent => part.type === 'text')
     .map((part) => part.text)
@@ -122,20 +122,22 @@ export async function generateDirectImages(
   const base = model.baseUrl.replace(/\/+$/, '');
   let url: string;
   let body: string | FormData;
-  if (google) {
-    url = `${base.replace(/\/v1beta$/, '')}/v1beta/models/${encodeURIComponent(model.id)}:generateContent`;
+  if (qwen) {
+    url = `${base}/services/aigc/multimodal-generation/generation`;
     body = JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: context.input.map((part) =>
-            part.type === 'text'
-              ? { text: part.text }
-              : { inlineData: { mimeType: part.mimeType, data: part.data } }
-          ),
-        },
-      ],
-      generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+      model: model.id,
+      input: {
+        messages: [
+          {
+            role: 'user',
+            content: [
+              ...references.map((part) => ({ image: `data:${part.mimeType};base64,${part.data}` })),
+              { text: prompt },
+            ],
+          },
+        ],
+      },
+      parameters: { n: 1 },
     });
     headers.set('Content-Type', 'application/json');
   } else if (references.length) {
@@ -157,44 +159,56 @@ export async function generateDirectImages(
     headers.set('Content-Type', 'application/json');
     body = JSON.stringify({ model: model.id, prompt, n: 1 });
   }
-  const response = await (options.fetch ?? fetch)(url, {
-    method: 'POST',
-    headers,
-    body,
-    signal: options.signal,
-  });
+  const fetchImage = options.fetch ?? fetch;
+  const request = { method: 'POST', headers, body, signal: options.signal, redirect: 'error' as const };
+  let response = await fetchImage(url, request);
+  if (!qwen && references.length === 1 && body instanceof FormData && !response.ok) {
+    const failure = await imageHttpError(response, sensitive);
+    if (!failure.missingImageField) {
+      throw failure;
+    }
+    // The gateway rejected the upload before generation. Rename the one file, keeping every other field.
+    // Multiple references never fall back: a singular field cannot preserve their ordered contract.
+    options.signal?.throwIfAborted();
+    const upload = body.get('image[]') as File;
+    body.delete('image[]');
+    body.set('image', upload, upload.name);
+    response = await fetchImage(url, request);
+  }
   const result = JSON.parse(
     Buffer.from(await readResponse(response, sensitive)).toString('utf8')
   ) as ImageProviderResponse;
   const output: Array<ImageContent | TextContent> = [];
-  if (google) {
-    for (const part of result.candidates?.[0]?.content?.parts ?? []) {
-      if (typeof part.inlineData?.data === 'string' && typeof part.inlineData.mimeType === 'string') {
-        output.push({ type: 'image', data: part.inlineData.data, mimeType: part.inlineData.mimeType });
+  if (result.code) {
+    throw new Error(`Image provider rejected the request: ${result.code}. ${result.message ?? ''}`);
+  }
+  const items = qwen
+    ? (result.output?.choices?.[0]?.message?.content ?? []).map((part) => ({
+        url: part.image,
+        revised_prompt: part.text,
+        b64_json: undefined,
+      }))
+    : (result.data ?? []);
+  for (const item of items) {
+    if (typeof item.b64_json === 'string') {
+      output.push({ type: 'image', data: item.b64_json, mimeType: 'image/png' });
+    } else if (typeof item.url === 'string') {
+      const download = new URL(item.url);
+      if (download.protocol !== 'https:' || download.username || download.password) {
+        throw new Error('Image provider returned an unsupported download URL.');
       }
-      if (typeof part.text === 'string') {
-        output.push({ type: 'text', text: part.text });
-      }
+      const bytes = await readResponse(
+        await (options.fetch ?? fetch)(download, { signal: options.signal, redirect: 'error' }),
+        sensitive
+      );
+      output.push({ type: 'image', data: Buffer.from(bytes).toString('base64'), mimeType: 'image/png' });
     }
-  } else {
-    for (const item of result.data ?? []) {
-      if (typeof item.b64_json === 'string') {
-        output.push({ type: 'image', data: item.b64_json, mimeType: 'image/png' });
-      } else if (typeof item.url === 'string') {
-        const download = new URL(item.url);
-        if (download.protocol !== 'https:' || download.username || download.password) {
-          throw new Error('Image provider returned an unsupported download URL.');
-        }
-        const bytes = await readResponse(
-          await (options.fetch ?? fetch)(download, { signal: options.signal, redirect: 'error' }),
-          sensitive
-        );
-        output.push({ type: 'image', data: Buffer.from(bytes).toString('base64'), mimeType: 'image/png' });
-      }
-      if (typeof item.revised_prompt === 'string') {
-        output.push({ type: 'text', text: item.revised_prompt });
-      }
+    if (typeof item.revised_prompt === 'string') {
+      output.push({ type: 'text', text: item.revised_prompt });
     }
+  }
+  if (!output.some((part) => part.type === 'image')) {
+    throw new Error('Image provider returned no images.');
   }
   return {
     api: model.api,
@@ -203,8 +217,6 @@ export async function generateDirectImages(
     output,
     stopReason: 'stop',
     timestamp: Date.now(),
-    usage: google
-      ? usage(result.usageMetadata?.promptTokenCount, result.usageMetadata?.candidatesTokenCount)
-      : usage(result.usage?.input_tokens, result.usage?.output_tokens),
+    usage: usage(result.usage?.input_tokens, result.usage?.output_tokens),
   };
 }

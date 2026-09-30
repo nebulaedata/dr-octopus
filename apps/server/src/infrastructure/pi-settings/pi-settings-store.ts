@@ -8,20 +8,14 @@ import { join } from 'node:path';
 import {
   CredentialSynchronizationError,
   ModelRuntime,
-  ModelRegistry,
   SettingsManager,
 } from '@earendil-works/pi-coding-agent';
 import { getSupportedThinkingLevels } from '@earendil-works/pi-ai';
-import { builtinImagesModels } from '@earendil-works/pi-ai/providers/all';
-import { getImagegenCatalog, readImagegenConfig, saveImagegenConfig } from '@octopus/agent';
 import { PiCredentialSynchronizationError } from './types.js';
-import { saveModelConfiguration } from './custom-provider-repository.js';
+import { saveModelAssociation, reconcileRelayModels } from './custom-provider-repository.js';
 import { CustomProviderStore } from './custom-provider-store.js';
 import type {
-  ImagegenConfig,
-  ImagegenSettingsDto,
-  ImagegenCandidate,
-  UpdateModelConfigurationBody,
+  ModelAssociation,
   CustomProviderTypeDto,
   ConfigureCustomProviderBody,
   CreateCustomProviderBody,
@@ -78,7 +72,6 @@ export class ServerPiSettingsStore {
   readonly #modelsPath: string;
   readonly #settings: SettingsManager;
   #runtime?: ModelRuntime;
-  readonly #imageModels = builtinImagesModels();
   readonly #local: CustomProviderStore;
 
   /**
@@ -101,6 +94,9 @@ export class ServerPiSettingsStore {
    * @returns Lazily constructed Pi ModelRuntime.
    */
   async #getRuntime(): Promise<ModelRuntime> {
+    if (!this.#runtime) {
+      await reconcileRelayModels(this.#modelsPath);
+    }
     this.#runtime ??= await ModelRuntime.create({
       authPath: join(this.#agentDir, 'auth.json'),
       modelsPath: this.#modelsPath,
@@ -146,7 +142,6 @@ export class ServerPiSettingsStore {
         reasoning: model.reasoning,
         thinkingLevels: getSupportedThinkingLevels(model),
         input: [...model.input],
-        interfaces: ['chat'],
         contextWindow: model.contextWindow,
         maxTokens: model.maxTokens,
         available: available.has(`${provider.id}\u0000${model.id}`),
@@ -188,38 +183,6 @@ export class ServerPiSettingsStore {
         models,
       };
     });
-    for (const imageProvider of this.#imageModels.getProviders()) {
-      const provider = providers.find(
-        (candidate) => candidate.id === imageProvider.id && candidate.provenance === 'builtin'
-      );
-      if (!provider) {
-        continue;
-      }
-      const modelsById = new Map(provider.models.map((model) => [model.id, model]));
-      for (const imageModel of imageProvider.getModels()) {
-        const existing = modelsById.get(imageModel.id);
-        if (existing) {
-          existing.interfaces = ['chat', 'image'];
-          existing.imageGeneration = imageModel.output.includes('image');
-          existing.input = [...new Set([...existing.input, ...imageModel.input])];
-        } else {
-          const model: PiSettingsModel = {
-            id: imageModel.id,
-            name: imageModel.name,
-            api: imageModel.api,
-            baseUrl: imageModel.baseUrl,
-            reasoning: false,
-            input: [...imageModel.input],
-            interfaces: ['image'],
-            imageGeneration: imageModel.output.includes('image'),
-            available: provider.auth.configured,
-            configuration: 'inherited',
-          };
-          provider.models.push(model);
-          modelsById.set(model.id, model);
-        }
-      }
-    }
     return this.#local.project(providers);
   }
 
@@ -290,10 +253,10 @@ export class ServerPiSettingsStore {
   }
 
   /**
-   * Saves capabilities without replacing endpoint, credentials, or unrelated model configuration.
+   * Saves the relay association without changing its endpoint or credentials.
    */
-  public async updateModelConfiguration(id: string, modelId: string, input: UpdateModelConfigurationBody) {
-    const changed = await saveModelConfiguration(this.#modelsPath, id, modelId, input);
+  public async updateModelAssociation(id: string, modelId: string, source: ModelAssociation | null) {
+    const changed = await saveModelAssociation(this.#modelsPath, id, modelId, source);
     return this.#refreshProvider(id, changed);
   }
 
@@ -319,6 +282,7 @@ export class ServerPiSettingsStore {
    * Reconciles external configuration edits with the Host catalog before admission.
    */
   public async refreshCatalog(): Promise<void> {
+    await reconcileRelayModels(this.#modelsPath);
     const runtime = await this.#getRuntime();
     const result = await runtime.refresh({ allowNetwork: false });
     if (result.aborted || result.errors.size > 0) {
@@ -334,44 +298,6 @@ export class ServerPiSettingsStore {
       ...(providerId === undefined ? {} : { providerId }),
       ...(modelId === undefined ? {} : { modelId }),
     };
-  }
-
-  /**
-   * Lists supported image models without resolving or exposing credentials.
-   */
-  public async listImagegenCandidates(): Promise<ImagegenCandidate[]> {
-    const runtime = await this.#getRuntime();
-    return (await getImagegenCatalog(this.#agentDir, new ModelRegistry(runtime))).map(
-      (entry) => entry.candidate
-    );
-  }
-
-  /**
-   * Reads the independent default and checks current capability and authentication metadata.
-   */
-  public async getImagegenSettings(): Promise<ImagegenSettingsDto> {
-    const config = await readImagegenConfig(this.#agentDir);
-    const candidates = await this.listImagegenCandidates();
-    return {
-      config,
-      available:
-        config !== null &&
-        candidates.some(
-          (candidate) =>
-            candidate.providerId === config.providerId &&
-            candidate.modelId === config.modelId &&
-            candidate.adapter === config.adapter &&
-            candidate.available
-        ),
-      effect: 'next_call',
-    };
-  }
-
-  /**
-   * Saves or clears the independently owned image default.
-   */
-  public async saveImagegenSettings(config: ImagegenConfig | null): Promise<void> {
-    await saveImagegenConfig(this.#agentDir, config);
   }
 
   /**
