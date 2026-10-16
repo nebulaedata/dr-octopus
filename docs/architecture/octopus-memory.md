@@ -31,7 +31,7 @@
 - 同一 Agent 用户环境下，所有 Workspace、Session 的 TUI 与 Web 共享同一份全局记忆，切换工作区不切换记忆库。
 - Web 从 Header 的“记忆”菜单进入 `/memory` 全局页面，无需选择 Workspace 或启动 Agent 会话。
 - 最近索引不充分且任务依赖历史时，Agent 能继续查找；不能把首屏未命中说成没有记忆。
-- 只有被判断与任务相关的 Wiki 正文按需进入模型上下文；最近目录可能含无关的短索引。
+- 与当前用户请求匹配的有界 Index 导航进入上下文，Wiki 正文仍通过显式工具按需读取；不自动附加整份最近目录。
 - 支持 create、merge、update、supersede 和 forget；失败不伪报已记住或已忘记。
 - 多会话、多个进程写入有事务和冲突保护，记忆不可用时主 Agent 仍可运行。
 - 记忆是带来源的历史资料，不提升为系统指令；当前明确用户指令优先于历史记忆，并服从上层指令及现有权限策略。
@@ -197,7 +197,7 @@ TUI 与 Web 操作的是同一个全局策略；修改后所有会话在下一�
 | factory              | 同步注册 events、tools、commands；立即注册 shutdown handler                        |
 | `session_start`      | 建立当前 Session generation，定位全局库，按需打开连接，恢复轻量状态并发布快照      |
 | `before_agent_start` | 等待本实例未结束的整理任务（有界），建立本次 run、来源和预算；默认追加完整内置 Skill |
-| `context`            | 在每次模型请求的消息副本中生成或替换唯一的 memory context 块                       |
+| `context`            | 在消息副本中复用当前用户回合的唯一、有界 memory 导航块；存储或请求变化时重建                       |
 | `agent_end`          | 收集当前 run 新产生的可靠来源标识；不直接逐次写库                                  |
 | `agent_settled`      | 读取当前活动分支的本次新增来源，过滤失败/取消 run，执行一次有界 Curator 与提交     |
 | `session_tree`       | 清理当前分支缓存、游标与待处理来源；不回滚已经写入的跨会话记忆                     |
@@ -207,7 +207,7 @@ TUI 与 Web 操作的是同一个全局策略；修改后所有会话在下一�
 
 `resources_discover` 注册内置 Skill 路径，Pi 提供名称、描述及位置，模型在相关任务中按需读取正文。`before_agent_start` 仅维护每轮预算与整理生命周期，不再修改系统提示词；动态记忆索引仍通过 `context` 提供。Skill 统一定义 Index 导航、按需读取记忆正文、检索与分页预算、历史数据的指令边界，以及宿主整理和提交回执规则；工具受模式限制不可用时，技能目录不赋予额外执行权限。
 
-动态 Index 通过 `context` 返回新的 `messages` 列表，使用带命名空间的临时 custom message，由 Pi 公共消息转换链转换为模型可读资料。只替换自身块，保留其他扩展变换，不调用虚构的 `ctx.systemContext.add`。
+动态 Index 通过 `context` 返回新的 `messages` 列表，使用带命名空间的临时 custom message，由 Pi 公共消息转换链转换为模型可读资料。只替换自身块，保留其他扩展变换，不调用虚构的 `ctx.systemContext.add`。导航按当前用户文本（最多 300 字符）进行搜索，最多 2500 字节/5 个候选；相同回合、查询、storeId 与 revision 复用内容和时间戳，放在最新用户请求之前，工具续轮不重复把目录追加到尾部。没有匹配项不等于没有相关记忆；查询、删除校验和保存/取消流程保持独立。
 
 该块不使用 `pi.sendMessage` 或 `before_agent_start.message` 逐轮持久追加，避免每次重放 Session 都累积历史目录。提交过的 tool content 仍属于正常 Session 历史；正文不能仅存在于 renderer/details。
 

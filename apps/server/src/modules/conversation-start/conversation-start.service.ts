@@ -18,6 +18,17 @@ import type { ConversationStartRepository } from './conversation-start.repositor
 import type { SessionsService } from '../sessions/index.js';
 
 type Row = NonNullable<ReturnType<ConversationStartRepository['get']>>;
+type PreparationStage =
+  | 'configuration'
+  | 'model'
+  | 'runtime'
+  | 'controls'
+  | 'state'
+  | 'message'
+  | 'revision'
+  | 'publication'
+  | 'dispatch'
+  | 'recovery';
 export interface ConversationStartDependencies {
   repository: ConversationStartRepository;
   sessions: SessionsService;
@@ -36,6 +47,16 @@ export interface ConversationStartDependencies {
    * Publishes a committed status invalidation without exposing transport to the workflow.
    */
   onChanged?(workspaceId: string): void;
+  /**
+   * Records bounded workflow metadata; prompts, credentials and raw infrastructure errors never cross this boundary.
+   */
+  onFailure?(failure: {
+    submissionId: string;
+    sessionId: string;
+    stage: PreparationStage;
+    code: string;
+    accepted: boolean;
+  }): void;
 }
 
 /**
@@ -87,6 +108,24 @@ export class ConversationStartService {
       this.deps.onChanged?.(workspaceId);
     } catch {
       /* Reconnect reads authoritative state. */
+    }
+  }
+
+  /**
+   * Diagnostics cannot change durable status or trigger a second dispatch.
+   */
+  #reportFailure(row: Row, stage: PreparationStage, accepted: boolean, error: unknown): void {
+    const code = error instanceof ApplicationError ? error.code : 'CONVERSATION_PREPARATION_FAILED';
+    try {
+      this.deps.onFailure?.({
+        submissionId: row.submissionId,
+        sessionId: row.sessionId,
+        stage,
+        code,
+        accepted,
+      });
+    } catch {
+      /* Authoritative status remains available even if logging fails. */
     }
   }
 
@@ -203,7 +242,8 @@ export class ConversationStartService {
       if (!this.#closed) {
         this.#transition(row.submissionId, 'running');
       }
-    } catch {
+    } catch (error) {
+      this.#reportFailure(row, 'recovery', true, error);
       if (!this.#closed) {
         this.#transition(
           row.submissionId,
@@ -250,6 +290,7 @@ export class ConversationStartService {
     const { sessions, repository, attachments } = this.deps;
     let accepted = false;
     let created = false;
+    let stage: PreparationStage = 'configuration';
     const deadline = setTimeout(() => {
       if (repository.get(row.submissionId)?.status === 'preparing') {
         this.#transition(row.submissionId, 'cancelled', 'Preparation timed out. Retry your saved draft.');
@@ -258,27 +299,35 @@ export class ConversationStartService {
     deadline.unref();
     try {
       const revision = await this.deps.configuration();
+      stage = 'model';
       const model = await this.resolve(row.request.selection);
       if (this.#closed || repository.get(row.submissionId)?.status !== 'preparing') {
         return;
       }
+      stage = 'runtime';
       const draft = await sessions.prepareDraftSession(row.workspaceId, row.sessionId);
       created = true;
       if (this.#closed || repository.get(row.submissionId)?.status !== 'preparing') {
         return;
       }
       const binding = draft.runtime!;
+      stage = 'controls';
       await sessions.executeThinkingControl(
         row.sessionId,
         { type: 'set_model', provider: model.provider, modelId: model.id },
         binding
       );
       await this.#applyControls(row, binding);
+      stage = 'state';
       const effective = responseData<{ model?: { provider: string; id: string } }>(
         await sessions.execute(row.sessionId, { type: 'get_state' }, binding)
       );
       if (effective?.model?.provider !== model.provider || effective.model.id !== model.id) {
-        throw new Error('The runtime did not adopt the selected model.');
+        throw new ApplicationError(
+          'CONVERSATION_MODEL_NOT_ADOPTED',
+          'The runtime did not adopt the selected model.',
+          { statusCode: 502 }
+        );
       }
       const message = {
         type: 'agent.prompt' as const,
@@ -292,24 +341,33 @@ export class ConversationStartService {
           workspaceReferences: row.request.workspaceReferences,
         },
       };
+      stage = 'message';
       const command = await this.deps.channel.prepareFirstMessage(message);
+      stage = 'revision';
       if (revision !== (await this.deps.configuration())) {
-        throw new Error('Configuration changed during preparation. Retry your saved draft.');
+        throw new ApplicationError(
+          'CONVERSATION_CONFIGURATION_CHANGED',
+          'Configuration changed during preparation. Retry your saved draft.',
+          { statusCode: 409 }
+        );
       }
       if (repository.get(row.submissionId)?.status !== 'preparing') {
         return;
       }
       // No await between the final check and publication: both metadata writes share one SQLite commit.
+      stage = 'publication';
       repository.accept(row.submissionId, () => {
         sessions.publishDraftSession(row.sessionId, row.request.message.slice(0, 80));
       });
       accepted = true;
+      stage = 'dispatch';
       this.#transition(row.submissionId, 'dispatching');
       await this.deps.channel.dispatchFirstMessage(message, command);
       if (!this.#closed) {
         this.#transition(row.submissionId, 'running');
       }
-    } catch {
+    } catch (error) {
+      this.#reportFailure(row, stage, accepted, error);
       if (this.#closed) {
         return;
       }

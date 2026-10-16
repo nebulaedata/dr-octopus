@@ -427,7 +427,18 @@ async function read(path: string): Promise<string> {
  * Computes a process-independent internal version without logging raw secret-bearing input.
  */
 function digest(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  return createHash('sha256')
+    .update(
+      JSON.stringify(value, (_key, item: unknown) => {
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          return Object.fromEntries(
+            Object.entries(item).sort(([left], [right]) => left.localeCompare(right))
+          );
+        }
+        return item;
+      })
+    )
+    .digest('hex');
 }
 
 export class ModelConfigMonitor {
@@ -489,14 +500,22 @@ export class ModelConfigMonitor {
     );
     const parsed = JSON.parse(settings!) as Record<string, unknown>;
     const runtimeModels = JSON.parse(models!) as Record<string, unknown>;
-    const modelVersion = digest([runtimeModels, auth]);
-    const version = digest([models, auth, parsed['defaultProvider'], parsed['defaultModel']]);
+    const credentials = JSON.parse(auth!) as Record<string, unknown>;
+    const modelVersion = digest([runtimeModels, credentials]);
+    const version = digest([runtimeModels, credentials, parsed['defaultProvider'], parsed['defaultModel']]);
     if (version !== this.#version) {
       await this.options.refresh();
       const confirmed = await Promise.all(
         ['models.json', 'auth.json', 'settings.json'].map((file) => read(join(this.options.agentDir, file)))
       );
-      if (confirmed[0] !== models || confirmed[1] !== auth || confirmed[2] !== settings) {
+      const confirmedSettings = JSON.parse(confirmed[2]!) as Record<string, unknown>;
+      const confirmedVersion = digest([
+        JSON.parse(confirmed[0]!),
+        JSON.parse(confirmed[1]!),
+        confirmedSettings['defaultProvider'],
+        confirmedSettings['defaultModel'],
+      ]);
+      if (confirmedVersion !== version) {
         throw new Error('Configuration changed while its catalog was refreshing.');
       }
       if (this.#models !== undefined && modelVersion !== this.#models) {

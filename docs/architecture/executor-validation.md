@@ -1,0 +1,447 @@
+# Executor 验证状态与已知限制
+
+更新日期：2026-10-15。本文汇总已完成开发、实际检查与尚未完成的交付条件，替代按日期累计的阶段报告。接口见 [架构入口](executor.md)，发布门禁见 [交付](executor-delivery.md#发布门禁)。
+
+## 当前状态
+
+### Browser 现场断线诊断
+
+2026-10-15 实际 Web 会话中，关闭截图的 browser_snapshot 两次在约 25ms 内返回 OUTCOME_UNKNOWN，随后 browser_tabs 返回 BROWSER_OFFLINE。旧快照参数严格 Schema 不接受新增 screenshot 字段，但协议号仍为 2，版本仍为 0.1.3；离线对照复现“列表/开页通过、快照被拒绝”。这证明存在兼容性缺陷，尚不能证明现场 Worker 实际使用的字节就是旧版本。当前产物在独立 Chrome/Edge Profile 的真实往返和原生彩带回归 3/3 通过，原始日志 apps/executor/build/browser-root-cause-isolated.log。不把标签页数量或截图尺寸当成已确认原因。
+
+扩展 0.1.4 新增本地 bridgeLastFailure，保留有限时间、错误码、工具名和 Native Host 原因分类，连接恢复/Worker 重启后仍在 popup 展示，不改变线上桥接协议或彩带生命周期。19 项测试与两个真实隔离浏览器 popup 验证通过，lint/typecheck 通过，Chrome/Edge 双目标及许可证构建完成。首次测试与构建产物清理重叠导致 manifest 缺失，构建完成后原条件复验 19/19；不归因于产品运行时。该轮交付后用户截图确认已加载 0.1.4，并提供单次快照成功、连接存活的报告；现场原失败根因仍待失败瞬间记录确认。未重放原百度点击或处理其活动任务。
+
+### PageController 原生反馈收敛
+
+2026-10-15 按用户要求发布本地扩展产物 0.1.5：页面状态和元素索引直接使用 PageController 1.12.4；移除适配层的快照前 hideMask、逐动作 dispose、透明高亮覆盖、DOM MutationObserver 与额外输入拦截。原生彩屏、箭头和默认高亮跨观察/思考/动作保留；Runtime 在任务结束/停止后发送带 taskId、connectionId 的内部 release，扩展在暂停/断线/上下文失效时释放本连接的原生资源。协议升至 3，旧扩展在握手阶段明确拒绝。未修改 Agent Core 或上游依赖。
+
+同文档的动态内容使用上游已索引的真实元素引用，不再承诺任意 DOM 变化使整份快照失效；导航、任务、连接、文档/Controller、过期及分页身份检查继续生效。敏感字段投影、截图遮蔽与图像字节限制仍由传输层负责；截图保留上游原生视觉反馈。
+
+实测：shared、Executor、Chrome/Edge 双目标及许可证构建通过；shared 7/7、扩展 20/20、Browser 原生授权/桥接 8/8 与新增 release 关联断言通过；Chrome 155.0.8059.41、Edge 155.0.4283.45 隔离 ISOLATED world 原生反馈 2/2，通过快照/等待/点击/输入/选择/滚动、旧任务与旧连接清理拒绝、在途动作收束后清理与异步初始化失效。完整 Electron → MCP → Native Host → Chrome/Edge 扩展往返 1/1（约 79 秒），包括 task_end 后原生遮罩移除。对应 lint/typecheck 通过。
+
+首次反馈回归的夹具失败包括 CDP replMode 表达式未显式 await 导致 Promise 投影为 {}，以及滚动后仍查找视口外按钮；改为显式 await、回到测试页顶部后重新观察，未扩大提取范围或放宽断言。首次完整往返停在旧的 sr-only 状态文本 visible 定位器，改为核对界面实际可见的“MCP 服务已启动”标题，保持原 20 秒期限后通过。完整往返首次失败与复验日志分开保留，未宣称产品启动故障。原始本地构建及端到端输出位于 apps/executor/build/browser-native-_.log，Chrome/Edge 原生彩屏与箭头截图为同目录 browser-native-feedback-_.png。现场旧版断线原因仍不据此追溯定案，当前用户浏览器需重新加载 0.1.5；以上不是正式商店、所有网站或独立电脑验收。
+
+进一步审查将构造配置收敛为 new PageController({ enableMask: true })，删除重复属性列表及 viewportExpansion: 0 覆盖，使用上游默认的完整页面提取；合并文档范围校验、移除重复 showMask 和快照过期定时器，过期在读取/动作/捕获入口按 expiresAt 拒绝，原生 Controller 生命周期仍归任务管理。适配文件从 479 行减到 450 行。更新后的双目标构建、扩展 20/20、真实 Chrome/Edge 原生反馈 2/2（包括视口外按钮已进入原生索引断言）、完整 MCP/Native Host/两渠道扩展往返 1/1（约 75 秒）以及 lint/typecheck 均通过。新增本地日志为 apps/executor/build/browser-simplified-feedback.log、browser-simplified-e2e.log；Executor dev 服务持续运行，无需因这次兼容的扩展精简再次重启。
+
+| 范围       | 实现与实测                                                                  | 未证明的部分                                 |
+| ---------- | --------------------------------------------------------------------------- | -------------------------------------------- |
+| 应用/IPC   | Main、沙箱 Preload/Renderer、唯一 Utility Runtime、具名控制与窗口重建已接通 | 任意 Windows 环境与签名发行                  |
+| 授权/任务  | 设备能力授权、私有配置、HTTP/stdio、全局任务与持久结果已接通                | 任意客户端或跨用户凭据迁移                   |
+| Basic      | 七工具、NTFS 发布/恢复、Job Bash、输出历史和搜索已实现                      | 对恶意同用户程序的 OS 沙箱、外部原子版本比较 |
+| Browser    | 十一工具、真实 Chrome/Edge、有限页面结构、反馈、连接恢复已接通              | 所有网站、企业策略、商店和跨版本稳定性       |
+| Computer   | 固定私有后端、八工具适配、实际 Utility 握手、防护与彩屏已实现               | 独立电脑输入/捕获矩阵与正式发行验收          |
+| Web 客户端 | HTTP/stdio Basic、Browser、长调用与限定停止/恢复已有实际链路证据            | 所有模型/客户端和网络环境                    |
+| 内网/VPN   | 本机私有网卡上的显式监听、鉴权、会话隔离已测                                | 实际另一台电脑/VPN/防火墙可达性              |
+| 打包       | 未签名 NSIS/ZIP、完整清单、许可、私有资源与验收工具已生成                   | 干净机器安装/卸载、签名与正式发布            |
+
+源码变化不会更新旧安装包。每次包测试以 acceptance-artifacts.json 的 productBuildId、文件摘要和实际扩展版本确定身份，不能把较早包的通过结果迁移给新包。
+
+## Computer 本机停止与绘制确认（2026-10-14）
+
+新增活动期间的本机实体 Esc 监听及托盘停止入口，按 activityId 和 Utility PID 拒绝旧通知；停止取消桌面任务、关闭拥有的后端并等待在途调用收束，保留 unknown 操作记录和隔离。停止后桌面后端需完整重启才能重新启用。固定原生组件进入构建和最终包。
+
+输入前确认保持原期限和防护，非聚焦反馈窗口关闭后台节流，等待真实绘制后复核当前布局/DPI/窗口身份，并验证四条边的 alpha；透明角不再作为完整彩带的唯一判断。拒绝日志只记录修订和有限阶段，不记录桌面内容。
+
+- 最终全量基础与原生测试 215/215、零跳过，包括固定私有 Node 的 50 次原生监听启动/停止竞态及环境退出清理，以及停止期间任务先释放、后台确认延迟和关闭失败的回归。前一阶段 212 项全量与单项原生检查保留为原始记录。
+- 最终构建、包级 lint/typecheck、本次文件格式与 diff 检查通过。
+- 实际 Electron 集成 3/4：真实 Utility 握手、实际桌面 Runtime 停止及彩带绘制回归通过；注入 Escape 输入场景仍因 Win32 `FOCUS_DENIED` 失败，未跳过或放宽该断言。人工激活尝试被 computer-use 自动审批拒绝，原始失败保留；实体键盘和 RDP 转发不据此声明通过。
+- 绘制回归保留透明中心、四边渐变、动画、非聚焦/穿透、多屏覆盖和未知状态，并新增透明角正常确认、只有文字但无彩带拒绝、旧修订拒绝。
+- 最终未签名 NSIS/ZIP 位于 `D:/tmp/octopus-computer-stop-20261014/0.0.1-unsigned-72d67c33-3295-43cd-9e4c-22be57963f7e`，productBuildId 为 `78f44c40fcb69333fc43972dbdb3260fda72964597f0d0515f23a2abc7631f2f`。完整包清单与最终 ASAR/Fuse/资源两项验收通过；未执行正式签名、安装/卸载和硬件矩阵。较早 6644ab3b 包（43d3ac148fd53bac1fd5da309298858a00312e019badd4ebca5599614a3f7d9e）也经过同范围两项核验，但尚未包含后续停止反馈修正。
+
+LAPTOP-LH 原授权的单次旧包复验聚焦自有 Executor 窗口返回 applied/OK，说明用户报告的 Chrome 场景尚未稳定重现，不能把角像素或节流直接认定为其唯一根因。远程磁盘重定向不可达；第一份完整 ZIP 已由用户手动处理 Chrome 下载拦截并完整解压。之后两个新增回归明确发现任务释放可早于后台确认，当前实现增加独立关闭反馈，确认失败持续 unknown，失败状态再次 Esc 采用有界完整退出。
+
+为此次验收生成一次性 13 文件覆盖包：先对前后两个完整产品清单做实际验证，拒绝删除路径，逐字节核对全部差异文件，未改产品更新架构或用户数据。用户手动处理补包下载拦截后，通过远程 Explorer 将 13 个差异文件及最终清单覆盖至完整产品目录，界面确认 14 个同名文件全部替换，没有复制用户数据。最终程序已从该目录启动，管理界面显示 MCP 服务启动和桌面工具就绪；新路径触发 Windows 防火墙提示，按项目规则交由用户手动处理。提示处理前一次原授权只读接入返回 fetch failed，原失败保留。
+
+用户确认处理防火墙后，原授权成功接入同一 LAPTOP-LH 实例。最终版 `computer_focus` 及 `computer_key(Escape)` 均返回 applied/OK，调用后任务仍 active、桌面能力仍可用，彩屏保持显示，证明该远程场景中程序注入 Escape 没有误触本机紧急停止。用户明确报告在目标电脑实体键盘按 Esc 后彩屏消失；专用任务 `567766ad-bb7a-46e4-b271-de32fabc7a5b` 的 MCP 核验为 cancelled、先前 Escape 操作 completed、computer.available=false、桌面工具数 0。实际管理界面确认“已停止”和需重启提示，彩屏消失，基础工具仍可用、浏览器桥接仍连接。
+
+完整退出并重新启动同一最终目录后，桌面能力再次就绪。Chrome 下载记录窗口首次聚焦明确返回 not_applied/FOCUS_DENIED，已通过绘制确认，原失败保留；通过普通 UI 激活该窗口后，新任务 `9e1ca544-48ce-44fd-b74c-00bd25b373b2` 的聚焦和下载记录标题区域点击均返回 applied/OK，没有出现 COMPUTER_INDICATOR_UNAVAILABLE。该用例证明新版本在已激活 Chrome 的当前环境中可完成绘制确认及输入，不证明 Windows 前台限制已消除，也不替代 Gmail 页面或所有环境的原问题重现。该任务随后按既有五分钟闲置规则取消，桌面后端保持可用，不能将这次闲置取消当作紧急停止。
+
+另建观察任务 `ee8f3584-042a-40e7-95f5-33c0a529638b`，通过实际托盘“停止桌面控制 (Esc)”收束。MCP 核验为 cancelled、computer.available=false、桌面工具数 0，彩屏清理，最终桌面能力保持停止。当前包在本次环境中的实体 Esc、程序注入 Escape 排除、完整重启恢复及托盘停止均有实际证据；修饰键、输入中强中断、断开的 RDP 会话、混合 DPI 和正式发行矩阵仍未提升。
+
+首次窗口定位把资源管理器标题也算作 Executor，随后精确标题遗漏 v0.0.1，分别造成 4/0 个匹配；两次均在输入前拒绝并结束专属任务，最终采用实际产品完整标题，未修改输入防护。使用托盘时图标位置变化曾打开另一应用的窗口，未修改其网络或其他设置，返回 Executor 后依据新截图选择自身图标。
+
+旧进程已从其托盘正常退出。RDP 隐藏期间图像曾停留在旧帧，重新激活连接后解压结果可见，不使用旧图像继续输入。远程覆盖来自经过核验的两个包及实际 GUI 复制完成证据，未在远程重新计算完整目录摘要，不能把本地清单核验提升为远程完整性验收。
+
+本地原始材料保存在被 Git 忽略的 `validation-evidence/computer-stop-2026-10-14`。首次测试装配、CSP、原生 Electron delay-load、设置子目录、lint 和前台拒绝等失败分别保留，不以有限后续通过抹除。
+
+## 设备身份验证（2026-10-14）
+
+[ADR-0080](../adr/0080-executor-device-identity.md) 的持久实例 UUID、设备名称、Main 初始化标记、Runtime 快照、MCP 初始化与发现描述、结构化状态和稳定配置键已实现。
+
+- 完整 Executor 单元及原生测试：202 项通过。最终初始化标记和连接键调整后，设备、设置、导出、Runtime 生命周期及接入的相关回归 21 项全部通过（20 项原范围通过，加修正导航与主题断言后的单项 GUI 复验）。
+- 最终构建、typecheck 和本轮变更范围 lint 通过；包级 lint 最初被 `test/integration/browser-feedback.test.mjs:240` 的 curly 错误阻挡；2026-10-14 按用户要求补齐该条件语句花括号后，`pnpm --filter @octopus/executor lint` 与该文件格式检查均通过。
+- 双实例实际 adapter 测试通过：两个独立临时数据目录拥有相同名称、不同 ID 和连接键，模型可见元数据保留目标身份；默认、short、mcp、none 命名合法，最长当前工具在有设备前缀时不超过 63 字符。
+- 既有窗口、端口、HTTP、stdio 与内网 GUI 接入回归通过。名称保存前后保持当前 Runtime 身份，完整重启后名称变化且 ID 保持；界面截图证据在未跟踪的 `apps/executor/build/device-identity-*.png`。
+- 原始失败：构建原生模块 EBUSY；聚焦测试中的多余 saved 参数和动态键断言；首次 GUI 集成因测试端口 0 被标记初始化错误保存而 7 项启动超时。修正后原期限复验通过。另有截图测试刷新页面后未重新选择设置页，导致定位超时，修正测试导航后单独复验。
+
+运行只使用临时数据和授权，用户授权关闭当时运行的开发版以释放构建文件。两个隔离 Runtime 是同机实例，不代表两台物理机器或真实模型行为已验收；旧安装包未重新打包，Computer 生产门禁不变。
+
+### 真实开发版与既有 Web 会话验收
+
+2026-10-14 用户要求启动 `pnpm dev:executor`、使用 computer-use，并继续会话 `ec983dee-977e-42b0-a3c3-0d39adf0d6a2`。实际通过 Windows 原生窗口执行名称修改、保存及配置预览检查；Web 会话使用真实模型和已有 `dr-octopus-executor` Browser 授权，没有新增授权或扩大能力。
+
+- 初始名称 `ZGL`，实例 ID `2ea054ac-b7ba-4ffd-b90e-7bc0d4f465ea`。保存“Executor 设备身份验收”后当前名称保持 `ZGL`，显示待重启名称；完整重启后新名称生效，ID 不变。
+- 同一会话首次读取发现文本时仍是重启前的 `ZGL`，实时 `runtime_status` 已返回新名称。按已确认契约执行 `mcp({connect:"dr-octopus-executor"})` 重新发现后，初始化说明、tool description 和实时状态的名称及 ID 全部一致，真实模型给出一致性报告。
+- 原生 HTTP 配置预览的键为 `octo2ea054acb7ba4ffdb90e7bc0d4f465ea`；Authorization 只展示占位符。没有复制、导出或修改凭据，旧连接名 `dr-octopus-executor` 继续可用。
+- 原始失败：旧隔离连接 `executor-screenshot-qa` 的状态查询和显式连接均返回 `fetch failed`；回退到既有开发版连接后成功。首次原生点击保存按钮因在视口外被拒绝，滚动后保存成功；批准 radio 控件在提交后消失，check 操作报告验证失败，重新观察确认只读批准已生效；同名 mcp 工具卡选择器曾有歧义，改用实际观察到的元素定位。没有重放任何设备业务动作。
+- 首次启动时桌面后端显示启动失败；完整重启后显示已就绪，且实时状态 `computer.available:true`。首次失败仍保留，根因未定位，不能用后续成功宣布 Computer 的启动稳定性或发布验收通过。本次没有使用 Executor 桌面权限，原生操作由外部 computer-use 技能完成。
+- 证据为 `apps/executor/build/device-identity-computer-use-renamed.png`、`device-identity-computer-use-config.png`、`device-identity-real-session.png`（均未跟踪）。测试结束恢复原名称 `ZGL` 并保持开发版运行；改名后的客户端需重新发现元数据。
+
+### 按设备名称选择 MCP 的真实模型验收（2026-10-14）
+
+用户要求验证仅凭设备名称调用工具。新建 Web 会话 `013f2edf-dee4-42c1-a56f-1dd862f395fe`，首条请求仅提供 `LAPTOP-LH` 和只读查询要求，没有提供 MCP 别名、IP 或设备 ID，并要求依据本轮发现和实时状态核对操作对象。
+
+- 真实 DeepSeek V4 Flash 读取 MCP 发现信息和 instructions，选择 `executor-laptop-lh-desktop-qa`；实际 `runtime_status` 返回名称 `LAPTOP-LH`、完整 ID `1ea7ef6a-c490-4815-8987-27abfaf784d1`，与远程设置页一致。
+- 确认身份后创建 `computer.observe` 任务 `8536499b-3536-4f08-860f-0e335a86ca0d`，`computer_displays` 实际返回一个 1920×1080 显示器，随后 `task_end` 返回 completed；没有键鼠输入、截屏或文件修改。
+- 为核对另一设备，模型调用 `dr-octopus-executor_runtime_status` 得到 `fetch failed`。该设备的发现名称不同，但实时状态不可达，因此本次不宣称全部已配置设备的重名检查通过。
+- 已安装 adapter 的同名设备专项 `test/integration/device-adapter.test.mjs` 1/1 通过，覆盖两个独立临时实例同名、不同 ID、连接键与工具前缀；此项不等于真实模型面对同名在线设备的澄清行为已经验收。
+
+本次证明已配置且在线的 Executor 可被模型按设备名称识别并调用；设备名称不替代稳定连接键或凭据。模型调用记录及实际输出保留在上述 Web 会话中，未修改设备名称、授权范围或其他连接配置。
+
+### 排除 MCP 名称提示后的设备识别验收（2026-10-14）
+
+用户指出上一轮连接键及工具前缀包含设备名，因此上一轮仅作初步验收。此次通过 Host API 暂时以中性连接 `route-q7m4` 替代 `executor-laptop-lh-desktop-qa`，连接描述为通用测试文字，搜索关键词为空，原连接从测试期间的有效配置中移除。13 个工具均采用 `route-q7m4_*` 名称，不含 LAPTOP-LH 或设备 ID；Executor 的结构化身份与初始化说明继续保留实际设备信息。
+
+- 新建真实 Web 会话 `310ae002-2f29-4e62-8307-51cc8a9b2555`，仅提供设备名称 `LAPTOP-LH` 及只读显示器查询要求，未向模型提供中性别名、地址或设备 ID；要求依据本轮发现及实时状态而非旧记忆识别。
+- 模型读取 discovery/instructions 中的设备身份后选择中性连接，实际 `route-q7m4_runtime_status` 返回名称 `LAPTOP-LH` 和 ID `1ea7ef6a-c490-4815-8987-27abfaf784d1`；`route-q7m4_computer_displays` 返回单显示器 1920×1080。观察任务 `ba43cc5a-45df-4a3f-8156-5e243e2bb801` 最终 completed、quarantined=false。无键鼠输入、截屏或文件修改。
+- 附带失败保留：模型尝试连接旧 `windows-mcp`，首次因等待批准期间权限配置变化被阻断，重试后 fetch failed；该连接没有参与目标设备的查询。此次不宣称所有工具调用均成功。
+- 临时配置首轮把 DTO 中仅适用于 stdio 的 inheritEnv 带入 HTTP，API 返回 400；此时尚未移除原连接。修正临时装配后测试成功，没有更改生产校验或扩大权限。
+- 测试后通过 API 恢复原连接并移除中性连接，核对私有配置的规范化结构与测试前备份一致；设备名称、ID、端点及授权范围保持。
+
+该结果证明已排除连接名、工具名及人工连接描述的名称提示，真实模型仍可依据 Executor 身份信息定位并调用当前在线目标；不据此扩大到真实在线同名设备的澄清行为已验收。完整调用轨迹保留在上述 Web 会话中。
+
+### 全局重启提示与动作（2026-10-14）
+
+新增全局顶部悬浮 warning Alert、立即重启按钮、有限 Preload/IPC 重启接口及开发启动器串行重启支持。Main、Preload 与 Renderer 已构建，开发版按用户确认完整重启并加载新接口。全量 Executor 测试 206 项通过，包级 lint、typecheck 通过。
+
+`test/application-restart.test.mjs` 验证：重复重启合并、Runtime 退出确认前不得 relaunch、退出失败不得 relaunch、开发版保留 Vite 且停止后不得重启、外来 frame/非空输入/未保存状态拒绝，以及重启后禁止新设置写入。保存中的设置与未保存草稿也阻止界面按钮派发。
+
+原生交互补充检查未完成：隔离 `--executor-test` 进程按既有测试规则不显示窗口，computer-use 无法定位该隐藏窗口，未将其记作实际按钮点击通过。独立测试进程已停止，临时目录清理被自动审批拒绝并保留在 Temp；日常开发版由用户授权重新启动。真实打包环境的 relaunch 与发行验收仍需另外验证。
+
+## 开发回归与验证范围
+
+2026-10-11 源码清理的历史范围如下，结果汇总自当时的本地命令输出；不能把旧证据目录或旧包的通过结果当作后续变更的原始日志。
+
+| 检查                               | 结果                                                  |
+| ---------------------------------- | ----------------------------------------------------- |
+| 两应用 build、lint、typecheck      | 通过                                                  |
+| Executor 基础与原生                | 182/182，无跳过                                       |
+| 扩展协议/路由/实际产物             | 11/11                                                 |
+| 隔离 Chrome/Edge action/popup 文档 | 2/2                                                   |
+| Executor 集成                      | 23 个不同用例通过；1 个真实键鼠用例未通过前台前置条件 |
+| 新包核验/加固/扩展/Computer owner  | 4/4                                                   |
+| 新包安装目录移动与 write/edit 恢复 | 1/1                                                   |
+
+此前构建身份配置变更的检查：Executor 基础与原生 189/189、插件 11/11、shared 7/7；两应用 lint/typecheck 通过。隔离双商店 ID 构建下，配置/Native/迁移 12/12 与 manifest 1/1 通过；已恢复 sideload 产物和空商店 ID。安装版 Chrome/Edge 的真实 popup/Host/MCP 与插件 UI 专项各 2/2 通过，不能代替真实商店身份验收。
+
+此前未签名包 productBuildId 为 `2b5778ce24b24f0268a0e7def43a646e1704604fbbdb1fb747b7974abbfa4033`。选定的包内插件/身份摘要、完整清单、离线核验、Fuse/ASAR、私有工具/真实 Host 和原始加固 Runtime 六项通过。首轮旧“管理连接”定位失败保留；随后夹具等待任务栏最小化而产品默认进入托盘，结束专属测试进程后修正显式 taskbar 设置，按原 600 秒期限复验通过。原始日志保留在本地，不随源码提交；本轮没有验证实际安装/卸载、签名或商店分发。
+
+GUI 首轮失败保留：正式 Host 注册保护拒绝旧夹具、旧 toast/传输控件定位、旧诊断断言、浏览器级 CDP 错误路由、未结束旧任务的准入冲突，以及内置页面尚未渲染时启用调试的竞态。夹具修正后按原期限复验，不改生产权限或回放语义。
+
+真实键鼠用例中，Electron 可见/focused 仍不是 Win32 前台；保护返回拒绝，未输入到其他窗口。需要用户激活专属测试输入框再复验，不删保护、不跳过或据此开放 Computer。此前人工激活的一次成功只覆盖当时产物和有限场景。
+
+本轮清理已移除一次性启动诊断、运行时阶段/字节采集、历史脚本副本、截图输出分支和废弃 IPC；持续行为回归仍保留。测试 Host 使用唯一名称和扩展副本，不占用正式注册或用户 Profile。
+
+2026-10-12 独立升级实施验证：两应用构建、lint/typecheck 通过；Executor 全量 193/193，随后补充的版本格式边界与独立产物专项 9/9。插件 sideload/store 两种真实构建各 11/11；仅重建插件切换模式时，客户端记录字节不变且交付校验通过，最终恢复 sideload 产物并保留本地 .env 的两个官方商店 ID。夹具验证不同插件产品版本的升级/回退握手、旧连接失效及不兼容协议拒绝，不代表已发布版本或真实商店安装验收。Turbo dry-run 确认仅切换进程 profile 时 Executor 缓存键不变。
+
+该轮未签名包位于 apps/executor/release/0.0.1-unsigned-9a679802-f77c-4368-bd76-59f55053b458，productBuildId 为 `1c1b0659bf7e07ff847c0749c3ab1b81e63578e2bf067a34b49b5415b366bc93`；包内插件字节/身份记录与完整资源清单两项通过。没有执行安装/卸载、实际商店更新或独立电脑验收，不能沿用此前包的其他验收结果。首次构建残留旧 loader 名称与专项测试缺少花括号的 lint 失败已修正后复验；未放宽运行预算或权限。
+
+2026-10-13 工程脚本整理验证：scripts 中 11 个 .mjs 入口均由 package.json 的 node 命令调用；工程辅助模块使用 JavaScript，通用归档不再调用 PowerShell。关闭 Node 实验性 TS 支持后，完整构建和实际未签名打包成功。平台分支用例覆盖 Windows x64 选择、Windows ARM64 拒绝以及 macOS/Linux 待适配错误，不代表其他系统支持。
+
+两应用 lint/typecheck 通过，Executor 全量 197/197，插件 11/11；工程边界/归档专项 3/3 已包含在全量中。Node 资源清单与整理前一致；Computer 清单 5,987 个资源条目一致，另一个 native/computer-supervisor.exe 条目随本次原生重编译更新。首轮全量 196/197，网络探针因 CJS 编译契约再次打包出现初始化错误，改为 ESM 后原用例及全量复验通过，未删断言或放宽超时。
+
+本轮未签名包目录为 apps/executor/release/0.0.1-unsigned-3f30e0f0-75b1-446c-86d9-e5d9afc17225，productBuildId 为 `069dee4f9c8cead6e35c854309b17a572218cade906178c45fc261931178054c`。选定的包内备份恢复、插件字节/身份、完整资源清单及独立清单核验四项通过；未执行安装/卸载、真实商店更新、其他操作系统或独立电脑验收。
+
+2026-10-13 浏览器插件工程目录同步：scripts/compile/build.mjs 与 scripts/package/licenses.mjs 均由 package.json 直接调用；补丁引擎迁入 tooling，固定运行时补丁数据归 vendor/page-controller。关闭 Node TS 支持后完成 Chrome/Edge 两目标构建与许可证收集，lint/typecheck 和 13/13 测试通过。两份 vendor 补丁输出与原实现逐字节一致，两个浏览器的 background.js 与 content-scripts/content.js 与上一验收包字节一致；现有 Executor 的独立产物兼容校验通过。未执行真实商店安装或新增系统平台验收。
+
+2026-10-13 工程辅助目录内聚：Executor 与 browser-extension 的 15 个辅助文件迁入各自 scripts/lib，两个顶层 tooling 源目录已移除。命令入口与 lib 辅助模块的分类断言、导入路径、资源定位、Turbo 输入和当前规范同步更新；生成缓存 build/tooling 保持原契约。关闭 Node TS 支持后的两应用构建通过，lint/typecheck 通过，Executor 197/197、插件 13/13；三个官方身份及当前产物兼容校验通过。使用既有 3f30e0f0 验收包进行包内插件和完整清单只读复验，两项通过；本轮未生成或安装新的发行包，不沿用旧包证据声明新发行验收完成。
+
+2026-10-13 官方身份配置收敛：browser-identity.json 成为侧载公钥/ID 与两个商店 ID 的唯一来源；删除 .env、模板和 CI 缓存中的商店 ID 覆盖，客户端不再读取或缓存依赖根 .env。两应用构建、lint/typecheck 通过，Executor 198/198、插件 13/13；身份专项 10/10 已包含在全量中，覆盖无 .env、旧环境变量无法覆盖 JSON、任一模式缺失身份拒绝及独立产物兼容。Turbo dry-run 确认旧身份变量及插件 profile 不改变客户端任务缓存键；当前构建产物身份与附带插件兼容校验通过。本轮未生成或安装新的发行包，未执行真实商店安装验收；此前 .env 身份配置的验证记录仅保留为历史证据。
+
+2026-10-13 PageController 补丁管理纠正：通过 pnpm patch/patch-commit 生成根 patches/@page-agent__page-controller@1.12.4.patch，由 workspace patchedDependencies 和锁文件管理；已删除 WXT/集成测试的字符串替换钩子、自制引擎及 browser-extension/vendor。冻结离线安装通过，安装后的两份依赖文件与迁移前补丁输出逐字节一致。插件双目标构建、lint/typecheck、13/13 测试及真实 Chrome/Edge 隔离反馈回归 2/2 通过；依赖补丁已列入 Turbo 输入及 Windows CI 触发范围。本轮保留既有定制，不代表已证明每项补丁都不可被公开配置/API 或适配层替代；产品裁剪、生命周期修正和自定义事件接入须分别复审。未上传商店或生成新的 Executor 安装包。
+
+2026-10-13 PageController 全部补丁撤销：通过 pnpm patch-remove 移除本依赖补丁及其 workspace/锁文件绑定，删除专属 Turbo/CI 补丁路径；其他依赖补丁保留。当前使用未经修改的 1.12.4，安装字节与上游两份源文件 SHA-256 一致，冻结离线安装通过。适配层改用默认无遮罩模式与公开 beforeUpdate/afterUpdate、cleanUpHighlights API；只有同步 SDK 提取/清理暂停观察，异步页面反应仍使快照失效。依赖修改的证据门槛与标准 pnpm 流程已写入插件 AGENTS.md。
+
+本轮 shared、插件 Chrome/Edge 与 Executor 构建通过，两应用 lint/typecheck 通过；插件 13/13、Executor 198/198。真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 隔离适配回归 2/2，覆盖点击/填写/选择/滚动、提取后及清理时的页面反应、人工输入、伪造 mask ID/ignore 属性、任意脚本方法拒绝、连接替换/reset/dispose。使用独立 Host/Profile 的真实 Native Messaging HTTP 往返 1/1 通过，覆盖两个浏览器。
+
+首次两引擎测试误把上游保留的空高亮容器判为残留高亮；改为检查覆盖层/标签子节点后，反应探针仍等待容器增删，造成第二次失败，随后改为观察实际子节点变化。业务失效断言始终保留；没有为这些测试假设修改依赖。初次 lint 缺少花括号已修正复验。原失败摘要与最终构建/测试输出保存在本地 validation-evidence/page-controller-unpatched-2026-10-13。上游未使用的 executeJavascript 导致构建 eval 警告仍存在，协议不开放该能力且未放宽 CSP；这不构成商店审核通过的证据。未生成新安装包或执行商店、独立电脑验收；之前的彩屏/指针回归仅保留为历史证据。
+
+2026-10-13 遮罩恢复与脚本边界确认：依照用户决定，通过 PageController 公开 API 恢复动作期间的原生彩屏、指针和交互阻挡；快照等待隐藏遮罩初始化后建立基线，动作完成/失败立即释放 Controller 与输入监听，下一次观察重新创建。无需依赖补丁、私有遮罩节点或特殊 DOM 过滤。真实 MV3 扩展 ISOLATED 内容脚本探针确认浏览器 CSP 拒绝 eval，随后撤回任意脚本协议/MCP/Worker 入口与 Debugger 权限；项目规则明确关闭任意脚本，并接受上游未调用的 eval 构建警告，不再列为待办。
+
+本轮 shared 与 Chrome/Edge 插件构建通过，插件 lint/typecheck、13/13 测试及 Executor 集成测试文件 lint 通过。真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 遮罩回归 2/2，覆盖彩屏 canvas、指针点击动画、真实鼠标/键盘阻挡、隐藏期间等待一秒后的快照稳定、重复动作释放、初始化中 reset 后无残留遮罩、有限动作及 DOM/人工输入失效、任意脚本方法拒绝。独立 Host/Profile 的真实 Native Messaging 往返 1/1 通过，覆盖两个浏览器。输出保存在本地 validation-evidence/browser-mask-restored-2026-10-13；未生成安装包、未进行商店安装或独立电脑验收，本轮没有重新运行 Executor 全量测试。
+
+2026-10-13 executeJavascript 最小裁剪：用户明确要求从发布产物移除未使用的动态脚本实现。通过 pnpm patch/patch-commit 生成根 patches/@page-agent__page-controller@1.12.4.patch，仅删除 JavaScript 方法与对应类型声明（两个文件、26 行删除），不修改遮罩/高亮；workspace 与锁文件绑定该补丁，其他依赖补丁保留。协议白名单与扩展权限配置注释说明关闭任意脚本并通过 pnpm patch 移除实现，Turbo 输入和 Windows CI 路径同步覆盖补丁。
+
+本轮 shared 与 Chrome/Edge 插件构建通过，构建日志不再出现 EVAL 告警；产物测试扫描两个浏览器全部发布 .js/.map，不包含 executeJavascript 或 eval 调用。插件 lint/typecheck、13/13 测试、Executor 集成测试文件 lint 通过，真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 遮罩与有限动作回归 2/2 通过。安装哈希验证包含已裁剪实现/类型声明及未修改的上游遮罩，冻结离线安装通过。原始输出保存在本地 validation-evidence/page-controller-no-eval-2026-10-13；本轮未重新运行 Native Messaging/Executor 全量测试，未生成安装包或上传商店。
+
+2026-10-13 浏览器快照截图与调用优化：browser_snapshot 默认激活目标标签页并采集有界 JPEG，screenshot=false 保留后台 DOM 观察。截图按 document/controller/snapshot 验证，监测切换标签再切回及导航；编码最大 128 KiB、边长 1280，Native 帧上限不变。密码与显式敏感内容临时遮蔽，只忽略准确归属的 style 写入，同步自定义元素反应仍使快照失效，结束/reset/dispose 恢复。MCP 返回独立 image block 和文本/尺寸信息，Web 复用已有 Attachment 与放大预览；历史纯文本记录不补造图片。
+
+调用指引明确使用精确工具名 describe，禁止用空参数业务调用探测；fill/select 要使用实际输入控件索引，task_end 只接受 taskId，并要求完整报告失败调用。用户批准的 Agent 记忆修改以当前用户文本检索、按回合/查询/存储身份和版本复用导航，固定插在用户请求之前；保留工具查询、删除校验及保存/取消流程。Host 配置监控改为语义内容指纹，格式重写、字段重排与无关设置不再误报准备期间配置变化，实际模型/认证/默认模型改变仍拒绝。
+
+验证：插件 17/17、Web 268/268、Shared 7/7、记忆串行 55/55、会话准备与配置监控专项 20/20 通过；真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 遮罩与敏感内容/同步反应回归 2/2、真实 Native Messaging 往返 1/1（两浏览器截图及有限动作）通过。Web 隔离验收会话 ec983dee-977e-42b0-a3c3-0d39adf0d6a2 在 localhost:5174 实际展示 JPEG 1280×720、24.3KB 并验证放大预览，任务 completed；早期验收实例包含旧的硬编码前缀指引，最终源码已改为连接列表中的精确工具名。
+
+广泛 Server 测试 440 项：437 通过、2 失败、1 跳过。附件用例因真实 C 盘使用率超过 90% 返回存储保护 507；知识服务并发启动超时，原期限下单独复验通过。并发记忆测试的启动失败保留，原期限下单独启动 2/2 和串行记忆 55/55 通过，未扩大时间或降低保护。第一次截图集成测试缺少 randomUUID 导入属于测试装配错误，修正后同用例复验通过。首次 Web 聚焦检查未使用已有 tsconfig alias 参数，改用包规定配置后通过。
+
+原始日志和图片保存在本地 validation-evidence/browser-snapshot-2026-10-13。验收时原 5173/3001 开发服务被另一项目接替或停止，临时使用本项目 5174 页面和进程级精确来源配置，不修改持久 .env；临时 QA MCP 已禁用，唯一测试 Host/Profile/授权已释放。未上传商店、未打包新的安装程序，不据此宣称正式发行或复杂网页全量验收。
+
+2026-10-14 桌面控制启用与状态投影：用户明确决定启用固定受管桌面后端，移除 ComputerRuntime 的 accepted 关闭参数，不提供任意后端或环境开关。真实握手才挂接工具；ready 与具名 Host 回复携带有界生命周期状态，Main 复用健康探针更新，停止/失联时清除可用能力。状态页展示实际启动、就绪、失败或不可用状态，授权页新增查看/控制桌面，control 包含 observe；已有客户端授权不自动扩大。新构建与包元数据 computerEnabled=true，启用不等于发布验收通过。
+
+验证：Executor 全量 202/202、真实 Electron/桌面授权/断开与页面生命周期 8/8、新包清单/加固/私有 Node 的实际 Computer owner 3/3 通过，构建、lint/typecheck 通过。桌面验证只读取显示器信息，不发送真实键鼠输入；仅终止由捕获的 Runtime PID 拥有且固定路径匹配的测试 supervisor，之后界面不可用、MCP 桌面工具消失、新桌面授权禁用。开发版已恢复，现有 Browser 授权的真实 runtime_status 确认 computer.available=true，授权仍只有 browser。
+
+首轮构建因并行验证进程加载原生 DLL 返回 EBUSY；停止该自有验证进程后串行构建成功。界面验证前两轮错误地把异步 IPC 谓词交给 waitForFunction，未真正等待就绪；改为等待异步结果的 expect.poll 后通过，45/15 秒期限不变。打包测试 lint 首次缺少 expect 导入，补齐后检查通过；原始失败记录保留。新未签名 NSIS/ZIP 产物身份为 0a5977849a224e69a4914bd0577223886583bcbeb3c756461f4f7a0a155297fb，未安装、未签名或发布，独立电脑硬件矩阵继续待验收。本地原始日志与图像位于 validation-evidence/computer-enabled-2026-10-14。
+
+## 可重复检查入口
+
+从仓库根使用实际 package.json 脚本，先构建再执行依赖产物的检查：
+
+```powershell
+pnpm --filter @octopus/executor build
+pnpm --filter @octopus/browser-extension build
+pnpm --filter @octopus/executor test
+pnpm --filter @octopus/browser-extension test
+pnpm --filter @octopus/browser-extension test:popup
+$env:EXECUTOR_BROWSER_FLAVOR = 'installed'
+try {
+  pnpm --filter @octopus/executor test:integration
+} finally {
+  Remove-Item Env:EXECUTOR_BROWSER_FLAVOR
+}
+```
+
+| 用例范围                                                     | 复核重点                                                        |
+| ------------------------------------------------------------ | --------------------------------------------------------------- |
+| test/native 的文件、Bash、搜索与 MCP                         | 真实竞争、恢复、权限、输出边界、Job 清理和同键不重放            |
+| integration/electron、mcp-access、settings、overview、scroll | 沙箱/来源拒绝、授权配置、真实服务、关闭/重建和布局              |
+| integration/browser-bridge、browser-feedback                 | Native 往返、效果一次、分页/身份、反馈与清理                    |
+| integration/browser-lifecycle                                | 拒绝期间网页不附着调试器，真实 frozen/discarded、旧引用拒绝     |
+| integration/browser-popup                                    | 实际 action 目标上的暂停/恢复、原 Host 生命周期、恢复后的新任务 |
+| integration/computer-owner、computer-use-indicator           | 实际 Utility 握手、固定契约、绘制和持续提示                     |
+| integration/computer-backend                                 | 人工取得 Win32 前台后的专属窗口截图与有限输入                   |
+| test/packaging                                               | 最终清单/Fuse/资源，移动与恢复；安装卸载只在专用电脑            |
+
+长预算/故障和实际 Web 验收位于 apps/server/test/integration；根据既有夹具选择明确场景，不用短调用代替完整 600 秒边界。未来文档检查只验证格式、索引、链接和决定一致性，无须重新运行全部硬件验收。
+
+## 已有实际客户端验证
+
+| 场景                   | 已验证范围与限制                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web Basic HTTP/stdio   | 真实 Web、Server、生产 Agent RPC、MCP 和七工具；窗口重建不重放。                                                                            |
+| 完整 600 秒预算        | HTTP/stdio 都取得有效期限 590 秒的真实超时与持久结果，不缩短时钟。                                                                          |
+| 停止/撤销/回复丢失     | Web Stop 和本地撤销收束拥有的 Bash；回复丢失后查询与同键取回，效果不重复。同键取回不是新执行。                                              |
+| Web Browser 短调用     | Chrome+HTTP、Edge+stdio 的有限工具、分页、旧引用和窗口/Host 退出。                                                                          |
+| Worker/扩展/权限恢复   | Worker 重启、重新启用后的单次固定补注入、网站权限撤销/恢复；重连不回放。                                                                    |
+| Browser 在途故障与 DOM | 两条链路各 timeout/disconnect/cancel/revoke；只拦已产生效果后的回包。单层同源 frame/open shadow、SPA 与拒绝边界，不扩大为每个动作中间步骤。 |
+| 普通人工激活           | Chrome/Edge 冻结/丢弃四个有限用例，拒绝期间不附着网页，人工激活后新快照与新动作；显式 CDP/刷新不是同一证据。                                |
+| 用户实际模型           | 用户本机 Chrome/Edge、扩展 0.1.3、真实 DeepSeek：开页、快照、一次点击、中文输入、选择、滚动与 task_end；源码效果独立核对。                  |
+
+受控模型/协议 peer 与真实模型分别标记；API 激活、CDP action 和物理鼠标人工操作分别标记。限定用例通过不能消除首轮失败或证明所有环境稳定。
+
+## 尚未完成与执行顺序
+
+1. 在用户已暂缓的独立电脑可用后，完成断网首启、普通权限安装/卸载、升级失败与恢复、主题/DPI 图标。
+2. 使用实际另机/VPN/防火墙及明确客户端完成网络调用、撤销、禁用和完整退出；本机网卡请求不能代替。
+3. 逐项完成 Computer 独立电脑矩阵，保留真实原生部分输入、锁屏/UAC、焦点竞争和混合显示证据；2026-10-14 的用户启用决定不替代这些发布证据。
+4. 完成正式扩展商店/企业策略、签名与目标环境验证，核对最终产物及 G1–G6，不自动提升门禁。
+
+用户暂缓环境意味着 not-tested，不表示场景不存在或已经验收。缺少环境时继续可独立完成的代码与文档工作，不引入生产绕过开关。
+
+## 历史验证边界与已知失败
+
+2026-09-30 的运行时与 Browser 评估针对原语和临时原型，不作为正式产品验收。2026-10-08 至 2026-10-11 的本机检查涉及设备授权与旧控制记录拒绝、人工侧载后的安装/连接/重连/撤销、mask/指针反馈与 DOM 新鲜度、私有离线工具链、完整清单和元数据/额外文件拒绝；这些检查不证明正式商店分发、签名或独立电脑验收完成。
+
+Computer 的早期超时、已撤销的启动预检、后续启动依赖修复与截图拒绝归因属于不同阶段。初次冷启动/负载失败不能被暖态成功抵消，首次截图失败原因仍未确认。持续彩屏检查覆盖任务间隙、未知状态、多屏窗口与透明流动；界面检查覆盖原生标题栏、独立授权/配置和三页布局，旧放大控件/底部按钮不再是当前要求。
+
+关键历史失败包括五分钟 HTTP 回复丢失、冷启动/资源压力、冻结页面普通激活后仍 frozen、恢复前额外效果、真实前台拒绝、首次捕获归因不足及旧 Host 路径问题。后续限定用例通过不抹去这些事实；未知原因不能借“夹具修正”宣称产品根因已经解决。较早包身份及当时未完成的物理工具栏操作，也不能证明后续源码通过验收。
+
+## 文件传输（ADR-0079）
+
+以下为已替代独立客户端方案的历史记录，不代表新协议通过。2026-10-15 在本机 Windows、Node 24.20.0、pnpm 11.18.0 下完成源码实现和本地验证。客户端是新建的独立 `apps/executor-client` Node MCP Host；未修改 Agent Core，未部署用户连接配置或发布安装包。
+
+| 范围                                     | 实际结果与边界                                                                                                                                                                                                                                                                             |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| shared / executor-client / executor 构建 | 通过；客户端生成独立可运行的 ESM bundle，执行体重新构建原生组件及 Runtime。构建保留既有 vswhere 探测提示和前端 chunk 大小警告，命令退出成功。                                                                                                                                              |
+| shared 检查                              | test 7/7、lint、typecheck 通过。                                                                                                                                                                                                                                                           |
+| 客户端检查                               | test 2/2、lint、typecheck 通过；实际 Windows 私有 ACL、目录范围、快照、不覆盖发布及配置地址检查。                                                                                                                                                                                          |
+| 执行体回归                               | `pnpm --filter @octopus/executor test` 223/223 通过；此轮包括当时 8 项传输测试。后续补充的传输与恢复收口另用聚焦测试验证，不将 223 记作最终全部用例数量。lint、typecheck 通过。                                                                                                            |
+| 传输聚焦验证                             | 11 项用例已通过：二进制与零字节、多分块双向传输、真实 2 GiB HTTP 往返及 SHA-256 一致、2 GiB 原生快照边界、超限、目标竞争创建、失去块确认后重连续传、错误身份/撤销、任务停止、幂等键冲突、错误摘要、准备中断不续传、提交结果不明后的事实恢复、模拟磁盘准入失败，以及实际打包 stdio 子进程。 |
+| 运行期内存                               | 2 GiB HTTP 往返采样的 JavaScript ArrayBuffer 增量低于测试的 512 MiB 上界；原生快照使用固定缓冲。该检查不等于所有操作系统及负载下的 RSS 上限承诺。                                                                                                                                          |
+| 未验证                                   | Linux 实机/容器、独立第二台电脑/VPN 链路、真实满盘/掉电及最终发行包。Docker Linux 引擎未运行，连接 `dockerDesktopLinuxEngine` 返回找不到管道，故未进行 Linux 容器验证。模拟故障不冒充真实硬件故障验收。                                                                                    |
+
+首轮新增测试的失败保留为实现修复记录：私有目录中继承 ACL 的文件被误判、准备完成状态过早暴露导致 TRANSFER_BUSY、Windows 只读上传句柄调用 sync 失败，以及 Windows PowerShell 的 Get-Acl 模块加载失败。分别通过沿用私有父目录与对象身份校验、等待操作收束后暴露可用状态、只刷新写句柄、固定 .NET ACL API 修复；后续测试未放宽断言。类型检查的 structuredContent 窄化错误和 lint 提示亦已修复。新增恢复测试最终独立为顶层用例，避免与 stdio 测试的生命周期混合。
+
+原始命令日志保存在本地 `apps/executor/build/transfer-verification/`，并归档到下述忽略目录；初次失败摘录与后续成功输出分开保留。以上为已被 2026-10-16 新方案替代的历史证据，不代表新协议通过；当前操作见 [Executor 安装说明](../../apps/executor/INSTALLATION.md)，设计见 [ADR-0079](../adr/0079-executor-file-transfer.md)。
+
+## 正式设置、项目目录与限额（ADR-0081）
+
+2026-10-15 先记录 ADR，再实施正式 settings.json、传输 journal 项目目录与四项执行体限额。下列结果均使用测试拥有的数据目录，未将用户真实设置作为测试对象。
+
+| 检查                  | 结果与范围                                                                                                                                                                                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 构建、lint、typecheck | 通过；最终构建包含最新 Main、Runtime 和 Renderer。前端 chunk 大小警告保留。                                                                                                                                                                                |
+| 完整执行体回归        | 首次 232 项中 229 通过，3 个重启用例因 Electron Mock 没有 commandLine API 失败。补齐有限 API 后常规单元复验 96/96，其中 4 项重启用例另行复验通过；另外 136 项原生用例在完整回归中通过。首次完整命令的失败保留，不记为一次全绿。                            |
+| 最终存储与限额        | 15/15：正式文件优先、旧设置和 journal 一次性导入且保留原件、损坏/缺失/标记回退拒绝、并发修改备份保留、提交结果不明时不重放、双方向限额、残留占额、磁盘余量及 journal 导入中断。                                                                            |
+| 实际跨卷发布          | 工作目录位于 C 盘、正式设置位于 D 盘，连续保存及重新打开均通过；仅操作新建的临时目录。                                                                                                                                                                     |
+| Electron UI           | 保存、关闭行为、端口占用、主题、设备名称和文件传输设置流程分轮通过。新流程验证非法数值禁止保存、运行中仍用旧限额、完整重启后 runtime_status 返回新限额。普通/窄窗口截图已查看，无相关 pageerror。Browser 插件不可用，使用现有 Playwright Electron 工作流。 |
+| 备份脚本              | 增加默认项目目录占用识别，PowerShell 语法检查通过；默认实例需分别保留项目目录和 AppData。                                                                                                                                                                  |
+
+首次失败还包括 journal 迁移夹具误从 save 后未更新的内存 Map 取值，以及旧端口用例查找已移除的提示文案。夹具改为比较真实原始 journal，UI 定位器对齐当前持久重启提示，保留端口、占用及重启断言。随后 toast 自动消失断言超时，改为用户显式关闭通知后验证持久提示仍存在；本轮不宣称验证了 toast 自动消失的具体时限。没有放宽原有任务或测试期限。
+
+原始完整日志及复验记录位于本地 `apps/executor/build/settings-verification/` 并归档到忽略的 validation-evidence 目录。没有重新执行独立电脑、真实掉电或安装包验收。设计见 [ADR-0081](../adr/0081-executor-settings-storage.md)，用户操作见 [安装说明](../../apps/executor/INSTALLATION.md)。
+
+## 验证材料的保存方式
+
+Git 只保留可重复执行的测试及必要夹具、架构决策和本文的验收状态摘要。每次验收摘要应注明日期、范围、产物身份、结果与未验证项；源码或产物变化后不得沿用旧结果宣称通过。
+
+`docs/architecture/validation-evidence/` 是被 Git 忽略的本地原始材料目录，其中的命令输出、JSON/JSONL/CSV 报告、截图和批次说明不提交。现有文件继续留在本地，失败记录与后续成功记录分别保存；仓库文档不依赖这些本地文件链接。CI 原始输出保存在 CI 附件中，正式发布的包摘要和验收材料随对应发布产物保存。
+
+## 2026-10-16：直连 MCP 与普通 HTTP 文件流
+
+本轮先更新 ADR-0079、架构及安装说明，再实现直连 MCP 与普通 HTTP 文件流；移除旧客户端源码、工具代理、旧控制/分块协议、共享传输导出及构建依赖。没有修改 Agent Core、部署用户 MCP 配置或发布安装包。旧客户端证据仅作历史保留。
+
+验证平台为本机 Windows、Node 24.20.0、pnpm 11.18.0。原目录构建因正在运行的 Executor 占用 dist/native/computer-escape.node 被拒绝（EXECUTOR_NATIVE_OUTPUT_BUSY），没有停止该实例或覆盖已加载模块；后续在独立复制的源码/资源目录重建原生、Main、Preload、Runtime 和 Renderer。隔离构建通过，保留既有 vswhere 提示和前端 chunk 大小警告。新构建不代表当前运行实例已更新。
+
+| 范围              | 结果                                                                                                                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| shared            | build、lint、typecheck 及 7 项测试通过；删除仅供旧客户端/Executor 消费的共享传输导出，Schema 回归 Executor                                                                                 |
+| Executor 静态检查 | lint、typecheck 通过；变更文件格式检查和 git diff --check 通过                                                                                                                             |
+| 包内测试          | 240 项覆盖通过：传输/限额 18 项，其余 222 项中首次 221 项通过；唯一失败为隔离材料缺少验收指南，补齐两份原始指南后该项复验通过                                                              |
+| 文件流与工具      | 真实 SDK 直连发现四工具、按权限筛选，描述明确缺少本地能力不要调用；OS curl 验证零字节、中文/空格路径、超过旧 4 MiB 边界的二进制上传下载及 2 GiB 往返，完整摘要一致                         |
+| 容量与内存        | 原生 2 GiB 边界通过、超一字节拒绝；2 GiB curl 往返采样 JavaScript ArrayBuffer 增量峰值 24,069,954 字节（约 23 MiB），断言上限仍为 128 MiB，未放宽                                          |
+| 授权与故障        | 临时凭证不能访问 MCP、其他传输、其他监听入口或错误方向；长期设备 Bearer 不认证字节通道；权限撤销、任务停止、传输到期、阻塞下载取消、短读、摘要错误、目标竞争、幂等键隔离和未知发布恢复通过 |
+| 已有入口          | Basic、Browser、Computer 非交互夹具、长 MCP 回复、可信内网入口及固定 stdio 取消/EOF 等原有回归覆盖通过                                                                                     |
+| 界面              | 现有 Electron/Playwright 连接配置测试通过，工具目录只展示四个 Executor 工具，普通和窄窗口截图已查看，无溢出及相关 pageerror；复制说明包含能力前提，凭据不出现在页面预览                    |
+| 锁文件            | 离线 frozen lockfile 校验通过，工作区剩余 12 个项目，无依赖版本升级                                                                                                                        |
+
+原始失败与成功记录分别保存，没有跳过断言或放宽产品期限。首次传输测试对撤销响应期望 409，实际认证拒绝为 401，修正明确期望后通过。首次大文件复验在下载准备中耗尽测试助手的过密轮询次数；记录显示实际快照准备需 23,575 ms，测试改为遵守接口 pollAfterMs。2 GiB 往返本身仍受原 360 秒测试预算，上传校验/发布记录为 22,729 ms，不把这些单机耗时当作吞吐承诺。
+
+Browser 插件不可用，界面沿用既有 Playwright Electron 流程。首次启动因宿主 ELECTRON_RUN_AS_NODE=1 将 Electron 当 Node 运行而拒绝 remote-debugging 参数；仅在测试子进程环境清除此变量。清理环境后的首次界面运行仍在原 60 秒预算超时，后续带诊断复验在相同预算内通过（约 51.7 秒）。当时首次超时的具体阶段和稳定性原因尚未定位，原始限制和失败继续保留；后续定位与修复见下方本日收口记录，不以一次暖态成功代替定位。
+
+此前自动审批以 blocked by policy 拒绝旧客户端本地生成目录的清理，原始失败记录继续保留。2026-10-16 用户调整审批规则后，已删除整个 apps/executor-client 残留目录（旧 bundle、node_modules 和空源码目录）、Executor 中遗留的客户端依赖链接及 shared/dist/protocol 下四个 executor-transfer 旧编译产物，并逐项验证不存在。源码、manifest、依赖、锁文件 importer 和构建入口此前已删除。原始日志、截图和隔离验证副本保留；没有删除旧 journal、已发布文件或日常用户数据。
+
+完整日志、隔离产物身份和截图留在本地 apps/executor/build/transfer-verification/；首次失败单独保留。未执行 Linux Agent、真实跨机、掉电、最终安装包或干净电脑验收，不将本机往返称为跨机验收。
+
+## 2026-10-16 后续收口：原目录构建、正常实例与 UI 超时定位
+
+原目录的原生输出已解除占用，完整 Executor 构建在原工作区通过（包含原生、Main、Preload、Runtime、Renderer），不再只使用隔离副本。沙箱内首次 Corepack 请求 npm 失败，升级执行权限后使用固定 pnpm 11.18.0 完成构建；两次输出分别保留。基于原目录新构建的四项文件传输冒烟测试全部通过，覆盖直连工具发现、系统 curl 零字节/多 MiB 双向传输、临时凭证隔离和真实在途上传的任务停止。
+
+UI 超时已定位到交互测试夹具：Main 在 testMode 中明确不显示管理窗口（ready-to-show 仅在非测试模式 show），原 client-setup 用例直接在隐藏窗口中操作。阶段诊断显示 Runtime 在 16,416 ms 就绪，工具弹窗交互累计消耗至 37,054 ms，全部断言在 63,676 ms 完成，超出 60 秒总预算；关闭和清理只需约 337 ms，未发现进程退出卡死。另一轮直接观察到窗口 isVisible=false、isFocused=false，requestAnimationFrame 间隔 1,009/1,008 ms。
+
+诊断仅显式显示并聚焦用例自身的窗口后，同一用例在 11,669 ms 完成。正式修复位于 test/integration/client-setup.test.mjs：复制子进程环境并删除 ELECTRON_RUN_AS_NODE；使用 app.browserWindow(page) 定位准确管理窗口，show/focus 后断言其可见且聚焦，再执行原有交互。产品后台节流、启动策略、原 60 秒预算和全部原断言保持不变。正式用例在故意保留宿主 ELECTRON_RUN_AS_NODE=1 的条件下通过（8,902 ms）；针对该文件的 ESLint、Prettier 和 git diff --check 通过。
+
+从原目录启动的新正常实例已使用既有项目数据成功运行并保持运行。记录中的 Main PID 为 37244、回环监听 Runtime PID 为 17008，沿进程父链确认监听属于此次启动的 Main；未认证 GET /mcp 返回预期 401。未迁移或重置既有数据。完整启动记录保存在本地 20261016-normal-instance.json，进程号仅是本次证据，不作为后续操作的固定目标。
+
+用户提供已连接的 LAPTOP-LH 远程桌面后，按 Computer Use 技能初始化 sky 并通过 list_apps/list_windows 唯一定位“LAPTOP-LH - 远程桌面连接”。首次激活被工具拒绝，精确错误为 Computer Use was not approved to use 远程桌面连接。收到用户“已授权”确认后再次尝试，并重建 node_repl 会话重新选择窗口，工具仍返回同一拒绝。未取得远程截图、未执行任何远程输入，不改用其他自动化通道绕过该应用访问控制。真实跨机验证仍被工具端应用授权阻塞，需要该访问控制实际生效后继续。
+
+本轮 Docker/WSL 查询在沙箱内分别报告 daemon 管道缺失及访问拒绝；外部执行查询被用户拒绝，未重试或启动容器，因此没有新增 Linux 环境验证。真实两机、Linux Agent、满盘/掉电、正式安装包及干净电脑验收仍未完成。
+
+上述原始失败、分阶段诊断、修复后的通过日志、正常实例身份和 Computer Use 阻塞记录继续保存在 apps/executor/build/transfer-verification/。旧客户端目录、依赖链接和 shared 旧传输产物的清理结果保持不变。
+
+## 2026-10-16：验收包生成与手动携带
+
+Computer Use 对既有远程桌面窗口的访问在后续重试中恢复；实际读取远端下载目录、磁盘列表及现有 Executor 状态页。现有远端界面没有新版文件传输工具；其已有 MCP 内网入口的无凭据请求返回预期 401，两台机器的控制端点可达。以上仅证明桌面访问及网络可达，尚未验证新版跨机文件传输。随后用户按实体 Esc 停止 Computer Use，未继续远程输入。用户选择由其手动复制新包。
+
+从此前已完成构建的原工作区，通过固定 pnpm 的 package:acceptance 生成独立 unsigned 产物目录：apps/executor/release/0.0.1-unsigned-6304aea2-160c-4cbb-826b-95cc13bf1a4e/。productBuildId 为 b3d4fe3ad92b3c7a9020502890bd3ff861da464120a3af9513d2a61817dbc138，signed=false；未签名状态与正式发布门禁保持不变，不覆盖此前发行产物。
+
+| 产物                                           |    字节数 | SHA-256                                                          |
+| ---------------------------------------------- | --------: | ---------------------------------------------------------------- |
+| Dr.Octopus-Executor-0.0.1-win-x64-unsigned.zip | 438157368 | f3a79a37de6e43b4b02904ecdf1dc46ca843a80712bbce5924733f5280c4aac2 |
+| Dr.Octopus-Executor-0.0.1-win-x64-unsigned.exe | 342116101 | 1bae91f6624e8cc7442c21bd1a496caf35db9ceb82083bd2ed56b35891a66ed9 |
+
+两份产物的实际长度和流式 SHA-256 均与 acceptance-artifacts.json 一致，另生成同目录 SHA256SUMS.txt。完整产品清单与产物身份测试、使用私有 Node 的便携清单验证器测试共 2 项通过。7-Zip 对最终 ZIP 的测试返回 Everything is Ok，包含 2,476 个目录和 17,867 个文件。实际打包 Runtime 包含四个新版传输工具。
+
+首次直接运行 Node 打包脚本被工程入口校验拒绝，随后沙箱内 pnpm/Corepack 因网络限制失败；保留两次原始日志，按仓库规定的 pnpm 入口在批准的外部执行环境完成打包。没有修改脚本以绕过校验，也没有将旧包冒充本次源码产物。
+
+用户手动携带推荐使用完整 ZIP，先退出远端旧 Executor，再完整解压到新的目录。新包尚未在远端运行；真实跨机文件流、远端授权及安装验收仍待后续执行。原始日志及交接摘要保存在本地 apps/executor/build/transfer-verification/，验收工具在本次产物目录的 acceptance-kit 子目录内。
+
+## 2026-10-16：远端安装失败与 Host 修复
+
+用户在 LAPTOP-LH 手动运行上述 EXE 后报告 Browser Host 注册失败。用户随后提供的只读 PowerShell 结果确认，Chrome/Edge 的注册均指向 `D:\下载\Dr.Octopus-Executor-0.0.1-win-x64-unsigned\resources\executor\bridge\native-host.json`，Exists=false。缺失旧 manifest 阻止身份确认是本次远端已证实的拒绝条件；未取得旧包实际注册脚本的异常全文，不将本地发现的编码缺陷认定为远端唯一根因。
+
+独立回归另复现了 Windows PowerShell 按默认编码读取无 BOM UTF-8 JSON 的问题，中文旧安装路径会被误判为未知身份。注册脚本改为显式 UTF-8 读取 manifest 和数据 locator，保留完整来源集合校验、未知身份拒绝和旧卸载所有权检查。缺失 manifest 现在报告具体路径及恢复提示。验收诊断脚本同步使用 UTF-8，并将来源数量上限修正为当前完整身份的三项。
+
+NSIS 失败分支增加退出码、脚本输出、临时 UTF-16LE 诊断日志及弹窗摘要。隔离夹具编译并运行真实安装宏，注册脚本替身返回 23，验证错误输出、退出码和中文路径完整保留；未运行真实用户安装或修改日常注册。夹具首次在沙箱启动编译器失败，权限升级后先后发现夹具误写只读 TEMP 常量和未指定 NSIS 源编码；修正夹具后通过，原始日志保留。
+
+新增只读诊断回归通过，使用随机 OctopusHostTest 注册键验证完整三来源身份及中文路径、拒绝不完整身份且不改变注册。中文迁移与缺失 manifest 拒绝回归通过；同轮物理路径测试因命令遗漏 --import tsx 而加载失败，该命令失败单独保留。随后使用正式 pnpm test 入口完整复验 241/241 通过、无跳过，包含物理路径及真实 2 GiB curl 双向流；此次往返采样的 JavaScript 缓冲增量峰值为 22,284,065 字节，沿用原 128 MiB 上限。Executor lint、typecheck 通过。
+
+针对用户已提供的精确失效路径，生成单次恢复脚本。仅允许在 LAPTOP-LH 运行，先检查两键无额外内容且仍指向同一缺失文件，再导出备份并移除。隔离测试证明路径变化时两键均保留、备份成功后移除两键、重复执行无副作用。用户随后手动运行并返回成功输出：Chrome/Edge 两键均已清理，备份保留在远端旧包目录旁 browser-host-backup-f1f0ca67901244e0aa7f5698e312cbca；重新安装和跨机文件流尚待确认。脚本和原始证据保存在本地 build/transfer-verification/，不作为通用自动清理能力发布。
+
+修复后的 setup 通过现有构建身份生成函数重新生成并校验消费者摘要，未手改 dist 或重编译占用中的原生模块。固定 pnpm package:acceptance 生成新目录 apps/executor/release/0.0.1-unsigned-4a42908e-ccb2-416e-acb5-2ba3560ad9b5/，保留原失败包。新 productBuildId 为 6989f01fc2bfbd06b39e87308e04b181de1b532e3df3cc066990442fd77242a2，signed=false。
+
+| 新产物                                         |    字节数 | SHA-256                                                          |
+| ---------------------------------------------- | --------: | ---------------------------------------------------------------- |
+| Dr.Octopus-Executor-0.0.1-win-x64-unsigned.exe | 342116844 | 861be390e1a0372cd4818de900de83711a9b2b70b1c2f05dfa5f5608cda28687 |
+| Dr.Octopus-Executor-0.0.1-win-x64-unsigned.zip | 438157890 | c28e1d0e4669aaccd8990ee502dbc96807115c221d632837618c6288fab72c1f |
+
+两份产物的实际字节数和流式 SHA-256 均与清单相符，同目录生成 SHA256SUMS.txt。新包完整清单和私有 Node 验证器两项测试通过；7-Zip 验证 Everything is Ok，2,476 个目录、17,867 个文件。NSIS 失败分支另有上述隔离运行验证。未在本机真实用户环境运行生产安装或卸载，新包远端重新安装及真实跨机文件流仍未验收。
+
+用户随后反馈远端安装在进度条中间停留约 3–5 分钟，最终安装成功；尚未核对远端安装的具体 productBuildId，以上反馈只记为用户确认安装完成，不提升为完整发行或跨机文件流验收。检查新包清单发现 17,866 项清单文件合计 1,082,811,248 字节（最终 ZIP 另含清单本身）；其中 PortableGit 为 9,612 个文件、410,384,442 字节，Computer/Python 为 5,987 个文件、161,151,604 字节，Node/npm 为 1,936 个文件、106,117,105 字节。
+
+固定 electron-builder 26.15.3 的 NSIS 模板在当前默认 7z 路径中先解压到 PLUGINSDIR/7z-out，再用 CopyFiles 复制到安装目录；oneClick 隐藏文件安装详情。大量散文件及双阶段落盘是已确认的安装工作量来源，但未取得远端分阶段耗时、磁盘或安全软件采样，不能认定 3–5 分钟全部耗于解压或杀毒扫描。后续优化应先测量解压、复制、进程检查和 Host 注册阶段，并评估资源文件数量及进度反馈；本轮未修改安装路径或裁剪私有资源。
+
+## 2026-10-16：系统 Shell 决定与实施评估
+
+用户同意采用系统 Shell，并要求先写文档及评估实施：Windows 实现 PowerShell 替换，Linux/macOS 的 Bash 分支仅声明并以注释占位。决定、显式 if-else 结构、命令传递/编码/退出码、Job 与搜索复用、持久结果、清理清单和分阶段验收统一记录在 [ADR-0084](../adr/0084-executor-system-shell.md)。
+
+本轮只修改文档和索引，当前源码、PortableGit 资源及既有包均未切换。现有 241 项测试和包验收结果继续仅适用于原实现；没有将它们记为 PowerShell 替换通过。后续实施必须重新执行新命令语义、原生生命周期、搜索、MCP/stdio、打包和独立 Windows 验收，再报告资源差值及实际安装耗时。
+
+## 2026-10-16：Windows 系统 PowerShell 实施
+
+用户随后明确授权开始实施。Windows MCP 的 bash 已移除，以 powershell 提供系统 Windows PowerShell 5.1；shell.execute、HTTP/stdio、认证、任务和其他基础工具的契约保留。shell-platform.ts 与工程平台选择均使用显式 if-else，Linux/macOS 只有 TODO 注释和未实现错误。runtime_status.shell 返回实际探测的 kind/version/available，Shell 缺失时不广告该命令工具，也不阻止独立文件能力。
+
+ShellExecutor 采用私有 UTF-8 BOM 的 CreateNew 脚本，固定系统解释器和参数；完成后校验身份再清理脚本，未知执行保留证据。process-supervisor 同时监管 PowerShell 和私有 fd/rg 搜索，保留 Job/管道/输出预算和树收束，不保留旧 Bash 模式。Shell journal 以新 Schema 和解释器身份隔离，旧记录明确拒绝并保留原件，不改写用户历史。
+
+| 范围           | 实际结果                                                                                                                                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 构建与静态检查 | 原工作区完整 build、lint、typecheck 通过。保留原有前端 chunk 大小警告。首次沙箱 Corepack 网络失败和一次新增夹具未使用变量的 lint 失败保留，修正后复验通过                                                                        |
+| 聚焦回归       | 首轮执行/历史 16/16，通过；随后平台、执行、历史、私有 Node/npm、搜索、HTTP、stdio 共 55/55 通过；新工具发现/旧名拒绝、Shell 不可用和旧 journal 保留另有 4/4 通过                                                                 |
+| 完整回归       | 247/247，无失败/跳过。覆盖真实 2 GiB curl 双向传输，以及 PowerShell 中文/引号/反引号/换行、16 KiB 上限、原始非 UTF-8 输出、64 MiB 上限、退出码、非终止错误、原生失败显式传播、取消/超时/父进程退出、后台残留拒绝、幂等和崩溃恢复 |
+| 实际 Electron  | Utility Basic 测试与 client-setup 两项通过，均沿用原预算。界面工具目录断言包含 powershell 且不含 bash；授权、配置复制与凭据占位验证通过                                                                                          |
+| UI 证据        | Browser plugin not available，沿用现有 Playwright Electron。普通 820 像素与窄 560 像素视口已查看；页面身份、非空、无错误覆盖、无相关 pageerror、工具详情/授权交互、凭据不泄露及无横向溢出通过，摘要单行省略按原设计保留          |
+| 调用方夹具     | Server 的四份 Executor 集成夹具同步工具名、PowerShell 命令与丢包计数，语法和针对文件的 ESLint 通过；本轮未重跑完整 Web/RPC 链路及 600 秒长等待，未修改 Agent Core                                                                |
+
+原生输出首次检测到仍运行实例占用 computer-escape.node，未强杀或覆盖；用户从托盘退出后完整重建成功。已删除本次明确拥有的 dist/resources/portable-git、build/vendor 的 PortableGit 归档/装配目录，以及 build/dist 中旧 bash-supervisor EXE/OBJ。装配源码、vendor pin、assemble:git 命令、CI 步骤、清单版本/入口/许可证依赖同步移除。其他资源、历史包、原始失败、隔离副本及用户数据保留。
+
+日志保存在 apps/executor/build/transfer-verification/20261016-shell-*；旧截图已先归档至 20261016-shell-ui-before-PHNcT1，新截图和 QA 摘要位于 20261016-shell-ui/。新安装包与最终产物验证完成后另记身份；独立 Windows 新包安装耗时、干净机器、跨机文件流和 Linux/macOS 实机均未新增验收。
+
+### 本轮最终验收包
+
+固定 pnpm package:acceptance 已生成 apps/executor/release/0.0.1-unsigned-4b2f8336-c400-41dd-a1ca-82373d62438b/，productBuildId 为 b739a09fb4b59072c7dd52094eae316faa9a1edca3ebcb02d63323c04bf66d53，signed=false。旧包和旧验收材料保留，不覆盖。
+
+| 新产物                                         |    字节数 | SHA-256                                                          |
+| ---------------------------------------------- | --------: | ---------------------------------------------------------------- |
+| Dr.Octopus-Executor-0.0.1-win-x64-unsigned.exe | 216051539 | 030e41a5922c23381392220896b8e7ad0561f85bba9dad28d03a6d0c8edbb561 |
+| Dr.Octopus-Executor-0.0.1-win-x64-unsigned.zip | 270023823 | 9352dfc6990e2a7fbbe35b7dbe89410d45352099bd471c8da111f69f28d19b1b |
+
+两份产物的长度和流式 SHA-256 与清单一致，并生成 SHA256SUMS.txt。相对上次 4a42908e 包，EXE 从约 326 MiB 降至 206 MiB，ZIP 从约 418 MiB 降至 258 MiB；ZIP 文件数由 17,867 降至 8,255，目录数由 2,476 降至 1,609。新 runtime-manifest 的 8,254 项清单文件合计 672,436,105 字节，不含 manifest 自身；比旧清单减少约 391 MiB。系统 PowerShell 以 operating-system/5.1 版本族需求声明，未伪装成包内文件，也未固定开发机 Shell 的哈希。
+
+最终打包测试、清单及工具验证结果：
+
+- 独立产品副本运行通过（约 50.4 秒）：仅为 Playwright 开启副本 inspector、替换副本 Browser 注册脚本，原包不变；在 system-only PATH 下通过真实 HTTP 执行七个 Basic 工具、私有 Node/npm 与中文 PowerShell，再通过真实固定 stdio 启动器执行中文命令并核对同一实际 Shell 版本。该测试不修改日常 Browser 注册，也不代替 Host 安装/卸载验收。
+- 最终文件清单、私有 Node 清单验证器、Electron Fuses/ASAR 加固和随包 Chrome/Edge 四项复验全部通过。首次 3/4 通过，唯一失败是旧测试将扩展安装说明硬编码为 0.1.3，实际当前插件与包均为 0.1.5；改为逐字比较来源说明并验证 package.json 当前版本后，在同一包复验 4/4 通过，未放宽身份/文件断言。
+- 7-Zip 最终 ZIP 测试 Everything is Ok。新增验收工具目录 acceptance-kit-b8d42484-a46f-4d14-850c-7b0a244d23ed 纳入当前交付说明，原先工具目录保留。该工具的只读 offline-preflight 通过，报告 preflight-system-shell-20261016.json 包含实际系统 Shell 可用性，G4–G6 保持 pending。
+- UI 补充控制台 error/warning 采集后，同一 client-setup 流程在原 60 秒预算内再次通过（约 17.2 秒），无相关控制台告警或页面错误。第一次两项 Electron 回归结果保留。
+
+完整回归内真实 2 GiB curl 往返通过，JavaScript 缓冲增量峰值 25,371,596 字节，仍使用原 128 MiB 上限。上述源码、UI、打包及离线预检均不能替代新包在 LAPTOP-LH 的重新安装及耗时测量、真实跨机文件流、干净机器或正式签名发行验收；这些项目仍未新增通过记录。Linux/macOS 注释分支也不计作平台实现。
+
+## 2026-10-16：真实 Windows 跨机文件传输通过
+
+用户亲测新包的远端安装时间已明显缩短并确认可接受，未提供精确秒数；该结论记录为用户反馈，不换算为安装吞吐或所有机器的时长承诺。随后继续主线验收，通过已连接的远程桌面确认 LAPTOP-LH 的 Executor 已启动，提供 PowerShell 和四项文件传输工具；本机对其内网 MCP 的无凭据探测返回预期 401。
+
+用户手动提供网络 HTTP MCP 配置和远端独立目录。本次实际源机器为 ZGL，目标为 LAPTOP-LH，端点为 192.168.0.11:19876；脚本核对端点不是本机任何网络接口，并在开始任务前核对预期地址和设备名称。目标 runtime_status.deviceId 为 e0d2e121-6ee7-4009-a10b-2de7ca044ad3，Shell 为系统 PowerShell 5.1.26100.9711。验收任务只申请 files.write，未调用 Shell、Browser 或 Computer；用户提供的设备授权本身还含其他能力，本轮未修改授权。
+
+控制面由普通 MCP SDK 直连，所有二进制数据由本机系统 curl.exe 8.21.0 直接从磁盘上传、下载至新暂存文件。临时 HTTP 凭据写入当前用户私有 ACL 的 curl 配置，不出现在进程参数、报告或模型上下文中；每次 curl 结束后确认文件身份并删除该临时配置。没有安装或运行额外的 Agent 桥接程序。
+
+| 实际文件字节数 | 路径覆盖                      | 上传                | 下载与本机落盘                 | SHA-256                                                          |
+| -------------: | ----------------------------- | ------------------- | ------------------------------ | ---------------------------------------------------------------- |
+|              0 | 中文与空格                    | completed / applied | completed 且本机空文件验证通过 | e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 |
+|      8,388,645 | 中文与空格，超过旧 4 MiB 边界 | completed / applied | completed、字节数与摘要一致    | b3b191de34036621be85553a6ba3aa48a18f3719bedc8f3e2f0f0eb8234b5dbe |
+|     67,108,883 | 中文与空格，约 64 MiB 二进制  | completed / applied | completed、字节数与摘要一致    | 95d9e5bb58339582f97af6dc93d2ba0786d04ac734b329679423660d9d1fb6e2 |
+
+64 MiB 案例的 curl HTTP 请求时间为上传 9.334006 秒、下载 9.129096 秒；下载快照准备不在下载 curl 计时内，这些是本次链路数据，不是性能承诺。各上传准备使用原操作键再次查询，transferId 保持一致；上传 completed 后不再返回 content。下载先落盘，再由本地流式计算字节数/摘要并发布本地文件，不把服务端 completed 当作本机已保存。
+
+以下负向检查均在同一真实跨机链路通过：匿名字节请求 401、长期设备 Bearer 不能访问字节通道（401）、临时字节 Bearer 不能访问 MCP（401）、临时凭据不能反向 GET 上传通道（409）。另对约 8 MiB 文件限速上传，实际观察已接收 262,144 字节且仍 transferring 后调用 file_transfer_cancel；最终 cancelled、destinationEffect=not_applied，远端 ls 确认目标不存在，再次字节请求被 409 拒绝。
+
+任务 d167338d-af29-4e0f-a1a5-66971dffe1ba 已正常 task_end，MCP 会话已关闭。后续只读核对六条完成传输和一条取消传输，七条均 cleanupPending=false；本机临时 curl 凭据配置剩余为零。验收源文件、下载文件、报告、用户提供的配置及远端三份已完成测试文件继续保留；没有自动撤销既有授权或删除用户配置。远端文件位于 `D:\下载\Executor-跨机验收-20261016`，文件名带本次 run UUID，未覆盖已有文件。
+
+可复现探针为 apps/executor/test/packaging/cross-machine-transfer.mjs。原始成功报告和独立 cleanup-status.json 位于本地 apps/executor/build/transfer-verification/octopus-executor-cross-machine-20261016-eb822160f53f44508af5718d5ae064a6/；控制台仅输出摘要和报告路径，未记录配置正文或 token。首次初始化及诊断因输出目录未使用原生允许的私有目录前缀被拒绝，未读取授权或派发远端任务；修正验收目录名前缀后通过，原生约束未放宽，首次日志保留。
+
+本轮新增探针的语法、ESLint 和格式检查通过；生产 Runtime/协议未改动，未为该实际链路验收重建产品或重复宣称包内 247 项回归。结论为真实 Windows 两机的文件流、凭据隔离、取消和清理验收通过。跨机 2 GiB、Linux/macOS Agent 或容器、真实满盘/掉电、完整 Web/RPC 和 600 秒长等待、干净机器及签名发布不在本轮新增通过范围内；此前本机 2 GiB 结果继续单独保留。

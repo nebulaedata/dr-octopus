@@ -1,0 +1,27 @@
+/**
+ * @author Codex
+ * @description Applies shared shadcn tokens to the compact browser popup with system CJK typography.
+ */
+@import '@octopus/ui/globals.css';
+@source './*.tsx';
+@source '../../../../packages/ui/src/components';
+
+:root {
+  --font-sans: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+}
+
+body {
+  width: 360px;
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

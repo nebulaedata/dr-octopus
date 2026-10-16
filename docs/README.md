@@ -11,6 +11,24 @@
 - [Server 架构设计](./architecture/octopus-server.md) — Fastify、持久化、Session Runtime 编排、Lease、事件身份与后台并行
 - [Web 架构设计](./architecture/octopus-web.md) — Session 投影、订阅、恢复与多 Session 后台交互
 
+## Executor 与浏览器扩展
+
+- [开发指南](../README.dev.zh-CN.md#executor-与浏览器插件构建) / [English](../README.dev.md#executor-and-browser-extension-builds) — 构建快速命令及各操作文档入口
+- [架构与维护入口](./architecture/executor.md) — 产品边界、进程、授权、任务与 MCP
+- [Basic 工具](./architecture/executor-basic-tools.md) — 文件、PowerShell、持久恢复与搜索
+- [系统 Shell 替换](./adr/0084-executor-system-shell.md) — Windows 系统 PowerShell 替换 PortableGit；Linux/macOS 仅显式分支与注释占位，实际验收另记
+- [跨机文件传输](./adr/0079-executor-file-transfer.md) — Accepted；MCP 直连、Agent 本地工具、临时凭证与普通 HTTP 文件流
+- [Executor 正式设置与传输限额](./adr/0081-executor-settings-storage.md) — 项目目录、AppData 恢复材料、四项限额与重启生效
+- [设备身份与 MCP 操作对象识别规划](./adr/0080-executor-device-identity.md) — Implemented；设备名称、持久实例身份、MCP 暴露与配置规则，含验证与限制
+- [Browser](./architecture/executor-browser.md) — Native Host、扩展、页面身份与恢复
+- [Computer](./architecture/executor-computer.md) — 本机后端、防护、彩屏与独立电脑矩阵
+- [构建、交付与离线验收](./architecture/executor-delivery.md) — 固定资源、包、验收工具和门禁
+- [Windows 正式签名发布 SOP](../apps/executor/RELEASE.md) — 证书、签名工程接入、清单顺序及发行验收
+- [Chrome / Edge 商店发布 SOP](../apps/browser-extension/RELEASE.md) — 账号、身份适配、ZIP、隐私与审核、更新
+- [验证状态与原始证据](./architecture/executor-validation.md) — 实际覆盖、失败、待办与证据索引
+
+开发约束分别由 [Executor AGENTS.md](../apps/executor/AGENTS.md) 与[插件 AGENTS.md](../apps/browser-extension/AGENTS.md)维护；用户安装与连接分别见 [Executor 安装说明](../apps/executor/INSTALLATION.md)与[插件安装说明](../apps/browser-extension/INSTALLATION.md)。
+
 ## 专项设计
 
 - [Docker 成品镜像发布与安装](./architecture/docker-distribution.md) — 本地 npm 发布、GitHub Actions 远程构建、Docker Hub 分发及用户安装的执行步骤表格

@@ -8,6 +8,41 @@ Octopus 是一个本地优先、以 Workspace 为边界的通用智能体系统�
 
 开发环境、代码约定与 PR 流程见 [贡献指南](https://github.com/nebulaedata/dr-octopus/blob/main/CONTRIBUTING.md)。部署边界、凭据保护及漏洞私密报告方式见 [安全政策](https://github.com/nebulaedata/dr-octopus/blob/main/SECURITY.md)。
 
+## Executor 与浏览器插件构建
+
+### Executor 验收构建
+
+Executor 目标为 Windows x64。先按[首次环境与资源准备](docs/architecture/executor-delivery.md#首次环境与资源准备)配置 Node 22.19+、pnpm 11+、MSVC/Windows SDK、固定原生头文件、私有资源与打包工具。准备完成后，在仓库根目录的 PowerShell 中依次执行，每一步成功后再继续：
+
+```powershell
+pnpm --filter @octopus/shared build
+pnpm --filter @octopus/browser-extension build
+pnpm --filter @octopus/executor build
+pnpm --filter @octopus/executor package:acceptance
+```
+
+`--filter @octopus/executor` 选择 Executor 子项目；`package:acceptance` 执行验收打包脚本，读取已有 Executor dist 与两份插件产物，不自动构建或装配缺失资源。每次生成新的 `apps/executor/release/<version>-unsigned-<UUID>/`，包含未签名安装程序、ZIP、清单与验收工具。源码或文档更新不会改变既有包。
+
+Windows 的 MCP 命令工具为 powershell，使用系统 Windows PowerShell 5.1，不再装配或携带 PortableGit。Node/Python 和搜索工具仍随包。Linux/macOS 仅显式分支与注释占位，尚未支持；契约和清理范围见 [ADR-0084](docs/adr/0084-executor-system-shell.md)。
+
+根 `pnpm build`、`pnpm test` 排除 Executor，使用 `pnpm build:executor` / `pnpm test:executor` 或聚焦命令。`pnpm dev:executor` 用于开发，Main/Preload/Runtime 改动后重启，Renderer 支持 HMR。构建与检查按[日常重新构建与打包](docs/architecture/executor-delivery.md#日常重新构建与打包)执行，并遵守 [Executor 项目规则](apps/executor/AGENTS.md)。
+
+再次执行 `pnpm dev:executor` 时，如果已有程序占用原生模块，会显示开发启动提示：选择“继续使用已有执行器”可打开当前实例（不会编译新代码）；如需重建，从系统托盘完整退出执行器并停止使用该构建目录的适配器，再点击“重新检查并构建”。“取消”保留当前实例并结束本次启动。关闭窗口可能仅隐藏到托盘，不能代替完整退出。
+
+### 浏览器插件构建
+
+只构建插件时执行上面前两条命令。`build` 先完成 WXT 双目标，再写入依赖许可证，产物为 `apps/browser-extension/.output/chrome-mv3` 和 `.output/edge-mv3`。不分发构建未完成的目标或省略许可证。
+
+成功构建后按[插件 ZIP 流程](apps/browser-extension/RELEASE.md#4-构建检查并生成提交-zip)在 `.output` 外保存归档。更新插件后重新加载完整目录；交付 Executor 内置副本时重新打包。验证与交付约束见[插件项目规则](apps/browser-extension/AGENTS.md)。
+
+### 安装与公开发行
+
+用户操作分别见 [Executor 安装说明](apps/executor/INSTALLATION.md)和[插件安装说明](apps/browser-extension/INSTALLATION.md)；资源来源、产物清单、验收工具与离线发行门禁统一见[交付指南](docs/architecture/executor-delivery.md)。
+
+浏览器身份的侧载/商店配置见[身份构建流程](apps/browser-extension/RELEASE.md#33-配置身份并重新构建)，客户端身份策略不含插件模式和产品版本；兼容更新只构建对应应用，无需另一端同步升版。只有分发更新后的内置插件副本时才重打客户端包；官方身份只在 browser-identity.json 中维护，所有模式均要求完整配置。
+
+公开发行按 [Windows 签名 SOP](apps/executor/RELEASE.md)与[Chrome/Edge 商店 SOP](apps/browser-extension/RELEASE.md)执行。正式签名入口仍需工程接入，商店实际 ID 和安装需核验；验收打包不会生成签名正式版。
+
 ## 版本发版
 
 在仓库根目录执行 `pnpm release:dry patch` 预览，或执行 `pnpm release` 交互选择版本，随后自动更新 `release.config.json`、提交、创建 tag 并推送当前分支。要求工作区已提交且分支配置了 upstream。
@@ -252,3 +287,7 @@ Windows 使用 directory junction，macOS 和 Linux 使用目录软链接。若 
 ## 许可证
 
 本项目原创代码采用 [MIT License](https://github.com/nebulaedata/dr-octopus/blob/main/LICENSE)。第三方代码、二进制工具和素材保留各自的许可证与权利，详见 [第三方声明](https://github.com/nebulaedata/dr-octopus/blob/main/THIRD_PARTY_NOTICES.md)。
+
+## Executor 文件传输
+
+外部智能体直接连接 Executor MCP，通过已有本地 HTTP 工具和任务绑定的临时凭证传输文件，无需额外客户端。设计见 [ADR-0079](docs/adr/0079-executor-file-transfer.md)，操作见 [Executor 安装说明](apps/executor/INSTALLATION.md)。

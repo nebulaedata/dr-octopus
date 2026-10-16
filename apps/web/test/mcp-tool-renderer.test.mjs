@@ -98,3 +98,28 @@ test('only details get a closed disclosure while empty output stays visible', (c
     }
   }
 });
+
+test('Executor browser snapshots use the standard JPEG preview with snapshot text retained', (context) => {
+  const previousReact = globalThis.React;
+  globalThis.React = React;
+  context.after(() => {
+    globalThis.React = previousReact;
+  });
+  const html = renderToStaticMarkup(
+    createElement(McpToolRenderer, {
+      tool: {
+        name: 'mcp',
+        status: 'success',
+        arguments: { tool: 'dr-octopus-executor_browser_snapshot', args: { taskId: 'task', tabId: 1 } },
+        content: [
+          { type: 'text', text: 'Current Page: fixture' },
+          { type: 'image', mimeType: 'image/jpeg', data: '/9j/2Q==' },
+        ],
+        details: { snapshotId: 'snapshot' },
+      },
+    })
+  );
+  assert.match(html, /data:image\/jpeg;base64,/);
+  assert.match(html, /aria-label="Preview image"/);
+  assert.ok(html.indexOf('Preview image') < html.indexOf('Current Page: fixture'));
+});

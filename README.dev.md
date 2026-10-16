@@ -8,6 +8,39 @@ Octopus is a local-first, workspace-scoped general-purpose agent system. It uses
 
 See the [contributing guide](https://github.com/nebulaedata/dr-octopus/blob/main/CONTRIBUTING.md) for development setup, code conventions, and the PR workflow. See the [security policy](https://github.com/nebulaedata/dr-octopus/blob/main/SECURITY.md) for deployment boundaries, credential protection, and private vulnerability reporting.
 
+## Executor and browser-extension builds
+
+### Executor acceptance builds
+
+Executor targets Windows x64. Prepare Node 22.19+, pnpm 11+, MSVC/Windows SDK, fixed native headers, private resources and packaging tools using the [first-time setup procedure](docs/architecture/executor-delivery.md#首次环境与资源准备). Once prepared, run these commands from the repository root in PowerShell, proceeding only after each command succeeds:
+
+```powershell
+pnpm --filter @octopus/shared build
+pnpm --filter @octopus/browser-extension build
+pnpm --filter @octopus/executor build
+pnpm --filter @octopus/executor package:acceptance
+```
+
+`--filter @octopus/executor` selects the Executor workspace package; `package:acceptance` runs its acceptance-packaging script using the existing Executor dist and both extension outputs. It does not rebuild or prepare missing resources. Each run creates `apps/executor/release/<version>-unsigned-<UUID>/` with an unsigned installer, ZIP, manifests and acceptance tools. Source or documentation changes do not update existing packages.
+
+The Windows MCP command tool is powershell, using system Windows PowerShell 5.1; PortableGit is no longer assembled or bundled. Private Node/Python and search tools remain bundled. Linux/macOS have explicit branches and TODO comments only and remain unsupported. See [ADR-0084](docs/adr/0084-executor-system-shell.md) for the contract and cleanup scope.
+
+Root `pnpm build` and `pnpm test` exclude Executor. Use `pnpm build:executor` / `pnpm test:executor` or focused package commands. `pnpm dev:executor` starts development: restart after Main/Preload/Runtime changes; Renderer supports HMR. Follow the [build and verification sequence](docs/architecture/executor-delivery.md#日常重新构建与打包) and the [Executor project rules](apps/executor/AGENTS.md).
+
+### Browser-extension builds
+
+For the extension alone, run the first two commands above. Its `build` script builds both WXT targets, then adds dependency licenses. Complete outputs are `apps/browser-extension/.output/chrome-mv3` and `.output/edge-mv3`; do not distribute a partial target or omit licenses.
+
+Use the [extension ZIP procedure](apps/browser-extension/RELEASE.md#4-构建检查并生成提交-zip) to archive successful builds outside `.output`. After updating the extension, reload the complete directory in the browser; rebuild Executor packaging when distributing its bundled extension copies. Verification and delivery constraints belong in the [extension project rules](apps/browser-extension/AGENTS.md).
+
+### Installation and public releases
+
+User operations are documented in the [Executor installation guide](apps/executor/INSTALLATION.md) and [extension installation guide](apps/browser-extension/INSTALLATION.md). Resource provenance, artifact manifests, acceptance tools and offline release gates are maintained in the [delivery guide](docs/architecture/executor-delivery.md).
+
+Configure sideload/store build identities using the [identity procedure](apps/browser-extension/RELEASE.md#33-配置身份并重新构建), then rebuild the affected application. Client identity policy excludes plugin mode and product version; compatible updates can ship independently. Repackage Executor only when distributing updated bundled plugin copies. Official identities come exclusively from browser-identity.json and are required in every build mode.
+
+For public distribution, follow the [Windows signing SOP](apps/executor/RELEASE.md) and [Chrome/Edge store SOP](apps/browser-extension/RELEASE.md). The signing entrypoint still requires engineering work, and actual store identities and installation need verification; acceptance packaging does not produce a signed public release.
+
 ## Version releases
 
 From the repository root, run `pnpm release:dry patch` to preview a release, or `pnpm release` to select a version interactively. The workflow then updates `release.config.json`, commits the change, creates a tag, and pushes the current branch. All working-tree changes must be committed, and the branch must have an upstream configured.
@@ -252,3 +285,7 @@ Windows uses a directory junction; macOS and Linux use a directory symlink. If `
 ## License
 
 Original project code is licensed under the [MIT License](https://github.com/nebulaedata/dr-octopus/blob/main/LICENSE). Third-party code, binary tools, and assets retain their own licenses and rights; see [Third-party notices](https://github.com/nebulaedata/dr-octopus/blob/main/THIRD_PARTY_NOTICES.md).
+
+## Executor file transfer
+
+External agents connect directly to Executor MCP and use their existing local HTTP tools to stream files with task-bound temporary credentials. No additional client application is required. See [ADR-0079](docs/adr/0079-executor-file-transfer.md) and [Executor installation](apps/executor/INSTALLATION.md).

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "sideload": {
+    "extensionId": "oigkjlnafjdkoknajgeboknaoemkcbfj",
+    "publicKey": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxWe2kEshf+I4XHHMO6EaS31UrZBMgJjhttCR0qzUHtrCajVLjzl5xOj9vS67J1NOm6eBIQ50XzLBtENi+kP+wjguyPOJMS+NOPOGGMdiAQSxgI86FNRutgXwNb/yPnzzg8rH9IrU9Jmxw4FqLqPeEnShWr5DPrQQh+ef6Ol0JPdEfM71ndQy9nI9SIreTSPi29FqJeulUGgceFerbv1H3lB1/mgFr/u6cAXFP49oEwfQTRUa/xpyVQc7TJTF0WHSq6/E4A0yM0ZeTQgiQj6eWrbsuQenbiSKLyo5e4aKaJYPM1ILoLYNJrMRSVMVH2V5t3irDcoDj47zcAHFRztSHwIDAQAB"
+  },
+  "stores": {
+    "chromeExtensionId": "dibbenngcmnhgepdenindggkdmfmmilh",
+    "edgeExtensionId": "mojmpjbmhgjnfdigekepafolfgkjefab"
+  }
+}

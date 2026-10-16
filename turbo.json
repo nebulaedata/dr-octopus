@@ -41,6 +41,38 @@
         "$TURBO_ROOT$/.editorconfig"
       ]
     },
+    "@octopus/executor#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.md",
+        "$TURBO_ROOT$/packages/ui/src/**",
+        "$TURBO_ROOT$/packages/ui/package.json",
+        "$TURBO_ROOT$/pnpm-lock.yaml",
+        "$TURBO_ROOT$/apps/browser-extension/browser-identity.json",
+        "$TURBO_ROOT$/apps/browser-extension/scripts/lib/browser-identity.mjs"
+      ],
+      "outputs": ["dist/**", "build/browser-identity.ts"]
+    },
+    "@octopus/executor#test": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/pnpm-lock.yaml"]
+    },
+    "@octopus/browser-extension#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.md",
+        "$TURBO_ROOT$/.env",
+        "$TURBO_ROOT$/patches/@page-agent__page-controller@*.patch"
+      ],
+      "env": ["BROWSER_IDENTITY_PROFILE"],
+      "outputs": [".output/**", ".wxt/**"]
+    },
+    "@octopus/browser-extension#test": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/pnpm-lock.yaml"]
+    },
     "clean": {
       "cache": false
     }

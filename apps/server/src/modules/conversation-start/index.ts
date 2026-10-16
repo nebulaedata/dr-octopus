@@ -20,6 +20,7 @@ const plugin: FastifyPluginCallback = (server, _options, done) => {
     configuration: () => server.modelConfigMonitor.refresh(),
     assertWorkspace: (id) => server.workspacesService.resolve({ id }),
     onChanged: (workspaceId) => server.dataEvents.publish({ resource: 'conversation-starts', workspaceId }),
+    onFailure: (failure) => server.log.warn(failure, 'Conversation first-message workflow failed'),
   });
   server.addHook('onClose', () => service.close());
   registerConversationStartController(server, service);

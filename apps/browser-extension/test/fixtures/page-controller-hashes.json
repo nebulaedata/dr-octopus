@@ -1,0 +1,14 @@
+[
+  {
+    "file": "/@page-agent/page-controller/dist/lib/page-controller.js",
+    "sha256": "eef8b15890b30c3d42ccc0cbf49641bdec425fc98b71605e3e216910167d571f"
+  },
+  {
+    "file": "/@page-agent/page-controller/dist/lib/SimulatorMask-Dq2GJqJc.js",
+    "sha256": "26f70ee9cb6352ff4ef87a1c063af7533df89d6de79ad83d5fc03e19eb0e0205"
+  },
+  {
+    "file": "/@page-agent/page-controller/dist/lib/PageController.d.ts",
+    "sha256": "0ec3701c839357bc1c264660c6aa827f5753feacb452c25a63492f40dc9208f3"
+  }
+]

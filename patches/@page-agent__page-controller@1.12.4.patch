@@ -1,0 +1,48 @@
+diff --git a/dist/lib/PageController.d.ts b/dist/lib/PageController.d.ts
+index c977a0dc5e242dd642452d18db70351e62351a79..77e15013bc1959d7207501c4d0167ab3677aac14 100644
+--- a/dist/lib/PageController.d.ts
++++ b/dist/lib/PageController.d.ts
+@@ -231,12 +231,6 @@ export declare class PageController extends EventTarget {
+         pixels: number;
+         index?: number;
+     }): Promise<ActionResult>;
+-    /**
+-     * Execute arbitrary JavaScript on the page.
+-     * The optional `signal` is exposed to the script scope so cooperative code
+-     * can abort promptly when the task is stopped.
+-     */
+-    executeJavascript(script: string, signal?: AbortSignal): Promise<ActionResult>;
+     /**
+      * Show the visual mask overlay.
+      * Only works after mask is setup.
+diff --git a/dist/lib/page-controller.js b/dist/lib/page-controller.js
+index abc5d1e6ca2f2602e6b0a98f3aac5bb3740646af..8fac87bf9e552c1548585a074347de7c1f55d31f 100644
+--- a/dist/lib/page-controller.js
++++ b/dist/lib/page-controller.js
+@@ -1986,26 +1986,6 @@ var PageController = class extends EventTarget {
+ 		}
+ 	}
+ 	/**
+-	* Execute arbitrary JavaScript on the page.
+-	* The optional `signal` is exposed to the script scope so cooperative code
+-	* can abort promptly when the task is stopped.
+-	*/
+-	async executeJavascript(script, signal) {
+-		try {
+-			const asyncFunction = eval(`(async (signal) => { ${script} })`);
+-			const result = await asyncFunction(signal);
+-			return {
+-				success: true,
+-				message: `✅ Executed JavaScript. Result: ${result}`
+-			};
+-		} catch (error) {
+-			return {
+-				success: false,
+-				message: `❌ Error executing JavaScript: ${error}`
+-			};
+-		}
+-	}
+-	/**
+ 	* Show the visual mask overlay.
+ 	* Only works after mask is setup.
+ 	*/

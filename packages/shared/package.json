@@ -4,6 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./protocol/browser-tools": {
+      "types": "./dist/protocol/browser-tools.d.ts",
+      "import": "./dist/protocol/browser-tools.js",
+      "require": "./dist/protocol/browser-tools.js"
+    },
+    "./protocol/browser-bridge": {
+      "types": "./dist/protocol/browser-bridge.d.ts",
+      "import": "./dist/protocol/browser-bridge.js",
+      "require": "./dist/protocol/browser-bridge.js"
+    },
     "./protocol/knowledge": {
       "types": "./dist/protocol/knowledge/index.d.ts",
       "import": "./dist/protocol/knowledge/index.js"

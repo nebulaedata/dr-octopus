@@ -6,6 +6,9 @@ Octopus is a pnpm/Turborepo monorepo:
 
 - `apps/server`: Fastify host and Drizzle-backed business modules.
 - `apps/web`: React/Vite client.
+- `apps/executor`: Windows local tool executor with Electron/Utility Runtime; Basic and Browser implemented, Computer enabled with independent desktop and release acceptance pending.
+- `apps/browser-extension`: independent WXT/MV3 Native Messaging bridge; connection lifecycle and finite Browser tools implemented; release acceptance pending.
+- `apps/desktop`: reserved for future desktop packaging of the Web agent client; not implemented.
 - `packages/agent`: shared Pi CLI and RPC Agent core.
 - `packages/shared`: common types and utilities.
 - `packages/ui`: shared shadcn/ui primitives.
@@ -13,14 +16,17 @@ Octopus is a pnpm/Turborepo monorepo:
 
 Use the table below as an on-demand index, not a reading checklist. Read only the nested `AGENTS.md` files whose directory scope covers the files involved in the current task; do not read unrelated projects' instructions. If the task expands into another directory, load its applicable instructions then. This root file always applies; for a target file, also follow applicable ancestor and deeper nested instructions along its directory path.
 
-| Project / scope                            | Nested instructions                                     |
-| ------------------------------------------ | ------------------------------------------------------- |
-| `apps/server/`                             | [apps/server/AGENTS.md](apps/server/AGENTS.md)          |
-| `apps/web/`                                | [apps/web/AGENTS.md](apps/web/AGENTS.md)                |
-| `packages/agent/`                          | [packages/agent/AGENTS.md](packages/agent/AGENTS.md)    |
-| `packages/ui/`                             | [packages/ui/AGENTS.md](packages/ui/AGENTS.md)          |
-| `packages/custom-ui/`                      | No nested `AGENTS.md` currently; follow this root file. |
-| `packages/shared/`, `docs/`                | No nested `AGENTS.md` currently; follow this root file. |
+| Project / scope             | Nested instructions                                                   |
+| --------------------------- | --------------------------------------------------------------------- |
+| `apps/desktop/`             | Reserved scope; no nested AGENTS.md currently. Follow this root file. |
+| `apps/executor/`            | [apps/executor/AGENTS.md](apps/executor/AGENTS.md)                    |
+| `apps/browser-extension/`   | [apps/browser-extension/AGENTS.md](apps/browser-extension/AGENTS.md)  |
+| `apps/server/`              | [apps/server/AGENTS.md](apps/server/AGENTS.md)                        |
+| `apps/web/`                 | [apps/web/AGENTS.md](apps/web/AGENTS.md)                              |
+| `packages/agent/`           | [packages/agent/AGENTS.md](packages/agent/AGENTS.md)                  |
+| `packages/ui/`              | [packages/ui/AGENTS.md](packages/ui/AGENTS.md)                        |
+| `packages/custom-ui/`       | No nested `AGENTS.md` currently; follow this root file.               |
+| `packages/shared/`, `docs/` | No nested `AGENTS.md` currently; follow this root file.               |
 
 Keep this index updated when project-level `AGENTS.md` files are added, moved, or removed.
 
@@ -38,9 +44,16 @@ Read and follow [Code Development Standards](docs/code-development-standards.md)
 
 ## Tooling and Verification
 
-Use Node 22.19+ and pnpm 11+. Common commands are `pnpm dev`, `pnpm dev:web`, `pnpm dev:agent`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm format`; prefer focused filters while iterating, such as `pnpm --filter @octopus/server test`.
+Use Node 22.19+ and pnpm 11+. Common commands are `pnpm dev`, `pnpm dev:cli`, `pnpm dev:agent`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm format`; prefer focused filters while iterating, such as `pnpm --filter @octopus/server test`.
 
 Tests use `node:test`, are named `*.test.mjs`, and keep fixtures deterministic. Add regressions near the affected package. Before handoff, run focused checks followed by the relevant scope of `pnpm test`, `pnpm lint`, and `pnpm typecheck`.
+
+## Documentation Boundaries
+
+- Product READMEs explain installation and usage, with links to development guides. Put source setup, build commands and packaging instructions in `README.dev.md` / `README.dev.zh-CN.md` or the relevant scoped guide.
+- This root file owns repository-wide rules and the project instruction index. Application-specific build, verification and delivery rules belong in that application's `AGENTS.md`; keep procedural tutorials in the linked guides.
+- Keep user installation instructions and release SOPs in the owning application's `INSTALLATION.md` and `RELEASE.md`. Maintain architecture and ADRs under `docs/`; indexes link to these documents rather than repeat their content.
+- Maintain one authoritative detailed procedure per responsibility. Keep current validation status separate from enduring rules, preserve original evidence, and distinguish executable commands from pending integration. Packaged/offline instructions must not require unavailable repository-relative links.
 
 ## Code Conventions
 

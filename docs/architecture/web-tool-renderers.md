@@ -172,6 +172,8 @@ The `mcp` registration reads the exact invoked remote tool name from `arguments.
 
 MCP images use the `ImageAttachment` preview variant as a responsive shadcn Attachment card capped at 448px within Output, without an extra Images section heading. The card places its title, format, decoded payload size and decoded pixel dimensions in a footer below the image; its keyboard-accessible preview trigger covers only the image. Dimensions come from the loaded image and are tied to its source, never inferred from textual tool logs; they stay absent until available. Metadata wraps on narrow screens. The image fills the card width with natural height, no image padding, letterboxing or cropping. The image-only trigger uses a zoom-in cursor without an expand icon; clicking or keyboard activation opens the original image in the shared preview dialog. The metadata footer remains selectable and does not open the preview. Compact image attachments, including read-tool thumbnails, use one Attachment border with no padding or overlay expand icon. The full thumbnail remains a keyboard-accessible preview trigger.
 
+Executor 的 browser_snapshot 由 Native Messaging 返回有界 JPEG，在 MCP 层拆为标准 text/image content；结构化 data 不重复图像字节。Web 复用既有 MCP 图片 Attachment、预览和实时/历史归一化。旧的纯文本历史快照不会凭空补造截图，新快照才包含实际采集图片。
+
 ## Consecutive tool timelines
 
 `Conversation` groups tools through `session/utils/transcript-layout.ts` using explicit Turn ownership. Visible messages (including reasoning), notifications, compactions, and Turn boundaries break groups. Empty persisted assistant envelopes are skipped using the same visibility contract as `MessageRow`. Hidden final messages still retain the Turn retry and duration markers. Tools without known Turn ownership remain separate.

@@ -1,14 +1,20 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+# Third-party React declarations need these types visible from pnpm's isolated virtual store.
+publicHoistPattern:
+  - '@types/react'
+  - '@types/react-dom'
 allowBuilds:
   '@google/genai': true
   '@swc/core': true
   better-sqlite3: true
   esbuild: true
+  electron: true
   koffi: true
   protobufjs: true
   sharp: true
+  electron-winstaller: false
 ignoredOptionalDependencies:
   - '@huggingface/transformers'
 # 临时允许安装刚发布的此版本；满足 pnpm 最小发布时间限制后可删除此配置。
@@ -16,3 +22,4 @@ minimumReleaseAgeExclude:
   - lucide-react@1.48.0
 patchedDependencies:
   '@earendil-works/pi-coding-agent@0.85.1': patches/@earendil-works__pi-coding-agent@0.85.1.patch
+  '@page-agent/page-controller@1.12.4': patches/@page-agent__page-controller@1.12.4.patch

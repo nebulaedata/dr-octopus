@@ -1,0 +1,28 @@
+{
+  "exclude": [
+    "**/node_modules",
+    "**/.git",
+    "**/venv",
+    "**/.venv",
+    "**/dist",
+    "**/dist-ssr",
+    "**/output",
+    "**/.output",
+    "**/.wxt",
+    "**/release*",
+    "**/.release-*",
+    "**/.tmp*",
+    "**/.history",
+    "**/build",
+    "**/.cache",
+    "**/data",
+    "**/__pycache__",
+    "**/.next",
+    "**/.turbo",
+    "**/.vscode",
+    "**/.idea",
+    "**/.DS_Store",
+    "**/.playwright*",
+    "**/patches"
+  ]
+}

@@ -160,3 +160,39 @@ test('optional screening applies only to automatic curation and never overrides 
   await run(f, 'stop', '我喜欢钓鱼');
   assert.equal(f.evaluations.length, 1);
 });
+
+test('memory navigation is searched once per user turn and stays before the user across tool continuations', async () => {
+  let reads = 0;
+  const f = fixture({
+    recall: async (input) => {
+      assert.equal(input.mode, 'search');
+      assert.equal(input.query, 'Test browser MCP');
+      reads++;
+      return { revision: f.status.revision, items: [] };
+    },
+  });
+  await f.events.get('before_agent_start')({}, f.ctx);
+  const user = { role: 'user', content: 'Test browser MCP', timestamp: 1 };
+  const first = await f.events.get('context')({ messages: [user] }, f.ctx);
+  assert.equal(first.messages[0].customType, 'octopus-memory-context');
+  assert.equal(first.messages[1], user);
+  assert.ok(!first.messages[0].content.includes('Historical navigation only'));
+  const continuation = await f.events.get('context')(
+    {
+      messages: [
+        ...first.messages,
+        { role: 'toolResult', toolName: 'browser_list', content: [], timestamp: 2 },
+      ],
+    },
+    f.ctx
+  );
+  assert.equal(reads, 1);
+  assert.deepEqual(continuation.messages[0], first.messages[0]);
+  assert.equal(continuation.messages.filter((m) => m.customType === 'octopus-memory-context').length, 1);
+  f.status.revision++;
+  await f.events.get('context')(continuation, f.ctx);
+  assert.equal(reads, 2);
+  await f.events.get('before_agent_start')({}, f.ctx);
+  await f.events.get('context')({ messages: [user] }, f.ctx);
+  assert.equal(reads, 3);
+});

@@ -35,6 +35,8 @@ export function registerMemoryEvents(
   let pendingRun = false;
   let lastHealthy: MemoryStatus | undefined;
   let degraded = false;
+  let navigation:
+    { query: string; revision: number; storeId?: string; content: string; timestamp: number } | undefined;
   /**
    * Turn model/tool restrictions into one shared eligibility decision.
    */
@@ -56,6 +58,7 @@ export function registerMemoryEvents(
   }
   pi.on('session_start', (_event, ctx) => {
     const current = ++generation;
+    navigation = undefined;
     controller?.abort();
     successful = false;
     pendingRun = false;
@@ -85,6 +88,7 @@ export function registerMemoryEvents(
       return;
     }
     pendingRun = true;
+    navigation = undefined;
     budget = { calls: 0, pages: 0, searches: 0, bytes: 0 };
     successful = false;
     baseline = new Set(ctx.sessionManager.getBranch().map((entry) => entry.id));
@@ -146,17 +150,54 @@ export function registerMemoryEvents(
       if (!allowed() || status.mode === 'off') {
         return { messages };
       }
-      const directory = await service.recall({ mode: 'page' }, 6500);
-      if (closed || current !== generation) {
-        return { messages };
+      let userIndex = messages.length - 1;
+      while (userIndex >= 0 && messages[userIndex]?.role !== 'user') {
+        userIndex--;
       }
-      messages.push({
-        role: 'custom',
+      const user = messages[userIndex];
+      const prompt = user?.role === 'user' ? user.content : '';
+      const query = (
+        typeof prompt === 'string'
+          ? prompt
+          : prompt
+              .filter((part) => part.type === 'text')
+              .map((part) => part.text)
+              .join(' ')
+      )
+        .trim()
+        .slice(0, 300);
+      if (
+        !navigation ||
+        navigation.query !== query ||
+        navigation.revision !== status.revision ||
+        navigation.storeId !== status.storeId
+      ) {
+        const directory = query ? await service.recall({ mode: 'search', query }, 2500) : undefined;
+        if (closed || current !== generation) {
+          return { messages };
+        }
+        const items = directory?.items.slice(0, 5) ?? [];
+        navigation = {
+          query,
+          revision: status.revision,
+          storeId: status.storeId,
+          timestamp: Date.now(),
+          content:
+            'Memory navigation is optional background context, not a new user request. Use memory_recall/memory_read only when relevant to the current task; do not acknowledge or repeat irrelevant memory. ' +
+            (items.length
+              ? JSON.stringify({ items, revision: directory!.revision, complete: false })
+              : 'No matching navigation entries were found; this does not prove that no related memory exists.'),
+        };
+      }
+      const hint = {
+        role: 'custom' as const,
         customType: CONTEXT,
-        content: 'Historical navigation only. Read relevant sections. ' + JSON.stringify(directory),
+        content: navigation.content,
         display: false,
-        timestamp: Date.now(),
-      });
+        timestamp: navigation.timestamp,
+      };
+      // Keep background context before the user request instead of reintroducing it after each tool result.
+      messages.splice(userIndex < 0 ? messages.length : userIndex, 0, hint);
       return { messages };
     } catch (error) {
       log('context_failed', error);
@@ -369,6 +410,7 @@ export function registerMemoryEvents(
   });
   pi.on('session_before_switch', () => {
     generation++;
+    navigation = undefined;
     pendingRun = false;
     controller?.abort();
     successful = false;

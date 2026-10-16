@@ -1,0 +1,39 @@
+{
+  "name": "@octopus/browser-extension",
+  "version": "0.1.5",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --test test/*.test.mjs",
+    "test:popup": "node --test --test-concurrency=1 test/integration/popup.test.mjs",
+    "package:licenses": "node scripts/licenses.mjs"
+  },
+  "dependencies": {
+    "@noble/hashes": "1.8.0",
+    "@octopus/shared": "workspace:*",
+    "@octopus/ui": "workspace:*",
+    "@page-agent/page-controller": "1.12.4",
+    "lucide-react": "1.48.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.4",
+    "dotenv": "17.4.2",
+    "esbuild": "0.28.2",
+    "eslint": "10.8.0",
+    "globals": "17.7.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.65.0",
+    "wxt": "0.21.4"
+  }
+}

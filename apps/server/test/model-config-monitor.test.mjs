@@ -91,3 +91,46 @@ test('native atomic replacements publish configuration changes without periodic 
     await rm(agentDir, { recursive: true, force: true });
   }
 });
+
+test('format-only rewrites and unrelated settings during SDK refresh do not invalidate model preparation', async () => {
+  const agentDir = await mkdtemp(join(tmpdir(), 'octopus-config-semantic-'));
+  const models = { providers: { p: { api: 'a', baseUrl: 'http://localhost:1234' } } };
+  await writeFile(join(agentDir, 'models.json'), JSON.stringify(models));
+  await writeFile(join(agentDir, 'auth.json'), JSON.stringify({ p: { type: 'api_key', key: 'fixture' } }));
+  await writeFile(
+    join(agentDir, 'settings.json'),
+    JSON.stringify({ defaultProvider: 'p', defaultModel: 'one' })
+  );
+  const monitor = new ModelConfigMonitor({
+    agentDir,
+    changes: new RuntimeConfigChanges(),
+    notify() {},
+    onError() {},
+    refresh: async () => {
+      await writeFile(
+        join(agentDir, 'models.json'),
+        JSON.stringify({ providers: { p: { baseUrl: 'http://localhost:1234', api: 'a' } } }, null, 2)
+      );
+      await writeFile(
+        join(agentDir, 'auth.json'),
+        JSON.stringify({ p: { key: 'fixture', type: 'api_key' } }, null, 2)
+      );
+      await writeFile(
+        join(agentDir, 'settings.json'),
+        JSON.stringify({ defaultProvider: 'p', defaultModel: 'one', unrelatedUiSetting: true })
+      );
+    },
+  });
+  try {
+    const initial = await monitor.refresh();
+    assert.equal(await monitor.refresh(), initial);
+    await writeFile(
+      join(agentDir, 'settings.json'),
+      JSON.stringify({ defaultProvider: 'p', defaultModel: 'two' })
+    );
+    await assert.rejects(monitor.refresh(), /Configuration changed/);
+  } finally {
+    await monitor.close();
+    await rm(agentDir, { recursive: true, force: true });
+  }
+});

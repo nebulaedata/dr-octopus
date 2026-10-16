@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
+import { ApplicationError } from '../dist/infrastructure/errors/application-error.js';
 import { createDatabase } from '../dist/db/client.js';
 import { ConversationStartRepository } from '../dist/modules/conversation-start/conversation-start.repository.js';
 import { ConversationStartService } from '../dist/modules/conversation-start/conversation-start.service.js';
@@ -396,4 +397,61 @@ test('only definitive unsent receipts expose complete draft recovery context', a
     f.repository.set(input.submissionId, status);
     assert.equal(f.service.get('w', input.submissionId).draft, undefined);
   }
+});
+
+test('preparation diagnostics preserve safe stage and code without leaking an error or replaying', async (t) => {
+  const f = fixture(t);
+  const failures = [];
+  f.dependencies.onFailure = (failure) => failures.push(failure);
+  f.prepare(async () => {
+    throw new ApplicationError('SESSION_RUNTIME_TIMEOUT', 'Bearer private-secret and private prompt', {
+      statusCode: 504,
+    });
+  });
+  const input = f.input();
+  await f.service.start('w', input);
+  const result = await settled(f.service, input.submissionId);
+  assert.equal(result.status, 'failed');
+  assert.deepEqual(failures, [
+    {
+      submissionId: input.submissionId,
+      sessionId: result.sessionId,
+      stage: 'runtime',
+      code: 'SESSION_RUNTIME_TIMEOUT',
+      accepted: false,
+    },
+  ]);
+  assert.equal(JSON.stringify({ result, failures }).includes('private-secret'), false);
+  await f.service.start('w', input);
+  assert.equal(f.prepares(), 1);
+  assert.equal(f.deliveries(), 0);
+});
+
+test('accepted dispatch failure remains unknown and logging failure cannot trigger replay', async (t) => {
+  const f = fixture(t);
+  const failures = [];
+  f.dependencies.onFailure = (failure) => {
+    failures.push(failure);
+    throw new Error('Logging unavailable');
+  };
+  f.dispatch(async () => {
+    throw new Error('Private transport detail');
+  });
+  const input = f.input();
+  await f.service.start('w', input);
+  const result = await settled(f.service, input.submissionId);
+  assert.equal(result.status, 'unknown');
+  assert.equal(f.publications(), 1);
+  assert.deepEqual(failures, [
+    {
+      submissionId: input.submissionId,
+      sessionId: result.sessionId,
+      stage: 'dispatch',
+      code: 'CONVERSATION_PREPARATION_FAILED',
+      accepted: true,
+    },
+  ]);
+  await f.service.start('w', input);
+  assert.equal(f.publications(), 1);
+  assert.equal(failures.length, 1);
 });
