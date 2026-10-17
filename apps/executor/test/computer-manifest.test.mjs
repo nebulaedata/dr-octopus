@@ -13,9 +13,10 @@ const paths = [
   'resources/computer/python314.zip',
   'resources/computer/python314._pth',
   'resources/computer/.executor-asset.json',
-  'resources/computer/product/server.py',
-  'resources/computer/product/desktop.py',
-  'resources/computer/product/schemas.json',
+  'resources/computer/executor.toml',
+  'resources/computer/sitecustomize.py',
+  'resources/computer/Lib/site-packages/comtypes/gen/__init__.py',
+  'resources/computer/Lib/site-packages/windows_mcp/__main__.py',
 ];
 const inventory = {
   version: 1,

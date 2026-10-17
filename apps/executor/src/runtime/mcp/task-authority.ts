@@ -107,7 +107,6 @@ export class TaskAuthority {
         }
         task.operations.push({ key: parsed.idempotencyKey, tool: name, fingerprint, state: 'pending' });
         this.browser?.invalidate(task.taskId);
-        this.computer?.invalidate(task.taskId);
       }
       // Flush even an existing pending reservation, including a concurrent identical request.
       await this.store.saveTask(task);
@@ -177,7 +176,7 @@ export class TaskAuthority {
     ) {
       throw new BasicToolError(
         'COMPUTER_UNAVAILABLE',
-        'Computer permissions require the guarded local backend.'
+        'Computer permissions require the managed local backend.'
       );
     }
     if (this.closing || this.store.grants.size + this.approvals >= 100) {
@@ -189,7 +188,6 @@ export class TaskAuthority {
         ...new Set<ExecutorPermission>([
           ...input.permissions,
           ...(input.permissions.includes('files.write') ? ['files.read' as const] : []),
-          ...(input.permissions.includes('computer.control') ? ['computer.observe' as const] : []),
         ]),
       ];
       const token = randomBytes(32).toString('hex');
@@ -252,15 +250,7 @@ export class TaskAuthority {
     if (!this.computer?.available()) {
       return {};
     }
-    return Object.fromEntries(
-      Object.entries(computerSchemas).filter(([name]) =>
-        grant.permissions.includes(
-          ['computer_displays', 'computer_windows', 'computer_observe'].includes(name)
-            ? 'computer.observe'
-            : 'computer.control'
-        )
-      )
-    );
+    return grant.permissions.includes('computer.control') ? computerSchemas : {};
   }
 
   /**
@@ -293,7 +283,10 @@ export class TaskAuthority {
       capabilities: [...grant.permissions],
       shell: this.tools.shellStatus(),
       browser: { available: this.browser?.available() ?? false },
-      computer: { available: this.computer?.available() ?? false },
+      computer: {
+        available: this.computer?.available() ?? false,
+        backend: this.computer?.backendStatus() ?? null,
+      },
       authorization: { scope: grant.scope, clientId },
       defaultCwd: homedir(),
       task: task?.clientId === clientId ? this.publicTask(task) : null,
@@ -335,15 +328,8 @@ export class TaskAuthority {
       ...new Set<ExecutorPermission>([
         ...input.capabilities,
         ...(input.capabilities.includes('files.write') ? ['files.read' as const] : []),
-        ...(input.capabilities.includes('computer.control') ? ['computer.observe' as const] : []),
       ]),
     ].sort();
-    if (
-      capabilities.some((permission) => permission.startsWith('computer.')) &&
-      !this.computer?.available()
-    ) {
-      throw new BasicToolError('COMPUTER_UNAVAILABLE', 'The guarded local Computer backend is unavailable.');
-    }
     if (!capabilities.every((cap) => grant.permissions.includes(cap))) {
       throw new BasicToolError(
         'FORBIDDEN',
@@ -376,6 +362,16 @@ export class TaskAuthority {
         'RESOURCE_BUSY',
         'Another task or recovery barrier holds execution admission.'
       );
+    }
+    if (capabilities.includes('computer.control') && !this.computer?.available()) {
+      if (!this.computer) {
+        throw new BasicToolError('COMPUTER_UNAVAILABLE', 'Desktop backend is unavailable.');
+      }
+      await this.computer.restart();
+      this.requireGrant(clientId);
+      if (this.active) {
+        throw new BasicToolError('RESOURCE_BUSY', 'Another task was admitted during startup.');
+      }
     }
     if (this.store.tasks.size >= 1000) {
       throw new BasicToolError('TASK_LIMIT', 'Retained task history reached its limit.');
@@ -512,7 +508,10 @@ export class TaskAuthority {
       this.requireGrant(clientId);
     }
     const task = this.task(clientId, taskId);
-    if (!['created', 'active', 'stopping'].includes(task.state)) {
+    if (
+      !['created', 'active', 'stopping'].includes(task.state) &&
+      !(task.quarantined && task.capabilities.includes('computer.control'))
+    ) {
       return this.publicTask(task);
     }
     const existing = this.stopping.get(taskId);
@@ -540,6 +539,9 @@ export class TaskAuthority {
     try {
       await this.store.saveTask(task);
       await this.transfers?.stopTask(task.taskId);
+      if (task.capabilities.includes('computer.control')) {
+        await this.computer?.close();
+      }
       await this.preparing.get(task.taskId)?.catch(() => {});
       try {
         await this.tools.stopTask(clientId, task.taskId);
@@ -550,6 +552,20 @@ export class TaskAuthority {
       }
       await this.running.get(task.taskId)?.catch(() => {});
       await this.browser?.release(task.taskId);
+      const onlyComputerUnknown =
+        task.operations.some((op) => op.state === 'unknown' && Object.hasOwn(computerSchemas, op.tool)) &&
+        task.operations.every(
+          (op) => !['pending', 'unknown'].includes(op.state) || Object.hasOwn(computerSchemas, op.tool)
+        );
+      if (
+        task.quarantined &&
+        onlyComputerUnknown &&
+        !this.transfers?.active(task.taskId) &&
+        this.computer?.executionStopped() &&
+        this.tools.taskStatus(clientId, task.taskId).state !== 'isolated'
+      ) {
+        task.quarantined = false;
+      }
       task.state = 'cancelled';
       task.updatedAt = Date.now();
       await this.store.saveTask(task);
@@ -599,6 +615,9 @@ export class TaskAuthority {
       await this.store.saveTask(task);
       await this.tools.stopTask(clientId, task.taskId);
       await this.browser?.release(task.taskId);
+      if (task.capabilities.includes('computer.control')) {
+        await this.computer?.close();
+      }
       task.state = 'completed';
       task.updatedAt = Date.now();
       await this.store.saveTask(task);
@@ -628,9 +647,7 @@ export class TaskAuthority {
     if (isBrowser) {
       permission = 'browser';
     } else if (isComputer) {
-      permission = ['computer_displays', 'computer_windows', 'computer_observe'].includes(name)
-        ? 'computer.observe'
-        : 'computer.control';
+      permission = 'computer.control';
     } else if (name === 'powershell') {
       permission = 'shell.execute';
     } else if (name === 'write' || name === 'edit') {
@@ -693,7 +710,8 @@ export class TaskAuthority {
       });
     };
     signal.addEventListener('abort', cancel, { once: true });
-    const pending = this.execute(clientId, grant, task, name, input, operation);
+    const requestDeadlineMs = Math.min(Date.now() + grant.waitBudgetMs, task.createdAt + 1800000);
+    const pending = this.execute(clientId, grant, task, name, input, operation, requestDeadlineMs);
     this.running.set(task.taskId, pending);
     try {
       const value = await pending;
@@ -732,7 +750,8 @@ export class TaskAuthority {
     task: TaskRecord,
     name: ToolName,
     input: Record<string, unknown>,
-    operation: TaskRecord['operations'][number] | null
+    operation: TaskRecord['operations'][number] | null,
+    requestDeadlineMs: number
   ): Promise<unknown> {
     const recording = operation?.state === 'pending';
     try {
@@ -766,9 +785,6 @@ export class TaskAuthority {
       if (isBrowser && effective.connectionId && effective.connectionId !== task.connectionId) {
         throw new BasicToolError('FORBIDDEN', 'Browser connection does not match the task binding.');
       }
-      if (!isComputer) {
-        this.computer?.invalidate(task.taskId);
-      }
       let value: unknown;
       if (isBrowser) {
         value = await this.browser?.call(clientId, task.taskId, name as BrowserName, {
@@ -776,15 +792,14 @@ export class TaskAuthority {
           connectionId: task.connectionId,
         });
       } else if (isComputer) {
-        value = await this.computer?.call(clientId, task.taskId, name as ComputerName, effective);
+        value = await this.computer?.call(task.taskId, name as ComputerName, effective, {
+          deadlineMs: requestDeadlineMs,
+        });
       } else {
         value = await this.tools[name as BasicName](clientId, effective);
       }
       if (isComputer && !this.computer) {
-        throw new BasicToolError(
-          'COMPUTER_UNAVAILABLE',
-          'The guarded local Computer backend is unavailable.'
-        );
+        throw new BasicToolError('COMPUTER_UNAVAILABLE', 'The managed local desktop backend is unavailable.');
       }
       const outcome = value && typeof value === 'object' ? value : {};
       if (operation && recording) {
@@ -828,6 +843,10 @@ export class TaskAuthority {
       if (operation && recording) {
         operation.state = 'failed';
         operation.code = error instanceof BasicToolError ? error.code : 'TOOL_FAILED';
+        if (operation.code === 'COMPUTER_OBSERVATION_INTERRUPTED') {
+          operation.state = 'unknown';
+          operation.effect = 'not_applied';
+        }
         if (operation.code === 'COMPUTER_RESULT_UNKNOWN' || operation.code === 'OUTCOME_UNKNOWN') {
           operation.state = 'unknown';
           operation.effect = 'unknown';
@@ -839,6 +858,7 @@ export class TaskAuthority {
             'CONTROL_STORE_FAILED',
             'FILE_RECOVERY_REQUIRED',
             'COMPUTER_RESULT_UNKNOWN',
+            'COMPUTER_OBSERVATION_INTERRUPTED',
           ].includes(operation.code)
         ) {
           task.quarantined = true;

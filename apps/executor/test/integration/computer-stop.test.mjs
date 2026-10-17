@@ -9,6 +9,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createServer } from 'node:net';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { build } from 'esbuild';
 import { _electron as electron, expect } from '@playwright/test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -77,14 +79,9 @@ async function stopFixture({ verifyInput }) {
           await globalThis.runtime.saveSettings({port:${port},networkAddress:null});
           globalThis.indicator=new ComputerUseIndicator('app://ui/computer-use-overlay.html');
           globalThis.escapeOwner=new ComputerUseEscape({start(callback){const ready=native.start(callback);globalThis.hookReady=ready;return ready;},stop(){native.stop();}},(id,pid)=>globalThis.runtime.stopComputerUse(id,pid));
-          let revision=0;
           globalThis.runtime.subscribe(snapshot=>{
             globalThis.indicator.update(snapshot.computerUse);
             globalThis.escapeOwner.update(snapshot);
-            if(snapshot.computerUse.state==='running'&&snapshot.computerUse.revision>revision) {
-              revision=snapshot.computerUse.revision;
-              globalThis.indicator.confirmVisible(revision).then(visible=>globalThis.runtime.confirmComputerIndicator(snapshot.computerUse.revision,visible)).catch(()=>{});
-            }
           });
           await globalThis.runtime.start();
         });
@@ -147,35 +144,37 @@ async function stopFixture({ verifyInput }) {
         console.log('Waiting for activation of OCTOPUS OWNED COMPUTER STOP FIXTURE input.');
         await sentinel.waitForFunction(() => window.fixtureActivated, undefined, { timeout: 30000 });
       }
-      const listing = await call(client, 'computer_windows', { taskId: task.taskId });
-      const windows = listing.windows.filter(
-        (window) => window.title === 'OCTOPUS OWNED COMPUTER STOP FIXTURE'
-      );
-      assert.equal(windows.length, 1);
-      const target = windows[0];
-      await app.evaluate(({ app }) => {
-        app.focus();
-        globalThis.sentinel.show();
-        globalThis.sentinel.focus();
-      });
-      const focus = await call(client, 'computer_focus', {
+      const focus = await call(client, 'computer.app.switch', {
         taskId: task.taskId,
-        windowId: target.windowId,
+        name: 'OCTOPUS OWNED COMPUTER STOP FIXTURE',
         idempotencyKey: 'owned-focus',
       });
-      assert.equal(focus.businessEffect, 'applied', JSON.stringify(focus));
-      const observation = await call(client, 'computer_observe', {
+      assert.equal(focus.businessEffect, 'applied');
+      assert.equal(await sentinel.evaluate(() => document.hasFocus()), true);
+      const ownedHandle = await app.evaluate(() =>
+        globalThis.sentinel.getNativeWindowHandle().readBigUInt64LE().toString()
+      );
+      const foreground = await promisify(execFile)(
+        join(root, 'dist/resources/computer/python.exe'),
+        [
+          '-I',
+          '-B',
+          '-c',
+          'import ctypes as c; u=c.WinDLL("user32"); u.GetForegroundWindow.restype=c.c_void_p; print(u.GetForegroundWindow())',
+        ],
+        { windowsHide: true, timeout: 5000 }
+      );
+      assert.equal(
+        foreground.stdout.trim(),
+        ownedHandle,
+        'Refuse injected Escape unless Win32 foreground is the owned fixture'
+      );
+      const key = await call(client, 'computer.shortcut', {
         taskId: task.taskId,
-        windowId: target.windowId,
-      });
-      const key = await call(client, 'computer_key', {
-        taskId: task.taskId,
-        windowId: observation.windowId,
-        observationId: observation.observationId,
         idempotencyKey: 'injected-escape',
-        key: 'Escape',
+        shortcut: 'esc',
       });
-      assert.equal(key.businessEffect, 'applied', JSON.stringify(key));
+      assert.equal(key.businessEffect, 'applied');
       await expect.poll(() => sentinel.evaluate(() => window.escapeCount)).toBe(1);
       const active = await app.evaluate(() => globalThis.runtime.readStatus());
       assert.equal(

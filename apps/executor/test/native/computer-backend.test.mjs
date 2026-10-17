@@ -61,8 +61,8 @@ test(
       const first = owner.connect();
       assert.equal(owner.connect(), first);
       const connection = await first;
-      assert.equal(connection.supportsProductContract(), true);
-      assert.equal(connection.readStatus().computerAvailable, false);
+      assert.equal(connection.isConnected(), true);
+      assert.equal(connection.readStatus().upstreamVersion, '0.8.8');
       assert.deepEqual(await owner.close(), { executionStopConfirmed: true });
       await assert.rejects(owner.connect(), /BACKEND_CLOSED/);
     } finally {
@@ -100,7 +100,7 @@ test(
           .length > 260
       );
       const connection = await owner.connect();
-      assert.equal(connection.supportsProductContract(), true);
+      assert.equal(connection.isConnected(), true);
       assert.deepEqual(await owner.close(), { executionStopConfirmed: true });
     } finally {
       await owner.close();

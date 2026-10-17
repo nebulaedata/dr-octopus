@@ -22,7 +22,6 @@ export const executorPermissionSchema = z.enum([
   'files.write',
   'shell.execute',
   'browser',
-  'computer.observe',
   'computer.control',
 ]);
 export const approvalInputSchema = z.strictObject({

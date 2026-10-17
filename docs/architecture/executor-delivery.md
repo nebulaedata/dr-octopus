@@ -16,12 +16,12 @@ Windows 命令执行使用系统 Windows PowerShell 5.1，不装配或分发 Por
 | 私有 Node/npm | Node 24.20.0、npm 11.19.0，供 Bridge、PowerShell 与验收工具使用                                     |
 | 系统 Shell    | Windows PowerShell 5.1 由目标 Windows 提供；清单声明系统需求，预检独立检查，不记录开发机 Shell 哈希 |
 | 搜索          | ripgrep 15.2.0、fd 10.5.0 Windows x64 MSVC 包                                                       |
-| Computer      | 固定私有 Python、Windows-MCP、完整依赖与产品输入/捕获补丁                                           |
+| Computer      | 固定私有 Python、官方未修改 Windows-MCP 0.8.8 wheel、完整依赖与私有解释器配置                       |
 | 原生组件      | 文件提交、PowerShell/Computer Job supervisor、两个启动器、stdio 退出后备                            |
 | 扩展          | Chrome/Edge 版本以插件 package.json 和构建记录为准，固定 PageController 构建变换、图标与许可证      |
 | 品牌          | 本应用 assets/brand 的原始资源，不在构建或启动时读取 Web 项目                                       |
 
-私有运行资源位于实际 resources/executor，UI 位于完整性校验的 ASAR；私有执行资源不从 ASAR、系统 PATH、用户环境或临时下载取得。系统 Shell 是明确例外：固定系统路径选择 Windows PowerShell，业务子命令可使用筛选后的本机 PATH。运行时不编译原生插件。私有 Python/comtypes 使用固定补丁，不在用户缓存中生成代码；发行依赖与许可闭包不能因当前未调用某后端而随意裁剪。
+私有运行资源位于实际 resources/executor，UI 位于完整性校验的 ASAR；私有执行资源不从 ASAR、系统 PATH、用户环境或临时下载取得。系统 Shell 是明确例外：固定系统路径选择 Windows PowerShell，业务子命令可使用筛选后的本机 PATH。运行时不编译原生插件。私有 Python 使用固定配置，comtypes 包标记由原版库在构建期初始化并按固定摘要入清单，运行期类型包装器在内存生成，不修改第三方源码或在用户缓存中生成代码；发行依赖与许可闭包不能因当前未调用某后端而随意裁剪。
 
 Computer 启动不做资源完整性预检；构建与打包仍核验资源。Node 从验证过的原始归档生成清单，将其摘要编译进 Runtime，启动验证完整资源目录、每次命令复查入口，不从已安装目录重建信任锚，也不保证整个目录在恶意同用户修改下原子不变。
 
@@ -139,6 +139,25 @@ pnpm --filter @octopus/executor prepare:acceptance-kit 'D:/ExecutorAcceptance/se
 
 此命令只为所选已有产物创建新的 acceptance-kit-UUID，不修改安装程序/ZIP、不覆盖旧工具和报告。Windows CI 配置为 .github/workflows/executor-windows.yml；配置存在或本机检查通过不等于已取得远程 CI 证据。
 
+### GitHub Actions 未签名交付
+
+`.github/workflows/executor-windows.yml` 的名称为 **Executor Windows unsigned delivery**，只交付 Windows x64 未签名验收包。提交并推送本次所需源码、vendor 固定配置、许可证及工作流后，相关路径的 PR 会触发检查；手动运行需工作流先进入默认分支，再在仓库 Actions 中选择该工作流、点击 Run workflow 并选择目标分支。流程只需要 GitHub 内置的 Actions 上传能力和 contents:read，不配置签名证书、发布令牌或应用 Bearer，不创建 GitHub Release。
+
+执行顺序为：冻结依赖并显式准备 Electron/esbuild → 先构建 shared 的公开导出 → 准备固定头文件、Node、搜索、Computer 和打包工具 → 按扩展、Executor 顺序构建并检查 → 在本次运行独有目录生成 EXE/ZIP → 使用随包工具核验最终产品树与实际 ZIP 解压目录 → 从该 ZIP 运行六项有限包级回归 → 组装并复核交付物 → 上传。各步骤失败即停止后续交付，不选择本机已有 release 中的“最新包”，不自动重放构建或放宽期限。
+
+有限包级回归包括备份恢复工具、双浏览器插件字节、完整清单、私有 Node 核验器、PE/Fuse/ASAR，以及原版 Computer 后端握手和确认退出后安装树不变。CI 明确禁用真实安装/注册用例，不执行 GUI 输入、锁屏/UAC 或硬件验收；用例筛选须实际通过六项，空选择或意外扩选都不能记为通过。
+
+工作流成功后，从运行页面的 Artifacts 或 Summary 下载 `executor-windows-x64-unsigned-<run_id>-<run_attempt>`。GitHub 下载的外层归档解开后包含：
+
+- 未签名 EXE、完整产品 ZIP、acceptance-artifacts.json 和 acceptance-kit-UUID。
+- BUILD-INFO.json：版本、productBuildId、源提交、触发事件、运行链接、构建环境及实际检查范围。
+- SHA256SUMS.txt：交付目录内所有其他文件的 SHA-256，供下载后核对；不认证发布者。
+- verification/：最终产品树、ZIP 及暂存交付物的核验报告，保留 G4/G5/G6 pending。
+
+交付物保留 14 天；独立的 `executor-windows-diagnostics-<run_id>-<run_attempt>` 保留 7 天，成功或失败均尝试上传构建/测试日志及已有报告。过期后需重新运行生成新产物，不把 Actions 附件当作永久发布源。完整 win-unpacked、资源下载缓存和本机测试私有配置不作为附件上传；产品 ZIP 内保留完整资源和隐藏配置文件。
+
+Summary 展示上传结果、下载链接、源提交、版本、productBuildId 和 EXE/ZIP 摘要。它只说明本次 Actions 的自动检查结果；正式签名、独立电脑、真实硬件和安装卸载仍按后文门禁及 RELEASE.md 验证。首次远端执行或重跑的实际结果记入 executor-validation.md，不以本地脚本演练代替 GitHub runner 证据。
+
 runtime-manifest.json 在 builder 完成 PE/Fuse 修改后生成，覆盖最终 ZIP 树、实际组件版本、入口、Schema 投影及许可；acceptance-artifacts.json 锚定其摘要和 productBuildId。生产 JS、原生组件、私有资源与两份扩展必须属于同一产物，旧包不会随源码更新。
 
 Fuse 限制 Node loader/inspector 注入并要求 ASAR 完整性。摘要证明字节一致，不认证发布者；未签名状态不能用本地 hash 掩盖。完整目录核验也不是原子安装锁，JSON Schema 投影不替代 Zod refinement、实际授权或 tools/list。
@@ -214,11 +233,13 @@ Shell 离线专项另授权 shell.execute，携带本地 npm tar 包，核对 no
 
 | 门禁        | 必须有的真实证据                                              |
 | ----------- | ------------------------------------------------------------- |
-| G1 固定构建 | 依赖/原生 ABI、版本/摘要、输入/捕获补丁、许可闭包             |
+| G1 固定构建 | 依赖/原生 ABI、版本/摘要、上游与初始化产物、许可闭包          |
 | G2 协议兼容 | 明确客户端版本/配置、三段 MCP、长预算与取消/结果恢复          |
 | G3 文件恢复 | 真实 NTFS、占用/竞争、备份、崩溃和取消                        |
 | G4 Browser  | 正式构建扩展、Native、补注入、分页、导航/生命周期、目标环境   |
 | G5 Computer | 真实普通权限窗口、Unicode/剪贴板边界、多 DPI/GPU、输入中断    |
 | G6 离线发行 | 独立停止/Job、干净 Windows 断网首启、安装卸载、升级恢复与许可 |
+
+包级 GUI 测试只在独立副本替换 Host 注册步骤，不迁移日常浏览器注册；原样产品启动可能自动配置 Host，与安装卸载一样只在专用验收机显式启用。测试筛选不能替代副本隔离和入口保护。
 
 本机回归、独立 ZIP 核验与人工有限用例分别记录，不合并为整体验收通过。商店/企业策略、签名、独立电脑、跨电脑及 Computer 真实硬件专项仍待完成；不能因整理文档提升门禁。

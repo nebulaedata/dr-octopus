@@ -21,13 +21,21 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 
 用户操作见 [INSTALLATION.md](INSTALLATION.md)。用户已确认边界优先于旧候选与示例，冲突应修正文档，不能因此扩大产品范围。
 
+## Computer 重构规则的适用范围
+
+[Windows Computer Use 新规范](../../docs/architecture/dr-octopus-windows-computer-use-mcp-architecture.md)是用户已明确选择的重构设计依据。项目尚未发布，旧 Computer 实现、API 和专属状态可删除重建，无需兼容。用户已授权按新规范实施；不得将设计、单项实验或旧后端验收写成新后端已经完成。
+
+当前 Computer 已按新规范接入上游，验证范围另行记录。Computer 专属的旧工具契约、30/45 秒预算、彩带绘制确认、Esc 原生钩子、停止后整应用重启及旧隔离机制均以新规范为准，不要求新实现兼容这些行为。截图由上游提供；彩带不入镜只做有限验证，不可靠时允许持续彩带入镜。
+
+统一身份与授权、任务所有权、非 Computer 数据和结果、共享 PowerShell/搜索监管及交付规则继续适用。详细 MCP 接线、共享日志处置、恢复条件和产物清理只在新规范维护，不在本文件复制流程。实现后同步现行架构和验证记录，保留历史证据。
+
 ## 目录与依赖
 
 - main 负责单实例、窗口/托盘、安全、IPC、凭据及 Runtime 监管；preload 仅有具名有限 API；renderer 仅管理安全投影。
 - runtime 拥有唯一任务、授权、工具和持久结果，不绑定窗口/路由生命周期；bridge 只转换协议并连接同一 Runtime。
 - contracts 只放跨进程 DTO/Schema；内部类型靠近实现。跨应用纯 Browser 协议进入现有 packages/shared；文件传输仅由本应用消费，工具与传输 Schema 保持在 runtime/transfer。
 - 扩展独立放 apps/browser-extension，不反向导入本项目；PageController 不进入 Main/Runtime。
-- native 是有限 Windows 原语，vendor 固定后端/版本/哈希/小补丁；scripts 的 compile/resources/package 放 package.json 可调用的 .mjs 工程入口，lib 放辅助模块，使用 node 直接执行，不依赖 TS loader。
+- native 是有限 Windows 原语，vendor 固定后端/版本/哈希、私有配置和许可；scripts 的 compile/resources/package 放 package.json 可调用的 .mjs 工程入口，lib 放辅助模块，使用 node 直接执行，不依赖 TS loader。
 - scripts/lib 放纯 JavaScript 工程辅助模块，不反向导入命令入口，不承载授权、任务、备份恢复等业务规则。需要应用契约时先编译为 JS 再读取，不复制业务实现；业务维护代码归 src/maintenance，平台安装代码归 src/installation/<platform>，验收探针归 test/packaging。
 - 平台差异通过 scripts/lib/platform.mjs 的显式 if/else 分支选择；当前仅 Windows x64 实现，macOS/Linux 保留明确未实现错误，不假装跨平台可用。应用源码和开发测试可继续使用 TypeScript；生产与工程入口不直接执行 TS。
 - Host 专属能力保持在本项目，不为统一目录新增共享 Runtime/Contracts。Agent Core、共享 shadcn 源组件的保护规则继续适用。
@@ -44,9 +52,9 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 - Browser 只关闭新派发，允许在途动作完成；不增加许可世代、强停止确认、reconcile 或 Browser 恢复隔离。不泛化为放弃 PowerShell/Computer 的 Job 清理。
 - Computer 只操作本机；固定受管后端随 Runtime 启动，握手和当前可用状态确认后才允许显式桌面授权与工具发现，不提供任意后端或环境变量/Renderer/MCP 开关，展示名为“桌面控制工具”。独立电脑与正式发布验收继续单独记录，不将启用视为验收通过。
 - Computer 启动完整性预检已明确删除：不读清单、不算摘要、不遍历资源、不保留开关。构建/打包校验、固定入口、握手、授权、防护、Job 监管继续保留，Node/文件原生摘要不删除。
-- 受管 stdio initialize 30 秒/总体 45 秒，回环 HTTP 10/15 秒，discovery/动作 10 秒。失败不重试或扩大能力，一次性阶段/字节采集接口已删除。
-- Computer 彩屏覆盖任务/思考间隙，未知持续提示；多屏透明渐变、连续流动、reduced-motion，不恢复逐调用闪退/实色边条。输入前取得实际绘制确认。
-- Computer 活动期间，本机无修饰键的实体 Esc 与托盘停止入口取消当前桌面任务并关闭固定后端；忽略注入键、重复按下和旧活动/Runtime 回调。确认后台退出并收束在途调用后才清除彩屏，未知效果及持久隔离不重置；本次进程内不重新启用后端，需完整重启。
+- Computer 内部仅受管 stdio，initialize 30 秒/总体 45 秒，discovery 10 秒。执行预算由 Computer 工具策略统一定义（普通调用上限 10 秒、Snapshot/窗口切换共用 UIA 上限 60 秒），受授权等待预算及任务剩余时间共同限制，另预留 10 秒收束；不足以执行时派发前拒绝。Computer 使用官方未修改 wheel，构建不改第三方源码、不维护运行时函数替换或自制补丁。固定上游版本与输入 Schema 同时校验；失败不自动重放或扩大能力。
+- Computer 彩屏覆盖任务/思考间隙，未知持续提示；多屏透明渐变、连续流动、reduced-motion，不恢复逐调用闪退/实色边条。上游负责实际输入控制权与可见提示；Executor 彩带允许截图入镜。
+- Computer 活动期间，本机无修饰键的实体 Esc 与托盘停止入口取消当前桌面任务并关闭固定后端；忽略注入键、重复按下和旧活动/Runtime 回调。确认后台退出并收束在途调用后才清除彩屏，未知效果记录不改写。明确结束旧任务且无其他能力阻断后，可通过新 task_start 创建后端世代；不自动恢复控制。
 - 界面为状态、连接、设置三页，原生 Window Controls Overlay 与默认控件尺寸；关闭默认系统托盘，可选任务栏或完整退出，保存偏好保留。不恢复底部按钮或废弃最小化 IPC。
 - Host 自动维护只迁移当前完整身份集合匹配的本产品注册，不兼容旧身份集合，未知/丢失 manifest 拒绝，旧卸载只删仍属自己的注册；授权、桥接启用、扩展更新独立。
 - 远端智能体使用已确认的可信内网/VPN 显式 HTTP 与独立 Bearer，默认回环，保存网络设置后完整重启；不自动改防火墙，不公开桥接路由。

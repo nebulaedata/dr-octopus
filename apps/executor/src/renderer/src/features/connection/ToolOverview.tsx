@@ -55,10 +55,12 @@ function ToolDialogRow({
   status,
   groups,
   note,
+  summary,
 }: Omit<RowProps, 'action'> & {
   status: Status;
   groups: { title: string; names: string[] }[];
   note: string;
+  summary?: string;
 }) {
   return (
     <Dialog>
@@ -68,6 +70,7 @@ function ToolDialogRow({
         icon={icon}
         action={
           <DialogTrigger render={<Button variant="ghost" className="shrink-0" aria-label={`查看${title}`} />}>
+            {summary && <span className="text-muted-foreground">{summary}</span>}
             <ConnectionBadge variant={status.variant}>{status.label}</ConnectionBadge>
             <ChevronRightIcon data-icon="inline-end" />
           </DialogTrigger>
@@ -155,9 +158,10 @@ export function ToolOverview({
         title="桌面控制工具"
         description="查看本机桌面，控制窗口、鼠标与键盘。"
         icon={<img src={windowsIcon} alt="" className="size-5 object-contain rounded-xs" />}
-        status={registration(catalog?.computer)}
+        status={computer}
+        summary={catalog?.computer ? '支持 ' + catalog.computer.length + ' 项' : '清单读取中'}
         groups={[{ title: '工具清单', names: catalog?.computer ?? [] }]}
-        note={`当前状态：${computer.label}。${computer.description} ${note}`}
+        note={`当前状态：${computer.label}。${computer.description} 支持数量来自产品目录；客户端实际可用工具取决于授权和后端状态。`}
       />
       <ToolRow
         title="浏览器桥接"

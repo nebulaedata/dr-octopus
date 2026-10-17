@@ -14,6 +14,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { ConnectionSettings } from '../../src/main/connection-settings.ts';
 import { NativeFileCommit } from '../../src/runtime/basic/native-file-commit.ts';
+import { deviceConnectionKey } from '../../src/contracts/device-identity.ts';
 
 /**
  * Saves an unused loopback port in the fixture's actual private settings before either packaged launch.
@@ -67,7 +68,9 @@ async function configuration(app, page, clientId) {
   );
   assert.equal(reply.ok, true);
   const text = await app.evaluate(() => globalThis.fixtureConfiguration);
-  return JSON.parse(text).mcpServers['octopus-executor'];
+  const access = await page.evaluate(() => window.executor.readAccess());
+  assert.equal(access.ok, true);
+  return JSON.parse(text).mcpServers[deviceConnectionKey(access.data.device)];
 }
 
 /**

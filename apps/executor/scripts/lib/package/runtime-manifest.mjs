@@ -58,7 +58,7 @@ export const releaseMetadataSchema = z.strictObject({
     basic: z.array(z.string()).length(7),
     browser: z.array(z.string()).length(11),
     control: z.array(z.string()).length(5),
-    computerPrepared: z.array(z.string()).length(8),
+    computer: z.array(z.string()).length(9),
   }),
   availability: z.strictObject({
     computerEnabled: z.literal(true),

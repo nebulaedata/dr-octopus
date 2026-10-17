@@ -85,7 +85,7 @@ test('stdio configuration survives installation moves and endpoint changes while
     const connectionKey = deviceConnectionKey(device);
     const snapshot = {
       device,
-      clients: [{ clientId, revoked: false, permissions: ['files.read', 'computer.observe'] }],
+      clients: [{ clientId, revoked: false, permissions: ['files.read', 'computer.control'] }],
       endpoint: 'http://127.0.0.1:19876/mcp',
       remoteEndpoint: null,
     };

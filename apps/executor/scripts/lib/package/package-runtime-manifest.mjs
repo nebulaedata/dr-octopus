@@ -126,8 +126,8 @@ export async function packageRuntimeManifest(root, product) {
     browserLauncher: 'resources/executor/native/browser-launcher.exe',
     browserIdentity: 'resources/executor/browser-identity.json',
     computerSupervisor: 'resources/executor/native/computer-supervisor.exe',
-    computerBackend: 'resources/executor/resources/computer/product/server.py',
-    computerGuard: 'resources/executor/resources/computer/product/desktop.py',
+    computerBackend: 'resources/executor/resources/computer/Lib/site-packages/windows_mcp/__main__.py',
+    computerConfiguration: 'resources/executor/resources/computer/executor.toml',
   };
   const components = {
     electron: await electronVersions(root),
@@ -166,11 +166,11 @@ export async function packageRuntimeManifest(root, product) {
         basic: z.record(z.string(), z.unknown()),
         browser: z.record(z.string(), z.unknown()),
         control: z.record(z.string(), z.unknown()),
-        computerPrepared: z.record(z.string(), z.unknown()),
+        computer: z.record(z.string(), z.unknown()),
       }),
     })
     .parse(JSON.parse(await readFile(join(product, schemaPath), 'utf8')));
-  const schemaFiles = [schemaPath, 'resources/executor/resources/computer/product/schemas.json'];
+  const schemaFiles = [schemaPath];
   const schemaRecords = [];
   for (const path of schemaFiles) {
     schemaRecords.push({
@@ -202,7 +202,7 @@ export async function packageRuntimeManifest(root, product) {
       .update(await readFile(join(resource, 'runtime/index.cjs')))
       .digest('hex'),
     tools: Object.fromEntries(
-      ['basic', 'browser', 'control', 'computerPrepared'].map((name) => [
+      ['basic', 'browser', 'control', 'computer'].map((name) => [
         name,
         Object.keys(schemas.schemas[name]).sort(),
       ])

@@ -4,6 +4,9 @@
  */
 import type { ComputerRuntimeStatus } from '../../contracts/computer-use';
 import type { ComputerBackend } from './computer-backend';
+import type { WindowsMcpConnection } from './windows-mcp-connection';
+import { reportComputerFailure } from './computer-diagnostics';
+import { windowsMcpVersion } from './windows-mcp-schemas';
 import { ComputerTools } from './computer-tools';
 import type { ComputerUseActivity } from './computer-use-activity';
 
@@ -13,15 +16,52 @@ export class ComputerRuntime {
   private stopping: Promise<void> | undefined;
   private state: ComputerRuntimeStatus['state'] = 'stopped';
   private stopFailed = false;
+  private revision = 0;
 
   /**
    * Owns the fixed local backend; initialization cannot be redirected by Renderer or MCP settings.
    */
   constructor(
     private readonly activity: ComputerUseActivity,
-    private readonly backend: ComputerBackend
+    private backend: ComputerBackend
   ) {
-    this.tools = new ComputerTools(activity);
+    this.tools = new ComputerTools(activity, undefined, () => this.reconnect());
+  }
+
+  /**
+   * Replaces only a retired owner and contains failed initialization without publishing a ready provider.
+   */
+  private async reconnect(): Promise<WindowsMcpConnection> {
+    const revision = this.revision;
+    await this.backend.close();
+    if (revision !== this.revision) {
+      throw new Error('COMPUTER_RESTART_STOPPED');
+    }
+    const backend = this.backend.recreate();
+    this.backend = backend;
+    this.stopping = undefined;
+    this.stopFailed = false;
+    this.state = 'starting';
+    const startedAt = Date.now();
+    try {
+      const connection = await backend.connect();
+      if (revision !== this.revision) {
+        await backend.close();
+        throw new Error('COMPUTER_RESTART_STOPPED');
+      }
+      this.state = 'ready';
+      return connection;
+    } catch (error) {
+      reportComputerFailure({
+        stage: 'startup',
+        code: 'COMPUTER_START_FAILED',
+        durationMs: Date.now() - startedAt,
+      });
+      if (revision === this.revision) {
+        this.state = 'failed';
+      }
+      throw error;
+    }
   }
 
   /**
@@ -46,13 +86,16 @@ export class ComputerRuntime {
       starting: '桌面后端正在启动并验证连接',
       ready: '桌面工具已就绪，使用前需显式授权',
       failed: '桌面后端启动或握手失败，请完整重启执行器后重试',
-      unavailable: '桌面连接已断开或任务结果待确认，当前不可执行桌面操作',
+      unavailable: '桌面连接已断开或任务结果待确认，结束旧任务后可显式启动新任务',
       stopping: '正在停止桌面控制并确认后台退出',
-      closed: '桌面控制已停止，请重启执行器重新启用',
+      closed: '桌面控制已停止，结束旧任务后可显式启动新任务',
     };
     return {
       state,
       available,
+      engine: 'windows-mcp',
+      upstreamVersion: windowsMcpVersion,
+      serverVersion: this.tools.backendStatus()?.serverVersion ?? '',
       reason: this.stopFailed ? '桌面后台停止未获确认，请从托盘完整退出执行器' : reasons[state],
     };
   }
@@ -61,6 +104,7 @@ export class ComputerRuntime {
    * Attaches only after actual handshake; shutdown winning the race never publishes a late ready connection.
    */
   private async initialize(): Promise<void> {
+    const startedAt = Date.now();
     this.state = 'starting';
     try {
       const connection = await this.backend.connect();
@@ -70,6 +114,11 @@ export class ComputerRuntime {
       this.tools.attach(connection);
       this.state = 'ready';
     } catch {
+      reportComputerFailure({
+        stage: 'startup',
+        code: 'COMPUTER_START_FAILED',
+        durationMs: Date.now() - startedAt,
+      });
       if (!this.stopping) {
         this.state = 'failed';
       }
@@ -81,7 +130,8 @@ export class ComputerRuntime {
    * Cancels any pending handshake immediately and confirms only this backend's process-tree cleanup.
    */
   close(): Promise<void> {
-    this.stopping ??= this.shutdown();
+    this.revision++;
+    this.stopping ??= Promise.resolve().then(() => this.shutdown());
     return this.stopping;
   }
 

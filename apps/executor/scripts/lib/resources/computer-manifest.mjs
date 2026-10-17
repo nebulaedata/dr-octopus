@@ -7,8 +7,8 @@ const asset = z.strictObject({ url: z.url(), sha256: z.string().regex(/^[a-f0-9]
 export const computerManifestSchema = z.strictObject({
   python: asset.extend({ version: z.literal('3.14.0') }),
   windowsMcp: z.strictObject({
-    version: z.literal('0.8.6'),
-    commit: z.literal('97979d6f6ff987f591ccfad8d2c15b9103db1091'),
+    version: z.string().regex(/^\d+\.\d+\.\d+$/),
+    commit: z.string().regex(/^[a-f0-9]{40}$/),
   }),
   wheels: z
     .array(
@@ -29,9 +29,10 @@ const required = [
   'resources/computer/python314.zip',
   'resources/computer/python314._pth',
   'resources/computer/.executor-asset.json',
-  'resources/computer/product/server.py',
-  'resources/computer/product/desktop.py',
-  'resources/computer/product/schemas.json',
+  'resources/computer/executor.toml',
+  'resources/computer/sitecustomize.py',
+  'resources/computer/Lib/site-packages/comtypes/gen/__init__.py',
+  'resources/computer/Lib/site-packages/windows_mcp/__main__.py',
 ];
 const fileSchema = z.strictObject({
   path: z

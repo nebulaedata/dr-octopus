@@ -23,23 +23,6 @@ type HostCommand<T = HostRequest> = T extends HostRequest ? Omit<T, 'requestId'>
 
 export class RuntimeManager {
   /**
-   * Returns named Main evidence only to the current Utility and exact active revision; Renderer cannot invoke it.
-   */
-  confirmComputerIndicator(revision: number, visible: boolean): void {
-    if (
-      this.child &&
-      this.snapshot.state === 'ready' &&
-      this.snapshot.computerUse.state === 'running' &&
-      this.snapshot.computerUse.revision === revision
-    ) {
-      try {
-        this.child.postMessage({ type: 'computer-indicator-reply', revision, visible });
-      } catch {
-        // Runtime bounds its pending confirmation; a broken parent channel never grants dispatch.
-      }
-    }
-  }
-  /**
    * Stops only the activity observed by trusted Main, never a new task that began after Escape was queued.
    * @returns Whether the current owned Runtime accepted the stop message for delivery.
    */

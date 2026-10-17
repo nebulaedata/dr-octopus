@@ -33,8 +33,8 @@ test(
       const [checked, connected] = await Promise.allSettled([checks, startup]);
       assert.equal(checked.status, 'fulfilled', checked.reason?.message);
       assert.equal(connected.status, 'fulfilled', connected.reason?.message);
-      assert.equal(connected.value.supportsProductContract(), true);
-      assert.equal(connected.value.readStatus().computerAvailable, false);
+      assert.equal(connected.value.isConnected(), true);
+      assert.equal(connected.value.readStatus().upstreamVersion, '0.8.8');
       assert.deepEqual(await owner.close(), { executionStopConfirmed: true });
     } finally {
       await owner.close();

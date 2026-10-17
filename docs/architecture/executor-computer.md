@@ -1,114 +1,75 @@
-# Executor Computer 与独立电脑验收
+# Executor Computer：Windows-MCP 上游集成
 
-Computer 只控制本机桌面，远端智能体通过 Executor 的外部 MCP 入口连接。2026-10-14 根据用户明确决定启用固定受管 owner：随 Runtime 独立启动，完成真实握手后才允许显式桌面授权与工具发现。启动、握手失败、连接断开或未知任务结果均不暴露可用工具，不提供任意后端配置或环境变量/Renderer/MCP 开关。启用不代表独立电脑矩阵或正式发布验收已经通过。
+当前源码通过 Utility Runtime 托管固定 Windows-MCP 0.8.8；截图、UIA 与输入调用真实上游工具。旧 product.server / desktop.py、自定义 ExecutorDesktopMeta/ExecutorCapture/ExecutorInput 和旧八工具契约已移除，不提供兼容入口或旧引擎回退。
 
-## 固定后端与连接
+设计与完整边界以 [Computer 实施规范](dr-octopus-windows-computer-use-mcp-architecture.md)为准。实际验证、失败与未验证项见 [验证记录](executor-validation.md)；源码接入不等于独立电脑或发行验收完成。
 
-固定 Windows-MCP 基线、私有 Python、依赖与有限产品补丁由 vendor 和构建清单持有，不依赖系统 Python/uv/pip，不启动用户自有后端。产品入口是私有 Job 监督下的 stdio；显式数字回环 HTTP 仅为内部同机连接契约，拒绝其他主机、DNS、URL 凭据、任意 command/args 和 TLS 忽略。
+## 入口与职责
 
-ComputerBackend 合并并发初始化，拥有一个连接和有界关闭。连接只发现并校验版本 1 的 ExecutorDesktopMeta、ExecutorCapture、ExecutorFocusWindow、ExecutorInput 及输入 Schema；原版同名或 Click/Type 不自动满足产品契约。不能透传 PowerShell、Clipboard、FileSystem 或通用后端方法。
+智能体 → Executor 认证 MCP → TaskAuthority → ComputerTools → WindowsMcpConnection → 受管 stdio / Windows Job → 私有 Python 的 windows_mcp serve。
 
-| 连接          | initialize | 初始化与发现总预算 | discovery/动作 |
-| ------------- | ---------- | ------------------ | -------------- |
-| 受管 stdio    | 30 秒      | 45 秒              | 10 秒          |
-| 显式回环 HTTP | 10 秒      | 15 秒              | 10 秒          |
+Main 保持窗口、托盘、任务彩带及本机 Esc 停止桥接；Runtime 拥有任务、后端与结果。任务彩带只消费状态投影，不再通过跨进程绘制确认决定输入放行。上游负责桌面控制权、输入保护和实际截图/UIA/输入。Executor 不运行模型或第二套 Agent Loop。
 
-失败不重试或扩大能力。受管关闭只有原生 Job owner 成功退出才能确认进程树清理；HTTP 传输关闭不证明外部执行停止。stdio 保留有界帧、背压和 stderr 排空，不能因移除诊断采集阻塞后端。
+后端固定仅 stdio，不读取用户 ~/.windows-mcp 配置。使用随包 executor.toml 和显式工具白名单；遥测关闭。启动无资源完整性扫描，构建/打包仍检查固定归档、初始化产物、清单和实际字节。
 
-用户已明确删除全部 Computer 启动前资源完整性预检：启动不读清单、不遍历目录、不计算摘要、不保留关闭开关。构建/打包资源核验、固定私有路径、握手、授权、防护和 Job 监管继续存在。Node 与文件工具的原生摘要能力不因此删除。
+## 公开能力与权限
 
-## 八个有限工具
+所有 Computer 工具均要求 computer.control，包括截图、UIA、显示器和状态。不提供 computer.observe：上游除 ControlStatus 外的工具均进入控制权流程，不能冒称不取得控制权的只读查看。
 
-| 工具              | 契约                                                    |
-| ----------------- | ------------------------------------------------------- |
-| computer_displays | 有限显示器元数据，不截图                                |
-| computer_windows  | 有限窗口列表，生成任务专属 windowId                     |
-| computer_observe  | 观察当前前台或已登记窗口的可见区域                      |
-| computer_focus    | 明确窗口身份，不模糊匹配或启动应用                      |
-| computer_click    | 当前观察像素坐标，有限鼠标按钮及最多双击                |
-| computer_type     | Literal 单行文本，最多 256 code point/2 KiB，默认不清空 |
-| computer_key      | 有限按键/修饰键，无持续按住                             |
-| computer_scroll   | 当前观察点，最多十次垂直滚轮                            |
+| 工具                    | 当前语义                                                                    |
+| ----------------------- | --------------------------------------------------------------------------- |
+| computer.screenshot     | 全桌面、指定显示器或物理区域截图；使用上游图像及坐标说明                    |
+| computer.snapshot       | Windows UIA 控件树，可选图像；禁用浏览器 DOM 模式                           |
+| computer.click          | 物理虚拟桌面坐标、有限按钮及单击/双击                                       |
+| computer.type           | 必须给出目标物理坐标；上游文本输入，可显式 clear/pressEnter，可能使用剪贴板 |
+| computer.scroll         | 指定物理坐标上的有限水平/垂直滚轮                                           |
+| computer.shortcut       | 上游有限长度的按键组合                                                      |
+| computer.app.switch     | 按上游名称匹配切换已有窗口，不启动任意程序                                  |
+| computer.display.list   | 上游显示器信息                                                              |
+| computer.control.status | 不取得控制权的状态读取，但仍要求桌面授权及活动任务                          |
 
-computer.control 包含 observe；旧 Basic 权限不升级。工具发现与实际调用都重新检查当前授权、任务能力和状态。桌面后端不可用时不能新增桌面授权或暴露工具入口；已有授权不自动升级。界面提供查看/控制桌面两种授权，control 包含 observe。Runtime 在 ready 握手及具名 Host 回复中上报状态，Main 复用现有健康探针持续校验；停止、失联或探针失败会清除可用状态，Renderer 不自行推断连接成功。
+旧 windowId/observationId 和十秒窗口观察协议不保留。坐标动作依赖当前桌面，不承诺窗口隔离或精确输入字符计数。动作前重新观察；图像可能缩放，按返回尺寸、原点和范围解释物理坐标。
 
-## 窗口、观察与捕获
+工具注册、发现、权限提示和结果转换使用同一 Computer 定义。图像通过 MCP image content 返回，结构化元数据不重复 base64；拒绝不支持的 content 类型、非法编码和超限结果。输入与 UIA 内容不写入持久操作日志。
 
-windowId 绑定 owner、taskId、backendEpoch、登录会话、布局、HWND/PID/进程创建时间。客户端不取得或重写原生句柄、捕获矩形和会话身份。
+## 生命周期与结果
 
-每任务只有当前可执行观察，有效期最多十秒。重新观察、窗口列表、动作、Basic 调用、停止或结束使其失效。动作要求目标存在、边界相同且为真实前台；临近输入时后端仍检查遮挡、会话、焦点和人工输入，适配层提前检查不能替代后端防护。
+沿用全局唯一任务准入，Computer 操作串行，冲突调用明确拒绝。每个动作以及会取得控制权的观察要求幂等键；网络重试只查询既有结果，不重发输入。
 
-固定捕获直接使用 Pillow 窗口区域路径，必要时按其虚拟屏幕路径捕获后裁剪，不在握手前初始化未使用的 GPU/UIA 截图注册器。私有依赖搜索根转为 Windows 扩展路径，避免深目录 Schema 读取失败；不增加外部搜索根或更改系统环境。
+上游用户接管通知关闭本次 Computer owner，后续调用不能自动重新夺取控制。实体 Esc/托盘停止与 task_stop 会阻止派发、关闭拥有的 Job 并收束在途调用。超时或已派发后不明确的结果记为 unknown，保留记录。
 
-先裁剪真实目标再缩放，保留负桌面原点；像素中心映射到物理桌面，不能伪造观察精度或把截图等同应用隔离。捕获前后复查会话、布局、身份、前台与矩形。
+明确 task_stop 后，只有 Computer 已停止、无其他能力未解决阻断且所有在途执行收束，才能释放该任务占用。不得借 Computer 恢复清除文件、Shell 或 Transfer 隔离。task_end 同样关闭本次上游控制。已有授权的调用方可以显式 task_start 创建新后端世代；不复活旧任务或重放未知动作。
 
-PNG 编码最多 2 MiB，宽高各最多 1920；验证正规 base64、PNG 签名/chunk/CRC、尺寸、RGB/RGBA、非 interlaced 和有界解压。图像经 MCP image content 返回，结构化结果不重复 base64；失败不登记观察。
+后端版本投影区分固定包版本 0.8.8 和 MCP 自报 serverVersion；当前自报值来自 FastMCP，不能用它认定 Windows-MCP 包版本。
 
-| 捕获错误                 | 含义                         |
-| ------------------------ | ---------------------------- |
-| TARGET_CHANGED           | 身份、前台、布局或矩形变化   |
-| SESSION_UNAVAILABLE      | 交互桌面不可用               |
-| CAPTURE_UNVERIFIED       | 捕获区域或事后复核失败       |
-| CAPTURE_LIMIT            | 容量超限                     |
-| CAPTURE_FAILED           | 后端捕获失败，不泄漏原始异常 |
-| CAPTURE_RESPONSE_INVALID | 响应包络不符合契约           |
-| CAPTURE_IMAGE_INVALID    | PNG 内容不符合契约           |
+## 原版 UIA 与捕获反馈
 
-后端只返回严格有限错误包络，未知码、额外字段、错误版本和伪装成功仍拒绝。独立 bundle 按数据契约交换拒绝原因，不依赖自定义 Error 类的实例身份。已派发输入的未知效果不能被捕获拒绝解释为未发生。
+使用官方 Windows-MCP 0.8.8 原始 wheel，不应用本地 UIA 补丁、不 monkey-patch Python 方法。原版默认和实际转发参数均可完成 UIA；此前 20 秒超时不能证明上游不可用。装饰窗口过滤只是历史性能规避，已撤销，历史日志见验证记录。
 
-## 输入与可见确认
+Snapshot 和可能在冷态内部触发 get_state 的 App switch 共用 60 秒 UIA 上限；其余工具上限 10 秒。Computer 先从客户端授权等待预算和任务剩余时间中预留 10 秒收束，再限制为工具上限。预检与实际调用共享一个绝对截止时间，进度通知不延长它。UIA 工具至少需 30 秒可执行预算，否则派发前拒绝；这只是最低准入条件，不保证调用一定完成。建议客户端超时与授权等待预算至少覆盖完整执行和收束时间（如 70 秒以上），未知第三方 Host 自设的更短期限无法由 Executor 强制改变。
 
-Literal 不默认使用剪贴板、控制键或 SendKeys 解释，拒绝控制字符、无效 surrogate 和超限输入。clear 或有限快捷键是显式请求。真实插入计数、部分前缀和未配对事件清理必须如实记录；不释放用户已经按住的状态，不在中途焦点变化后盲目继续。
+观察超时/断连表示结果未完成及控制流程需收束，返回 COMPUTER_OBSERVATION_INTERRUPTED，不冒称发生未知文字输入；输入动作超时/断连返回 COMPUTER_RESULT_UNKNOWN。明确上游失败与传输不确定性分开处理。两种不确定情况都关闭拥有的后端并保留原操作，不自动重试。用户明确 task_stop 后按当前清理证据释放 Computer 自身阻断，不能解除其他能力隔离。上游成功消息只证明工具报告完成，不证明业务目标完成。
 
-focus/input 派发前发布 running 并取得实际彩屏绘制确认。超时、显示失败、版本/布局变化或未确认绘制不派发输入；不能以“发送了 show”代替真实显示。
+私有 sitecustomize.py 仅规范化已存在的私有搜索路径并使用 comtypes 支持的内存类型包装器生成配置；不改上游或 comtypes 源文件。资源清单从官方归档、私有配置与固定初始化产物派生，不再有补丁后摘要/字节差特判。构建及显式资源装配通过原版 comtypes 正常导入，提前生成其 56 字节 comtypes/gen/**init**.py 包标记，并按固定摘要纳入清单；不手写或替换第三方源码。运行期类型包装器仍在内存生成，后端启动/关闭后完整清单必须保持一致。
 
-确认只捕获本应用拥有的透明反馈窗口。其非聚焦 Renderer 关闭后台节流，等待两次动画帧后复核状态、窗口尺寸、显示器 DPI 和当前修订，再检查四条边上的实际 alpha 像素；透明圆角不能代替整条边的证据，也不能把只有提示文字、没有彩带的窗口判为有效。Main 两秒、Runtime 三秒确认期限保持不变。
+Executor 任务彩带允许入镜，不增加跨进程隐藏/恢复协议；上游自己的提示与截图协调继续使用其实现。无彩带图像不作为验收门槛。
 
-Computer 彩屏覆盖已授权任务的观察、思考间隙和动作，直到确定收束。多显示器复用非聚焦、穿透的拥有窗口，四周透明渐变和连续流动，遵守 reduced-motion；不恢复逐调用闪退、实色边条或夺取输入的提示。
+## 数据与交付
 
-未知结果继续黄色提示并阻止后续 Computer 派发，持久化恢复证据和任务隔离。同键只查询摘要，不重发。完整退出只清理拥有的后端和窗口，未确认清理不能解除不确定性。
+未发布的旧 Computer API 和日志格式无需兼容；共享任务日志、设备凭据、非 Computer 结果不能自动清空。开发验收使用独立数据目录。旧格式加载失败时保留原件，按新规范的离线处置边界处理，不自动重放。
 
-## 本机主动停止
+新资源清单包含真实上游入口、executor.toml 和私有路径初始化文件；不再发布旧 product 目录。Python/wheel 版本、来源、摘要和许可证随包固定，普通启动不下载。PowerShell/搜索使用的 process-supervisor 不属于旧 Computer 清理范围。
 
-活动期间，目标电脑上的无修饰键实体 Esc 或系统托盘“停止桌面控制 (Esc)”可结束 Computer Use。Main 使用固定原生监听组件，只观察 Esc，不拦截按键、不记录输入文字；Windows 标记为注入的按键不会触发停止，因此智能体调用 computer_key 的 Escape 仍作为正常应用输入。
+原版 UIA 及本机专属窗口成功不替代多屏/混合 DPI、锁屏/UAC、真实部分输入、独立电脑和最终发行验收；原失败日志继续保留。
 
-监听绑定跨调用保持的 activityId 与当前 Utility PID，闲置、重启、注销监听后旧回调失效。Main 仅向自有 Utility 发送具名停止消息，没有 Renderer 或远端 MCP 紧急停止入口。Runtime 关闭新的桌面派发和待定绘制确认，同时取消唯一桌面任务、关闭自有后端 Job，并等待在途输入返回后清除彩屏；Basic-only 任务不因桌面停止取消。后台退出不撤销已发生操作，unknown journal 与任务隔离继续保留。
+首页分别显示“支持 N 项”和真实后端状态。数量来自公开产品定义，不随失联伪装为零；就绪状态来自 Runtime，客户端发现仍按实际授权和后端状态过滤。
 
-停止后桌面能力为 closed，在本次应用进程内不重开，用户需完整重启执行器重新启用。关闭期间由后端 owner 保留独立反馈，任务先释放也不能提前撤掉彩屏；未确认关闭为 failed，反馈保持 unknown，不能显示“已停止”。Main 已取得失败/关闭状态或 Utility 不可达时，再次本机停止采用既有有界完整退出；用户也可从托盘完整退出。原生监听注册失败时记录错误并保留托盘入口。
+## 会话恢复、结果契约与维护约束
 
-## 本机验证
+Computer 工具在创建 MCP 会话时按客户端授权注册，不因当时后端离线而永久缺项。tools/list 按当前授权和后端可用性实时过滤；显式任务启动/结束/停止后发送工具列表变化通知。已有会话可在 task_start 恢复后重新发现工具，真实调用仍检查任务、权限和连接。未授权或撤销不会因稳定注册而取得能力。
 
-基础/原生、实际 Electron Utility 握手和专属窗口测试分别报告。所有桌面输入只进入自有窗口；窗口可见或 Electron focused 不证明真实 Win32 前台。需要人工激活时使用既有测试夹具，不删除保护判断。
+computer-results.ts 统一状态、完成结果与保留摘要的契约；ComputerTools 返回明确类型，MCP 输出边界用同一运行时 Schema 校验，不强制断言图像类型。内容容量、图像签名和编码检查继续执行。内部已删除未使用的 owner 参数，身份与任务归属仍由唯一 TaskAuthority 检查。
 
-从仓库根目录执行：
+computer-diagnostics.ts 仅记录失败阶段、固定工具名、错误码、耗时和清理确认状态；不记录参数、输入全文、窗口内容、地址或原始异常字符串。清理失败保持隔离，日志写入失败不能改变原执行结果。启动失败、预检/执行错误和异步退休失败都有对应诊断。
 
-```powershell
-$env:EXECUTOR_COMPUTER_MANUAL_ACTIVATION = '1'
-try {
-  pnpm --filter @octopus/executor exec node --import tsx --test test/integration/computer-backend.test.mjs
-} finally {
-  Remove-Item Env:EXECUTOR_COMPUTER_MANUAL_ACTIVATION
-}
-```
-
-按夹具提示点击专属输入框，之后只等待其测试完成。EXECUTOR_COMPUTER_DISPLAY 可显式选择 0–15 中的测试显示器；不存在或工作区不足 800×600 DIP 时失败，不回退其他屏幕、不改显示器配置。这些选项仅存在于测试夹具，不进入正式包或改变生产防护。
-
-`test/integration/computer-stop.test.mjs` 分别验证无需桌面输入的实际 Runtime 停止，以及原生监听活动期间智能体 Escape 作为正常输入。第二项使用同一人工激活选项，必须先使专属输入框成为实际前台；自动聚焦被系统拒绝时保持失败证据，不放宽防护或标记按键通过。实体 Esc、修饰键、RDP 转发和后台异常退出仍需目标电脑人工专项。
-
-## 独立电脑验收矩阵
-
-只在专用测试电脑执行锁屏、UAC、显示器变化和人工输入竞争，保留准确产物身份、步骤、前置条件、结果与证据。当前状态如下，不因本机或替身通过自动提升。
-
-| 场景              | 必须证明的结果                                              | 状态                         |
-| ----------------- | ----------------------------------------------------------- | ---------------------------- |
-| 混合 DPI          | 100%/125%/150% 各屏裁剪、点映射和彩带正确；跨屏后旧观察失效 | 待真实测试                   |
-| 负原点            | 副屏在左侧/上方时真实点击仍命中专属目标                     | 待真实测试                   |
-| 锁屏              | 输入拒绝且不排队，解锁后重新观察，不重放                    | 待真实测试                   |
-| UAC/完整性        | 普通权限后端拒绝或明确未知，不绕过安全桌面                  | 待真实测试                   |
-| 中途焦点竞争      | 实际前缀与结果可核对；后续批次不继续，未知动作不重试        | 边界拒绝有证据，中途待测     |
-| 用户按住键/鼠标   | INPUT_BUSY，不释放用户状态；松开后建立新观察                | 替身通过，真实待测           |
-| 原生部分输入      | 核对 Windows 返回计数、未配对清理和 unknown                 | 故障注入通过，真实待测       |
-| 布局变化/独占全屏 | 显示失败不发动作，旧布局与确认不复用                        | 变化/独占待测                |
-| 输入中后端退出    | 无重放、未知反馈、只清理拥有的 Job                          | Job 回收有证据，输入中断待测 |
-
-所有必需防护专项通过后再按明确产品决定开启生产能力，并另完成最终安装与发布门禁。独立电脑当前暂缓，不能将缺少环境写成已通过。
+私有 Python 配置由 computer-configuration.mjs 统一产生 ._pth、executor.toml、.executor-asset.json 和 sitecustomize.py 字节，资源装配与清单复用同一来源。资源 pin 经过 Schema 校验并与编译出的上游契约版本比较；升级不一致时构建拒绝。保留固定资源摘要和官方原始源码，不增加通用插件/Provider 框架。

@@ -4,6 +4,8 @@
 
 Accepted（2026-10-01，范围修正）。用户确认“只控制本机，智能体可以在远端”，取代将远程连接解释为控制其他 Windows 主机的候选。
 
+2026-10-16 补充：本机执行与统一入口决定继续有效。具体后端已重构为真实 Windows-MCP 0.8.8；下文旧八工具、内部 HTTP 候选和关闭生产准入的叙述属于历史状态，不约束新实现。当前契约见 [Computer](../architecture/executor-computer.md) 与 [新实施规范](../architecture/dr-octopus-windows-computer-use-mcp-architecture.md)。
+
 ## 决策
 
 调用链为智能体 → 本机 Executor MCP → 本机 Windows-MCP → 本机桌面。智能体位置、MCP 传输和桌面执行位置分别定义，不提供其他 Windows 主机目标选择。

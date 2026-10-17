@@ -445,3 +445,188 @@ ShellExecutor 采用私有 UTF-8 BOM 的 CreateNew 脚本，固定系统解释�
 可复现探针为 apps/executor/test/packaging/cross-machine-transfer.mjs。原始成功报告和独立 cleanup-status.json 位于本地 apps/executor/build/transfer-verification/octopus-executor-cross-machine-20261016-eb822160f53f44508af5718d5ae064a6/；控制台仅输出摘要和报告路径，未记录配置正文或 token。首次初始化及诊断因输出目录未使用原生允许的私有目录前缀被拒绝，未读取授权或派发远端任务；修正验收目录名前缀后通过，原生约束未放宽，首次日志保留。
 
 本轮新增探针的语法、ESLint 和格式检查通过；生产 Runtime/协议未改动，未为该实际链路验收重建产品或重复宣称包内 247 项回归。结论为真实 Windows 两机的文件流、凭据隔离、取消和清理验收通过。跨机 2 GiB、Linux/macOS Agent 或容器、真实满盘/掉电、完整 Web/RPC 和 600 秒长等待、干净机器及签名发布不在本轮新增通过范围内；此前本机 2 GiB 结果继续单独保留。
+
+## 2026-10-16：远端 PowerShell MCP 工具实测
+
+用户要求测试 powershell 工具后，复用其提供的私有网络 MCP 配置，从 ZGL 直接调用 LAPTOP-LH。开始任务前核对端点 192.168.0.11:19876、设备 ID e0d2e121-6ee7-4009-a10b-2de7ca044ad3、Shell 可用性和实际工具发现；任务只申请 shell.execute、files.read，不改变既有授权。实际 PowerShell 命令另返回机器名 LAPTOP-LH、版本 5.1.26100.9711、64 位及可执行路径 C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe，确认不是在控制端执行命令。
+
+8 项实测全部通过：系统身份；中文/emoji/CRLF 文件写入、Get-Content 与管道；引号、反引号和美元符号字面量；exit 7；原生命令失败显式传播为 23；非终止错误写入 stderr 但进程退出码为 0；1 秒命令预算超时并确认 quiescent；同任务超时后继续执行成功。另以同一幂等键重复文件命令，结果完全相同，独立 Basic read 验证中文文件内容及计数文件仍为单个 x，未重复修改。
+
+首次尝试已确认系统身份并成功执行文件/管道命令，但测试脚本未把 Get-Content 的带附加属性结果转换为普通字符串，ConvertTo-Json 因而输出含 value/PSPath 等字段的对象，严格结果断言失败。该次任务已停止，会话关闭，失败报告和文件保留。测试命令显式使用 [string](Get-Content ...) 后，在新的 UUID 子目录复验 8/8 通过；没有修改产品实现、放宽断言或扩大期限。
+
+成功结果中，超时命令 effectiveTimeoutMs=1000，实际含准备/收束耗时 1167 ms；后续命令退出码为 0。任务与会话均正常结束。两次尝试的自建文件保留于远端验收根下各自的 PowerShell 验收 UUID 子目录，不删除已有文件或撤销既有授权。
+
+可复现探针位于 apps/executor/test/packaging/cross-machine-shell.mjs。首次报告为本地 build/transfer-verification/remote-powershell-20261016-eeb51d798103494abe1b6eb82f6b8df3/report.json，成功报告为 remote-powershell-20261016-e4d14033bc4148bd9a48293960fc1e36/report.json。探针语法、ESLint、格式及文档差异检查通过，报告不含授权 token。该结果不提升为 Linux/macOS Shell、600 秒长等待、任意后台服务或干净机器验收。
+
+## 2026-10-16：Windows-MCP 上游接入与 UIA 验证
+
+用户授权整体替换未发布的 Computer，并确认所有截图/UIA/输入统一要求 computer.control。用户随后明确 UIA 是核心目标，撤销暂缓 Snapshot 的降级决定。当前接入固定 Windows-MCP 0.8.8（b74c507d9e709223a0904cf08019edf55f2a75bb），旧自有 product 后端移除；Computer 不开放上游 PowerShell/文件/任意程序执行。
+
+### UIA 失败归因与修复
+
+原版私有 Python 3.14.0 和通过 uv 安装的官方标准 Python 3.14.3 环境，均在同一 20 秒预算内 Snapshot 超时。按 HWND/进程跟踪显示，耗时集中在上游自己的控制装饰窗口；没有这些提示的上游 UIA 独立枚举约 0.24 秒完成。临时过滤本进程的 WindowsMCPControl_/WindowsMCPFlash_ 窗口后，Snapshot 约 3.87 秒完成并返回真实控件树。
+
+现使用带源/目标 SHA-256 的最小固定补丁，在进入 UIA 前排除本进程专属装饰窗口。未改截图引擎、输入保护或用户应用遍历；外部同名前缀和本进程普通窗口仍保留。补丁说明与上游提交计划见 apps/executor/vendor/COMPUTER-PATCH.md，尚未向外提交 issue/PR。
+
+私有 sitecustomize 将既有私有搜索根改为扩展路径，修复 MAX_PATH 下模块不可见；配置 comtypes.client.gen_dir=None 使用内存类型包装器，避免修改安装目录。不再对 comtypes 源码做字符串替换。最终真实 UIA/输入在此配置下复验成功。
+
+### 已取得的验证证据
+
+| 范围                 | 结果与限制                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 全量单元与原生       | 224/224，通过；包含现有 PowerShell、搜索、文件发布、2 GiB 文件流及 MCP 生命周期。新增后续用例另行聚焦验证，不把 224 宣称为最终全部测试数量。                              |
+| 清单、UIA 补丁与重启 | 6/6 聚焦复验通过；验证补丁幂等/源篡改拒绝、窗口所属过滤、重启竞争以及清单别名/穿越拒绝。                                                                                  |
+| 最终 Computer 专项   | 8/8 通过，覆盖最终私有环境握手/长路径、真实 MCP 图像和未知结果恢复、UIA 补丁及重启竞争。                                                                                  |
+| 构建资源逐字节核对   | 5,998 个清单文件、161,377,425 字节均与固定来源清单一致；旧 product 引擎不存在，输出 Schema 包含新九工具及 Snapshot。                                                      |
+| 真实桌面             | 专属 Electron 窗口启用系统无障碍；Win32 前台核对后验证上游截图、Snapshot 中真实输入框名称、中文坐标输入、快捷键。最终内存 COM 配置下 1/1 通过，约 20.6 秒为整个测试耗时。 |
+| Electron / Utility   | 后端真实运行、本机停止及注入 Escape 三项通过；授权/失联用例因旧界面定位先失败，按当前工具详情界面修正定位后独立复验 1/1 通过。已查看测试窗口截图。                        |
+| 构建与静态检查       | 完整构建通过；保留现有前端 chunk 大小警告。lint、Node/Renderer typecheck 通过。后续清单和格式核对另保留原始日志。                                                         |
+
+首轮失败保留：受限沙箱中的 asyncio socketpair 导致握手超时，沙箱外同预算通过；长路径模块导入失败经私有路径初始化修复；原版 UIA 超时在两个环境复现；未启用测试窗口系统无障碍时控件名断言失败；诊断脚本插入位置错误在执行输入前失败；GUI 用例旧状态定位和残留 row 变量错误修正后复验；清单测试受沙箱 junction 权限阻止，沙箱外原条件通过。临时资源装配的 .executor-asset.json 使用了原 JSON 键序，首次字节核对不符，已按正式装配器同一 Schema 序列化更正，未为任意运行文件重新生成信任摘要。
+
+本地证据位于 apps/executor/build/upstream-computer-0.8.8/：原版/标准 UIA 日志、专属窗口日志、full-test.log、final-focused.log、gui-regression.log、gui-access-verified.log、uia-memory-cache.log、build-verified.log、lint-verified.log。旧失败与新成功分开保留。
+
+尚未生成或安装本轮的新 EXE/ZIP，未升级远端实例。多屏混合 DPI、锁屏/UAC、独立电脑真实部分输入、干净机器及签名发行继续未验收；不把本机成功升级为这些门禁通过。
+
+## 2026-10-16：Computer 源码整理（暂未验证）
+
+按用户要求先优化代码，暂缓验证。移除不再参与输入放行的 ComputerIndicatorConfirmation IPC、活动 ready 回调和空的 Computer 观察失效调用；保留任务彩带与本机停止。上游调用命名改为 callTool/isConnected，参数映射按各工具 Schema 收窄，区域校验归输入 Schema；后端重连逻辑从构造回调移入具名方法，版本投影复用固定常量。关闭操作在执行 SDK 清理前缓存 Promise，清理失败保留 failed 状态和启动/清理原因，并始终退订控制通知。
+
+同步调整调用方与相关测试源码，新增关闭失败状态用例，但本轮未执行测试、typecheck、lint、构建、应用启动或硬件验收；此前 224/224、Computer 专项和真实 UIA 结果只适用于整理前的代码与构建。当前仅做格式化和源码差异检查。后续恢复验证时，应覆盖参数映射、重连/关闭竞争、清理失败、状态彩带、停止、真实 UIA 和现有工具回归。
+
+## 2026-10-16：UIA 超时归因复核（修正此前结论）
+
+用户要求排除转发参数问题。本轮对官方 GitHub v0.8.8 的 desktop/service.py 与独立标准环境安装文件逐字节摘要核对，均为 c116adc0d221c993a89596a14f0ac66bf924e250672cb2691a8914b0e788231e。随后使用官方 MCP SDK 的 StdioClientTransport 直接运行标准 Python 3.14.3 / Windows-MCP 0.8.8 / FastMCP 4.1.0，不加载 Executor、不使用自定义 transport/Job，也不注入 Python 包装或过滤函数。
+
+| Snapshot 参数                                                                        | 20 秒原预算   | 90 秒诊断上限下的实际结果              |
+| ------------------------------------------------------------------------------------ | ------------- | -------------------------------------- |
+| 官方默认参数 {}                                                                      | 20.008 秒超时 | 26.505 秒成功，返回 UIA 文本           |
+| 实际转发参数：use_vision=true、use_ui_tree=true、use_dom=false、use_annotation=false | 20.005 秒超时 | 27.819 秒成功，返回一张图像与 UIA 文本 |
+
+90 秒仅为区分慢调用和永久阻塞的诊断上限，没有修改产品 20 秒期限，也不将此记为原预算通过。调用后仅清理本次直接启动的进程树；未保存 UI 文本或图像。证据为 build/upstream-computer-0.8.8/plain-sdk-defaults.json、plain-sdk-executor.json、plain-sdk-long-measurement-defaults.json、plain-sdk-long-measurement-executor.json 及 plain-sdk-probe.mjs/plain-sdk-measure.mjs。
+
+更准确结论：实际转发参数符合官方 Schema，且原版能完成相同请求；不能把 20 秒超时直接归为上游 UIA 不可用或永久死锁。客户端超时预算是本次失败的一部分，上游自身装饰窗口的额外 UIA 查询是已有证据支持的性能开销。过滤优化有效不等于补丁是唯一方案。此轮未修改产品源码、期限或现存补丁；也没有验证上一节源码整理后的整体应用。
+
+## 2026-10-17：撤销本地补丁与调用维护性优化（本机验证完成）
+
+用户同意恢复未修改上游，并在代码整理后开始验证。已删除 JSON 替换补丁、构建应用逻辑、补丁摘要/字节差特判和补丁专属测试。私有资源由现有固定官方归档在新目录重新装配，旧装配目录只移至本次 build 隔离目录保留，不提供运行期回退。资源配置不修改上游；保留深路径导入和 comtypes 内存类型包装器配置。
+
+### 原版 UIA 耗时证据
+
+使用新装配私有 Python 和实际受管 Job，核对 desktop/service.py SHA-256 为官方原值 c116adc0d221c993a89596a14f0ac66bf924e250672cb2691a8914b0e788231e。两次独立启动耗时分别为 5.797 秒、5.369 秒；每次执行三次 Snapshot，不保存 UI 文本或图像。
+
+| 独立会话 | 不带图像首次 Snapshot | 带图像第二次 | 带图像第三次 |
+| -------- | --------------------- | ------------ | ------------ |
+| 1        | 26.525 秒             | 16.587 秒    | 31.804 秒    |
+| 2        | 26.936 秒             | 16.790 秒    | 32.440 秒    |
+
+六次调用均成功，所有带图像请求返回一张图像，两个 Job 均确认清理。数据支持当前 Snapshot 60 秒上限的本机配置，不证明所有机器和桌面复杂度均满足该预算；历史 20 秒失败保留，不重记为通过。证据为 build/computer-maintenance-20261017/measure.log、unmodified-timings.json、measure.mjs。
+
+### 调用与状态规则
+
+工具定义统一持有上游名称、Schema 关联、副作用分类及执行预算。Snapshot 与冷态可能触发完整 UIA 的 App switch 共用 60 秒上限/30 秒最低准入，其余调用 10 秒上限；TaskAuthority 提供授权等待和任务剩余时间中较短的截止时间，Computer 预留 10 秒收束，状态预检与执行共享一个绝对期限，进度通知不续期。
+
+观察中断返回 COMPUTER_OBSERVATION_INTERRUPTED，保留结果不完整和控制需收束状态，不声称发生未知输入；输入派发后不明确返回 COMPUTER_RESULT_UNKNOWN。上游明确完成但报错与传输不确定性分开。已报告完成的输入仍需验证应用业务效果。后端退休集中处理，Runtime 停止与重连冲突不能发布迟到 ready。首页支持数量与后端真实状态分别显示。
+
+### 用户退出运行实例前的验证范围与阻塞
+
+- 聚焦源码用例 26/26 通过：预算、派发前拒绝、预检扣时、观察/输入失败区别、控制通知、重启/关闭竞争、上游源字节未修改及私有配置重复发布。此前资源测试第一次因 Buffer 与 Uint8Array 的比较类型差异失败，统一字节容器后复验通过，没有改变源字节断言。
+- Node/Renderer typecheck 已通过。lint 曾指出格式及异常 cause 归属问题，已修正，末轮 lint 全部通过（lint-verified.log）。
+- 官方归档装配成功；源码中无补丁应用或运行时函数替换逻辑。最终构建资源清单及应用 UI 尚待新构建后验证。
+- 完整构建首次被 dist/native/computer-escape.node 占用拒绝，错误 EXECUTOR_NATIVE_OUTPUT_BUSY。只读进程检查确认本仓库存在非测试 Executor 实例；未强杀、未覆盖原生文件，也未拿旧产物宣称新构建成功。已请用户从托盘完整退出，之后才能完成新构建、原生/全量回归和 Electron 界面验证。
+
+本轮未生成安装包，未更新远端实例；上一轮 224/224、本机截图输入和 UIA 小补丁结果不作为本轮最终通过证据。Browser 插件/browser skill 未列出，后续 Electron 视觉回归沿用仓库已有 Playwright Electron 工作流。
+
+### 用户完整退出后的完成结果
+
+用户确认已从托盘完整退出后，重新构建成功；未强杀日常实例或覆盖加载中的原生文件。首轮完整回归 233/233 通过，约 420.2 秒，无失败/跳过，覆盖 PowerShell、文件发布、2 GiB 文件流、MCP 和新预算/观察中断用例。
+
+首轮 Electron 五项中四项通过，原版 UIA/截图/输入和 Utility owner 均通过；注入 Escape 用例在它前面的 App switch 超时。源码核对确认上游冷态窗口切换在 _find_window_by_name 中调用完整 get_state，因此不能采用普通动作 10 秒预算。将窗口切换纳入已测量的 60 秒 UIA 策略后重新构建，没有修改上游或降低结果/前台断言；该首次失败保留于 electron-test.log。
+
+| 最终范围           | 实际结果                                                                                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 完整构建           | 初次退出后构建成功；窗口切换策略修正后再次构建成功，保留既有前端 chunk 大小警告。                                                        |
+| 全量回归           | 233/233 通过；最后一次窗口切换策略及测试证据调整后，按影响范围聚焦复验，不把全量记录伪称为之后再次全跑。                                 |
+| 最后构建后的聚焦   | 26/26，通过预算、错误/内容校验、Runtime/连接生命周期竞争和未修改上游配置；窗口切换预算已纳入断言。                                       |
+| 原版真实桌面       | screenshot、Snapshot 内测试输入框名称、中文坐标输入及快捷键均通过，专属窗口整例约 56.97 秒；仍使用60秒UIA策略，未恢复补丁。              |
+| 最终 Electron 复验 | 首页授权/就绪/失联、本机停止、窗口切换后注入 Escape 共3/3通过。窗口切换/注入整例约44.35秒，输入前额外核对拥有窗口的Win32 HWND。          |
+| 静态检查           | 最后一轮 Node/Renderer typecheck、全应用 lint、格式及 git diff --check 通过。                                                            |
+| 资源字节           | 5,998项、161,376,876字节全部匹配归档派生清单；上游service.py为官方原始SHA-256，旧product引擎与补丁不存在。                               |
+| 视觉检查           | 已查看最终 desktop-ready.png 与 desktop-disconnected.png，支持数与真实状态分开显示；截图关闭有限动画，避免把弹窗退场中间帧当作布局问题。 |
+
+最终日志均在 apps/executor/build/computer-maintenance-20261017：build-after-exit.log、build-app-budget.log、full-test.log、focused-after-build.log、electron-test.log、gui-final.log、resources-final.json、lint-complete.log；截图在 screens-final/。源码未再修改；文档按这些实际结果收尾。
+
+该验证没有新增远端安装、锁屏/UAC、混合DPI/多屏、独立电脑或签名发行证据；没有生成新的EXE/ZIP，也未替用户重新启动日常Executor实例。上游首次预算失败、UIA性能归因修正及早期补丁实验继续按历史记录保留。
+
+## 2026-10-17：会话恢复发现与代码精简（本机验证完成）
+
+本轮在现有上游集成上修正离线会话的恢复发现：创建会话时按授权注册稳定 Computer Schema，listTools 按实时连接和授权过滤。显式任务生命周期变化发送 tools/list_changed 提示。注册和显式列表投影共用工具 annotations，避免只在注册时声明而实际发现时丢失。
+
+Computer 返回值已从 unknown 改为明确结果类型，MCP 图像输出取消类型断言，统一结果 Schema 包含状态、完成内容和保留摘要。结果模块由工具执行与 MCP 序列化共同消费，独立于生命周期实现；没有为文件长度拆分。删除未使用的 owner 参数和 Browser 图像分支中永远不执行的备选路径，保留权限、状态、容量和收束检查。
+
+失败诊断只输出阶段、工具、错误码、耗时及清理确认，不含原始异常、文本输入或UI数据；诊断写入失败不改变执行错误。私有配置和归档派生清单复用确定字节来源，资源版本与编译后的工具契约版本不一致时拒绝构建；没有修改上游源码。
+
+构建、lint、Node/Renderer typecheck 首轮通过。聚焦30项及独立MCP恢复/权限6项已通过；全量及最终Electron正在串行验证，完成结果随后记录。最初类型检查发现启动诊断的计时变量未定义，已补齐并通过复查；未将这次初始检查记为通过。原版UIA与第三方二进制版本未改变。
+
+证据目录为 apps/executor/build/computer-cleanup-20261017。未生成EXE/ZIP，未升级远端实例，独立电脑/混合DPI/锁屏UAC门禁保持原范围。
+
+### 最终验证结果
+
+- 全量单元/原生回归 239/239，无失败或跳过，约379.2秒；包括恢复发现、未授权/撤销、预算、结果契约、诊断脱敏、配置版本不一致拒绝、PowerShell和2GiB文件流。
+- Electron 首轮五项中四项通过：真实授权/失联、Utility owner、本机停止、注入Escape。综合桌面用例在等待Win32前台60秒时被保护拒绝，未派发截图或键鼠，不是上游调用超时。首轮失败完整保留。
+- 综合桌面用例按同一前台条件与工具预算单独复验1/1通过，约55.8秒；验证原版截图、UIA测试输入框、中文输入和快捷键，没有修改上游、放宽期限或删除断言。
+- 最终构建成功，保留既有chunk大小警告；lint、Node/Renderer typecheck通过。最终格式检查发现三处调用参数整理后的排版，已仅格式化修正，源码差异检查通过。
+- 资源清单5998项、161376876字节逐项核对通过，上游service.py仍为官方SHA-256 c116adc0d221c993a89596a14f0ac66bf924e250672cb2691a8914b0e788231e。配置单一来源没有改变发行资源字节；旧引擎与自制补丁仍不存在。
+
+本地日志位于 build/computer-cleanup-20261017/：build-final.log、focused.log、diagnostics.log、resource-diagnostics.log、discovery.log、full-test.log、electron-test.log、desktop-retest.log、resources.json和lint-final.log。首轮前台失败与复验成功分开保留。未生成新安装包或执行远端、混合DPI、锁屏/UAC、独立电脑验收。
+
+## 2026-10-17：未签名新包与包级验证收尾
+
+本轮继续前述交付收尾，使用固定本地资源生成新安装包与 ZIP，不签名、不发布、不安装到日常或远端环境。源码全量 239/239 的记录属于上一轮；本轮新增构建期初始化和测试夹具修正后，按工程与交付影响范围重新验证。
+
+### 首次失败、实际原因与修正
+
+- 沙箱内首次打包在 pnpm 许可证收集阶段失败，单独复现得到 ERR_SQLITE_ERROR / unable to open database file；允许访问本地依赖存储后打包成功，没有下载替代依赖或跳过许可。
+- 第一批包为 0.0.1-unsigned-633fca47-8553-4a13-94ac-247716ce14ac。初始清单核验通过，但原版 comtypes 首次导入在安装树生成 56 字节 comtypes/gen/**init**.py，后续核验因此拒绝。逐项比较确认只有这一新增文件，没有修改或丢失既有文件。该批产物和首次失败均保留，不作为本轮最终交付包。
+- 修正为在构建和显式资源装配时，用固定私有 Python 正常导入原版 comtypes，由库自身生成包标记；校验其固定大小和 SHA-256 后纳入归档派生清单。没有手写/替换第三方源码、恢复 UIA 补丁或增加运行时完整性扫描。运行期包装器继续使用支持的 gen_dir=None 内存配置；包测试新增后端启动/关闭后完整清单不变的断言。
+- 包级测试的旧定位位于折叠的服务详情中，改用当前可见的“连接”页入口。Host 响应实际为协议 v3，旧断言仍是 v2；改为引用共享 bridgeVersion。公开配置已使用设备 connectionKey，综合和恢复夹具仍读取旧固定键；改为根据实际设备身份取键，保留真实握手、目录移动、授权、原配置字节和结果不重放断言。
+- 第一轮负向用例筛选未排除完整启动测试，实际将 Chrome/Edge Host 注册指向随后删除的临时测试副本。这是本轮测试隔离失误。已保存证据并只清理仍精确指向该副本、没有其他值或子项的两个残留键，未结束日常进程。测试前注册值没有留存，无法据此证明原注册已恢复；未猜测恢复位置。用户随后确认此前已配置，并选择自行在日常 Executor 中重新配置浏览器连接。恢复方式已确认，实际重配尚未由用户报告完成；不再自动修改注册。
+- 普通包级 GUI 用例现与既有恢复/Shell 用例一样，只在独立副本替换注册步骤。原样产品启动可能自动迁移 Host，改为与安装卸载一样要求专用验收机显式启用。修正后的两轮测试前后均确认 Host 注册未变化；不再依赖测试名称筛选保证隔离。
+
+证据目录为 apps/executor/build/computer-cleanup-20261017。package-first.log、package-license-first.log、package-tests.log、package-tests-final.log、package-registration-incident.json 和 package-inventory-differences.json 保留上述原始失败及差异；package-tests.log 在发现误执行后明确停止，不作为完整测试结果。
+
+### 最终构建与本机包级结果
+
+- 新构建成功，保留既有前端 chunk 大小警告；全应用 lint 和 Node/Renderer typecheck 通过。
+- 工程聚焦 10/10，通过资源配置、原版字节、版本不一致拒绝、归档安全及清单。首次沙箱运行 9/10，junction 创建被 EPERM 拒绝；在允许创建测试 junction 的环境下按原断言复验 10/10，没有跳过或放宽链接检查。
+- 新包完整测试共 12 项：10 通过、0 失败、2 明确跳过，约 210.2 秒。包含完整资源和私有 Node 核验、最终 PE/Fuse/ASAR、插件字节、Computer 受管握手和退出后清单不变、HTTP/stdio、系统 PowerShell/私有 Node/npm、安装目录移动后的授权与结果恢复，以及拥有的 NSIS 注册失败夹具。
+- 两项未执行为原样产品启动及实际用户安装卸载，均因可能修改真实 Host 注册而保留给专用验收机。普通测试使用独立数据、副本和端口；最终 package-registration-initialized-before.json / after.json 一致。
+- Computer 资源 5,999 项、161,376,932 字节逐项匹配。上游 service.py SHA-256 仍为 c116adc0d221c993a89596a14f0ac66bf924e250672cb2691a8914b0e788231e；新增的原版初始化产物为 56 字节、SHA-256 0d474e302634b834072be47bae442dd92b5919dba7870f13e8c8f91272dd8f68。Computer Schema 保持九项并包含 computer.snapshot。
+
+最终产物位于 apps/executor/release/0.0.1-unsigned-13dbf54a-9efc-421a-beae-ac14578ccb68，productBuildId 为 fa01e8cc4b11d25d9a5442577a6b37bc9ec04b2548425d178951aa85fd7ac954，signed=false。ZIP SHA-256 为 2c577e88f75792c71441ad5487990c271dbcf552a0ac9bc6c1f26008e55e4519，EXE SHA-256 为 244c96e532c3acdee316aa76065a3550762092b3f73b95fe4abb720f875bfc92。新包不会更新已有安装或远端实例。
+
+实际 ZIP 已解压到新的独立目录，含清单自身共 8,266 个文件。随包私有 Node 完整核验通过，清单覆盖 8,265 项、672,399,323 字节，productBuildId 与 EXE/ZIP 元数据一致；随包离线预检也通过，包含 123 项许可记录。报告为 zip-runtime-inventory.json、zip-offline-preflight.json；本机有开发工具且并未断网，预检明确保留 G4/G5/G6 pending，不是干净机器证明。沙箱预检的注册视图与主机测试前后记录不同；随后在主机视图只读复验通过，注册数为零，报告为 zip-offline-preflight-host.json。零残留不证明测试前的原注册已恢复。
+
+本轮日志为 build-package-initialization.log、package-focused-final.log、package-lint-complete.log、package-typecheck.log、package-initialized.log、package-tests-initialized.log 与 resources-initialized.json。真实独立电脑、锁屏/UAC、混合 DPI、多屏/GPU、跨机和签名发行门禁保持待验，不因本机新包生成而提升。
+
+## 2026-10-17：GitHub Actions 未签名交付流程（本机演练完成，远端待验）
+
+完善 .github/workflows/executor-windows.yml，名称改为 Executor Windows unsigned delivery，保留 PR 和手动触发。shared 构建已提前到资源装配之前，解决干净检出时工程接口依赖 shared/dist 的顺序问题。pnpm 版本从根 packageManager 读取并要求固定版本；扩展使用明确 sideload profile，真实安装/注册用例明确禁用。没有新增签名、GitHub Release 创建、发布令牌或日常应用操作。
+
+打包使用本次 run_id/run_attempt 独有的新目录，只接受此次调用生成的一份完成产物，不扫描旧 release 的最新目录。随包离线工具核验 EXE/ZIP 摘要、win-unpacked 和实际 ZIP 解压目录；六项有限回归从 ZIP 执行，包含原版 Computer 握手与确认退出后的清单不变。测试结果必须实际为六项通过、零失败，不能以空筛选或扩选替代。
+
+只有完整核验和暂存完成且目录输出非空时，才上传独立交付附件。附件包含 EXE、ZIP、元数据、验收工具、BUILD-INFO、SHA256SUMS 和四份核验报告；不上传 win-unpacked、下载缓存或测试私有配置。交付物保留 14 天，诊断日志独立保留 7 天，失败也尝试保留已有日志/报告。Summary 的下载链接来自真实上传动作输出，同时列出源提交、版本、productBuildId、摘要和未验收边界。
+
+### 本机实际验证
+
+- YAML 唯一键解析与全部十个 PowerShell run 块的 AST 语法检查通过。actionlint v1.7.12 检查通过；工具来自官方 GitHub Release，并验证官方校验文件中的 ZIP SHA-256，工具及来源记录只在忽略的 build 目录保存。
+- 从工作流提取并执行实际 package、verify、有限测试、stage 和 Summary 代码块，未重写一套等效流程。演练复用此前完成的本机构建，未重复依赖安装、资源下载和源码全量检查；这些初始化步骤及修正后的构建顺序本轮完成静态核对，干净 GitHub runner 的完整执行仍待验证。
+- 新 EXE/ZIP 在 .tmp-ci-1017-1/executor-package-20261017-1/0.0.1-unsigned-a088171a-6003-4289-b3a8-b7eb46a24811 生成，两个产品树核验和暂存后离线复验均通过。产品身份仍为 fa01e8cc4b11d25d9a5442577a6b37bc9ec04b2548425d178951aa85fd7ac954；不会把相同内容身份解释为远端已构建。
+- ZIP 有限回归实际 6/6，约 41.3 秒，无失败、跳过或取消；筛选没有运行 GUI、安装或注册用例。
+- 独立复核交付目录：22 个文件的 SHA-256 全部匹配，SHA256SUMS 自身不计入自身摘要；根目录恰为 EXE、ZIP、acceptance-artifacts.json、BUILD-INFO.json、SHA256SUMS.txt。摘要文件为无 BOM 的 UTF-8/LF，目录没有混入完整产品树或 node_modules。
+- 原样重复调用打包和暂存步骤，均在写入前明确拒绝已有目标，没有发布步骤输出或覆盖既有文件。成功和失败两种 Summary 分支均检查通过，失败分支不显示下载链接。
+- 最终 actionlint、格式和 git diff --check 通过；没有修改 Runtime/工具实现或重跑无关的全量源码回归。
+
+原始材料位于 apps/executor/build/actions-delivery-20261017/：rehearsal.log、logs/package.log、logs/package-ci.tap、三个产品核验报告、delivery-check.json、existing-output-refusals.json、两个 Summary 样本及 actionlint 工具来源记录。rehearsal.json 明确 githubUpload=not-executed；本地 BUILD-INFO 的 event=local_rehearsal，成功 Summary 的占位链接只用于分支格式检查，没有创建远端附件。
+
+本轮未提交/推送源码，也未触发远端 Actions 或上传 GitHub 附件。工作流及它依赖的重构源码、vendor 配置和许可证需要一起进入仓库；远端首次执行的通过/失败证据另行补记。独立电脑、硬件、安装卸载和正式签名门禁仍待实际验收，不将本机演练提升为远端 CI 或发行通过。

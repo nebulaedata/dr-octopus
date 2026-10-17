@@ -3,6 +3,8 @@
  * @description Verifies hardened release files, production packaged resource loading, and a real per-user installer without claiming clean-machine acceptance.
  */
 import { createClientConfiguration } from '../integration/client-configuration.mjs';
+import { bridgeVersion } from '@octopus/shared/protocol/browser-bridge';
+import { deviceConnectionKey } from '../../src/contracts/device-identity.ts';
 import { parseBrowserIdentity } from '../../../browser-extension/scripts/lib/browser-identity.mjs';
 import {
   verifyBuiltBrowserIdentity,
@@ -410,21 +412,16 @@ test(
         throw error;
       }
     };
-    const owner = new ComputerRuntime({begin(){throw new Error('No input admitted');},endTasks(){}},backend);
+    const owner = new ComputerRuntime({snapshot(){return {state:'idle'};},begin(){throw new Error('No input admitted');},endTasks(){}},backend);
     (async () => {
       try {
         await owner.start();
         process.stderr.write(JSON.stringify({stage:'packaged-computer-started',status:owner.status(),elapsedMs:performance.now()-startedAt})+'\\n');
         const contract = owner.status().available;
-        const taskId=require('node:crypto').randomUUID();
-        const displays=await owner.tools.call('owned-test',taskId,'computer_displays',{taskId});
-        if(!displays.displays.length)throw new Error('No desktop metadata');
-        const connection=await backend.connect();
-        const meta=await connection.callProduct('ExecutorDesktopMeta',{contractVersion:1});
-        const refused=await connection.callProduct('ExecutorCapture',{contractVersion:1,desktopSessionId:meta.desktopSessionId,layoutVersion:meta.layoutVersion+'-owned-invalid-layout',identity:{hwnd:'1',pid:process.pid,processStartedAt:'1'},expectedBoundsPx:{left:0,top:0,width:1,height:1}});
-        if(JSON.stringify(refused)!==JSON.stringify({contractVersion:1,error:{code:'TARGET_CHANGED'}}))throw new Error('Capture refusal contract mismatch');
+        const control=await (await backend.connect()).callTool('ControlStatus', {}, { timeoutMs: 10000 });
+        if(!control.structuredContent?.state)throw new Error('No desktop metadata');
         await owner.close();
-        process.stdout.write(JSON.stringify({ contract, captureRefusal:refused.error.code, available:owner.status().available, closed:{executionStopConfirmed:owner.status().state==='closed'} }));
+        process.stdout.write(JSON.stringify({ contract,  available:owner.status().available, closed:{executionStopConfirmed:owner.status().state==='closed'} }));
       } finally {
         await owner.close();
         childProcess.spawn=spawnBackend;
@@ -449,10 +446,13 @@ test(
     );
     assert.deepEqual(JSON.parse(result.split(/\r?\n/).find((line) => line.startsWith('{"contract":'))), {
       contract: true,
-      captureRefusal: 'TARGET_CHANGED',
       available: false,
       closed: { executionStopConfirmed: true },
     });
+    await verifyRuntimeManifest(
+      product,
+      JSON.parse(await readFile(join(product, 'runtime-manifest.json'), 'utf8'))
+    );
     console.info(
       result
         .split(/\r?\n/)
@@ -486,6 +486,11 @@ test(
         version: FuseVersion.V1,
         [FuseV1Options.EnableNodeCliInspectArguments]: true,
       });
+      // Keep automatic Host setup inside this disposable fixture; never migrate the user's registration.
+      await writeFile(
+        join(clone, 'resources/executor/setup/register-browser-host.ps1'),
+        'param($Mode, $ResourceRoot, $ProjectRoot, [switch]$MigrateProduct)\r\nexit 0\r\n'
+      );
       const data = join(root, 'data');
       const workspace = join(root, 'workspace');
       const configPath = join(root, 'connection.json');
@@ -530,7 +535,7 @@ test(
       const status = await page.evaluate(() => window.executor.readStatus());
       assert.equal(status.data.state, 'ready');
       assert.equal(await page.locator('footer').count(), 0);
-      await page.getByRole('button', { name: '管理授权', exact: true }).click();
+      await page.getByRole('tab', { name: '连接', exact: true }).click();
       const help = page.getByRole('button', { name: '安装与连接说明', exact: true });
       assert.equal(await help.getAttribute('aria-expanded'), 'false');
       if (process.env.EXECUTOR_PACKAGE_CAPTURE_DIR) {
@@ -611,7 +616,7 @@ test(
       try {
         await writeFrame(host.stdin, {
           type: 'hello',
-          version: 3,
+          version: bridgeVersion,
           requestId: randomUUID(),
           installationId: randomUUID(),
           browser: 'chrome',
@@ -622,7 +627,7 @@ test(
         });
         const reply = await readFrames(host.stdout)[Symbol.asyncIterator]().next();
         assert.equal(reply.value.type, 'connected');
-        assert.equal(reply.value.version, 2);
+        assert.equal(reply.value.version, bridgeVersion);
         host.stdin.end();
         assert.equal((await hostExit)[0], 0);
       } finally {
@@ -649,7 +654,9 @@ test(
         waitBudgetMs: 610000,
       });
       assert.equal(approval.ok, true);
-      const config = JSON.parse(await readFile(configPath, 'utf8')).mcpServers['octopus-executor'];
+      const config = JSON.parse(await readFile(configPath, 'utf8')).mcpServers[
+        deviceConnectionKey(live.device)
+      ];
       client = new Client({ name: 'packaged-acceptance', version: '1' });
       await client.connect(
         new StdioClientTransport({
@@ -728,7 +735,7 @@ test(
       });
       assert.equal(remoteApproval.ok, true);
       const remoteConfig = JSON.parse(await readFile(remoteConfigPath, 'utf8')).mcpServers[
-        'octopus-executor'
+        deviceConnectionKey(live.device)
       ];
       assert.equal(remoteConfig.url, live.remoteEndpoint);
       remoteClient = new Client({ name: 'packaged-network-validation', version: '1' });
@@ -775,7 +782,13 @@ test(
 test(
   'unaltered hardened release starts its Runtime with Node injection ignored',
   { timeout: 60000 },
-  async () => {
+  async (context) => {
+    if (process.env.EXECUTOR_INSTALL_ACCEPTANCE !== '1') {
+      context.skip(
+        'Unmodified startup can migrate Browser Host registrations; use the dedicated Windows test computer.'
+      );
+      return;
+    }
     const root = await mkdtemp(join(tmpdir(), 'octopus-package-blackbox-'));
     const startedAt = performance.now();
     /**

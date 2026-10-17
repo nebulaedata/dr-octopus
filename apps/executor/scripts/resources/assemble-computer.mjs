@@ -9,9 +9,12 @@ import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { extractComputer } from '../lib/resources/archives.mjs';
-import { computerManifestSchema } from '../lib/resources/computer-manifest.mjs';
 import { randomUUID } from 'node:crypto';
-import { publishComputerProduct } from '../lib/compile/computer-product.mjs';
+import {
+  publishComputerConfiguration,
+  initializeComputerConfiguration,
+  readComputerPin,
+} from '../lib/compile/computer-configuration.mjs';
 /**
  * Downloads only fixed official assets during explicit assembly, then verifies bytes before writing or extracting.
  */
@@ -43,9 +46,7 @@ async function acquire(input, path) {
  */
 async function assemble() {
   const root = fileURLToPath(new URL('../../', import.meta.url));
-  const pin = computerManifestSchema.parse(
-    JSON.parse(await readFile(join(root, 'vendor', 'windows-mcp.json'), 'utf8'))
-  );
+  const pin = await readComputerPin(root);
   const cache = join(root, 'build', 'vendor', 'computer');
   await mkdir(cache, { recursive: true });
   const python = join(cache, 'python-3.14.0-embed-amd64.zip');
@@ -61,12 +62,8 @@ async function assemble() {
   );
   const staging = join(cache, 'staging-' + randomUUID());
   await extractComputer({ python, wheels: pin.wheels.map((wheel) => join(cache, wheel.filename)) }, staging);
-  await writeFile(
-    join(staging, 'python314._pth'),
-    'python314.zip\r\n.\r\nLib/site-packages\r\nimport site\r\n'
-  );
-  await publishComputerProduct(root, staging);
-  await writeFile(join(staging, '.executor-asset.json'), JSON.stringify(pin));
+  await publishComputerConfiguration(root, staging);
+  await initializeComputerConfiguration(staging);
   await mkdir(join(root, 'dist', 'resources'), { recursive: true });
   await rename(staging, join(root, 'dist', 'resources', 'computer'));
   console.log(

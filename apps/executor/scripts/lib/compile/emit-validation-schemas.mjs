@@ -40,7 +40,7 @@ export async function emitValidationSchemas(path) {
       ls: lsInputSchema,
     },
     browser: browserSchemas,
-    computerPrepared: computerSchemas,
+    computer: computerSchemas,
     control: {
       runtime_status: z.strictObject({}),
       task_start: taskStartSchema,

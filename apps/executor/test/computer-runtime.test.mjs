@@ -86,10 +86,11 @@ test('one owner merges startup and attaches the same guarded tools and indicator
     assert.equal(owner.status().state, 'ready');
     assert.equal(owner.status().available, true);
     const taskId = randomUUID();
-    const windows = await owner.tools.call('owner', taskId, 'computer_windows', { taskId });
-    assert.equal(windows.windows.length, 1);
+    owner.tools.startTask(taskId);
+    const result = await owner.tools.call(taskId, 'computer.control.status', { taskId });
+    assert.equal(result.control.state, 'ready');
     assert.equal(state.calls.length, 1);
-    assert.equal(activity.snapshot().state, 'idle');
+    assert.equal(activity.snapshot().state, 'running');
     assert.throws(() => owner.tools.attach(connection), /CONNECTION_REJECTED/);
     const close = owner.close();
     assert.equal(owner.close(), close);
@@ -145,7 +146,7 @@ test('shutdown winning pending initialization rejects late tool readiness', asyn
 test('incompatible backend never attaches; lost connection cannot remain tool-ready', async () => {
   await computerFixture(async ({ activity, connection }) => {
     const rejected = new ComputerRuntime(activity, {
-      connect: async () => ({ supportsProductContract: () => false }),
+      connect: async () => ({ isConnected: () => false }),
       close: async () => ({ executionStopConfirmed: true }),
     });
     await rejected.start();
@@ -177,4 +178,38 @@ test('unconfirmed backend cleanup remains a rejected close and disables admissio
     assert.equal(owner.status().state, 'failed');
     assert.equal(owner.status().available, false);
   });
+});
+
+test('Runtime stop racing explicit reconnect never publishes late readiness', async () => {
+  await computerFixture(async ({ connection: first, activity }) =>
+    computerFixture(async ({ connection: second }) => {
+      let resolve;
+      const pending = new Promise((done) => {
+        resolve = done;
+      });
+      const next = {
+        connect: () => pending,
+        close: async () => {
+          resolve(second);
+          return second.close();
+        },
+      };
+      const owner = new ComputerRuntime(activity, {
+        connect: async () => first,
+        close: () => first.close(),
+        recreate: () => next,
+      });
+      await owner.start();
+      await owner.tools.close();
+      const restarted = owner.tools.restart();
+      await new Promise((done) => setImmediate(done));
+      assert.equal(owner.status().state, 'starting');
+      const rejection = assert.rejects(restarted, /RESTART_STOPPED|COMPUTER_UNAVAILABLE/);
+      await owner.close();
+      await rejection;
+      assert.equal(owner.status().state, 'closed');
+      assert.equal(owner.status().available, false);
+      assert.equal(second.isConnected(), false);
+    })
+  );
 });

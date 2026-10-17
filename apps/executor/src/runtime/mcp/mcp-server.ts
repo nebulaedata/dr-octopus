@@ -5,7 +5,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { transferControlSchemas } from '../transfer/transfer-inputs';
 import { browserSchemas } from '../browser/browser-tools';
-import { computerSchemas } from '../computer/computer-inputs';
+import { computerCallResultSchema } from '../computer/computer-results';
+import { computerSchemas, computerDefinitions, type ComputerName } from '../computer/computer-inputs';
 import type { TransferControlName } from '../transfer/transfer-inputs';
 import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
@@ -91,21 +92,27 @@ const descriptions = {
   grep: 'Search bounded native file snapshots with Rust regex or literal text; partial results are explicit.',
   find: 'Find authorized files by glob with bounded discovery and explicit ignore/hidden controls.',
   ls: 'List direct directory children without following reparse entries.',
-  computer_displays: 'List validated local desktop display bounds. Does not capture pixels.',
-  computer_windows:
-    'List local windows with opaque task-bound identities; refresh invalidates prior observations.',
-  computer_observe:
-    '截图 / 查看桌面窗口 (screenshot / capture / desktop): capture a validated visible window region as PNG, not the full display; defaults to the foreground window. Observe again after every action.',
-  computer_focus:
-    'Focus an explicitly identified local window through the guarded backend; no application launching.',
-  computer_click:
-    'Click a pixel in a fresh observation of the foreground target; input is validated again in the backend.',
-  computer_type:
-    'Type bounded single-line literal Unicode without clipboard fallback. Control characters are rejected; clear defaults false.',
-  computer_key: 'Send one allowed key combination to the observed foreground target; no sustained key hold.',
-  computer_scroll:
-    'Scroll vertically at a point in a fresh foreground observation. Horizontal scrolling is unavailable.',
+  ...Object.fromEntries(
+    Object.entries(computerDefinitions).map(([name, definition]) => [name, definition.description])
+  ),
 } as const;
+
+/**
+ * Keeps registration and explicit tools/list projections consistent without creating a second tool catalog.
+ */
+function toolAnnotations(name: string) {
+  return {
+    readOnlyHint: Object.hasOwn(computerDefinitions, name)
+      ? name === 'computer.control.status'
+      : ['runtime_status', 'task_status', 'read', 'grep', 'find', 'ls', 'file_transfer_status'].includes(
+          name
+        ),
+    destructiveHint: Object.hasOwn(computerDefinitions, name)
+      ? computerDefinitions[name as ComputerName].mutation
+      : ['write', 'edit', 'powershell', 'file_transfer_cancel'].includes(name),
+    idempotentHint: ['task_status', 'runtime_status', 'read', 'grep', 'find', 'ls'].includes(name),
+  };
+}
 
 /**
  * Creates a per-session projection; clientInfo, JSON-RPC IDs and sessions never grant capabilities.
@@ -152,7 +159,7 @@ export function createMcpServer(
           file_transfer_cancel: transferControlSchemas.file_transfer_cancel,
         }
       : {}),
-    ...authority.computerTools(clientId),
+    ...(grant.permissions.includes('computer.control') ? computerSchemas : {}),
     ...authority.browserTools(clientId),
   };
   for (const [name, schema] of Object.entries(basicSchemas)) {
@@ -178,32 +185,7 @@ export function createMcpServer(
         description: toolDescription(name),
         inputSchema,
         outputSchema,
-        annotations: {
-          readOnlyHint: [
-            'runtime_status',
-            'task_status',
-            'read',
-            'grep',
-            'find',
-            'ls',
-            'computer_displays',
-            'computer_windows',
-            'computer_observe',
-            'file_transfer_status',
-          ].includes(name),
-          destructiveHint: [
-            'write',
-            'edit',
-            'powershell',
-            'computer_focus',
-            'computer_click',
-            'computer_type',
-            'computer_key',
-            'computer_scroll',
-            'file_transfer_cancel',
-          ].includes(name),
-          idempotentHint: ['task_status', 'runtime_status', 'read', 'grep', 'find', 'ls'].includes(name),
-        },
+        annotations: toolAnnotations(name),
       },
       async (input, extra) => {
         try {
@@ -251,11 +233,20 @@ export function createMcpServer(
           }
           authority.requireGrant(clientId);
           if (
-            (name === 'computer_observe' || name === 'browser_snapshot') &&
-            data &&
-            typeof data === 'object' &&
-            'image' in data
+            grant.permissions.includes('computer.control') &&
+            ['task_start', 'task_end', 'task_stop'].includes(name)
           ) {
+            server.sendToolListChanged();
+          }
+          if (Object.hasOwn(computerSchemas, name)) {
+            const result = computerCallResultSchema.parse(data);
+            if ('computerContent' in result) {
+              const { computerContent, ...metadata } = result;
+              return { content: computerContent, structuredContent: { data: metadata } };
+            }
+            data = result;
+          }
+          if (name === 'browser_snapshot' && data && typeof data === 'object' && 'image' in data) {
             const { image, ...metadata } = data;
             const validated = z
               .object({
@@ -265,17 +256,14 @@ export function createMcpServer(
                 height: z.number().int().positive().optional(),
               })
               .parse(image);
-            const output =
-              name === 'browser_snapshot'
-                ? {
-                    ...metadata,
-                    screenshot: {
-                      mimeType: validated.mimeType,
-                      width: validated.width,
-                      height: validated.height,
-                    },
-                  }
-                : metadata;
+            const output = {
+              ...metadata,
+              screenshot: {
+                mimeType: validated.mimeType,
+                width: validated.width,
+                height: validated.height,
+              },
+            };
             return {
               content: [
                 { type: 'text' as const, text: JSON.stringify(output) },
@@ -321,7 +309,8 @@ export function createMcpServer(
       tools: Object.entries(schemaMap)
         .filter(
           ([name]) =>
-            (!name.startsWith('computer_') || Object.hasOwn(authority.computerTools(clientId), name)) &&
+            (!Object.hasOwn(computerSchemas, name) ||
+              Object.hasOwn(authority.computerTools(clientId), name)) &&
             (!name.startsWith('browser_') || Object.hasOwn(authority.browserTools(clientId), name))
         )
         .map(([name, schema]) => {
@@ -344,6 +333,7 @@ export function createMcpServer(
           return {
             name,
             description: toolDescription(name),
+            annotations: toolAnnotations(name),
             inputSchema: converted as { type: 'object'; properties?: Record<string, object> },
             outputSchema: {
               type: 'object' as const,

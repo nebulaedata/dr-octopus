@@ -1,451 +1,314 @@
 /**
  * @author Codex
- * @description Adapts eight bounded Computer tools to guarded Windows-MCP extensions with task-bound identities and truthful action feedback.
+ * @description Serializes task-owned upstream desktop calls, validates finite content and retires control on takeover or unknown execution.
  */
-import { randomUUID } from 'node:crypto';
-import { crc32, inflateSync } from 'node:zlib';
-import { performance } from 'node:perf_hooks';
+import { validateComputerContent, type ComputerResult } from './computer-results';
+import { reportComputerFailure } from './computer-diagnostics';
 import { BasicToolError } from '../basic/basic-inputs';
 import {
-  actionResultSchema,
-  captureSchema,
-  captureFailureSchema,
   computerSchemas,
-  desktopMetaSchema,
+  computerDefinitions,
+  computerCleanupReserveMs,
+  computerExecutionDeadline,
+  controlStatusSchema,
+  upstreamArguments,
+  type ComputerName,
 } from './computer-inputs';
-import type { ComputerName, ComputerRequest, DesktopMeta } from './computer-inputs';
 import type { ComputerUseActivity } from './computer-use-activity';
 import type { WindowsMcpConnection } from './windows-mcp-connection';
-
-type WindowRecord = {
-  owner: string;
-  taskId: string;
-  epoch: string;
-  session: string;
-  layout: string;
-  window: DesktopMeta['windows'][number];
-};
-type Observation = {
-  owner: string;
-  taskId: string;
-  windowId: string;
-  created: number;
-  capture: ReturnType<typeof captureSchema.parse>;
-};
-
-/**
- * Validates the complete bounded PNG stream; the product backend emits non-interlaced 8-bit RGB or RGBA only.
- */
-function validateImage(capture: ReturnType<typeof captureSchema.parse>): void {
-  const encoded = capture.image.data;
-  const bytes = Buffer.from(encoded, 'base64');
-  if (
-    bytes.length > 2 * 1024 * 1024 ||
-    bytes.toString('base64') !== encoded ||
-    bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a'
-  ) {
-    throw new Error('Invalid PNG');
-  }
-  let offset = 8;
-  let channels = 0;
-  let ended = false;
-  let startedData = false;
-  let endedData = false;
-  const chunks: Buffer[] = [];
-  while (offset + 12 <= bytes.length) {
-    const size = bytes.readUInt32BE(offset);
-    if (offset + 12 + size > bytes.length) {
-      throw new Error('Truncated PNG');
-    }
-    const kind = bytes.toString('ascii', offset + 4, offset + 8);
-    const data = bytes.subarray(offset + 8, offset + 8 + size);
-    if (crc32(bytes.subarray(offset + 4, offset + 8 + size)) !== bytes.readUInt32BE(offset + 8 + size)) {
-      throw new Error('PNG checksum mismatch');
-    }
-    if (kind === 'IHDR' && offset === 8 && size === 13) {
-      const { width, height } = capture.imageSizePx;
-      if (
-        data.readUInt32BE(0) !== width ||
-        data.readUInt32BE(4) !== height ||
-        data[8] !== 8 ||
-        ![2, 6].includes(data[9]) ||
-        data[10] ||
-        data[11] ||
-        data[12]
-      ) {
-        throw new Error('Unsupported PNG layout');
-      }
-      channels = data[9] === 6 ? 4 : 3;
-    } else if (kind === 'IDAT' && channels && !endedData) {
-      startedData = true;
-      chunks.push(data);
-    } else if (kind === 'IEND' && size === 0 && startedData) {
-      ended = true;
-      offset += 12;
-      break;
-    } else {
-      if (!channels || kind === 'IHDR' || kind === 'IDAT' || /^[A-Z]/.test(kind)) {
-        throw new Error('Unsupported PNG chunk');
-      }
-      endedData ||= startedData;
-    }
-    offset += size + 12;
-  }
-  if (!ended || offset !== bytes.length) {
-    throw new Error('Incomplete PNG');
-  }
-  const stride = capture.imageSizePx.width * channels + 1;
-  const length = stride * capture.imageSizePx.height;
-  const pixels = inflateSync(Buffer.concat(chunks), { maxOutputLength: length });
-  if (pixels.length !== length) {
-    throw new Error('Invalid PNG pixels');
-  }
-  for (let row = 0; row < pixels.length; row += stride) {
-    if (pixels[row] > 4) {
-      throw new Error('Invalid PNG filter');
-    }
-  }
-}
-
 export class ComputerTools {
-  private readonly windows = new Map<string, WindowRecord>();
-  private readonly observations = new Map<string, Observation>();
   private busy = false;
-  private uncertain: ReturnType<ComputerUseActivity['begin']> | undefined;
+  private revision = 0;
+  private restarting: Promise<void> | undefined;
   private closed = false;
+  private stopped = false;
+  private taskId: string | undefined;
+  private removeListener: (() => void) | undefined;
   private settled: Promise<void> = Promise.resolve();
-
+  private closing: Promise<void> | undefined;
+  private retiring: Promise<void> | undefined;
   /**
-   * Owns one local backend epoch; unavailable resources leave all desktop tools unavailable.
+   * Shares product task feedback while upstream owns actual visible-control and input protection.
    */
   constructor(
     private readonly activity: ComputerUseActivity,
-    private connection?: WindowsMcpConnection
-  ) {}
-
+    private connection?: WindowsMcpConnection,
+    private readonly reconnect?: () => Promise<WindowsMcpConnection>
+  ) {
+    if (connection) {
+      this.listen(connection);
+    }
+  }
   /**
-   * Attaches exactly one negotiated owner connection; only trusted Runtime assembly calls this method.
-   * @throws If the owner is closed, already attached or lacks the exact guarded product contract.
+   * Attaches a single already-negotiated provider; replacement requires a fresh owner.
    */
   attach(connection: WindowsMcpConnection): void {
-    if (this.closed || this.connection || !connection.supportsProductContract()) {
+    if (this.closed || this.connection || !connection.isConnected()) {
       throw new Error('COMPUTER_CONNECTION_REJECTED');
     }
     this.connection = connection;
+    this.listen(connection);
   }
-
   /**
-   * Connection discovery alone is insufficient; only a loopback or owned stdio backend with every exact product schema qualifies.
+   * Stops this provider after user takeover during an admitted task; subsequent calls cannot silently reacquire control.
+   */
+  private listen(connection: WindowsMcpConnection): void {
+    this.removeListener = connection.onControl((status) => {
+      if (this.taskId && ['user', 'takeover_pending', 'unavailable'].includes(status.state)) {
+        void this.close().catch(() => {});
+      }
+    });
+  }
+  /**
+   * Reopens only after an explicit new task request, confirmed cleanup and retirement of the prior task.
+   */
+  restart(): Promise<void> {
+    if (this.available()) {
+      return Promise.resolve();
+    }
+    this.restarting ??= this.reopen().finally(() => {
+      this.restarting = undefined;
+    });
+    return this.restarting;
+  }
+  /**
+   * Publishes a new connection only if no stop raced with its initialization.
+   */
+  private async reopen(): Promise<void> {
+    if (!this.reconnect || this.taskId || this.busy) {
+      throw new BasicToolError('COMPUTER_UNAVAILABLE', 'Stop the previous desktop task before restarting.');
+    }
+    await this.close();
+    const revision = this.revision;
+    const connection = await this.reconnect();
+    if (revision !== this.revision) {
+      await connection.close();
+      throw new BasicToolError('COMPUTER_UNAVAILABLE', 'Desktop restart was stopped.');
+    }
+    this.connection = undefined;
+    this.closed = false;
+    this.stopped = false;
+    this.closing = undefined;
+    this.retiring = undefined;
+    this.attach(connection);
+  }
+  /**
+   * Projects actual connection metadata without initiating a desktop call.
+   */
+  backendStatus(): ReturnType<WindowsMcpConnection['readStatus']> | null {
+    return this.connection?.readStatus() ?? null;
+  }
+  /**
+   * Reports only current negotiated availability.
    */
   available(): boolean {
-    return !this.closed && !this.uncertain && (this.connection?.supportsProductContract() ?? false);
+    return !this.closed && (this.connection?.isConnected() ?? false);
   }
-
   /**
-   * Opens continuous feedback only after the trusted task authority admits Computer capabilities.
+   * Exposes shutdown evidence for task recovery, never merely transport availability.
+   */
+  executionStopped(): boolean {
+    return this.stopped && !this.busy;
+  }
+  /**
+   * Binds one globally admitted task; upstream handles visual acquisition for each call.
    */
   startTask(taskId: string): void {
+    this.taskId = taskId;
     this.activity.startTask(taskId);
   }
-
   /**
-   * Invalidates executable observations at task/Basic transitions without reusing window identifiers across tasks.
-   */
-  invalidate(taskId: string): void {
-    for (const [id, observation] of this.observations) {
-      if (observation.taskId === taskId) {
-        this.observations.delete(id);
-      }
-    }
-  }
-
-  /**
-   * Retires task identities after admission stops; no foreign owner can inherit its observations.
+   * Retires product feedback; the Runtime closes upstream ownership at task completion.
    */
   release(taskId: string): void {
-    this.activity.endTask(taskId);
-    this.clearTargets(taskId);
-  }
-
-  /**
-   * Refreshes executable targets without ending the surrounding Computer session.
-   */
-  private clearTargets(taskId: string): void {
-    this.invalidate(taskId);
-    for (const [id, window] of this.windows) {
-      if (window.taskId === taskId) {
-        this.windows.delete(id);
-      }
+    if (this.taskId === taskId) {
+      this.taskId = undefined;
     }
+    this.activity.endTask(taskId);
   }
-
   /**
-   * Validates a named call, serializes the backend and binds every identity to the authenticated owner and active task.
-   * @throws Stable public errors without revealing raw handles, backend responses or credentials.
+   * Executes one finite action; every upstream call except status can acquire desktop control, including screenshots.
    */
-  async call(owner: string, taskId: string, name: ComputerName, input: unknown): Promise<unknown> {
-    const request = computerSchemas[name].parse(input) as ComputerRequest;
-    if (request.taskId !== taskId) {
-      throw new BasicToolError('TASK_NOT_FOUND', 'The Computer call is not bound to this task.');
+  async call(
+    taskId: string,
+    name: ComputerName,
+    input: unknown,
+    options?: { deadlineMs: number }
+  ): Promise<ComputerResult> {
+    const startedAt = Date.now();
+    const request = computerSchemas[name].parse(input);
+    if (request.taskId !== taskId || this.taskId !== taskId) {
+      throw new BasicToolError('TASK_NOT_FOUND', 'Desktop task is not active.');
     }
     if (!this.available()) {
-      throw new BasicToolError('COMPUTER_UNAVAILABLE', 'The guarded local Computer backend is unavailable.');
+      throw new BasicToolError('COMPUTER_UNAVAILABLE', 'Desktop control is unavailable.');
     }
     if (this.busy) {
-      throw new BasicToolError('ACTION_IN_PROGRESS', 'A Computer call is already in progress.');
+      throw new BasicToolError('ACTION_IN_PROGRESS', 'A desktop operation is still running.');
     }
+    const policy = computerDefinitions[name];
+    const deadline = computerExecutionDeadline(
+      name,
+      options?.deadlineMs ?? Date.now() + policy.timeoutMs + computerCleanupReserveMs
+    );
+    const args = upstreamArguments(name, request);
     this.busy = true;
     let settle!: () => void;
     this.settled = new Promise<void>((resolve) => {
       settle = resolve;
     });
+    let feedback: ReturnType<ComputerUseActivity['begin']> | undefined;
+    let dispatched = false;
     try {
+      feedback = this.activity.begin();
       const connection = this.connection!;
-      const epoch = connection.readStatus().backendEpoch;
-      const meta = desktopMetaSchema.parse(
-        await connection.callProduct('ExecutorDesktopMeta', { contractVersion: 1 })
-      );
-      if (
-        !meta.interactive ||
-        new Set(meta.displays.map((display) => display.index)).size !== meta.displays.length
-      ) {
-        throw new BasicToolError(
-          'SESSION_UNAVAILABLE',
-          'The interactive desktop or display layout is unavailable.'
-        );
-      }
-      if (name === 'computer_displays') {
-        return { layoutVersion: meta.layoutVersion, displays: meta.displays };
-      }
-      if (name === 'computer_windows') {
-        this.clearTargets(taskId);
-        const windows = meta.windows.map((window) => {
-          const windowId = randomUUID();
-          this.windows.set(windowId, {
-            owner,
-            taskId,
-            epoch,
-            session: meta.desktopSessionId,
-            layout: meta.layoutVersion,
-            window,
-          });
-          return {
-            windowId,
-            title: window.title,
-            bounds: window.bounds,
-            foreground: JSON.stringify(window.identity) === JSON.stringify(meta.foreground),
-          };
-        });
-        return { windows };
-      }
-      const requestedId = 'windowId' in request ? request.windowId : undefined;
-      let windowId = requestedId;
-      let record = windowId ? this.windows.get(windowId) : undefined;
-      if (name === 'computer_observe' && !windowId) {
-        const window = meta.windows.find(
-          (item) => JSON.stringify(item.identity) === JSON.stringify(meta.foreground)
-        );
-        if (window) {
-          this.clearTargets(taskId);
-          windowId = randomUUID();
-          record = {
-            owner,
-            taskId,
-            epoch,
-            session: meta.desktopSessionId,
-            layout: meta.layoutVersion,
-            window,
-          };
-          this.windows.set(windowId, record);
+      const stateResult = await connection.callTool(
+        'ControlStatus',
+        {},
+        {
+          timeoutMs: Math.min(
+            computerDefinitions['computer.control.status'].timeoutMs,
+            deadline - Date.now()
+          ),
         }
-      }
-      const current = meta.windows.find(
-        (item) => JSON.stringify(item.identity) === JSON.stringify(record?.window.identity)
       );
-      if (
-        !windowId ||
-        !record ||
-        record.owner !== owner ||
-        record.taskId !== taskId ||
-        record.epoch !== epoch ||
-        record.session !== meta.desktopSessionId ||
-        record.layout !== meta.layoutVersion ||
-        !current ||
-        JSON.stringify(current.bounds) !== JSON.stringify(record.window.bounds)
-      ) {
-        this.invalidate(taskId);
-        throw new BasicToolError('TARGET_CHANGED', 'Obtain a fresh window identity for the current desktop.');
+      const state = controlStatusSchema.parse(stateResult.structuredContent);
+      if (name === 'computer.control.status') {
+        return { control: state, backend: connection.readStatus() };
       }
-      const target = {
-        contractVersion: 1 as const,
-        desktopSessionId: meta.desktopSessionId,
-        layoutVersion: meta.layoutVersion,
-        identity: current.identity,
-        expectedBoundsPx: current.bounds,
+      if (!['ready', 'ai'].includes(state.state)) {
+        throw new BasicToolError(
+          'COMPUTER_USER_CONTROL',
+          'The user owns desktop control; no action was dispatched.'
+        );
+      }
+      if (this.closed) {
+        throw new BasicToolError('COMPUTER_UNAVAILABLE', 'Desktop control stopped before dispatch.');
+      }
+      const remainingMs = deadline - Date.now();
+      if (remainingMs < policy.minimumMs) {
+        throw new BasicToolError(
+          'COMPUTER_BUDGET_INSUFFICIENT',
+          'Desktop preflight consumed the remaining execution budget. No action was dispatched.'
+        );
+      }
+      dispatched = true;
+      const result = await connection.callTool(policy.upstream, args, { timeoutMs: remainingMs });
+      const blocks = validateComputerContent(result.content);
+      // Upstream some tools return an error as ordinary text rather than isError.
+      const failed =
+        result.isError === true ||
+        blocks.some((block) => block.type === 'text' && /^(Error\b|Failed\b)/i.test(block.text.trim()));
+      if (failed) {
+        if (policy.mutation) {
+          throw new Error('Upstream action failed after dispatch');
+        }
+        throw new BasicToolError('COMPUTER_EXECUTION_FAILED', 'Upstream desktop observation failed.');
+      }
+      if (
+        (name === 'computer.screenshot' ||
+          (name === 'computer.snapshot' && 'image' in request && request.image)) &&
+        !blocks.some((block) => block.type === 'image')
+      ) {
+        throw new Error('Missing screenshot image');
+      }
+      if (this.closed) {
+        throw new Error('Control retired during operation');
+      }
+      return {
+        computerContent: blocks,
+        backend: connection.readStatus(),
+        businessEffect: policy.mutation ? 'applied' : 'not_applied',
+        resultMeaning: policy.mutation
+          ? 'Upstream reported completion; verify the application state before claiming business success.'
+          : 'Observation completed.',
+        code: 'OK',
       };
-      if (name === 'computer_observe') {
-        this.invalidate(taskId);
-        const rawCapture = await connection.callProduct('ExecutorCapture', target);
-        const refusal = captureFailureSchema.safeParse(rawCapture);
-        if (refusal.success) {
-          const messages = {
-            TARGET_CHANGED:
-              'The target changed or lost foreground during capture; obtain a fresh observation.',
-            SESSION_UNAVAILABLE: 'The interactive desktop is unavailable; no observation was created.',
-            CAPTURE_UNVERIFIED: 'The captured region could not be verified; no observation was created.',
-            CAPTURE_LIMIT: 'The captured image exceeds the output limit; no observation was created.',
-            CAPTURE_FAILED: 'The local screenshot backend failed; no observation was created.',
-          };
-          const code = refusal.data.error.code;
-          throw new BasicToolError(code, messages[code]);
-        }
-        const parsedCapture = captureSchema.safeParse(rawCapture);
-        if (!parsedCapture.success) {
-          throw new BasicToolError(
-            'CAPTURE_RESPONSE_INVALID',
-            'The capture response does not match the product contract.'
-          );
-        }
-        const capture = parsedCapture.data;
-        if (
-          JSON.stringify(capture.identity) !== JSON.stringify(current.identity) ||
-          capture.desktopSessionId !== meta.desktopSessionId ||
-          capture.layoutVersion !== meta.layoutVersion ||
-          JSON.stringify(capture.captureRectPx) !== JSON.stringify(current.bounds) ||
-          JSON.stringify(capture.expectedBoundsPx) !== JSON.stringify(current.bounds)
-        ) {
-          throw new BasicToolError(
-            'CAPTURE_UNVERIFIED',
-            'The captured region does not match the validated target.'
-          );
-        }
+    } catch (error) {
+      if (dispatched && !(error instanceof BasicToolError)) {
+        feedback?.uncertain();
         try {
-          validateImage(capture);
+          await this.retireConnection();
         } catch {
-          throw new BasicToolError('CAPTURE_IMAGE_INVALID', 'The captured PNG could not be validated.');
+          /* Cleanup failure keeps admission closed. */
         }
-        const observationId = randomUUID();
-        this.observations.set(observationId, {
-          owner,
-          taskId,
-          windowId,
-          created: performance.now(),
-          capture,
+        reportComputerFailure({
+          stage: 'dispatch',
+          tool: name,
+          code: policy.mutation ? 'COMPUTER_RESULT_UNKNOWN' : 'COMPUTER_OBSERVATION_INTERRUPTED',
+          durationMs: Date.now() - startedAt,
+          cleanupConfirmed: this.stopped,
         });
-        return {
-          observationId,
-          windowId,
-          captureRectPx: capture.captureRectPx,
-          imageSizePx: capture.imageSizePx,
-          image: capture.image,
-        };
-      }
-      let backendAction: unknown;
-      if (name !== 'computer_focus') {
-        const observation =
-          'observationId' in request ? this.observations.get(request.observationId) : undefined;
-        if (
-          !observation ||
-          observation.owner !== owner ||
-          observation.taskId !== taskId ||
-          observation.windowId !== windowId ||
-          performance.now() - observation.created > 10000 ||
-          JSON.stringify(meta.foreground) !== JSON.stringify(current.identity)
-        ) {
-          this.invalidate(taskId);
-          throw new BasicToolError(
-            'OBSERVATION_STALE',
-            'Observe the current foreground target before each input action.'
-          );
-        }
-        if ('point' in request) {
-          const { imageSizePx: size, captureRectPx: bounds } = observation.capture;
-          if (request.point.x >= size.width || request.point.y >= size.height) {
-            throw new BasicToolError('INVALID_POINT', 'The point is outside the observation image.');
-          }
-          const x = bounds.left + Math.floor(((request.point.x + 0.5) * bounds.width) / size.width);
-          const y = bounds.top + Math.floor(((request.point.y + 0.5) * bounds.height) / size.height);
-          backendAction =
-            name === 'computer_click' && 'button' in request
-              ? { kind: 'click', x, y, button: request.button, clicks: request.clicks }
-              : 'direction' in request
-                ? { kind: 'scroll', x, y, direction: request.direction, count: request.count }
-                : undefined;
-        } else if ('text' in request) {
-          backendAction = { kind: 'type', text: request.text, clear: request.clear };
-        } else if ('key' in request) {
-          backendAction = { kind: 'key', key: request.key, modifiers: request.modifiers };
-        }
-      }
-      this.invalidate(taskId);
-      const feedback = this.activity.begin();
-      let dispatched = false;
-      try {
-        await feedback.ready();
-        if (this.closed || !connection.supportsProductContract()) {
-          throw new Error('Computer backend closed before dispatch');
-        }
-        dispatched = true;
-        const raw =
-          name === 'computer_focus'
-            ? await connection.callProduct('ExecutorFocusWindow', target)
-            : await connection.callProduct('ExecutorInput', { ...target, action: backendAction });
-        const result = actionResultSchema.parse(raw);
-        if (result.effect === 'unknown') {
-          this.uncertain = feedback;
-          feedback.uncertain();
-        } else {
-          feedback.complete();
-        }
-        return { businessEffect: result.effect, code: result.code };
-      } catch {
-        if (!dispatched) {
-          feedback.complete();
-          if (this.closed) {
-            throw new BasicToolError(
-              'COMPUTER_UNAVAILABLE',
-              'Local desktop control was stopped; no input was dispatched.'
-            );
-          }
-          throw new BasicToolError(
-            'COMPUTER_INDICATOR_UNAVAILABLE',
-            'Visible Computer feedback could not be confirmed; no input action was dispatched.'
-          );
-        }
-        this.uncertain = feedback;
-        feedback.uncertain();
         throw new BasicToolError(
-          'COMPUTER_RESULT_UNKNOWN',
-          'The action outcome is unknown; it must not be replayed.'
+          policy.mutation ? 'COMPUTER_RESULT_UNKNOWN' : 'COMPUTER_OBSERVATION_INTERRUPTED',
+          policy.mutation
+            ? 'The dispatched input outcome is unknown. Do not replay; stop the task before starting another.'
+            : 'The observation did not complete and desktop control was retired. No input action was requested; stop the task before starting another.'
         );
       }
-    } catch (error) {
       if (error instanceof BasicToolError) {
+        reportComputerFailure({
+          stage: dispatched ? 'dispatch' : 'preflight',
+          tool: name,
+          code: error.code,
+          durationMs: Date.now() - startedAt,
+        });
         throw error;
       }
-      throw new BasicToolError(
-        'COMPUTER_RESPONSE_INVALID',
-        'The guarded Computer response could not be validated.'
-      );
+      reportComputerFailure({
+        stage: 'preflight',
+        tool: name,
+        code: 'COMPUTER_UNAVAILABLE',
+        durationMs: Date.now() - startedAt,
+      });
+      throw new BasicToolError('COMPUTER_UNAVAILABLE', 'The upstream desktop state could not be obtained.');
     } finally {
       this.busy = false;
       settle();
+      if (!this.closed || this.stopped) {
+        feedback?.complete();
+      }
+      if (this.stopped) {
+        this.activity.endTasks();
+      }
     }
   }
-
   /**
-   * Closes the owned backend; uncertain feedback clears only after confirmed local process-tree cleanup.
+   * Closes the owned Job and drains the running call before reporting execution stopped.
    */
-  async close(): Promise<void> {
+  close(): Promise<void> {
+    this.revision++;
     this.closed = true;
-    this.windows.clear();
-    this.observations.clear();
-    const stopped = await this.connection?.close();
-    await this.settled;
-    if (stopped?.executionStopConfirmed) {
+    this.closing ??= Promise.resolve().then(async () => {
+      await this.retireConnection();
+      await this.settled;
       this.activity.endTasks();
-      this.uncertain?.complete();
-      this.uncertain = undefined;
-    }
+    });
+    return this.closing;
+  }
+  /**
+   * Retires one connection once, independently of call draining so an in-flight error cannot wait on itself.
+   */
+  private retireConnection(): Promise<void> {
+    this.closed = true;
+    this.retiring ??= Promise.resolve().then(async () => {
+      const startedAt = Date.now();
+      try {
+        const result = await this.connection?.close();
+        this.stopped = result?.executionStopConfirmed ?? true;
+      } catch (error) {
+        reportComputerFailure({
+          stage: 'cleanup',
+          code: 'WINDOWS_MCP_CLEANUP_UNCONFIRMED',
+          durationMs: Date.now() - startedAt,
+          cleanupConfirmed: false,
+        });
+        throw error;
+      } finally {
+        this.removeListener?.();
+        this.removeListener = undefined;
+      }
+    });
+    return this.retiring;
   }
 }

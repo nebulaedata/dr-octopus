@@ -55,15 +55,13 @@ const permissions = [
   ['files.write', '写入与编辑文件（包含读取）'],
   ['shell.execute', '运行 PowerShell 命令'],
   ['browser', '控制浏览器网页'],
-  ['computer.observe', '查看桌面'],
-  ['computer.control', '控制桌面（包含查看）'],
+  ['computer.control', '桌面控制（含截图）'],
 ] as const;
 const permissionLabels: Record<ExecutorPermission, string> = {
   'files.read': '读取与搜索文件',
   'files.write': '写入与编辑文件',
   'shell.execute': '运行 PowerShell 命令',
   browser: '控制浏览器网页',
-  'computer.observe': '查看桌面',
   'computer.control': '控制桌面',
 };
 

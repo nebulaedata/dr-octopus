@@ -8,7 +8,6 @@ import { hostRequestSchema, type AccessSnapshot } from '../contracts/access';
 import { ComputerUseActivity } from './computer/computer-use-activity';
 import { ComputerRuntime } from './computer/computer-runtime';
 import { ComputerBackend } from './computer/computer-backend';
-import { ComputerIndicatorConfirmation } from './computer/computer-indicator-confirmation';
 import { ControlStore } from './mcp/control-store';
 import { TaskAuthority } from './mcp/task-authority';
 import { HttpGateway } from './mcp/http-gateway';
@@ -42,13 +41,9 @@ if (!port) {
 }
 
 // Keep ownership explicit rather than relying on incidental event-loop handles.
-const confirmation = new ComputerIndicatorConfirmation();
-const computerUse = new ComputerUseActivity(
-  (activity) => {
-    port.postMessage({ type: 'computer-use', pid: process.pid, activity });
-  },
-  (revision) => confirmation.wait(revision)
-);
+const computerUse = new ComputerUseActivity((activity) => {
+  port.postMessage({ type: 'computer-use', pid: process.pid, activity });
+});
 const keepAlive = setInterval(() => {}, 60_000);
 const userData = process.argv[2];
 const nativePath = process.argv[3];
@@ -139,9 +134,6 @@ const initialized = (async () => {
   }
 })();
 port.on('message', (event: { data: unknown }) => {
-  if (confirmation.receive(event.data)) {
-    return;
-  }
   const localStop = computerStopMessageSchema.safeParse(event.data);
   if (localStop.success) {
     const activity = computerUse.snapshot();
@@ -156,7 +148,6 @@ port.on('message', (event: { data: unknown }) => {
           if (computerUse.snapshot().activityId !== localStop.data.activityId) {
             return;
           }
-          confirmation.close();
           const taskDrain = runtime.authority.stopComputerUse();
           const results = await Promise.allSettled([computerRuntime.close(), taskDrain]);
           if (results.some((result) => result.status === 'rejected')) {
@@ -238,7 +229,6 @@ port.on('message', (event: { data: unknown }) => {
   const result = runtimeMessageSchema.safeParse(event.data);
   if (result.success && result.data.type === 'shutdown') {
     if (!stopping) {
-      confirmation.close();
       stopping = initialized.then(async (runtime) => {
         try {
           await runtime.gateway.close();

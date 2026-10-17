@@ -59,18 +59,25 @@ test(
           { timeout: 45000 }
         )
         .toBe(true);
-      const row = page.getByRole('heading', { name: '桌面控制工具', exact: true }).locator('xpath=../..');
-      await expect(row.getByText('已就绪', { exact: true })).toBeVisible();
-      assert.equal(await row.getByText('未接入', { exact: true }).count(), 0);
+      const desktopRow = page.getByRole('button', { name: '查看桌面控制工具', exact: true });
+      await expect(desktopRow.getByText('支持 9 项', { exact: true })).toBeVisible();
+      await expect(desktopRow.getByText('已就绪', { exact: true })).toBeVisible();
+      await desktopRow.click();
+      await expect(page.getByRole('dialog').getByText(/当前状态：已就绪/)).toBeVisible();
+      await expect(page.getByRole('dialog').getByText('computer.snapshot', { exact: true })).toBeVisible();
+      await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();
       if (process.env.EXECUTOR_COMPUTER_CAPTURE) {
         await mkdir(process.env.EXECUTOR_COMPUTER_CAPTURE, { recursive: true });
-        await page.screenshot({ path: join(process.env.EXECUTOR_COMPUTER_CAPTURE, 'desktop-ready.png') });
+        await page.screenshot({
+          animations: 'disabled',
+          path: join(process.env.EXECUTOR_COMPUTER_CAPTURE, 'desktop-ready.png'),
+        });
       }
       await page.getByRole('tab', { name: '连接', exact: true }).click();
       await page.getByRole('button', { name: '创建授权', exact: true }).click();
-      await expect(page.getByRole('checkbox', { name: '查看桌面', exact: true })).toBeEnabled();
+      await expect(page.getByRole('checkbox', { name: '桌面控制（含截图）', exact: true })).toBeEnabled();
       await page.getByRole('checkbox', { name: '读取与搜索文件', exact: true }).uncheck();
-      await page.getByRole('checkbox', { name: '控制桌面（包含查看）', exact: true }).check();
+      await page.getByRole('checkbox', { name: '桌面控制（含截图）', exact: true }).check();
       await page.getByRole('dialog').getByRole('button', { name: '创建授权', exact: true }).click();
       await page.locator('[data-slot="toast"]').filter({ hasText: '授权已创建' }).waitFor();
       const output = join(data, 'desktop-config.json');
@@ -83,7 +90,7 @@ test(
       const grant = (await page.evaluate(() => window.executor.readAccess())).data.clients.find(
         (entry) => entry.clientId === clientId
       );
-      assert.deepEqual([...grant.permissions].sort(), ['computer.control', 'computer.observe']);
+      assert.deepEqual([...grant.permissions].sort(), ['computer.control']);
       assert.equal(
         (await page.locator('body').innerText()).includes(connection.headers.Authorization),
         false
@@ -97,25 +104,25 @@ test(
       assert.equal((await call(client, 'runtime_status')).computer.available, true);
       const names = (await client.listTools()).tools
         .map((tool) => tool.name)
-        .filter((name) => name.startsWith('computer_'))
+        .filter((name) => name.startsWith('computer.'))
         .sort();
       assert.deepEqual(names, [
-        'computer_click',
-        'computer_displays',
-        'computer_focus',
-        'computer_key',
-        'computer_observe',
-        'computer_scroll',
-        'computer_type',
-        'computer_windows',
+        'computer.app.switch',
+        'computer.click',
+        'computer.control.status',
+        'computer.display.list',
+        'computer.screenshot',
+        'computer.scroll',
+        'computer.shortcut',
+        'computer.snapshot',
+        'computer.type',
       ]);
       const task = await call(client, 'task_start', {
-        capabilities: ['computer.observe'],
+        capabilities: ['computer.control'],
         idempotencyKey: 'desktop-observe-only',
       });
-      const result = await call(client, 'computer_displays', { taskId: task.taskId });
-      assert.ok(result.displays.length > 0);
-      await call(client, 'task_end', { taskId: task.taskId });
+      const result = await call(client, 'computer.control.status', { taskId: task.taskId });
+      assert.ok(result.control.state);
 
       const runtimePid = (await page.evaluate(() => window.executor.readStatus())).data.pid;
       assert.ok(Number.isInteger(runtimePid) && runtimePid > 0);
@@ -141,20 +148,24 @@ test(
         .toBe('unavailable');
       assert.equal((await call(client, 'runtime_status')).computer.available, false);
       assert.deepEqual(
-        (await client.listTools()).tools.filter((tool) => tool.name.startsWith('computer_')),
+        (await client.listTools()).tools.filter((tool) => tool.name.startsWith('computer.')),
         []
       );
       await page.getByRole('tab', { name: '状态', exact: true }).click();
-      await expect(row.getByText('不可用', { exact: true })).toBeVisible();
+      await expect(desktopRow.getByText('支持 9 项', { exact: true })).toBeVisible();
+      await expect(desktopRow.getByText('不可用', { exact: true })).toBeVisible();
+      await desktopRow.click();
+      await expect(page.getByRole('dialog').getByText(/当前状态：不可用/)).toBeVisible();
+      await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();
       if (process.env.EXECUTOR_COMPUTER_CAPTURE) {
         await page.screenshot({
+          animations: 'disabled',
           path: join(process.env.EXECUTOR_COMPUTER_CAPTURE, 'desktop-disconnected.png'),
         });
       }
       await page.getByRole('tab', { name: '连接', exact: true }).click();
       await page.getByRole('button', { name: '创建授权', exact: true }).click();
-      await expect(page.getByRole('checkbox', { name: '查看桌面', exact: true })).toBeDisabled();
-      await expect(page.getByRole('checkbox', { name: '控制桌面（包含查看）', exact: true })).toBeDisabled();
+      await expect(page.getByRole('checkbox', { name: '桌面控制（含截图）', exact: true })).toBeDisabled();
       assert.deepEqual(errors, []);
     } finally {
       await client?.close();

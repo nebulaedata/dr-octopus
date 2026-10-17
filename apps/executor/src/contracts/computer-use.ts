@@ -8,6 +8,9 @@ export const computerRuntimeStatusSchema = z
   .strictObject({
     state: z.enum(['stopped', 'starting', 'ready', 'failed', 'unavailable', 'stopping', 'closed']),
     available: z.boolean(),
+    engine: z.literal('windows-mcp').optional(),
+    upstreamVersion: z.string().max(32).optional(),
+    serverVersion: z.string().max(128).optional(),
     reason: z.string().max(200),
   })
   .refine((value) => value.available === (value.state === 'ready'));
@@ -36,9 +39,4 @@ export const computerUseMessageSchema = z.strictObject({
 export const computerStopMessageSchema = z.strictObject({
   type: z.literal('computer-stop'),
   activityId: z.uuid(),
-});
-export const computerIndicatorReplySchema = z.strictObject({
-  type: z.literal('computer-indicator-reply'),
-  revision: z.number().int().positive(),
-  visible: z.boolean(),
 });

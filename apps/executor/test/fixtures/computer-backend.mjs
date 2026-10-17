@@ -1,121 +1,80 @@
 /**
  * @author Codex
- * @description Provides actual in-memory MCP protocol responses for guarded Computer tests without capturing or operating the user's desktop.
+ * @description Provides the real in-memory MCP protocol with pinned upstream schemas and controllable failures, without desktop access.
  */
-import { deflateSync, crc32 } from 'node:zlib';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { backendSchemas } from '../../src/runtime/computer/computer-inputs.ts';
+import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { windowsMcpSchemas } from '../../src/runtime/computer/windows-mcp-schemas.ts';
 import { WindowsMcpConnection } from '../../src/runtime/computer/windows-mcp-connection.ts';
 import { ComputerUseActivity } from '../../src/runtime/computer/computer-use-activity.ts';
 import { ComputerTools } from '../../src/runtime/computer/computer-tools.ts';
-
+export const fixturePng = () =>
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==';
 /**
- * Encodes a small deterministic, valid PNG; no screen pixels are acquired.
- */
-export function fixturePng() {
-  /**
-   * Emits one CRC-checked PNG chunk.
-   */
-  const chunk = (name, data) => {
-    const body = Buffer.concat([Buffer.from(name), data]);
-    const size = Buffer.alloc(4);
-    const checksum = Buffer.alloc(4);
-    size.writeUInt32BE(data.length);
-    checksum.writeUInt32BE(crc32(body));
-    return Buffer.concat([size, body, checksum]);
-  };
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(4);
-  header.writeUInt32BE(2, 4);
-  header[8] = 8;
-  header[9] = 6;
-  return Buffer.concat([
-    Buffer.from('89504e470d0a1a0a', 'hex'),
-    chunk('IHDR', header),
-    chunk('IDAT', deflateSync(Buffer.alloc(34))),
-    chunk('IEND', Buffer.alloc(0)),
-  ]).toString('base64');
-}
-
-/**
- * Owns an exact linked MCP pair, a mutable response fixture and deterministic cleanup evidence.
+ * Creates one negotiated session and returns mutable fault controls; all owners are cleaned in finally.
  */
 export async function computerFixture(run, options = {}) {
-  const [transport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const server = new McpServer({ name: 'windows-mcp', version: 'fixture-guarded-1' });
-  const identity = { hwnd: '123', pid: 123, processStartedAt: '123456' };
-  const bounds = { left: -100, top: 20, width: 400, height: 200 };
-  const meta = {
-    contractVersion: 1,
-    desktopSessionId: 'session-1',
-    layoutVersion: 'layout-1',
-    interactive: true,
-    foreground: identity,
-    displays: [{ index: 0, bounds }],
-    windows: [{ identity, bounds, title: 'Owned deterministic fixture' }],
-  };
+  const [transport, peer] = InMemoryTransport.createLinkedPair();
+  const server = new Server(
+    { name: 'windows-mcp', version: '4.0.5' },
+    { capabilities: { tools: {}, logging: {} } }
+  );
   const state = {
-    meta,
-    capture: {
-      contractVersion: 1,
-      desktopSessionId: 'session-1',
-      layoutVersion: 'layout-1',
-      identity,
-      captureRectPx: bounds,
-      expectedBoundsPx: bounds,
-      imageSizePx: { width: 4, height: 2 },
-      image: { mimeType: 'image/png', data: fixturePng() },
-    },
-    result: { contractVersion: 1, effect: 'applied', code: 'OK' },
     calls: [],
-    updates: [],
     stopped: 0,
+    control: { state: 'ready', generation: 1, wait_seconds: 0 },
     hold: undefined,
-    responses: {},
+    result: undefined,
+    cleanupFails: false,
   };
-  for (const [name, schema] of Object.entries(backendSchemas)) {
-    if (options.missing === name) {
-      continue;
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: Object.entries(windowsMcpSchemas)
+      .map(([name, inputSchema]) => ({ name, inputSchema }))
+      .filter((tool) => tool.name !== options.omit),
+  }));
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    state.calls.push(request.params);
+    if (request.params.name === 'ControlStatus') {
+      return {
+        content: [{ type: 'text', text: JSON.stringify(state.control) }],
+        structuredContent: state.control,
+      };
     }
-    server.registerTool(name, { inputSchema: schema }, async (input) => {
-      state.calls.push({ name, input });
-      if (Object.hasOwn(state.responses, name)) {
-        return structuredClone(state.responses[name]);
-      }
-      const response =
-        name === 'ExecutorDesktopMeta'
-          ? state.meta
-          : name === 'ExecutorCapture'
-            ? state.capture
-            : state.result;
-      if (state.hold && ['ExecutorInput', 'ExecutorFocusWindow'].includes(name)) {
-        await state.hold;
-      }
-      return { content: [], structuredContent: structuredClone(response) };
-    });
-  }
-  await server.connect(serverTransport);
-  const connection = await WindowsMcpConnection.connect(
-    { transport: 'stdio' },
-    {
-      openLocal: async () => ({
-        transport,
-        stop: async () => {
-          state.stopped++;
-        },
-      }),
+    if (state.hold) {
+      await state.hold;
     }
-  );
-  const activity = new ComputerUseActivity(
-    (update) => state.updates.push(update),
-    options.confirmVisible ?? (async () => {})
-  );
-  const tools = new ComputerTools(activity, connection);
+    return (
+      state.result ?? {
+        content:
+          request.params.name === 'Screenshot' || request.params.name === 'Snapshot'
+            ? [
+                { type: 'text', text: 'Physical origin 0,0; original 1x1; image 1x1' },
+                { type: 'image', mimeType: 'image/png', data: fixturePng() },
+              ]
+            : [{ type: 'text', text: 'Done' }],
+      }
+    );
+  });
+  await server.connect(peer);
+  let connection;
   try {
-    await run({ tools, activity, state, connection });
-  } finally {
+    connection = await WindowsMcpConnection.connect({
+      transport,
+      stop: async () => {
+        state.stopped++;
+        if (state.cleanupFails) {
+          throw Error('cleanup failed');
+        }
+        await server.close();
+      },
+    });
+    const activity = new ComputerUseActivity(() => {});
+    const tools = new ComputerTools(activity, connection);
+    await run({ connection, tools, activity, state, server });
     await tools.close();
+  } finally {
+    await connection?.close().catch(() => {});
     await server.close();
   }
 }

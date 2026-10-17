@@ -9,7 +9,10 @@ import { fileURLToPath } from 'node:url';
 import { copyFile, mkdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { buildNative } from './build-native.mjs';
-import { publishComputerProduct } from '../lib/compile/computer-product.mjs';
+import {
+  publishComputerConfiguration,
+  initializeComputerConfiguration,
+} from '../lib/compile/computer-configuration.mjs';
 import { buildComputerInventory } from '../lib/resources/computer-inventory.mjs';
 import { emitValidationSchemas } from '../lib/compile/emit-validation-schemas.mjs';
 import { buildNodeInventory } from '../lib/resources/node-inventory.mjs';
@@ -29,12 +32,15 @@ export async function buildProcesses() {
   let computerResources = false;
   try {
     await stat(join(computer, 'python.exe'));
-    await publishComputerProduct(root, computer);
     computerResources = true;
   } catch (error) {
     if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 'ENOENT') {
       throw error;
     }
+  }
+  if (computerResources) {
+    await publishComputerConfiguration(root, computer);
+    await initializeComputerConfiguration(computer);
   }
   await mkdir(join(root, 'dist', 'native'), { recursive: true });
   await copyFile(

@@ -1,10 +1,11 @@
 /**
  * @author Codex
- * @description Owns one fixed private Computer connection with merged startup and bounded cleanup, without activating production tool admission.
+ * @description Owns one fixed private upstream desktop process with coalesced startup and confirmed Job cleanup.
  */
 import { isAbsolute, join } from 'node:path';
 import { ComputerStdioTransport } from './computer-stdio-transport';
 import { WindowsMcpConnection } from './windows-mcp-connection';
+import { windowsMcpSchemas } from './windows-mcp-schemas';
 
 export class ComputerBackend {
   private readonly abort = new AbortController();
@@ -22,13 +23,20 @@ export class ComputerBackend {
   }
 
   /**
+   * Creates a fresh owner with the same trusted resource root after the previous owner is retired.
+   */
+  recreate(): ComputerBackend {
+    return new ComputerBackend(this.root);
+  }
+
+  /**
    * Coalesces concurrent startup into one fixed Job-supervised stdio transport.
    */
   connect(): Promise<WindowsMcpConnection> {
     if (this.stopping) {
       return Promise.reject(new Error('COMPUTER_BACKEND_CLOSED'));
     }
-    if (this.connection && !this.connection.supportsProductContract()) {
+    if (this.connection && !this.connection.isConnected()) {
       return Promise.reject(new Error('COMPUTER_BACKEND_DISCONNECTED'));
     }
     this.pending ??= this.start();
@@ -58,20 +66,26 @@ export class ComputerBackend {
       join(this.root, 'native/computer-supervisor.exe'),
       join(resource, 'python.exe'),
       resource,
-      ['-I', '-B', '-u', '-m', 'product.server'],
+      [
+        '-I',
+        '-B',
+        '-u',
+        '-m',
+        'windows_mcp',
+        'serve',
+        '--transport',
+        'stdio',
+        '--config',
+        join(resource, 'executor.toml'),
+        '--tools',
+        Object.keys(windowsMcpSchemas).join(','),
+      ],
       { SystemRoot: systemRoot, ANONYMIZED_TELEMETRY: 'false', WINDOWS_MCP_WATCHDOG: 'false' }
     );
     this.connection = await WindowsMcpConnection.connect(
-      { transport: 'stdio' },
-      {
-        openLocal: async () => ({ transport, stop: () => transport.close() }),
-      },
+      { transport, stop: () => transport.close() },
       this.abort.signal
     );
-    if (!this.connection.supportsProductContract()) {
-      await this.connection.close();
-      throw new Error('COMPUTER_PRODUCT_CONTRACT_MISMATCH');
-    }
     return this.connection;
   }
 
@@ -93,7 +107,7 @@ export class ComputerBackend {
 }
 
 /**
- * Builds the future Runtime's owner from its fixed resource root without resource preflight.
+ * Builds the Runtime's owned upstream backend from its fixed resource root without resource preflight.
  */
 export function createComputerBackend(resourceRoot: string): ComputerBackend {
   return new ComputerBackend(resourceRoot);

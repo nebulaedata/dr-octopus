@@ -48,32 +48,21 @@ export class ComputerUseActivity {
   /**
    * Publishes detached evidence to the owning Runtime; the callback does not expose an execution interface.
    */
-  constructor(
-    private readonly publish: (snapshot: ComputerUseSnapshot) => void,
-    private readonly confirmVisible?: (revision: number) => Promise<void>
-  ) {}
+  constructor(private readonly publish: (snapshot: ComputerUseSnapshot) => void) {}
 
   /**
    * Starts feedback only at trusted dispatch admission, never at connect/listTools or agent planning time.
    * @returns A per-call completion handle; repeated completion is harmless and unknown outcomes retain feedback.
    * @throws If admitted calls exceed the finite call limit.
    */
-  begin(): { ready: () => Promise<void>; complete: () => void; uncertain: () => void } {
+  begin(): { complete: () => void; uncertain: () => void } {
     if (this.calls.size >= 32) {
       throw new Error('COMPUTER_ACTIVITY_BUSY');
     }
     const id = Symbol('computer-call');
     this.calls.set(id, false);
     this.emit();
-    const revision = this.revision;
     return {
-      /**
-       * Requires trusted Host evidence that this revision's feedback is visible before any desktop input dispatch.
-       */
-      ready: () =>
-        this.confirmVisible
-          ? this.confirmVisible(revision)
-          : Promise.reject(new Error('COMPUTER_INDICATOR_UNAVAILABLE')),
       /**
        * Releases this call only after an actual backend result or confirmed local cleanup.
        */

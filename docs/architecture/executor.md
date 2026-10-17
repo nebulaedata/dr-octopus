@@ -73,8 +73,7 @@ flowchart LR
 | files.write      | write、edit，包含 files.read                             |
 | shell.execute    | PowerShell 及该身份拥有的 Shell 输出，不附带文件工具权限 |
 | browser          | 有限 Browser 工具                                        |
-| computer.observe | 显示器、窗口与观察；生产暂不可授权                       |
-| computer.control | 有限桌面输入，包含 observe；生产暂不可授权               |
+| computer.control | 桌面控制、截图与 UIA Snapshot；后端就绪后显式授权        |
 
 Main 以 Windows 用户密钥加密保存凭据，Runtime 保存认证摘要；Renderer 仅取得安全列表和占位符配置预览。创建授权、复制配置、可选下载、撤销分别完成，不强制导出文件。私有配置检查当前 SID ACL、普通路径、单链接及容量，已有配置文件不覆盖。
 

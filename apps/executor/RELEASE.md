@@ -1,5 +1,7 @@
 # Executor Windows 正式签名发布 SOP
 
+未签名 GitHub Actions 构建与附件交付按 [Executor 交付指南](../../docs/architecture/executor-delivery.md#github-actions-未签名交付)操作；该工作流独立于本文的签名发布步骤，不将验收包标记为正式签名发行。
+
 适用：Windows x64、NSIS 安装程序及完整 ZIP。外部流程核对日期：2026-10-12；每次发布前重新确认签名服务资格和官方配置。本文是长期操作手册，不记录阶段进度。
 
 日常构建及首次资源装配见[交付指南](../../docs/architecture/executor-delivery.md)，安装和数据恢复见 [INSTALLATION.md](INSTALLATION.md)，浏览器商店协同见[插件发布 SOP](../browser-extension/RELEASE.md)。
@@ -145,17 +147,17 @@ const cloudSigningConfig = {
 
 不能仅把 `signExecutable` 改为 true 就交付。本仓库锁定版本的 builder 会对 extraResources/extraFiles 中匹配的 EXE 走签名转换，可能改变固定私有 Node 等资源的字节，导致运行时摘要校验失败。以上片段只说明后端参数，**完整接入必须同时处理下列事项**：
 
-| 工作项       | 实施要求                                                                                                                | 验证结果                                      |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| 独立正式入口 | 保留 package:acceptance 的 unsigned 行为；正式入口缺证书、时间戳或验证证据即失败                                        | 两种入口不会互相冒充                          |
-| 自有 PE 签名 | 列出主 EXE、Native Host/MCP/PowerShell/Computer 启动器、自有 .node/DLL（含 computer-escape.node）及卸载器等完整责任清单 | 路径明确，每项记录签名验证                    |
-| 上游资源     | 不批量重签、移除或覆盖上游签名；保留固定归档对应字节                                                                    | Node/Python/Git/搜索及原许可/摘要校验继续通过 |
-| 签名策略     | 对复制过程及签名 hook 建立经过审查的精确路径策略，不依赖默认所有 EXE 自动重签                                           | 自有文件签到，上游文件保持原样                |
-| 构建清单     | 签名会改变大小/摘要；构建端重建受影响的自有资源清单并核对引用方                                                         | 不从用户安装目录重建信任锚，不删原校验        |
-| 最终产品清单 | 所有产品 PE/Fuse/签名变更完成后生成 runtime-manifest                                                                    | 最终 unpacked 树完整匹配                      |
-| 安装程序     | 从最终产品树封装 NSIS，覆盖生成的卸载器和安装程序签名                                                                   | Installer 与内部文件均核验                    |
-| 最终交付记录 | EXE、ZIP 成品完成后才生成最终文件摘要、签名证据及发布元数据                                                             | signed 字段来自实测，文件名与事实一致         |
-| 测试适配     | 当前 packaging 测试部分明确断言 signed=false；为正式模式增加真实签名断言                                                | 不删 unsigned 回归，不把缺签名当通过          |
+| 工作项       | 实施要求                                                                                                                | 验证结果                                  |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| 独立正式入口 | 保留 package:acceptance 的 unsigned 行为；正式入口缺证书、时间戳或验证证据即失败                                        | 两种入口不会互相冒充                      |
+| 自有 PE 签名 | 列出主 EXE、Native Host/MCP/PowerShell/Computer 启动器、自有 .node/DLL（含 computer-escape.node）及卸载器等完整责任清单 | 路径明确，每项记录签名验证                |
+| 上游资源     | 不批量重签、移除或覆盖上游签名；保留固定归档对应字节                                                                    | Node/Python/搜索及原许可/摘要校验继续通过 |
+| 签名策略     | 对复制过程及签名 hook 建立经过审查的精确路径策略，不依赖默认所有 EXE 自动重签                                           | 自有文件签到，上游文件保持原样            |
+| 构建清单     | 签名会改变大小/摘要；构建端重建受影响的自有资源清单并核对引用方                                                         | 不从用户安装目录重建信任锚，不删原校验    |
+| 最终产品清单 | 所有产品 PE/Fuse/签名变更完成后生成 runtime-manifest                                                                    | 最终 unpacked 树完整匹配                  |
+| 安装程序     | 从最终产品树封装 NSIS，覆盖生成的卸载器和安装程序签名                                                                   | Installer 与内部文件均核验                |
+| 最终交付记录 | EXE、ZIP 成品完成后才生成最终文件摘要、签名证据及发布元数据                                                             | signed 字段来自实测，文件名与事实一致     |
+| 测试适配     | 当前 packaging 测试部分明确断言 signed=false；为正式模式增加真实签名断言                                                | 不删 unsigned 回归，不把缺签名当通过      |
 
 关键代码：打包在 [scripts/package/package.mjs](scripts/package/package.mjs)，清单生成在 [package-runtime-manifest.mjs](scripts/lib/package/package-runtime-manifest.mjs)，清单校验在 [runtime-manifest.mjs](scripts/lib/package/runtime-manifest.mjs)，当前测试在 [acceptance.test.mjs](test/packaging/acceptance.test.mjs)。Computer 自有 supervisor 摘要也进入构建清单，需要同步核对。
 

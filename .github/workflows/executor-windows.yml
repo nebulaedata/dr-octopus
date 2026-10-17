@@ -1,0 +1,226 @@
+# /**
+#  * @author Codex
+#  * @description Builds and verifies unsigned Windows x64 Executor acceptance artifacts without installing the product or claiming interactive/clean-machine acceptance.
+#  */
+name: Executor Windows unsigned delivery
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'apps/executor/**'
+      - 'apps/browser-extension/**'
+      - 'packages/shared/**'
+      - 'packages/ui/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.npmrc'
+      - 'patches/@page-agent__page-controller@*.patch'
+      - 'docs/architecture/executor-*.md'
+      - '.github/workflows/executor-windows.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: executor-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: windows-2025
+    timeout-minutes: 90
+    env:
+      BROWSER_IDENTITY_PROFILE: sideload
+      EXECUTOR_INSTALL_ACCEPTANCE: '0'
+      EXECUTOR_CI_LOG_DIRECTORY: apps/executor/build/ci-logs
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.20.0'
+      - name: Prepare diagnostic directory
+        run: New-Item -ItemType Directory -Path $env:EXECUTOR_CI_LOG_DIRECTORY | Out-Null
+      - name: Install frozen dependencies without workspace lifecycle scripts
+        run: |
+          $taskPackageManager = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).packageManager
+          if ($taskPackageManager -notmatch '^pnpm@\d+\.\d+\.\d+$') { throw 'Expected a fixed pnpm packageManager version.' }
+          npm install --global $taskPackageManager 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/pnpm-install.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm install --frozen-lockfile --ignore-scripts 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/install.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm rebuild electron esbuild 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/rebuild.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build shared exports before engineering resource commands
+        run: |
+          pnpm --filter @octopus/shared build 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/shared-build.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Explicitly prepare development headers and private resources
+        run: |
+          $taskHeaders = node ./apps/executor/scripts/resources/assemble-node-headers.mjs --cache-dir (Join-Path $env:RUNNER_TEMP 'executor-node-headers') 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/headers.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "EXECUTOR_NODE_HEADERS=$taskHeaders" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          foreach ($taskAssembly in @('assemble:node','assemble:search','assemble:computer','assemble:packaging')) {
+            $taskLog = Join-Path $env:EXECUTOR_CI_LOG_DIRECTORY ($taskAssembly.Replace(':', '-') + '.log')
+            pnpm --filter @octopus/executor $taskAssembly 2>&1 | Tee-Object $taskLog
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Build, lint, typecheck and test supported noninteractive scope
+        run: |
+          foreach ($taskPackage in @('@octopus/browser-extension','@octopus/executor')) {
+            foreach ($taskCheck in @('build','lint','typecheck','test')) {
+              $taskLog = Join-Path $env:EXECUTOR_CI_LOG_DIRECTORY ($taskPackage.Split('/')[-1] + '-' + $taskCheck + '.log')
+              pnpm --filter $taskPackage $taskCheck 2>&1 | Tee-Object $taskLog
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            }
+          }
+      - name: Package a new unsigned installer and ZIP
+        id: package
+        run: |
+          $taskOutputRoot = Join-Path $env:RUNNER_TEMP "executor-package-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          if (Test-Path -LiteralPath $taskOutputRoot) { throw 'Packaging output must be new.' }
+          pnpm --filter @octopus/executor package:acceptance --output-root $taskOutputRoot 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/package.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskOutputs = @(Get-ChildItem -LiteralPath $taskOutputRoot -Directory)
+          if ($taskOutputs.Count -ne 1 -or !(Test-Path (Join-Path $taskOutputs[0].FullName 'acceptance-artifacts.json'))) {
+            throw 'Expected one completed package from this invocation.'
+          }
+          "directory=$($taskOutputs[0].FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+      - name: Verify packaged tree and actual ZIP using the bundled offline tools
+        id: verify
+        env:
+          EXECUTOR_ACCEPTANCE_DIR: ${{ steps.package.outputs.directory }}
+        run: |
+          $taskKits = @(Get-ChildItem -LiteralPath $env:EXECUTOR_ACCEPTANCE_DIR -Directory -Filter 'acceptance-kit-*')
+          if ($taskKits.Count -ne 1) { throw 'Expected one acceptance kit.' }
+          $taskKit = $taskKits[0].FullName
+          $taskProduct = Join-Path $env:EXECUTOR_ACCEPTANCE_DIR 'win-unpacked'
+          $taskShell = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
+          $taskLogs = (Resolve-Path $env:EXECUTOR_CI_LOG_DIRECTORY).Path
+          & $taskShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $taskKit 'offline-preflight.ps1') -ArtifactDirectory $env:EXECUTOR_ACCEPTANCE_DIR -ProductDirectory $taskProduct -ReportPath (Join-Path $taskLogs 'offline-preflight.json')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $taskShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $taskKit 'verify-runtime-manifest.ps1') -ProductDirectory $taskProduct -ReportPath (Join-Path $taskLogs 'unpacked-inventory.json')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskMetadata = Get-Content -LiteralPath (Join-Path $env:EXECUTOR_ACCEPTANCE_DIR 'acceptance-artifacts.json') -Raw | ConvertFrom-Json
+          $taskZip = @($taskMetadata.files | Where-Object { $_.path.EndsWith('.zip') })
+          if ($taskZip.Count -ne 1) { throw 'Expected one verified ZIP.' }
+          $taskZipProduct = Join-Path $env:RUNNER_TEMP "executor-zip-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          if (Test-Path -LiteralPath $taskZipProduct) { throw 'ZIP verification directory must be new.' }
+          Expand-Archive -LiteralPath (Join-Path $env:EXECUTOR_ACCEPTANCE_DIR $taskZip[0].path) -DestinationPath $taskZipProduct
+          & $taskShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $taskKit 'verify-runtime-manifest.ps1') -ProductDirectory $taskZipProduct -ReportPath (Join-Path $taskLogs 'zip-inventory.json')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskZipReport = Get-Content -LiteralPath (Join-Path $taskLogs 'zip-inventory.json') -Raw | ConvertFrom-Json
+          if (!$taskZipReport.passed -or $taskZipReport.verification.productBuildId -cne $taskMetadata.productBuildId) {
+            throw 'ZIP identity differs from the packaged artifact.'
+          }
+          "product-directory=$taskZipProduct" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+      - name: Test noninteractive delivery and Computer lifecycle from the ZIP
+        env:
+          EXECUTOR_ACCEPTANCE_DIR: ${{ steps.package.outputs.directory }}
+          EXECUTOR_ACCEPTANCE_PRODUCT_DIR: ${{ steps.verify.outputs.product-directory }}
+        run: |
+          $taskPattern = '^(private companion|packaged Chrome/Edge|final packaged inventory|portable inventory verifier|release disables|packaged Computer owner)'
+          $taskTap = Join-Path $env:EXECUTOR_CI_LOG_DIRECTORY 'package-ci.tap'
+          pnpm --filter @octopus/executor exec node --import tsx --test --test-concurrency=1 --test-reporter=tap "--test-name-pattern=$taskPattern" test/packaging/acceptance.test.mjs 2>&1 | Tee-Object $taskTap
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskResults = Get-Content -LiteralPath $taskTap -Raw
+          if ($taskResults -notmatch '(?m)^# pass 6\r?$' -or $taskResults -notmatch '(?m)^# fail 0\r?$') {
+            throw 'Expected all six noninteractive delivery tests; no empty or expanded selection is accepted.'
+          }
+      - name: Stage verified downloads and source provenance
+        id: stage
+        env:
+          EXECUTOR_ACCEPTANCE_DIR: ${{ steps.package.outputs.directory }}
+          EXECUTOR_ACCEPTANCE_PRODUCT_DIR: ${{ steps.verify.outputs.product-directory }}
+        run: |
+          $taskDelivery = Join-Path $env:RUNNER_TEMP "executor-delivery-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          if (Test-Path -LiteralPath $taskDelivery) { throw 'Delivery directory must be new.' }
+          New-Item -ItemType Directory -Path $taskDelivery | Out-Null
+          $taskMetadata = Get-Content -LiteralPath (Join-Path $env:EXECUTOR_ACCEPTANCE_DIR 'acceptance-artifacts.json') -Raw | ConvertFrom-Json
+          if ($taskMetadata.signed -isnot [bool] -or $taskMetadata.signed) { throw 'Only unsigned acceptance delivery is supported.' }
+          foreach ($taskFile in $taskMetadata.files) {
+            Copy-Item -LiteralPath (Join-Path $env:EXECUTOR_ACCEPTANCE_DIR $taskFile.path) -Destination $taskDelivery
+          }
+          Copy-Item -LiteralPath (Join-Path $env:EXECUTOR_ACCEPTANCE_DIR 'acceptance-artifacts.json') -Destination $taskDelivery
+          $taskKits = @(Get-ChildItem -LiteralPath $env:EXECUTOR_ACCEPTANCE_DIR -Directory -Filter 'acceptance-kit-*')
+          if ($taskKits.Count -ne 1) { throw 'Expected one acceptance kit.' }
+          Copy-Item -LiteralPath $taskKits[0].FullName -Destination (Join-Path $taskDelivery $taskKits[0].Name) -Recurse
+          $taskEvidence = New-Item -ItemType Directory -Path (Join-Path $taskDelivery 'verification')
+          foreach ($taskName in @('offline-preflight.json','unpacked-inventory.json','zip-inventory.json')) {
+            Copy-Item -LiteralPath (Join-Path $env:EXECUTOR_CI_LOG_DIRECTORY $taskName) -Destination $taskEvidence.FullName
+          }
+          $taskShell = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
+          & $taskShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $taskKits[0].FullName 'offline-preflight.ps1') -ArtifactDirectory $taskDelivery -ProductDirectory $env:EXECUTOR_ACCEPTANCE_PRODUCT_DIR -ReportPath (Join-Path $taskEvidence.FullName 'delivery-preflight.json')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskProvenance = [ordered]@{
+            schemaVersion = 1
+            productName = $taskMetadata.productName
+            version = $taskMetadata.version
+            signed = $false
+            productBuildId = $taskMetadata.productBuildId
+            repository = $env:GITHUB_REPOSITORY
+            sourceCommit = $env:GITHUB_SHA
+            sourceRef = $env:GITHUB_REF
+            event = $env:GITHUB_EVENT_NAME
+            runId = $env:GITHUB_RUN_ID
+            runAttempt = $env:GITHUB_RUN_ATTEMPT
+            runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            runnerImage = $env:ImageVersion
+            recordedAtUtc = [DateTime]::UtcNow.ToString('o')
+            verification = @{ packageTestsPassed = 6; zipInventory = 'passed'; stagedArtifacts = 'passed' }
+            acceptance = @{ G4 = 'pending'; G5 = 'pending'; G6 = 'pending'; signing = 'not-performed' }
+            artifacts = $taskMetadata.files
+          }
+          $taskProvenance | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $taskDelivery 'BUILD-INFO.json') -Encoding utf8
+          $taskChecksums = foreach ($taskFile in Get-ChildItem -LiteralPath $taskDelivery -File -Recurse | Sort-Object FullName) {
+            $taskRelative = [IO.Path]::GetRelativePath($taskDelivery, $taskFile.FullName).Replace('\', '/')
+            (Get-FileHash -LiteralPath $taskFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $taskRelative
+          }
+          [IO.File]::WriteAllText((Join-Path $taskDelivery 'SHA256SUMS.txt'), (($taskChecksums -join "`n") + "`n"), [Text.UTF8Encoding]::new($false))
+          "directory=$taskDelivery" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+      - name: Upload verified unsigned downloads
+        id: delivery
+        if: ${{ success() && steps.stage.outputs.directory != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: executor-windows-x64-unsigned-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.stage.outputs.directory }}/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload diagnostics independently of delivery success
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: executor-windows-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: apps/executor/build/ci-logs/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Write delivery summary
+        if: always()
+        env:
+          EXECUTOR_JOB_STATUS: ${{ job.status }}
+          EXECUTOR_DELIVERY_DIRECTORY: ${{ steps.stage.outputs.directory }}
+          EXECUTOR_ARTIFACT_URL: ${{ steps.delivery.outputs.artifact-url }}
+        run: |
+          $taskSummary = @('# Executor Windows unsigned delivery', '', "Result: $env:EXECUTOR_JOB_STATUS", '', "Source commit: $env:GITHUB_SHA", '')
+          if ($env:EXECUTOR_ARTIFACT_URL) {
+            $taskSummary += "[Download verified EXE, ZIP, acceptance kit and checksums]($env:EXECUTOR_ARTIFACT_URL)"
+          } else {
+            $taskSummary += 'No verified delivery artifact was uploaded. Inspect the diagnostics and failed step.'
+          }
+          if ($env:EXECUTOR_DELIVERY_DIRECTORY) {
+            $taskInfo = Get-Content -LiteralPath (Join-Path $env:EXECUTOR_DELIVERY_DIRECTORY 'BUILD-INFO.json') -Raw | ConvertFrom-Json
+            $taskSummary += @('', "Version: $($taskInfo.version)", '', "Product build: $($taskInfo.productBuildId)", '', '| Artifact | SHA-256 |', '| --- | --- |')
+            foreach ($taskFile in $taskInfo.artifacts) {
+              $taskSummary += "| $($taskFile.path) | $($taskFile.sha256) |"
+            }
+          }
+          $taskSummary += @('', 'Unsigned acceptance build. G4/G5/G6, clean-machine install/uninstall, real desktop hardware and signing remain pending.', '', 'Downloads are retained for 14 days; diagnostics for 7 days. This workflow does not publish a GitHub Release.')
+          $taskSummary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8

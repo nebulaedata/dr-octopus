@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { BasicToolError } from '../basic/basic-inputs';
 import type { NativeFileCommit } from '../basic/native-file-commit';
+import { computerNames, computerSchemas } from '../computer/computer-inputs';
 import { clientSummarySchema, executorPermissionSchema } from '../../contracts/access';
 
 export const grantSchema = clientSummarySchema.extend({ tokenHash: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -31,14 +32,7 @@ const summarySchema = z.strictObject({
     'browser_fill',
     'browser_select',
     'browser_scroll',
-    'computer_displays',
-    'computer_windows',
-    'computer_observe',
-    'computer_focus',
-    'computer_click',
-    'computer_type',
-    'computer_key',
-    'computer_scroll',
+    ...computerNames,
   ]),
   fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
   state: z.enum(['pending', 'completed', 'failed', 'unknown']),
@@ -134,7 +128,9 @@ export class ControlStore {
           for (const operation of task.operations) {
             if (operation.state === 'pending') {
               operation.state = 'unknown';
-              task.quarantined ||= ['write', 'edit', 'powershell'].includes(operation.tool);
+              task.quarantined ||=
+                ['write', 'edit', 'powershell'].includes(operation.tool) ||
+                Object.hasOwn(computerSchemas, operation.tool);
             }
           }
           task.state = 'interrupted';

@@ -38,12 +38,9 @@ test('real native supervised MCP preserves stdio framing and only native cleanup
     [fixture],
     { SystemRoot: process.env.SystemRoot }
   );
-  const connection = await WindowsMcpConnection.connect(
-    { transport: 'stdio' },
-    { openLocal: async () => ({ transport, stop: () => transport.close() }) }
-  );
+  const connection = await WindowsMcpConnection.connect({ transport, stop: () => transport.close() });
   try {
-    assert.deepEqual(connection.readStatus().toolNames, ['ExecutorDesktopMeta']);
+    assert.ok(connection.readStatus().toolNames.includes('Screenshot'));
     assert.deepEqual(await connection.close(), { executionStopConfirmed: true });
     await transport.close();
   } finally {
@@ -64,12 +61,7 @@ test('malformed owned stdout drains private stderr and confirms Job cleanup', as
     { SystemRoot: process.env.SystemRoot }
   );
   await assert.rejects(
-    WindowsMcpConnection.connect(
-      { transport: 'stdio' },
-      {
-        openLocal: async () => ({ transport, stop: () => transport.close() }),
-      }
-    ),
+    WindowsMcpConnection.connect({ transport, stop: () => transport.close() }),
     /WINDOWS_MCP_CONNECTION_FAILED/
   );
   await transport.close();

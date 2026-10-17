@@ -24,7 +24,7 @@ const metadata = {
     fd: '10.5.0',
     rg: '15.2.0',
     pageController: '1.12.4',
-    windowsMcp: { version: '0.8.6', commit: 'a'.repeat(40) },
+    windowsMcp: { version: '0.8.8', commit: 'a'.repeat(40) },
   },
   entries: { runtime: 'runtime.cjs' },
   schemas: [{ path: 'schemas.json', sha256: schemaDigest }],
@@ -34,7 +34,7 @@ const metadata = {
     basic: Array.from({ length: 7 }, (_, i) => `basic_${i}`),
     browser: Array.from({ length: 11 }, (_, i) => `browser_${i}`),
     control: Array.from({ length: 5 }, (_, i) => `control_${i}`),
-    computerPrepared: Array.from({ length: 8 }, (_, i) => `computer_${i}`),
+    computer: Array.from({ length: 9 }, (_, i) => `computer.${i}`),
   },
   availability: {
     computerEnabled: true,

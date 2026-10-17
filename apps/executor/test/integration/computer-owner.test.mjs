@@ -32,15 +32,12 @@ test(
         await first;
         const contract=owner.status().available;
         const taskId=require('node:crypto').randomUUID();
-        const displays=await owner.tools.call('owned-test',taskId,'computer_displays',{taskId});
-        if(!displays.displays.length)throw new Error('No actual desktop metadata');
+        const displays=await (await backend.connect()).callTool('ControlStatus', {}, { timeoutMs: 10000 });
+        if(!(displays.structuredContent.state ? 1 : 0))throw new Error('No actual desktop metadata');
         const connection=await backend.connect();
-        const meta=await connection.callProduct('ExecutorDesktopMeta',{contractVersion:1});
-        const refused=await connection.callProduct('ExecutorCapture',{contractVersion:1,desktopSessionId:meta.desktopSessionId,layoutVersion:meta.layoutVersion+'-owned-invalid-layout',identity:{hwnd:'1',pid:process.pid,processStartedAt:'1'},expectedBoundsPx:{left:0,top:0,width:1,height:1}});
-        if(JSON.stringify(refused)!==JSON.stringify({contractVersion:1,error:{code:'TARGET_CHANGED'}}))throw new Error('Capture refusal contract mismatch');
         await owner.close();
         const closed={executionStopConfirmed:owner.status().state==='closed'};
-        process.parentPort.postMessage({same,contract,closed,captureRefusal:refused.error.code,node:process.versions.node});
+        process.parentPort.postMessage({same,contract,closed,node:process.versions.node});
         // Wait for the parent to acknowledge the result before exiting.
       } catch(error) {
         await owner.close().catch(()=>{});
@@ -95,7 +92,7 @@ test(
       assert.equal(result.error, undefined, JSON.stringify(result));
       assert.equal(result.same, true);
       assert.equal(result.contract, true);
-      assert.equal(result.captureRefusal, 'TARGET_CHANGED');
+
       assert.deepEqual(result.closed, { executionStopConfirmed: true });
       await expect
         .poll(

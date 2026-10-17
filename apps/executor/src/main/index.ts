@@ -365,30 +365,9 @@ if (!app.requestSingleInstanceLock()) {
       } catch {
         console.error('[executor] Escape stop helper unavailable; use the tray desktop-stop action.');
       }
-      let confirmedRevision = 0;
-      let confirmedEpoch = '';
       unsubscribeIndicator = runtime.subscribe((snapshot) => {
         indicator?.update(snapshot.computerUse);
         computerEscape?.update(snapshot);
-        const epoch = `${snapshot.pid}:${snapshot.startedAt}`;
-        if (epoch !== confirmedEpoch) {
-          confirmedEpoch = epoch;
-          confirmedRevision = 0;
-        }
-        if (
-          snapshot.computerUse.state === 'running' &&
-          snapshot.computerUse.revision > confirmedRevision &&
-          indicator
-        ) {
-          confirmedRevision = snapshot.computerUse.revision;
-          const revision = snapshot.computerUse.revision;
-          void indicator.confirmVisible(revision).then((visible) => {
-            const current = runtime.readStatus();
-            if (`${current.pid}:${current.startedAt}` === epoch) {
-              runtime.confirmComputerIndicator(revision, visible);
-            }
-          });
-        }
       });
       unregisterIpc = registerDesktopIpc(runtime, windows, uiOrigin, !testMode, requestRestart);
       const settings = await runtime.readSettings();
