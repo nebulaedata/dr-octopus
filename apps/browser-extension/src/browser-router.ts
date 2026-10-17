@@ -70,7 +70,7 @@ export class BrowserRouter {
     this.preparing.clear();
   }
   /**
-   * Releases only matching task feedback in the exact documents that received Browser commands.
+   * Reclaims matching task routes before awaiting feedback cleanup so late replies cannot delete new routes.
    */
   private async release(taskId?: string, connectionId?: string) {
     await Promise.all(
@@ -79,6 +79,7 @@ export class BrowserRouter {
           return;
         }
         this.feedback.delete(id);
+        this.documents.delete(id);
         await browser.tabs
           .sendMessage(
             id,

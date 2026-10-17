@@ -61,7 +61,7 @@ LAPTOP-LH 原授权的单次旧包复验聚焦自有 Executor 窗口返回 appli
 
 旧进程已从其托盘正常退出。RDP 隐藏期间图像曾停留在旧帧，重新激活连接后解压结果可见，不使用旧图像继续输入。远程覆盖来自经过核验的两个包及实际 GUI 复制完成证据，未在远程重新计算完整目录摘要，不能把本地清单核验提升为远程完整性验收。
 
-本地原始材料保存在被 Git 忽略的 `validation-evidence/computer-stop-2026-10-14`。首次测试装配、CSP、原生 Electron delay-load、设置子目录、lint 和前台拒绝等失败分别保留，不以有限后续通过抹除。
+本地原始材料保存在被 Git 忽略的 `apps/executor/build/validation-evidence/computer-stop-2026-10-14`。首次测试装配、CSP、原生 Electron delay-load、设置子目录、lint 和前台拒绝等失败分别保留，不以有限后续通过抹除。
 
 ## 设备身份验证（2026-10-14）
 
@@ -163,15 +163,15 @@ GUI 首轮失败保留：正式 Host 注册保护拒绝旧夹具、旧 toast/传
 
 本轮 shared、插件 Chrome/Edge 与 Executor 构建通过，两应用 lint/typecheck 通过；插件 13/13、Executor 198/198。真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 隔离适配回归 2/2，覆盖点击/填写/选择/滚动、提取后及清理时的页面反应、人工输入、伪造 mask ID/ignore 属性、任意脚本方法拒绝、连接替换/reset/dispose。使用独立 Host/Profile 的真实 Native Messaging HTTP 往返 1/1 通过，覆盖两个浏览器。
 
-首次两引擎测试误把上游保留的空高亮容器判为残留高亮；改为检查覆盖层/标签子节点后，反应探针仍等待容器增删，造成第二次失败，随后改为观察实际子节点变化。业务失效断言始终保留；没有为这些测试假设修改依赖。初次 lint 缺少花括号已修正复验。原失败摘要与最终构建/测试输出保存在本地 validation-evidence/page-controller-unpatched-2026-10-13。上游未使用的 executeJavascript 导致构建 eval 警告仍存在，协议不开放该能力且未放宽 CSP；这不构成商店审核通过的证据。未生成新安装包或执行商店、独立电脑验收；之前的彩屏/指针回归仅保留为历史证据。
+首次两引擎测试误把上游保留的空高亮容器判为残留高亮；改为检查覆盖层/标签子节点后，反应探针仍等待容器增删，造成第二次失败，随后改为观察实际子节点变化。业务失效断言始终保留；没有为这些测试假设修改依赖。初次 lint 缺少花括号已修正复验。原失败摘要与最终构建/测试输出保存在本地 apps/executor/build/validation-evidence/page-controller-unpatched-2026-10-13。上游未使用的 executeJavascript 导致构建 eval 警告仍存在，协议不开放该能力且未放宽 CSP；这不构成商店审核通过的证据。未生成新安装包或执行商店、独立电脑验收；之前的彩屏/指针回归仅保留为历史证据。
 
 2026-10-13 遮罩恢复与脚本边界确认：依照用户决定，通过 PageController 公开 API 恢复动作期间的原生彩屏、指针和交互阻挡；快照等待隐藏遮罩初始化后建立基线，动作完成/失败立即释放 Controller 与输入监听，下一次观察重新创建。无需依赖补丁、私有遮罩节点或特殊 DOM 过滤。真实 MV3 扩展 ISOLATED 内容脚本探针确认浏览器 CSP 拒绝 eval，随后撤回任意脚本协议/MCP/Worker 入口与 Debugger 权限；项目规则明确关闭任意脚本，并接受上游未调用的 eval 构建警告，不再列为待办。
 
-本轮 shared 与 Chrome/Edge 插件构建通过，插件 lint/typecheck、13/13 测试及 Executor 集成测试文件 lint 通过。真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 遮罩回归 2/2，覆盖彩屏 canvas、指针点击动画、真实鼠标/键盘阻挡、隐藏期间等待一秒后的快照稳定、重复动作释放、初始化中 reset 后无残留遮罩、有限动作及 DOM/人工输入失效、任意脚本方法拒绝。独立 Host/Profile 的真实 Native Messaging 往返 1/1 通过，覆盖两个浏览器。输出保存在本地 validation-evidence/browser-mask-restored-2026-10-13；未生成安装包、未进行商店安装或独立电脑验收，本轮没有重新运行 Executor 全量测试。
+本轮 shared 与 Chrome/Edge 插件构建通过，插件 lint/typecheck、13/13 测试及 Executor 集成测试文件 lint 通过。真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 遮罩回归 2/2，覆盖彩屏 canvas、指针点击动画、真实鼠标/键盘阻挡、隐藏期间等待一秒后的快照稳定、重复动作释放、初始化中 reset 后无残留遮罩、有限动作及 DOM/人工输入失效、任意脚本方法拒绝。独立 Host/Profile 的真实 Native Messaging 往返 1/1 通过，覆盖两个浏览器。输出保存在本地 apps/executor/build/validation-evidence/browser-mask-restored-2026-10-13；未生成安装包、未进行商店安装或独立电脑验收，本轮没有重新运行 Executor 全量测试。
 
 2026-10-13 executeJavascript 最小裁剪：用户明确要求从发布产物移除未使用的动态脚本实现。通过 pnpm patch/patch-commit 生成根 patches/@page-agent__page-controller@1.12.4.patch，仅删除 JavaScript 方法与对应类型声明（两个文件、26 行删除），不修改遮罩/高亮；workspace 与锁文件绑定该补丁，其他依赖补丁保留。协议白名单与扩展权限配置注释说明关闭任意脚本并通过 pnpm patch 移除实现，Turbo 输入和 Windows CI 路径同步覆盖补丁。
 
-本轮 shared 与 Chrome/Edge 插件构建通过，构建日志不再出现 EVAL 告警；产物测试扫描两个浏览器全部发布 .js/.map，不包含 executeJavascript 或 eval 调用。插件 lint/typecheck、13/13 测试、Executor 集成测试文件 lint 通过，真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 遮罩与有限动作回归 2/2 通过。安装哈希验证包含已裁剪实现/类型声明及未修改的上游遮罩，冻结离线安装通过。原始输出保存在本地 validation-evidence/page-controller-no-eval-2026-10-13；本轮未重新运行 Native Messaging/Executor 全量测试，未生成安装包或上传商店。
+本轮 shared 与 Chrome/Edge 插件构建通过，构建日志不再出现 EVAL 告警；产物测试扫描两个浏览器全部发布 .js/.map，不包含 executeJavascript 或 eval 调用。插件 lint/typecheck、13/13 测试、Executor 集成测试文件 lint 通过，真实 Chrome 155.0.8059.39 / Edge 155.0.4283.45 遮罩与有限动作回归 2/2 通过。安装哈希验证包含已裁剪实现/类型声明及未修改的上游遮罩，冻结离线安装通过。原始输出保存在本地 apps/executor/build/validation-evidence/page-controller-no-eval-2026-10-13；本轮未重新运行 Native Messaging/Executor 全量测试，未生成安装包或上传商店。
 
 2026-10-13 浏览器快照截图与调用优化：browser_snapshot 默认激活目标标签页并采集有界 JPEG，screenshot=false 保留后台 DOM 观察。截图按 document/controller/snapshot 验证，监测切换标签再切回及导航；编码最大 128 KiB、边长 1280，Native 帧上限不变。密码与显式敏感内容临时遮蔽，只忽略准确归属的 style 写入，同步自定义元素反应仍使快照失效，结束/reset/dispose 恢复。MCP 返回独立 image block 和文本/尺寸信息，Web 复用已有 Attachment 与放大预览；历史纯文本记录不补造图片。
 
@@ -181,13 +181,13 @@ GUI 首轮失败保留：正式 Host 注册保护拒绝旧夹具、旧 toast/传
 
 广泛 Server 测试 440 项：437 通过、2 失败、1 跳过。附件用例因真实 C 盘使用率超过 90% 返回存储保护 507；知识服务并发启动超时，原期限下单独复验通过。并发记忆测试的启动失败保留，原期限下单独启动 2/2 和串行记忆 55/55 通过，未扩大时间或降低保护。第一次截图集成测试缺少 randomUUID 导入属于测试装配错误，修正后同用例复验通过。首次 Web 聚焦检查未使用已有 tsconfig alias 参数，改用包规定配置后通过。
 
-原始日志和图片保存在本地 validation-evidence/browser-snapshot-2026-10-13。验收时原 5173/3001 开发服务被另一项目接替或停止，临时使用本项目 5174 页面和进程级精确来源配置，不修改持久 .env；临时 QA MCP 已禁用，唯一测试 Host/Profile/授权已释放。未上传商店、未打包新的安装程序，不据此宣称正式发行或复杂网页全量验收。
+原始日志和图片保存在本地 apps/executor/build/validation-evidence/browser-snapshot-2026-10-13。验收时原 5173/3001 开发服务被另一项目接替或停止，临时使用本项目 5174 页面和进程级精确来源配置，不修改持久 .env；临时 QA MCP 已禁用，唯一测试 Host/Profile/授权已释放。未上传商店、未打包新的安装程序，不据此宣称正式发行或复杂网页全量验收。
 
 2026-10-14 桌面控制启用与状态投影：用户明确决定启用固定受管桌面后端，移除 ComputerRuntime 的 accepted 关闭参数，不提供任意后端或环境开关。真实握手才挂接工具；ready 与具名 Host 回复携带有界生命周期状态，Main 复用健康探针更新，停止/失联时清除可用能力。状态页展示实际启动、就绪、失败或不可用状态，授权页新增查看/控制桌面，control 包含 observe；已有客户端授权不自动扩大。新构建与包元数据 computerEnabled=true，启用不等于发布验收通过。
 
 验证：Executor 全量 202/202、真实 Electron/桌面授权/断开与页面生命周期 8/8、新包清单/加固/私有 Node 的实际 Computer owner 3/3 通过，构建、lint/typecheck 通过。桌面验证只读取显示器信息，不发送真实键鼠输入；仅终止由捕获的 Runtime PID 拥有且固定路径匹配的测试 supervisor，之后界面不可用、MCP 桌面工具消失、新桌面授权禁用。开发版已恢复，现有 Browser 授权的真实 runtime_status 确认 computer.available=true，授权仍只有 browser。
 
-首轮构建因并行验证进程加载原生 DLL 返回 EBUSY；停止该自有验证进程后串行构建成功。界面验证前两轮错误地把异步 IPC 谓词交给 waitForFunction，未真正等待就绪；改为等待异步结果的 expect.poll 后通过，45/15 秒期限不变。打包测试 lint 首次缺少 expect 导入，补齐后检查通过；原始失败记录保留。新未签名 NSIS/ZIP 产物身份为 0a5977849a224e69a4914bd0577223886583bcbeb3c756461f4f7a0a155297fb，未安装、未签名或发布，独立电脑硬件矩阵继续待验收。本地原始日志与图像位于 validation-evidence/computer-enabled-2026-10-14。
+首轮构建因并行验证进程加载原生 DLL 返回 EBUSY；停止该自有验证进程后串行构建成功。界面验证前两轮错误地把异步 IPC 谓词交给 waitForFunction，未真正等待就绪；改为等待异步结果的 expect.poll 后通过，45/15 秒期限不变。打包测试 lint 首次缺少 expect 导入，补齐后检查通过；原始失败记录保留。新未签名 NSIS/ZIP 产物身份为 0a5977849a224e69a4914bd0577223886583bcbeb3c756461f4f7a0a155297fb，未安装、未签名或发布，独立电脑硬件矩阵继续待验收。本地原始日志与图像位于 apps/executor/build/validation-evidence/computer-enabled-2026-10-14。
 
 ## 可重复检查入口
 
@@ -285,13 +285,13 @@ Computer 的早期超时、已撤销的启动预检、后续启动依赖修复�
 
 首次失败还包括 journal 迁移夹具误从 save 后未更新的内存 Map 取值，以及旧端口用例查找已移除的提示文案。夹具改为比较真实原始 journal，UI 定位器对齐当前持久重启提示，保留端口、占用及重启断言。随后 toast 自动消失断言超时，改为用户显式关闭通知后验证持久提示仍存在；本轮不宣称验证了 toast 自动消失的具体时限。没有放宽原有任务或测试期限。
 
-原始完整日志及复验记录位于本地 `apps/executor/build/settings-verification/` 并归档到忽略的 validation-evidence 目录。没有重新执行独立电脑、真实掉电或安装包验收。设计见 [ADR-0081](../adr/0081-executor-settings-storage.md)，用户操作见 [安装说明](../../apps/executor/INSTALLATION.md)。
+原始完整日志及复验记录位于本地 `apps/executor/build/settings-verification/` 并归档到忽略的 apps/executor/build/validation-evidence/ 目录。没有重新执行独立电脑、真实掉电或安装包验收。设计见 [ADR-0081](../adr/0081-executor-settings-storage.md)，用户操作见 [安装说明](../../apps/executor/INSTALLATION.md)。
 
 ## 验证材料的保存方式
 
-Git 只保留可重复执行的测试及必要夹具、架构决策和本文的验收状态摘要。每次验收摘要应注明日期、范围、产物身份、结果与未验证项；源码或产物变化后不得沿用旧结果宣称通过。
+材料目录、批次命名、Git 边界与清理规则统一见 [Executor 项目规范：验证材料存放与清理](../../apps/executor/AGENTS.md#验证材料存放与清理)。本文只记录验收结论与证据状态；源码或产物变化后不得沿用旧结果宣称通过。
 
-`docs/architecture/validation-evidence/` 是被 Git 忽略的本地原始材料目录，其中的命令输出、JSON/JSONL/CSV 报告、截图和批次说明不提交。现有文件继续留在本地，失败记录与后续成功记录分别保存；仓库文档不依赖这些本地文件链接。CI 原始输出保存在 CI 附件中，正式发布的包摘要和验收材料随对应发布产物保存。
+2026-10-17，原本位于 docs 下的本地验证归档迁入 Executor 工程后，已按用户要求删除该归档目录。本文历史条目中的相关路径仅表示当时的材料位置，不代表原始文件当前仍可取回；历史结果与未验证范围继续保留。该次删除不涉及其他批次或发布附件。
 
 ## 2026-10-16：直连 MCP 与普通 HTTP 文件流
 

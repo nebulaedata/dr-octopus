@@ -35,6 +35,3 @@ build/
 # Agent files
 /.claude/skills
 .playwright*
-
-# Local validation artifacts (logs, reports, screenshots)
-/docs/architecture/validation-evidence/

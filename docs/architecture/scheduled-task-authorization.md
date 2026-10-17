@@ -227,7 +227,7 @@ Web/TUI 历史展示任务、执行时间、被拦工具、原因和本次执行
 
 验证采用临时数据库、真实 Pi RPC 和可控进程，不授予或运行用户的新闻任务。实际新闻抓取的带模型、外网端到端验证尚未进行；第 10 节为长期完整验收矩阵，不代表每个故障注入场景都已测试。
 
-隔离浏览器测试使用生产组件和模拟 API，验证批准请求范围与 revision、撤销、只读详情、桌面及移动布局，未发生自动运行请求或浏览器错误。当前会话未提供 Browser plugin，按前端验证 skill 使用普通 Playwright。截图：[桌面](./assets/scheduled-authorization-desktop.png)、[移动端](./assets/scheduled-authorization-mobile.png)。
+隔离浏览器测试使用生产组件和模拟 API，验证批准请求范围与 revision、撤销、只读详情、桌面及移动布局，未发生自动运行请求或浏览器错误。当前会话未提供 Browser plugin，按前端验证 skill 使用普通 Playwright。截图：[桌面](../../apps/web/test/evidence/scheduled-task-authorization/scheduled-authorization-desktop.png)、[移动端](../../apps/web/test/evidence/scheduled-task-authorization/scheduled-authorization-mobile.png)。
 
 最终验证记录：
 

@@ -107,7 +107,13 @@ function fixture() {
           revision = message.documentRevision;
           const identity = await ready(
             { type: 'page.ready', controllerId },
-            { id: 'fixture', frameId: 0, tab: { id: 1 }, documentId: 'document', url: state.tab.url }
+            {
+              id: 'fixture',
+              frameId: 0,
+              tab: { id: state.tab.id },
+              documentId: 'document',
+              url: state.tab.url,
+            }
           );
           return { ...identity, controllerId };
         }
@@ -260,5 +266,56 @@ test('task completion releases only its own document feedback; disconnect also r
   await peer.router.execute(snapshot);
   peer.router.reset();
   assert.equal(peer.state.released.length, 2);
+  assert.equal(peer.state.removed, 0);
+});
+
+test('completed tasks reclaim route capacity while their tabs stay open', async () => {
+  const peer = fixture();
+  for (let id = 1; id <= 40; id++) {
+    peer.state.tab.id = id;
+    const snapshot = {
+      ...peer.command('browser_snapshot', { tabId: id, screenshot: false }),
+      taskId: randomUUID(),
+    };
+    await peer.router.execute(snapshot);
+    await peer.router.execute({
+      type: 'release',
+      requestId: randomUUID(),
+      connectionId: snapshot.connectionId,
+      taskId: snapshot.taskId,
+    });
+  }
+  assert.equal(peer.state.actions, 40);
+  assert.equal(peer.state.released.length, 40);
+  assert.equal(peer.state.removed, 0);
+});
+
+test('foreign releases preserve active route limits until the owning task releases them', async () => {
+  const peer = fixture();
+  const owner = peer.command('browser_snapshot');
+  for (let id = 1; id <= 32; id++) {
+    peer.state.tab.id = id;
+    await peer.router.execute(peer.command('browser_snapshot', { tabId: id, screenshot: false }));
+  }
+  for (const foreign of [
+    { taskId: randomUUID(), connectionId: owner.connectionId },
+    { taskId: owner.taskId, connectionId: randomUUID() },
+  ]) {
+    await peer.router.execute({ type: 'release', requestId: randomUUID(), ...foreign });
+    peer.state.tab.id = 33;
+    await assert.rejects(
+      peer.router.execute(peer.command('browser_snapshot', { tabId: 33, screenshot: false })),
+      /BROWSER_BUSY/
+    );
+  }
+  assert.equal(peer.state.released.length, 0);
+  await peer.router.execute({
+    type: 'release',
+    requestId: randomUUID(),
+    taskId: owner.taskId,
+    connectionId: owner.connectionId,
+  });
+  await peer.router.execute(peer.command('browser_snapshot', { tabId: 33, screenshot: false }));
+  assert.equal(peer.state.actions, 33);
   assert.equal(peer.state.removed, 0);
 });
