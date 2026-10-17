@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@octopus/ui/components/select';
 import { Kbd } from '@octopus/ui/components/kbd';
+import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
 export type AgentWorkMode = 'agent' | 'plan' | 'knowledge';
 import type { Translate } from '@/i18n/use-i18n';
@@ -54,6 +55,7 @@ function getWorkModeItems(t: Translate) {
 }
 
 export interface WorkModeSelectProps {
+  mobile?: boolean;
   /**
    * Keeps the trigger usable while its Agent options are not loaded yet.
    */
@@ -72,6 +74,7 @@ export interface WorkModeSelectProps {
  * Delegates enabled work-mode changes to the Session runtime control plane.
  */
 export function WorkModeSelect({
+  mobile = false,
   loaded = true,
   knowledgeAvailable = false,
   disabled = false,
@@ -94,20 +97,25 @@ export function WorkModeSelect({
     >
       <SelectTrigger
         size="sm"
-        className="w-8 shrink-0 justify-center gap-0 border-0 px-0 hover:bg-muted max-md:data-[size=sm]:h-8 md:w-fit md:justify-between md:gap-1.5 md:pl-2.5 md:pr-2 [&>svg]:hidden md:[&>svg]:block"
+        className={cn(
+          'min-w-0 border-0 hover:bg-muted data-[size=sm]:h-8',
+          mobile
+            ? 'w-8 shrink-0 justify-center gap-0 px-0 [&>svg]:hidden'
+            : 'w-fit shrink justify-between gap-1.5 pl-2.5 pr-2'
+        )}
         aria-label="Agent work mode"
       >
-        <SelectValue className="justify-center md:justify-start">
+        <SelectValue className={cn('min-w-0', mobile ? 'justify-center' : 'justify-start')}>
           {(selectedValue: AgentWorkMode) => {
             const selected = workModeItems.find((item) => item.value === selectedValue);
             const Icon = selected?.icon ?? React.Fragment;
             return (
               <span
-                className="flex items-center gap-1 text-xs"
+                className="flex min-w-0 items-center gap-1 text-xs"
                 title={selected?.label ?? t('session.workMode.fallbackTitle', 'Agent mode')}
               >
                 <Icon />
-                <span className="hidden md:inline">
+                <span className={cn('truncate', mobile && 'hidden')}>
                   {selected?.label ?? t('session.workMode.unknown', 'Unknown')}
                 </span>
               </span>

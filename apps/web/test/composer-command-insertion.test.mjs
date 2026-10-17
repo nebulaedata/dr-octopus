@@ -13,16 +13,19 @@ test('formats a goal command for empty and existing Composer drafts', () => {
   assert.equal(formatCommandInsertion('goal', true), ' /goal ');
 });
 
-test('renders the goal shortcut immediately after the workspace mention button', () => {
+test('keeps the goal action after mentions in the shared tools menu', () => {
   const source = readFileSync(new URL('../src/features/session/Composer.tsx', import.meta.url), 'utf8');
-  const mention = source.indexOf("'session.composer.mentionTooltip'");
-  const goal = source.indexOf("insertCommand('goal')");
-  const workMode = source.indexOf('<WorkModeSelect');
+  const menu = readFileSync(
+    new URL('../src/features/session/ComposerToolsMenu.tsx', import.meta.url),
+    'utf8'
+  );
+  const mention = menu.indexOf("'session.composer.mentionTooltip'");
+  const goal = menu.indexOf("'session.composer.goalTooltip'");
 
   assert.ok(mention >= 0);
   assert.ok(goal > mention);
-  assert.ok(workMode > goal);
   assert.match(source, /editorRef\.current\?\.insertCommand\('goal'\)/);
+  assert.match(source, /<ComposerToolsMenu/);
 });
 
 test('routes the enabled settings command into the existing masked Settings dialog', () => {

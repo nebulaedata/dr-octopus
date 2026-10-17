@@ -30,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/
 import { toast } from '@octopus/ui/components/toast';
 import { useState } from 'react';
 import { SessionRestartActions } from '@/features/session';
+import { ExecutorDownloadCard } from '@/features/executor-download';
 import { Logo } from '@/components/Logo';
 import { CreateWorkspaceDialog } from './CreateWorkspaceDialog';
 import { SessionListItem } from './SessionListItem';
@@ -246,6 +247,7 @@ function SidebarView(
           </div>
         </ScrollArea>
       </div>
+      <ExecutorDownloadCard />
       <div aria-label="footer" className="flex-none px-3.5 py-2 border-t">
         <Button
           variant="ghost"

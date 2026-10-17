@@ -51,6 +51,7 @@ const rootRoute = createRootRouteWithContext<RouterContext>()();
  * Shared Workbench search state that child routes inherit.
  */
 const workbenchSearchSchema = z.object({
+  executorDownload: z.boolean().optional(),
   sideright: z.enum(['file-explorer', 'properties-panel']).optional(),
   settings: settingsModalSearchSchema.optional(),
 });

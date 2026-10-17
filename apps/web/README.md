@@ -9,6 +9,8 @@ Currently, two official plugins are available:
 
 ## 环境变量
 
+执行体下载入口的版本和公开下载地址配置见 [Web 开发指南](./README.dev.md#executor-download-entry)。
+
 前端配置独立放在 `apps/web`，Vite 使用项目目录作为默认环境文件目录，不读取仓库根 `.env`。
 
 在仓库根目录执行：

@@ -28,6 +28,7 @@ import { Sidebar } from '@/features/layout/Sidebar';
 import { ConnectionStatus } from '@/features/layout/ConnectionStatus';
 import { SessionPropertiesPanel } from '@/features/layout/SessionPropertiesPanel';
 import { FileExplorerPanel } from '@/features/session';
+import { ExecutorDownloadDialog } from '@/features/executor-download';
 import type { PanelImperativeHandle } from '@octopus/ui/components/resizable';
 import type { DeleteSessionOptionsDto, SessionDto } from '@octopus/shared/protocol';
 
@@ -275,7 +276,7 @@ function WorkbenchLayout() {
 
   if (isMobile) {
     return (
-      <>
+      <ExecutorDownloadDialog>
         <div className="relative flex h-full w-full overflow-hidden">
           {openMobile && (
             <>
@@ -293,12 +294,12 @@ function WorkbenchLayout() {
           {mainContent}
         </div>
         {settingsDialog}
-      </>
+      </ExecutorDownloadDialog>
     );
   }
 
   return (
-    <>
+    <ExecutorDownloadDialog>
       <div className="flex h-full w-full">
         <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
           <ResizablePanel
@@ -352,7 +353,7 @@ function WorkbenchLayout() {
         </ResizablePanelGroup>
       </div>
       {settingsDialog}
-    </>
+    </ExecutorDownloadDialog>
   );
 }
 

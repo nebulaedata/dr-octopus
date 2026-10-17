@@ -8,12 +8,11 @@ import { useMemoizedFn } from 'ahooks';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { v4 as uuidv4 } from 'uuid';
-import { ArrowUpIcon, AtSignIcon, PaperclipIcon, SquareSlashIcon, TargetIcon } from 'lucide-react';
+import { ArrowUpIcon } from 'lucide-react';
 import { useStore } from 'zustand';
 import { MAX_WORKSPACE_REFERENCES } from '@octopus/shared/protocol';
 import { Button } from '@octopus/ui/components/button';
 import { Spinner } from '@octopus/ui/components/spinner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/tooltip';
 import { getAttachmentCapabilities, startAttachmentUpload } from '@/api/attachments';
 import { queryKeys } from '@/queries/core/query-keys';
 import { useDeriveSession } from '@/queries/session-queries';
@@ -22,7 +21,7 @@ import { useRealtimeCommand } from '@/hooks/use-realtime';
 import { useI18n } from '@/i18n/use-i18n';
 import { useWorkbenchHome } from '@/stores/workbench-home';
 import { persistAttachmentDraft, restoreAttachmentDraft, sessionStores } from '@/stores/session';
-import { Upload } from '@/components/Upload';
+import { ComposerToolbar } from '@/components/ComposerToolbar';
 import { download } from '@/utils/common';
 import { realtimeClient } from '@/lib/runtime/realtime-client';
 import { awaitRealtimeCommand } from '@/lib/runtime/await-realtime-command';
@@ -32,6 +31,7 @@ import { comboMatches, ShortcutKeyRegister, toAriaKeyShortcuts } from '@/lib/sho
 import { useShortcut, useShortcutBinding } from '@/hooks/use-shortcut';
 import { toComposerAttachment } from '@/features/session/utils/attachment-projection';
 import { ComposerAttachments } from './ComposerAttachments';
+import { ComposerToolsMenu } from './ComposerToolsMenu';
 import { ComposerSpeechInput } from './ComposerSpeechInput';
 import { useSpeechInput } from './hooks/use-speech-input';
 import { useSpeechSettings } from '@/queries/speech-queries';
@@ -57,6 +57,7 @@ import type { ComposerCommand, ComposerDraft } from '@/components/AgentComposerE
 import type { RunningMessageMode } from './RunningMessageControls';
 import type { AgentWorkMode } from './WorkModeSelect';
 import type { ComposerAttachmentViewModel, SessionStoreApi } from '@/stores/session';
+import type { ComposerToolbarItem, ComposerToolbarMode } from '@/components/ComposerToolbar';
 
 export interface ComposerHandle {
   /**
@@ -101,6 +102,7 @@ export interface ComposerProps {
   onFirstSubmit?(text: string, attachmentIds: string[], references: WorkspaceReferenceDto[]): Promise<void>;
   firstSubmitPending?: boolean;
   variant?: 'home' | 'conversation';
+  toolbarMode?: ComposerToolbarMode;
   /**
    * Overrides the editor hint for route-specific transient states.
    */
@@ -133,6 +135,7 @@ export function Composer({
   models,
   session,
   variant = 'conversation',
+  toolbarMode,
   initialDraft,
   followDefaultModel,
   modelMenuOpen,
@@ -843,6 +846,127 @@ export function Composer({
       return [];
     }
   }
+
+  const toolbarItems: ComposerToolbarItem[] = [
+    {
+      id: 'tools',
+      render: () => (
+        <ComposerToolsMenu
+          disabled={interactionDisabled}
+          onAttach={(files) => void attach(files)}
+          onInsertTrigger={(trigger) => editorRef.current?.insertTrigger(trigger)}
+          onInsertGoal={() => editorRef.current?.insertCommand('goal')}
+          onReturnFocus={() => editorRef.current?.focus()}
+        />
+      ),
+    },
+    {
+      id: 'work-mode',
+      modes: running ? ['mobile'] : undefined,
+      render: (mode) => (
+        <WorkModeSelect
+          mobile={mode === 'mobile'}
+          loaded={controlsLoaded}
+          knowledgeAvailable={knowledgeState !== undefined}
+          disabled={interactionDisabled || running}
+          planAvailable={Boolean(onFirstSubmit) || planMode.available}
+          value={workMode}
+          onValueChange={handleWorkModeChange}
+        />
+      ),
+    },
+    {
+      id: 'model',
+      modes: running ? ['mobile'] : undefined,
+      render: (mode) => (
+        <ModelThinkingSelect
+          mobile={mode === 'mobile'}
+          disabled={interactionDisabled || running}
+          models={models}
+          open={modelOpen}
+          onOpenChange={setModelOpen}
+          modelValue={modelValue}
+          followDefault={followDefaultModel}
+          onFollowDefault={onFollowDefaultModel}
+          thinkingLevels={selectThinkingLevels()}
+          thinkingValue={draftControls?.thinkingLevel ?? thinking.level}
+          onModelValueChange={handleModelChange}
+          onThinkingValueChange={handleThinkingChange}
+        />
+      ),
+    },
+    {
+      id: 'permission',
+      render: (mode) => (
+        <PermissionSelect
+          mobile={mode === 'mobile'}
+          loaded={controlsLoaded}
+          disabled={interactionDisabled}
+          value={draftControls?.permissionMode ?? permissionMode}
+          onValueChange={handlePermissionModeChange}
+        />
+      ),
+    },
+    {
+      id: 'speech',
+      area: 'trailing',
+      visible: Boolean(speechSettings.data?.enabled),
+      render: () => (
+        <ComposerSpeechInput
+          speech={speech}
+          disabled={interactionDisabled}
+          onReturnFocus={() => editorRef.current?.focus()}
+        />
+      ),
+    },
+    {
+      id: 'context-usage',
+      area: 'trailing',
+      visible: variant !== 'home',
+      render: (mode) => (
+        <ContextUsageIndicator
+          mobile={mode === 'mobile'}
+          usage={contextUsage}
+          autoCompactionEnabled={session.preferences.autoCompactionEnabled}
+        />
+      ),
+    },
+    {
+      id: 'running-controls',
+      area: 'trailing',
+      visible: running,
+      modes: ['desktop'],
+      render: () => (
+        <RunningMessageControls
+          disabled={interactionDisabled}
+          mode={runningMessageMode}
+          followUpCount={followUpCount}
+          sendDisabled={sendingDisabled || draft.trim() === '' || !attachmentsReady}
+          onModeChange={setRunningMessageMode}
+          onSend={submitSelectedMode}
+          onStop={stop}
+        />
+      ),
+    },
+    {
+      id: 'send',
+      area: 'trailing',
+      modes: running ? ['mobile'] : undefined,
+      render: () => (
+        <Button
+          className="shrink-0"
+          onClick={submitSelectedMode}
+          disabled={sendingDisabled || submitting || draft.trim() === '' || !attachmentsReady}
+          size="icon"
+          title={connecting ? t('session.composer.waitingForAgent', 'Waiting for Agent…') : sendButtonTitle}
+          aria-busy={connecting || submitting}
+          aria-label={submitting ? 'Sending message' : 'Send message'}
+        >
+          {connecting || submitting ? <Spinner /> : <ArrowUpIcon />}
+        </Button>
+      ),
+    },
+  ];
   return (
     <div
       className={
@@ -890,153 +1014,7 @@ export function Composer({
             {speech.error}
           </div>
         )}
-        <div role="toolbar" className="flex flex-nowrap items-center gap-1 p-2 md:flex-wrap">
-          <div className="hidden items-center gap-1 md:flex">
-            <Upload
-              disabled={interactionDisabled}
-              multiple
-              onChange={(event) => {
-                void attach(Array.from(event.target.files ?? []));
-              }}
-            >
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Attach files"
-                      disabled={interactionDisabled}
-                    >
-                      <PaperclipIcon />
-                    </Button>
-                  }
-                />
-                <TooltipContent>{t('session.composer.attachFiles', 'Attach files')}</TooltipContent>
-              </Tooltip>
-            </Upload>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Open commands"
-                    disabled={interactionDisabled}
-                    onClick={() => editorRef.current?.insertTrigger('/')}
-                  >
-                    <SquareSlashIcon />
-                  </Button>
-                }
-              />
-              <TooltipContent>{t('session.composer.commandsTooltip', 'Commands')}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Mention workspace file or folder"
-                    disabled={interactionDisabled}
-                    onClick={() => editorRef.current?.insertTrigger('@')}
-                  >
-                    <AtSignIcon />
-                  </Button>
-                }
-              />
-              <TooltipContent>
-                {t('session.composer.mentionTooltip', 'Mention file or folder')}
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Insert /goal command"
-                    disabled={interactionDisabled}
-                    onClick={() => editorRef.current?.insertCommand('goal')}
-                  >
-                    <TargetIcon />
-                  </Button>
-                }
-              />
-              <TooltipContent>{t('session.composer.goalTooltip', 'Goal')}</TooltipContent>
-            </Tooltip>
-          </div>
-          <div className={running ? 'contents md:hidden' : 'contents'}>
-            <WorkModeSelect
-              loaded={controlsLoaded}
-              knowledgeAvailable={knowledgeState !== undefined}
-              disabled={interactionDisabled || running}
-              planAvailable={Boolean(onFirstSubmit) || planMode.available}
-              value={workMode}
-              onValueChange={handleWorkModeChange}
-            />
-            <ModelThinkingSelect
-              disabled={interactionDisabled || running}
-              models={models}
-              open={modelOpen}
-              onOpenChange={setModelOpen}
-              modelValue={modelValue}
-              followDefault={followDefaultModel}
-              onFollowDefault={onFollowDefaultModel}
-              thinkingLevels={selectThinkingLevels()}
-              thinkingValue={draftControls?.thinkingLevel ?? thinking.level}
-              onModelValueChange={handleModelChange}
-              onThinkingValueChange={handleThinkingChange}
-            />
-          </div>
-          <PermissionSelect
-            loaded={controlsLoaded}
-            disabled={interactionDisabled}
-            value={draftControls?.permissionMode ?? permissionMode}
-            onValueChange={handlePermissionModeChange}
-          />
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {speechSettings.data?.enabled && (
-              <ComposerSpeechInput
-                speech={speech}
-                disabled={interactionDisabled}
-                onReturnFocus={() => editorRef.current?.focus()}
-              />
-            )}
-            <div className="hidden md:block">
-              <ContextUsageIndicator
-                usage={contextUsage}
-                autoCompactionEnabled={session.preferences.autoCompactionEnabled}
-              />
-            </div>
-            {running && (
-              <div className="hidden md:block">
-                <RunningMessageControls
-                  disabled={interactionDisabled}
-                  mode={runningMessageMode}
-                  followUpCount={followUpCount}
-                  sendDisabled={sendingDisabled || draft.trim() === '' || !attachmentsReady}
-                  onModeChange={setRunningMessageMode}
-                  onSend={submitSelectedMode}
-                  onStop={stop}
-                />
-              </div>
-            )}
-            <Button
-              className={running ? 'shrink-0 md:hidden' : 'shrink-0'}
-              onClick={submitSelectedMode}
-              disabled={sendingDisabled || submitting || draft.trim() === '' || !attachmentsReady}
-              size="icon"
-              title={
-                connecting ? t('session.composer.waitingForAgent', 'Waiting for Agent…') : sendButtonTitle
-              }
-              aria-busy={connecting || submitting}
-              aria-label={submitting ? 'Sending message' : 'Send message'}
-            >
-              {connecting || submitting ? <Spinner /> : <ArrowUpIcon />}
-            </Button>
-          </div>
-        </div>
+        <ComposerToolbar items={toolbarItems} mode={toolbarMode} />
       </div>
       <RenameSessionDialog
         session={session}

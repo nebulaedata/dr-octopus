@@ -284,7 +284,7 @@ test('home thinking choices follow the actual model catalog including extended l
   const picker = page.getByRole('button', { name: 'Model and thinking settings' });
   await expect(picker).toHaveAttribute('title', 'Model');
   await picker.click();
-  await page.getByRole('menuitem', { name: /^Thinking level/ }).hover();
+  await page.getByRole('menuitem', { name: /^Thinking/ }).hover();
   await expect(page.getByRole('menuitemradio', { name: 'low', exact: true })).toHaveCount(0);
   await page.getByRole('menuitemradio', { name: 'max', exact: true }).click();
   const editor = page.getByRole('textbox', { name: 'Message Dr.Octopus' });

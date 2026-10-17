@@ -59,6 +59,30 @@
       "resultCount_other": "{{count}} results"
     }
   },
+  "executorDownload": {
+    "acceptance": "Acceptance build",
+    "archive": "Download ZIP archive",
+    "browserHint": "Browser tools require the companion browser extension.",
+    "card": {
+      "description": "Connect your computer. Expand what your agent can do.",
+      "dismiss": "Hide until the page is refreshed",
+      "title": "Give AI the power to act"
+    },
+    "description": "Let your agent use local files, shell, browser, and desktop tools after you authorize access.",
+    "guide": "Installation and connection guide",
+    "installer": "Download Windows installer",
+    "mcpSettings": "Open MCP settings",
+    "setupTitle": "Connect in three steps",
+    "steps": {
+      "authorize": "Create an authorization in Executor and copy the client configuration.",
+      "connect": "Add the configuration to your agent’s MCP settings.",
+      "install": "Install and start Executor."
+    },
+    "title": "Download Executor",
+    "unavailable": "Downloads are not available yet",
+    "unavailableHint": "Please check back when a download has been published.",
+    "unsignedNotice": "This unsigned acceptance build has not completed public release validation."
+  },
   "home": {
     "configureModels": "Configure model services",
     "loadingWorkspaces": "Loading workspaces…",
@@ -816,6 +840,7 @@
       "writeContent": "Write content"
     },
     "composer": {
+      "addTools": "Add to message",
       "attachFiles": "Attach files",
       "attachments": {
         "statusFailed": "Failed",
@@ -1257,7 +1282,7 @@
       "followDefault": "Follow default model",
       "model": "Model",
       "notSelected": "Not selected",
-      "thinkingLevel": "Thinking level"
+      "thinkingLevel": "Thinking"
     },
     "newSession": "New session",
     "notFound": "Session not found",

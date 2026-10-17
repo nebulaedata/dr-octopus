@@ -61,6 +61,7 @@ function getPermissionItems(t: Translate) {
 }
 
 export interface PermissionSelectProps {
+  mobile?: boolean;
   /**
    * Keeps the trigger usable while its Agent options are not loaded yet.
    */
@@ -77,6 +78,7 @@ export interface PermissionSelectProps {
  * Highlights silent allow as the high-attention choice without claiming runtime enforcement.
  */
 export function PermissionSelect({
+  mobile = false,
   loaded = true,
   disabled = false,
   value,
@@ -97,23 +99,28 @@ export function PermissionSelect({
     >
       <SelectTrigger
         size="sm"
-        className="w-8 shrink-0 justify-center gap-0 border-0 px-0 hover:bg-muted max-md:data-[size=sm]:h-8 md:w-fit md:justify-between md:gap-1.5 md:pl-2.5 md:pr-2 [&>svg]:hidden md:[&>svg]:block"
+        className={cn(
+          'min-w-0 border-0 hover:bg-muted data-[size=sm]:h-8',
+          mobile
+            ? 'w-8 shrink-0 justify-center gap-0 px-0 [&>svg]:hidden'
+            : 'w-fit shrink justify-between gap-1.5 pl-2.5 pr-2'
+        )}
         aria-label="Permission approval mode"
       >
-        <SelectValue className="justify-center md:justify-start">
+        <SelectValue className={cn('min-w-0', mobile ? 'justify-center' : 'justify-start')}>
           {(selectedValue: PermissionMode) => {
             const selected = permissionItems.find((item) => item.value === selectedValue);
             const Icon = selected?.icon ?? React.Fragment;
             return (
               <span
                 className={cn(
-                  'flex items-center gap-1',
+                  'flex min-w-0 items-center gap-1',
                   selectedValue === 'full' && 'text-yellow-600 dark:text-yellow-400'
                 )}
                 title={selected?.label ?? t('session.permission.fallback', 'Permission')}
               >
                 <Icon />
-                <span className="hidden text-xs md:inline">
+                <span className={cn('truncate text-xs', mobile && 'hidden')}>
                   {selected?.label ?? t('session.permission.fallback', 'Permission')}
                 </span>
               </span>

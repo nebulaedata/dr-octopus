@@ -21,10 +21,12 @@ import {
   DropdownMenuTrigger,
 } from '@octopus/ui/components/dropdown-menu';
 import { useI18n } from '@/i18n/use-i18n';
+import { cn } from '@octopus/ui/lib/utils';
 import { modelProvidersQueryOptions } from '@/queries/settings-queries';
 import type { ModelDto, ThinkingLevel } from '@octopus/shared/protocol';
 
 export interface ModelThinkingSelectProps {
+  mobile?: boolean;
   disabled?: boolean;
   models: ModelDto[];
   open?: boolean;
@@ -54,6 +56,7 @@ export interface ModelThinkingSelectProps {
  * Renders one toolbar trigger with model and thinking-level submenus.
  */
 export function ModelThinkingSelect({
+  mobile = false,
   disabled = false,
   models,
   open,
@@ -113,21 +116,21 @@ export function ModelThinkingSelect({
         render={
           <Button
             variant="ghost"
-            size="sm"
-            className="flex h-8 w-8 shrink-0 gap-0 px-0 md:h-7 md:w-auto md:max-w-48 md:gap-1.5 md:px-2.5"
+            size={mobile ? 'icon' : 'sm'}
+            className={cn('h-8 min-w-0', mobile ? 'shrink-0' : 'max-w-48 shrink gap-1.5')}
             title={selectedModel?.label ?? t('session.modelThinking.chooseModel', 'Choose model')}
             aria-label="Model and thinking settings"
           />
         }
       >
-        <BotIcon data-icon="inline-start" className="size-4 md:size-3.5" />
+        <BotIcon data-icon="inline-start" />
         <span
-          className="hidden max-w-32 truncate text-xs md:inline"
+          className={cn('max-w-32 truncate text-xs', mobile && 'hidden')}
           title={selectedModel?.label ?? t('session.modelThinking.chooseModel', 'Choose model')}
         >
           {selectedModel?.label ?? t('session.modelThinking.chooseModel', 'Choose model')}
         </span>
-        <ChevronDownIcon data-icon="inline-end" className="hidden md:block" />
+        {!mobile && <ChevronDownIcon data-icon="inline-end" />}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" side="top" className="w-60">
         <DropdownMenuGroup>
@@ -183,7 +186,7 @@ export function ModelThinkingSelect({
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <BrainCircuitIcon data-icon="inline-start" />
-              <span>{t('session.modelThinking.thinkingLevel', 'Thinking level')}</span>
+              <span>{t('session.modelThinking.thinkingLevel', 'Thinking')}</span>
               <span className="ml-auto text-xs text-muted-foreground">{thinkingValue}</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="min-w-40">

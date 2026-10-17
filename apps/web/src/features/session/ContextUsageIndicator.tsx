@@ -18,6 +18,7 @@ import { useI18n } from '@/i18n/use-i18n';
 import type { ContextUsageDto } from '@octopus/shared/protocol';
 
 export interface ContextUsageIndicatorProps {
+  mobile?: boolean;
   usage?: ContextUsageDto;
   autoCompactionEnabled: boolean;
 }
@@ -35,7 +36,11 @@ function formatTokens(tokens: number): string {
 /**
  * Shows an unknown state immediately after compaction or before Pi has reported usage.
  */
-export function ContextUsageIndicator({ usage, autoCompactionEnabled }: ContextUsageIndicatorProps) {
+export function ContextUsageIndicator({
+  usage,
+  autoCompactionEnabled,
+  mobile = false,
+}: ContextUsageIndicatorProps) {
   const { t } = useI18n();
   const percent = usage?.percent ?? null;
   const label = percent === null ? '--%' : `${String(Math.round(percent))}%`;
@@ -44,12 +49,9 @@ export function ContextUsageIndicator({ usage, autoCompactionEnabled }: ContextU
     <Popover>
       <PopoverTrigger
         render={
-          <Button
-            variant="ghost"
-            aria-label={`Context usage ${label}`}
-          >
+          <Button variant="ghost" size={mobile ? 'icon' : 'default'} aria-label={`Context usage ${label}`}>
             <GaugeIcon data-icon="inline-start" />
-            <span className="text-xs">{label}</span>
+            {!mobile && <span className="text-xs">{label}</span>}
           </Button>
         }
       />
