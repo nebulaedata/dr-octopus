@@ -1,6 +1,6 @@
 # Docker 镜像发布配置
 
-本目录另有 [Executor Windows 未签名交付工作流](./executor-windows.yml)，构建 Windows x64 EXE/ZIP 并上传 Actions 附件。触发、下载、有效期和验收边界统一见 [Executor 交付指南](../../docs/architecture/executor-delivery.md#github-actions-未签名交付)；它不使用下文的 Docker Hub 凭据，也不创建 GitHub Release。
+本目录另有 [Executor Windows 未签名交付工作流](./executor-windows.yml)，构建 Windows x64 EXE/ZIP 并上传 Actions 附件；发布 Release 后还会自动附加已验收的 Executor 资源。触发、下载、有效期和验收边界统一见 [Executor 交付指南](../../docs/architecture/executor-delivery.md#github-actions-未签名交付)；它不使用下文的 Docker Hub 凭据，也不创建 GitHub Release。
 
 本目录的 [docker-release.yml](./docker-release.yml) 负责在 GitHub Actions 上构建、验证并发布 Docker Hub 成品镜像。需要手动添加的 Actions Secrets 只有两个：`DOCKERHUB_USERNAME` 和 `DOCKERHUB_TOKEN`。
 
