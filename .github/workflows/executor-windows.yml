@@ -1,11 +1,18 @@
 # /**
 #  * @author Codex
-#  * @description Builds and verifies unsigned Windows x64 Executor acceptance artifacts without installing the product or claiming interactive/clean-machine acceptance.
+#  * @description Builds unsigned Windows Executor artifacts and attaches verified exact-source assets to published GitHub Releases.
 #  */
 name: Executor Windows unsigned delivery
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing published Release tag; leave empty for Actions artifacts only'
+        required: false
+        type: string
   pull_request:
     paths:
       - 'apps/executor/**'
@@ -24,14 +31,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: executor-windows-${{ github.ref }}
-  cancel-in-progress: true
+  group: executor-windows-${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   acceptance:
     runs-on: windows-2025
     timeout-minutes: 90
+    outputs:
+      artifact-id: ${{ steps.delivery.outputs.artifact-id }}
+      source-commit: ${{ steps.source.outputs.commit }}
     env:
+      EXECUTOR_RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag || '' }}
       BROWSER_IDENTITY_PROFILE: sideload
       EXECUTOR_INSTALL_ACCEPTANCE: '0'
       EXECUTOR_CI_LOG_DIRECTORY: apps/executor/build/ci-logs
@@ -41,13 +52,26 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24.20.0'
       - name: Prepare canonical temporary and diagnostic directories
+        id: source
         run: |
           New-Item -ItemType Directory -Path $env:EXECUTOR_CI_LOG_DIRECTORY | Out-Null
+          $taskSourceCommit = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $taskSourceRef = $env:GITHUB_REF
+          if ($env:EXECUTOR_RELEASE_TAG) {
+            if ($env:EXECUTOR_RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+(-[\w.-]+)?$') { throw 'Expected an explicit version Release tag.' }
+            $taskSourceRef = "refs/tags/$env:EXECUTOR_RELEASE_TAG"
+            $taskTaggedCommit = git rev-parse "$taskSourceRef^{commit}"
+            if ($LASTEXITCODE -ne 0 -or $taskTaggedCommit -cne $taskSourceCommit) { throw 'Release checkout differs from its tag.' }
+          }
+          @("EXECUTOR_SOURCE_COMMIT=$taskSourceCommit", "EXECUTOR_SOURCE_REF=$taskSourceRef") | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "commit=$taskSourceCommit" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           # Hosted Windows TEMP can contain an 8.3 alias that the native path boundary rejects.
           $taskTemporary = Join-Path $env:RUNNER_TEMP "executor-temp-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
           New-Item -ItemType Directory -Path $taskTemporary | Out-Null
@@ -178,8 +202,8 @@ jobs:
             signed = $false
             productBuildId = $taskMetadata.productBuildId
             repository = $env:GITHUB_REPOSITORY
-            sourceCommit = $env:GITHUB_SHA
-            sourceRef = $env:GITHUB_REF
+            sourceCommit = $env:EXECUTOR_SOURCE_COMMIT
+            sourceRef = $env:EXECUTOR_SOURCE_REF
             event = $env:GITHUB_EVENT_NAME
             runId = $env:GITHUB_RUN_ID
             runAttempt = $env:GITHUB_RUN_ATTEMPT
@@ -222,7 +246,7 @@ jobs:
           EXECUTOR_DELIVERY_DIRECTORY: ${{ steps.stage.outputs.directory }}
           EXECUTOR_ARTIFACT_URL: ${{ steps.delivery.outputs.artifact-url }}
         run: |
-          $taskSummary = @('# Executor Windows unsigned delivery', '', "Result: $env:EXECUTOR_JOB_STATUS", '', "Source commit: $env:GITHUB_SHA", '')
+          $taskSummary = @('# Executor Windows unsigned delivery', '', "Result: $env:EXECUTOR_JOB_STATUS", '', "Source commit: $env:EXECUTOR_SOURCE_COMMIT", '')
           if ($env:EXECUTOR_ARTIFACT_URL) {
             $taskSummary += "[Download verified EXE, ZIP, acceptance kit and checksums]($env:EXECUTOR_ARTIFACT_URL)"
           } else {
@@ -235,5 +259,37 @@ jobs:
               $taskSummary += "| $($taskFile.path) | $($taskFile.sha256) |"
             }
           }
-          $taskSummary += @('', 'Unsigned acceptance build. G4/G5/G6, clean-machine install/uninstall, real desktop hardware and signing remain pending.', '', 'Downloads are retained for 14 days; diagnostics for 7 days. This workflow does not publish a GitHub Release.')
+          $taskSummary += @('', 'Unsigned acceptance build. G4/G5/G6, clean-machine install/uninstall, real desktop hardware and signing remain pending.', '', 'Downloads are retained for 14 days; diagnostics for 7 days. Published Release tags additionally receive verified Executor assets from a separate publishing job.')
           $taskSummary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+  publish-release:
+    name: Publish verified Executor Release assets
+    needs: acceptance
+    if: github.event_name == 'release' || inputs.release_tag != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    env:
+      EXECUTOR_RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+      EXECUTOR_RELEASE_SOURCE_COMMIT: ${{ needs.acceptance.outputs.source-commit }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.20.0'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ needs.acceptance.outputs.artifact-id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/executor-release-assets
+      - name: Verify provenance and upload exact Release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node apps/executor/scripts/package/publish-release.mjs --directory "$RUNNER_TEMP/executor-release-assets" --repository "$GITHUB_REPOSITORY" --tag "$EXECUTOR_RELEASE_TAG" --source-commit "$EXECUTOR_RELEASE_SOURCE_COMMIT"
