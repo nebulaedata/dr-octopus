@@ -5,4 +5,6 @@
 - 来源：[LICENSE.md](https://github.com/cfworker/cfworker/blob/5409fdc2bd144f68e8b28c61c71fcb16600000a6/LICENSE.md)
 - SHA-256：`376944252ab78ca6b41aee44ddea8894927ee67891e77e61eb9d59af63e35094`
 
+该原文通过根目录 .gitattributes 固定为 LF，避免 Windows 检出转换换行后破坏字节摘要。
+
 打包只复制并校验本地固定原文，不在线补齐。其他声明从本地已安装的生产依赖复制。

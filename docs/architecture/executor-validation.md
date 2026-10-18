@@ -630,3 +630,11 @@ Computer 返回值已从 unknown 改为明确结果类型，MCP 图像输出取�
 原始材料位于 apps/executor/build/actions-delivery-20261017/：rehearsal.log、logs/package.log、logs/package-ci.tap、三个产品核验报告、delivery-check.json、existing-output-refusals.json、两个 Summary 样本及 actionlint 工具来源记录。rehearsal.json 明确 githubUpload=not-executed；本地 BUILD-INFO 的 event=local_rehearsal，成功 Summary 的占位链接只用于分支格式检查，没有创建远端附件。
 
 本轮未提交/推送源码，也未触发远端 Actions 或上传 GitHub 附件。工作流及它依赖的重构源码、vendor 配置和许可证需要一起进入仓库；远端首次执行的通过/失败证据另行补记。独立电脑、硬件、安装卸载和正式签名门禁仍待实际验收，不将本机演练提升为远端 CI 或发行通过。
+
+## 2026-10-18：远端首次构建的许可证换行修正
+
+首次远端运行 [39128217356](https://github.com/nebulaedata/dr-octopus/actions/runs/39128217356) 使用源码 35afc0bd9b24da84da38b6ef6652ac6c6a2d8c7b，在 assemble:packaging 阶段因 Pinned cfworker notice digest mismatch 失败，尚未执行构建、测试和打包。原始日志保留于该运行及对应诊断附件，本地副本按验证材料批次目录保存。
+
+根因是 Windows Git 自动换行转换：仓库及固定上游原文均为 1,070 字节、LF，SHA-256 为 376944252ab78ca6b41aee44ddea8894927ee67891e77e61eb9d59af63e35094；Windows 工作副本转换为 CRLF 后为 1,091 字节，摘要变为 1eda211d873cf624198d343951c383c7ec717cc311432e3e8e5f5f707275f211。根 .gitattributes 为该固定原文添加精确路径 eol=lf，保留既有原文字节摘要校验。
+
+本地以 core.autocrlf=true、core.eol=crlf 执行独立 checkout-index，检出仍为 1,070 字节且摘要匹配；pnpm --filter @octopus/executor assemble:packaging 复验通过。仅调整检出属性和说明，没有改变应用源码、依赖或许可证原文；未重跑无关的应用测试、lint 和 typecheck。修复后的完整远端构建、安装和下载功能仍待验证。

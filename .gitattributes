@@ -19,3 +19,6 @@
 *.woff binary
 *.woff2 binary
 *.pdf binary
+
+# Pinned third-party notice hashes require the exact upstream LF bytes.
+apps/executor/vendor/notices/cfworker-json-schema-4.1.1-LICENSE text eol=lf
