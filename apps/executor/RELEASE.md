@@ -19,6 +19,8 @@
 
 **当前没有 `package:release` 脚本。本文的正式配置是待接入方案，不表示已生成签名正式包。** 先完成第 4 节的工程接入，再进行第 5–7 节的正式构建、验证与分发。
 
+已实现的 GitHub Release 自动化仅分发仍标记 unsigned 的验收包：现有 Release 的 published 事件触发构建与完整 CI，成功后附加 EXE/ZIP、构建来源和摘要。操作、权限、失败恢复及 Web 默认下载路径统一见[交付指南](../../docs/architecture/executor-delivery.md#github-release-assets-与-web-下载地址)。这条流程不代替本文的签名工程接入或正式 Windows 发行门禁。
+
 ## 2. 选择签名身份和服务
 
 | 发布主体/需求                             | 路线                                                   | 先确认                                                              |

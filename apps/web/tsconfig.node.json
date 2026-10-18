@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "i18next.config.ts"]
+  "include": ["vite.config.ts", "i18next.config.ts", "scripts/**/*.ts"]
 }

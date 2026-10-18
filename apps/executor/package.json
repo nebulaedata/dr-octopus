@@ -7,6 +7,7 @@
   "scripts": {
     "assemble:packaging": "node scripts/package/assemble-packaging.mjs",
     "package:acceptance": "node scripts/package/package.mjs",
+    "publish:release": "node scripts/package/publish-release.mjs",
     "prepare:acceptance-kit": "node scripts/package/prepare-acceptance-kit.mjs",
     "test:packaging": "node --import tsx --test --test-concurrency=1 test/packaging/*.test.mjs",
     "assemble:computer": "node scripts/resources/assemble-computer.mjs",

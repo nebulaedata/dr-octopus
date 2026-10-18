@@ -5,6 +5,8 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { executorReleaseDefines } from '../scripts/executor-release-config.ts';
 import { readExecutorRelease } from '../src/features/executor-download/utils/executor-release.ts';
 
 test('missing release links remain unavailable without inheriting the Web version', () => {
@@ -56,4 +58,53 @@ test('each download format is independently available', () => {
   });
   assert.equal(release.installerUrl, undefined);
   assert.equal(release.archiveUrl, 'http://localhost:8080/executor.zip');
+});
+
+/**
+ * Applies the public Vite define contract before passing configuration to the runtime reader.
+ */
+function builtEnvironment(defines) {
+  return Object.fromEntries(
+    Object.entries(defines).map(([key, value]) => [key.replace('import.meta.env.', ''), JSON.parse(value)])
+  );
+}
+
+test('default downloads use the current repository Release with the independent Executor version', () => {
+  const release = JSON.parse(readFileSync(new URL('../../../release.config.json', import.meta.url), 'utf8'));
+  const executor = JSON.parse(readFileSync(new URL('../../executor/package.json', import.meta.url), 'utf8'));
+  const environment = builtEnvironment(
+    executorReleaseDefines(release.manifest.version, executor.version, {})
+  );
+  const configured = readExecutorRelease(environment);
+  assert.equal(configured.version, executor.version);
+  for (const [key, extension] of [
+    ['installerUrl', 'exe'],
+    ['archiveUrl', 'zip'],
+  ]) {
+    const url = new URL(configured[key]);
+    assert.equal(url.origin, 'https://github.com');
+    assert.equal(
+      url.pathname,
+      `/nebulaedata/dr-octopus/releases/download/v${release.manifest.version}/Dr.Octopus-Executor-${executor.version}-win-x64-unsigned.${extension}`
+    );
+  }
+});
+
+test('release defaults follow new tags and retain explicit mirrors or disabled formats', () => {
+  const environment = builtEnvironment(
+    executorReleaseDefines('3.2.1', '0.7.2', {
+      VITE_EXECUTOR_WINDOWS_INSTALLER_URL: '/downloads/mirror.exe',
+      VITE_EXECUTOR_WINDOWS_ZIP_URL: '',
+    })
+  );
+  assert.deepEqual(readExecutorRelease(environment), {
+    version: '0.7.2',
+    installerUrl: '/downloads/mirror.exe',
+    archiveUrl: undefined,
+  });
+  const next = builtEnvironment(executorReleaseDefines('3.2.2', '0.7.2', {}));
+  assert.match(
+    readExecutorRelease(next).archiveUrl,
+    /releases\/download\/v3\.2\.2\/Dr\.Octopus-Executor-0\.7\.2/
+  );
 });

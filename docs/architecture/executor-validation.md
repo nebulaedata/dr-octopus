@@ -666,3 +666,9 @@ Executor 新构建、lint 和 typecheck 通过。首次本地全量复验为 239
 同轮本地使用从 YAML 提取的原始 package、verify 和六项有限测试步骤完成独立演练。新包目录标识 0.0.1-unsigned-41a78420-51e2-464a-aaaa-97c0149861b5，productBuildId 为 9cefe4f3fb0c55ddde787721407a4e4729645876adcd96350b29e081a371ce59；EXE/ZIP 生成、随包离线预检、两个产品树清单及 6/6 非交互验收通过。该本地产物与远端交付产物分别按身份记录，不混用摘要或提升为相同构建。
 
 本轮仅完成未签名 Actions 交付附件，没有创建 GitHub Release，没有在日常环境安装、启动产品 GUI、修改 Host 注册或测试网站下载入口。网站下载、真实安装/升级/卸载、G4/G5/G6、独立电脑硬件和签名发行继续待验，不因 CI 成功改变这些状态。
+
+## 2026-10-18：Release Assets 自动发布与 Web 下载默认值接入
+
+为后续 v0.0.13 接入 release:published 触发及独立发布任务。构建任务仍为 contents:read，只在发布任务授予 contents:write；通过 artifact-id 接收当前验收附件，复核全部摘要、产品身份、验收结论及实际 Tag 提交后附加 EXE/ZIP 和版本化元数据。支持同字节保留、部分上传失败后从原任务继续，拒绝重名不同摘要覆盖。Web 从仓库 Release 与独立 Executor 产品版本生成同 Tag 的下载路径，Turbo 追踪版本清单与公开配置覆盖，避免复用旧链接。
+
+本地 Web build、tsc -b、lint/i18n 及 284 项测试通过；Executor lint/typecheck 和 112 项根级测试通过，发布与工程入口聚焦检查 19 项通过。新增发布用例使用独立文件及 GitHub 协议替身，覆盖篡改字节、遗漏清单、路径穿越、非 Tag 来源、未完成验收、草稿/移动 Tag、资产冲突及部分失败恢复，没有修改真实 Release。actionlint v1.7.12 和工作流 run 块语法检查通过。新版本实际 npm/GitHub 发布、远端构建上传及浏览器下载入口尚待执行；未将本地替身验证提升为公网交付证据。

@@ -9,6 +9,7 @@ import viteFastify from '@fastify/vite/plugin';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
+import { executorReleaseDefines } from './scripts/executor-release-config.ts';
 
 // https://vite.dev/config/
 /**
@@ -18,6 +19,10 @@ export default defineConfig(({ mode }) => {
   const releaseConfig = JSON.parse(
     readFileSync(new URL('../../release.config.json', import.meta.url), 'utf8')
   ) as { manifest: { version: string } };
+  const executorPackage = JSON.parse(
+    readFileSync(new URL('../executor/package.json', import.meta.url), 'utf8')
+  ) as { version: string };
+  const executorEnvironment = loadEnv(mode, fileURLToPath(new URL('./', import.meta.url)), 'VITE_EXECUTOR_');
   const env = loadEnv(mode, fileURLToPath(new URL('../../', import.meta.url)), 'SERVER_');
   const host = env.SERVER_HOST?.trim() || '127.0.0.1';
   let proxyHost = host;
@@ -31,6 +36,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __OCTOPUS_RELEASE_VERSION__: JSON.stringify(releaseConfig.manifest.version),
+      ...executorReleaseDefines(releaseConfig.manifest.version, executorPackage.version, executorEnvironment),
     },
     build: {
       rolldownOptions: {

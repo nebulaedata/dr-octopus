@@ -75,6 +75,27 @@
     },
     "clean": {
       "cache": false
+    },
+    "@octopus/web#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!**/*.md",
+        "$TURBO_ROOT$/release.config.json",
+        "$TURBO_ROOT$/apps/executor/package.json",
+        ".env",
+        ".env.*"
+      ],
+      "env": ["VITE_EXECUTOR_*"],
+      "outputs": ["dist/**"]
+    },
+    "@octopus/web#test": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/release.config.json",
+        "$TURBO_ROOT$/apps/executor/package.json"
+      ]
     }
   }
 }

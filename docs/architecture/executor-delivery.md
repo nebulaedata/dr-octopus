@@ -141,7 +141,7 @@ pnpm --filter @octopus/executor prepare:acceptance-kit 'D:/ExecutorAcceptance/se
 
 ### GitHub Actions 未签名交付
 
-`.github/workflows/executor-windows.yml` 的名称为 **Executor Windows unsigned delivery**，只交付 Windows x64 未签名验收包。提交并推送本次所需源码、vendor 固定配置、许可证及工作流后，相关路径的 PR 会触发检查；手动运行需工作流先进入默认分支，再在仓库 Actions 中选择该工作流、点击 Run workflow 并选择目标分支。流程只需要 GitHub 内置的 Actions 上传能力和 contents:read，不配置签名证书、发布令牌或应用 Bearer，不创建 GitHub Release。
+`.github/workflows/executor-windows.yml` 的名称为 **Executor Windows unsigned delivery**，只交付 Windows x64 未签名验收包。提交并推送本次所需源码、vendor 固定配置、许可证及工作流后，相关路径的 PR 会触发检查；手动运行需工作流先进入默认分支，再在仓库 Actions 中选择该工作流、点击 Run workflow 并选择目标分支。PR 和不填写 release_tag 的手动运行只生成 Actions 附件，构建任务保持 contents:read。发布已有 GitHub Release 时，release:published 自动触发同一工作流并检出该 Tag；验收通过后，由独立的 publish-release 任务以 contents:write 将当前运行的已验证资源附加到该 Release。流水线使用 GitHub 内置令牌，不新增个人发布令牌或应用 Bearer，也不创建 Release。
 
 执行顺序为：冻结依赖并显式准备 Electron/esbuild → 先构建 shared 的公开导出 → 准备固定头文件、Node、搜索、Computer 和打包工具 → 按扩展、Executor 顺序构建并检查 → 在本次运行独有目录生成 EXE/ZIP → 使用随包工具核验最终产品树与实际 ZIP 解压目录 → 从该 ZIP 运行六项有限包级回归 → 组装并复核交付物 → 上传。各步骤失败即停止后续交付，不选择本机已有 release 中的“最新包”，不自动重放构建或放宽期限。
 
@@ -157,6 +157,18 @@ pnpm --filter @octopus/executor prepare:acceptance-kit 'D:/ExecutorAcceptance/se
 交付物保留 14 天；独立的 `executor-windows-diagnostics-<run_id>-<run_attempt>` 保留 7 天，成功或失败均尝试上传构建/测试日志及已有报告。过期后需重新运行生成新产物，不把 Actions 附件当作永久发布源。完整 win-unpacked、资源下载缓存和本机测试私有配置不作为附件上传；产品 ZIP 内保留完整资源和隐藏配置文件。
 
 Summary 展示上传结果、下载链接、源提交、版本、productBuildId 和 EXE/ZIP 摘要。它只说明本次 Actions 的自动检查结果；正式签名、独立电脑、真实硬件和安装卸载仍按后文门禁及 RELEASE.md 验证。首次远端执行或重跑的实际结果记入 executor-validation.md，不以本地脚本演练代替 GitHub runner 证据。
+
+### GitHub Release Assets 与 Web 下载地址
+
+正常发版沿用仓库根 pnpm release:publish：先成功发布 npm，再用个人发布身份创建对应 Tag 的 GitHub Release。Release 发布事件同时触发 Docker 与 Executor 流水线。新 Tag 必须包含本工作流及其工程脚本；不将当前 main 的产物附加到旧源码 Tag。仓库 Release 版本与 Executor 产品版本独立，例如 v0.0.13 可以分发 Executor 0.0.1。
+
+发布任务只下载 acceptance 任务输出的单一 artifact-id，先验证完整 SHA256SUMS 清单、原始文件、产品身份、六项验收结论及实际检出提交，再查询目标 Release 的当前 Tag 提交；全部一致才允许上传。只给该任务 contents:write，PR 不运行发布任务。首次上传失败不自动重放；修复后使用原运行的 Re-run failed jobs，复用已验收的相同附件。与既有资产名称、大小和 SHA-256 一致时保留；冲突或未知摘要时失败，不使用 clobber 删除或替换已发布文件。
+
+Release Assets 包含 Dr.Octopus-Executor-<executor-version>-win-x64-unsigned.exe、同名 ZIP，以及同前缀的 -BUILD-INFO.json、-acceptance-artifacts.json、-SHA256SUMS.txt。Release 专用摘要覆盖这四个实际公开文件；Actions 附件仍保留完整验收工具、报告及原始交付摘要。文件名中的 unsigned 和元数据 signed=false 保留，附加资产不意味着 Windows 签名发行或 G4/G5/G6 已通过。
+
+需要补跑已发布的新版本时，在 Executor 工作流的 Run workflow 中填写 release_tag（例如 v0.0.13）。该输入会检出精确 Tag，并在验收后尝试上传到已有非草稿 Release；留空则只交付 Actions 附件。重建产物若与已上传字节不同会拒绝覆盖；应优先重跑原失败发布任务，需要更改源码时发布新版本。
+
+Web 的 Vite 构建从 release.config.json 读取 Release Tag，从 apps/executor/package.json 读取独立产品版本，默认生成 https://github.com/nebulaedata/dr-octopus/releases/download/v<release-version>/Dr.Octopus-Executor-<executor-version>-win-x64-unsigned.exe 及 .zip。Turbo 构建缓存显式追踪这两份清单和 VITE_EXECUTOR_*，防止升版复用旧链接。可以通过 apps/web/.env.example 中的公开构建变量覆盖镜像地址；变量不设置时使用自动默认值，显式空字符串禁用对应格式。下载入口仍保留未签名验收说明。
 
 runtime-manifest.json 在 builder 完成 PE/Fuse 修改后生成，覆盖最终 ZIP 树、实际组件版本、入口、Schema 投影及许可；acceptance-artifacts.json 锚定其摘要和 productBuildId。生产 JS、原生组件、私有资源与两份扩展必须属于同一产物，旧包不会随源码更新。
 
