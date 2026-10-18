@@ -63,7 +63,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           pnpm install --frozen-lockfile --ignore-scripts 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/install.log"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          pnpm rebuild electron esbuild 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/rebuild.log"
+          pnpm rebuild esbuild 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/rebuild.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Electron 44 exposes an explicit installer instead of a postinstall lifecycle script.
+          pnpm --filter @octopus/executor exec install-electron 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/electron-install.log"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm --filter @octopus/executor exec node -e "const fs = require('node:fs'); const path = require('node:path'); const binary = require('electron'); const expected = require('electron/package.json').version; const actual = fs.readFileSync(path.join(path.dirname(binary), 'version'), 'utf8').trim().replace(/^v/, ''); if (!fs.statSync(binary).isFile() || actual !== expected) throw new Error('Electron binary does not match the installed package.'); console.log('Prepared Electron ' + actual);" 2>&1 | Tee-Object "$env:EXECUTOR_CI_LOG_DIRECTORY/electron-verify.log"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build shared exports before engineering resource commands
         run: |
