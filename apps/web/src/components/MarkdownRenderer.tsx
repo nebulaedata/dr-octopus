@@ -14,6 +14,7 @@ import remarkMath from 'remark-math';
 import { Skeleton } from '@octopus/ui/components/skeleton';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
+import { ImagePreviewDialog } from '@/components/ImagePreviewDialog';
 import type { ComponentProps } from 'react';
 
 /**
@@ -34,8 +35,14 @@ function MermaidDiagram({ source }: { source: string }) {
           setSvg(DOMPurify.sanitize(result.svg, { USE_PROFILES: { svg: true, svgFilters: true } }));
         }
       })
-      .catch((reason: unknown) =>
-        active && setError(reason instanceof Error ? reason.message : t('components.markdownRenderer.mermaidFailed', 'Mermaid rendering failed.'))
+      .catch(
+        (reason: unknown) =>
+          active &&
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : t('components.markdownRenderer.mermaidFailed', 'Mermaid rendering failed.')
+          )
       );
     return () => {
       active = false;
@@ -45,12 +52,7 @@ function MermaidDiagram({ source }: { source: string }) {
     return <pre>{`${source}\n\n${error}`}</pre>;
   }
   if (svg === undefined) {
-    return (
-      <Skeleton
-        className="h-28 rounded-lg"
-        aria-label="Rendering diagram"
-      />
-    );
+    return <Skeleton className="h-28 rounded-lg" aria-label="Rendering diagram" />;
   }
   return <div className="overflow-x-auto" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
@@ -70,6 +72,50 @@ function MarkdownCode({ className, children, ...props }: ComponentProps<'code'>)
 }
 
 /**
+ * Opens Markdown images in the shared viewer while retaining inline image layout and link semantics.
+ */
+function MarkdownImage({ src, alt, className, title: imageTitle, width, height }: ComponentProps<'img'>) {
+  const [open, setOpen] = useState(false);
+  const { t } = useI18n();
+  const title = alt || t('components.imageThumbnails.previewTitle', 'Image preview');
+  const source = typeof src === 'string' ? src : undefined;
+  return (
+    <>
+      <img
+        src={src}
+        alt={alt ?? ''}
+        title={imageTitle}
+        width={width}
+        height={height}
+        loading="lazy"
+        role={source ? 'button' : undefined}
+        tabIndex={source ? 0 : undefined}
+        aria-label={source ? `Preview ${title}` : undefined}
+        className={cn(
+          className,
+          source && 'cursor-zoom-in rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring'
+        )}
+        onClick={(event) => {
+          if (source) {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(true);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (source && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(true);
+          }
+        }}
+      />
+      {source && <ImagePreviewDialog open={open} onOpenChange={setOpen} src={source} title={title} />}
+    </>
+  );
+}
+
+/**
  * 使用统一的 remark/rehype 插件与安全策略渲染 Markdown 内容。
  */
 export function MarkdownRenderer({
@@ -85,7 +131,7 @@ export function MarkdownRenderer({
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
         rehypePlugins={[rehypeSanitize, rehypeKatex]}
-        components={{ code: MarkdownCode }}
+        components={{ code: MarkdownCode, img: MarkdownImage }}
         {...props}
       >
         {children}

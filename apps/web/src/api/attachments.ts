@@ -3,9 +3,10 @@
  * @description Implements tus browser upload/resume and attachment projection control-plane requests.
  */
 
-import { Upload } from 'tus-js-client';
+import { DetailedError, Upload } from 'tus-js-client';
 import { v4 as uuidv4 } from 'uuid';
-import { request } from '../utils/request';
+import { ApiRequestError, request } from '../utils/request';
+import { AttachmentFailureSchema } from '@octopus/shared/protocol/attachments';
 import type { AttachmentResourceDto } from '@octopus/shared/protocol/attachments';
 import type { OctopusCapabilities } from '@octopus/shared/protocol';
 
@@ -33,6 +34,32 @@ export interface AttachmentUploadTask {
    * Cancels the active request and asks tus to terminate its server resource.
    */
   abort(): Promise<void>;
+}
+
+/**
+ * Projects tus HTTP failures into the same safe Server message and retry contract as JSON API calls.
+ */
+export function projectAttachmentUploadError(error: Error): Error {
+  if (!(error instanceof DetailedError) || error.originalResponse === null) {
+    return error;
+  }
+  try {
+    const payload: unknown = JSON.parse(error.originalResponse.getBody());
+    if (typeof payload !== 'object' || payload === null || !('error' in payload)) {
+      return error;
+    }
+    const failure = AttachmentFailureSchema.safeParse(payload.error);
+    if (!failure.success) {
+      return error;
+    }
+    return new ApiRequestError(failure.data.code, failure.data.message, {
+      statusCode: error.originalResponse.getStatus(),
+      retryable: failure.data.retryable,
+      cause: error,
+    });
+  } catch {
+    return error;
+  }
 }
 
 /**
@@ -82,7 +109,7 @@ export function startAttachmentUpload(
         callbacks.onProgress(bytesUploaded, bytesTotal);
       },
       onError(error) {
-        rejectResult(error);
+        rejectResult(projectAttachmentUploadError(error));
       },
       onSuccess() {
         const id = attachmentId ?? upload.url?.split('/').at(-1);
@@ -174,6 +201,13 @@ export function attachmentContentUrl(
   disposition: 'inline' | 'attachment' = 'inline'
 ): string {
   return `/api/workspaces/${encodeURIComponent(workspaceId)}/attachments/${encodeURIComponent(id)}/content?disposition=${disposition}`;
+}
+
+/**
+ * Returns the Host's bounded image preview derivative without embedding file bytes in UI state.
+ */
+export function attachmentPreviewUrl(workspaceId: string, id: string): string {
+  return `/api/workspaces/${encodeURIComponent(workspaceId)}/attachments/${encodeURIComponent(id)}/preview`;
 }
 
 /**

@@ -13,6 +13,8 @@ import { useStore } from 'zustand';
 import { MAX_WORKSPACE_REFERENCES } from '@octopus/shared/protocol';
 import { Button } from '@octopus/ui/components/button';
 import { Spinner } from '@octopus/ui/components/spinner';
+import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { cn } from '@octopus/ui/lib/utils';
 import { getAttachmentCapabilities, startAttachmentUpload } from '@/api/attachments';
 import { queryKeys } from '@/queries/core/query-keys';
 import { useDeriveSession } from '@/queries/session-queries';
@@ -23,6 +25,7 @@ import { useWorkbenchHome } from '@/stores/workbench-home';
 import { persistAttachmentDraft, restoreAttachmentDraft, sessionStores } from '@/stores/session';
 import { ComposerToolbar } from '@/components/ComposerToolbar';
 import { download } from '@/utils/common';
+import { ApiRequestError } from '@/utils/request';
 import { realtimeClient } from '@/lib/runtime/realtime-client';
 import { awaitRealtimeCommand } from '@/lib/runtime/await-realtime-command';
 import { getSessionExportUrl } from '@/api/sessions';
@@ -45,6 +48,8 @@ import { RenameSessionDialog } from './RenameSessionDialog';
 import { PlanModeExitDialog } from './PlanModeExitDialog';
 import { ExtensionDialogHost } from './ExtensionDialogHost';
 import { useComposerReferences } from './hooks/use-composer-references';
+import { useComposerFileInput } from './hooks/use-composer-file-input';
+import { isComposerImage, isComposerImageFile } from './utils/composer-images';
 import { registerAttachmentUploadTask, unregisterAttachmentUploadTask } from '@/stores/session';
 import { toWorkspaceReferences } from '@/features/session/utils/workspace-reference-payload';
 import type { Ref } from 'react';
@@ -162,6 +167,7 @@ export function Composer({
   const attachmentsReady = useStore(store, (state) =>
     state.attachments.every((item) => item.status === 'ready')
   );
+  const hasImages = useStore(store, (state) => state.attachments.some(isComposerImage));
   const attachmentDraftSignature = useStore(store, (state) =>
     JSON.stringify(
       state.attachments.map((item) => [item.id, item.name, item.byteSize, item.revision, item.status])
@@ -255,6 +261,10 @@ export function Composer({
     : planMode.knowledge;
   const references = useComposerReferences(session.workspaceId);
   const modelValue = session.model === undefined ? null : `${session.provider ?? ''}/${session.model}`;
+  const selectedModel = models.find((model) => `${model.provider}/${model.id}` === modelValue);
+  const supportsImages = selectedModel?.input.includes('image') === true;
+  const imageOnlyAllowed = hasImages && supportsImages;
+  const contentEmpty = draft.trim() === '' && !imageOnlyAllowed;
   const deriveSession = useDeriveSession(session);
   const renameSession = useRenameSession();
   const attachmentDraftKey = `${session.workspaceId}:${sessionId}`;
@@ -293,6 +303,7 @@ export function Composer({
             byteSize: file.size,
             revision: 0,
             status: 'uploading',
+            ...(isComposerImageFile(file) ? { localImage: file, presentationKind: 'image' as const } : {}),
             progress: { uploadedBytes: 0, totalBytes: file.size, percentage: 0 },
           },
         ]);
@@ -301,7 +312,11 @@ export function Composer({
           file,
           {
             onCreated(id) {
-              updateComposerAttachment(store, localId, (item) => ({ ...item, id }));
+              store.setState((state) => ({
+                attachments: state.attachments
+                  .filter((item) => item.id !== id || item.localKey === localId)
+                  .map((item) => (item.localKey === localId ? { ...item, id } : item)),
+              }));
             },
             onProgress(uploadedBytes, totalBytes) {
               updateComposerAttachment(store, localId, (item) => ({
@@ -325,11 +340,7 @@ export function Composer({
           .then(
             (resource) =>
               updateComposerAttachment(store, localId, (item) => ({
-                ...toComposerAttachment(resource),
-                ...(item.localKey === undefined ? {} : { localKey: item.localKey }),
-                ...(item.uploadFingerprint === undefined
-                  ? {}
-                  : { uploadFingerprint: item.uploadFingerprint }),
+                ...toComposerAttachment(resource, item.localKey, item.uploadFingerprint, item.localImage),
               })),
             (error) =>
               updateComposerAttachment(store, localId, (item) => ({
@@ -341,7 +352,7 @@ export function Composer({
                     error instanceof Error
                       ? error.message
                       : t('session.composer.attachmentUploadFailed', 'Attachment upload failed.'),
-                  retryable: true,
+                  retryable: error instanceof ApiRequestError ? error.retryable : true,
                 },
               }))
           )
@@ -359,6 +370,10 @@ export function Composer({
     }
   });
 
+  const fileInput = useComposerFileInput(interactionDisabled, attach, (text) =>
+    editorRef.current?.insertText(text)
+  );
+
   /**
    * Sends the current draft according to the authoritative runtime state and requested running mode.
    *
@@ -370,7 +385,7 @@ export function Composer({
         return;
       }
       const text = composerDraft.text.trim();
-      if (text === '') {
+      if (text === '' && !imageOnlyAllowed) {
         return;
       }
       const requestId = uuidv4();
@@ -854,6 +869,7 @@ export function Composer({
         <ComposerToolsMenu
           disabled={interactionDisabled}
           onAttach={(files) => void attach(files)}
+          onAttachImages={(files) => void attach(files)}
           onInsertTrigger={(trigger) => editorRef.current?.insertTrigger(trigger)}
           onInsertGoal={() => editorRef.current?.insertCommand('goal')}
           onReturnFocus={() => editorRef.current?.focus()}
@@ -941,7 +957,7 @@ export function Composer({
           disabled={interactionDisabled}
           mode={runningMessageMode}
           followUpCount={followUpCount}
-          sendDisabled={sendingDisabled || draft.trim() === '' || !attachmentsReady}
+          sendDisabled={sendingDisabled || contentEmpty || !attachmentsReady}
           onModeChange={setRunningMessageMode}
           onSend={submitSelectedMode}
           onStop={stop}
@@ -956,7 +972,7 @@ export function Composer({
         <Button
           className="shrink-0"
           onClick={submitSelectedMode}
-          disabled={sendingDisabled || submitting || draft.trim() === '' || !attachmentsReady}
+          disabled={sendingDisabled || submitting || contentEmpty || !attachmentsReady}
           size="icon"
           title={connecting ? t('session.composer.waitingForAgent', 'Waiting for Agent…') : sendButtonTitle}
           aria-busy={connecting || submitting}
@@ -969,11 +985,17 @@ export function Composer({
   ];
   return (
     <div
-      className={
+      className={cn(
+        'relative',
         variant === 'home'
           ? 'w-full'
           : 'mx-auto w-[calc(100%-20px)] pb-2.5 sm:w-[min(calc(100%-32px),880px)] sm:pb-4.5'
-      }
+      )}
+      onPasteCapture={fileInput.onPaste}
+      onDragEnterCapture={fileInput.onDragEnter}
+      onDragOverCapture={fileInput.onDragOver}
+      onDragLeaveCapture={fileInput.onDragLeave}
+      onDropCapture={fileInput.onDrop}
     >
       <ExtensionDialogHost sessionId={sessionId} runtimeId={runtimeId} epoch={epoch} />
       {workMode === 'knowledge' && knowledgeState && (
@@ -985,10 +1007,22 @@ export function Composer({
         />
       )}
       <ComposerAttachments
+        key={sessionId}
         disabled={interactionDisabled}
         sessionId={sessionId}
         workspaceId={session.workspaceId}
+        onRetryLocalImage={(file) => attach([file])}
       />
+      {hasImages && selectedModel !== undefined && !supportsImages && (
+        <Alert className="mb-3 border-warning/30 bg-warning/10 text-warning-foreground">
+          <AlertDescription>
+            {t(
+              'session.composer.imageModelHint',
+              'This model cannot inspect images. Switch to an image-capable model to send images without text. With text, images remain available as file references.'
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
       <div
         aria-label="composer"
         aria-busy={interactionDisabled}
@@ -1029,6 +1063,14 @@ export function Composer({
         onOpenChange={setPlanExitOpen}
         onConfirm={() => requestWorkModeChange(exitTarget)}
       />
+      {fileInput.dragging && (
+        <div
+          role="status"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-background/90 p-4 text-center text-sm font-medium text-primary"
+        >
+          {t('session.composer.dropFiles', 'Drop images or files to add them')}
+        </div>
+      )}
     </div>
   );
 }

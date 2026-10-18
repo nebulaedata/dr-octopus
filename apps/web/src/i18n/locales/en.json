@@ -47,6 +47,14 @@
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out"
     },
+    "imageThumbnails": {
+      "failed": "Failed",
+      "previewTitle": "Image preview",
+      "processing": "Processing…",
+      "remove": "Remove image",
+      "retry": "Retry",
+      "uploading": "Uploading…"
+    },
     "listPagination": {
       "next": "Next",
       "previous": "Previous"
@@ -65,7 +73,6 @@
     "browserHint": "Browser tools require the companion browser extension.",
     "card": {
       "description": "Connect your computer. Expand what your agent can do.",
-      "dismiss": "Hide until the page is refreshed",
       "title": "Give AI the power to act"
     },
     "description": "Let your agent use local files, shell, browser, and desktop tools after you authorize access.",
@@ -840,9 +847,11 @@
       "writeContent": "Write content"
     },
     "composer": {
+      "addImages": "Add images",
       "addTools": "Add to message",
       "attachFiles": "Attach files",
       "attachments": {
+        "removeFailed": "Could not remove attachment.",
         "statusFailed": "Failed",
         "statusProcessing": "Verifying and processing",
         "statusRejected": "Rejected",
@@ -854,7 +863,12 @@
       "attachmentUploadFailed": "Attachment upload failed.",
       "commandFailed": "Could not execute command.",
       "commandsTooltip": "Commands",
+      "dropFiles": "Drop images or files to add them",
       "goalTooltip": "Goal",
+      "imageModelHint": "This model cannot inspect images. Switch to an image-capable model to send images without text. With text, images remain available as file references.",
+      "images": {
+        "sourceRequired": "Select the same image again to resume, or remove it and add a new image."
+      },
       "mentionTooltip": "Mention file or folder",
       "newlineHint": "{{newline}} for a new line",
       "placeholderDefault": "Ask Dr.Octopus anything…",

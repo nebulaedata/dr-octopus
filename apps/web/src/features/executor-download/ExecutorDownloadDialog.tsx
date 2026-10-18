@@ -26,14 +26,13 @@ import { Separator } from '@octopus/ui/components/separator';
 import { cn } from '@octopus/ui/lib/utils';
 import { useI18n } from '@/i18n/use-i18n';
 import { executorInstallationUrl, readExecutorRelease } from './utils/executor-release';
-import type { ReactNode } from 'react';
 
 const release = readExecutorRelease(import.meta.env);
 
 /**
- * Keeps the dialog outside the mobile sidebar so resizing or closing navigation cannot discard it.
+ * Mounts beside the workbench so closed download state cannot make unrelated dialogs nested.
  */
-export function ExecutorDownloadDialog({ children }: { children: ReactNode }) {
+export function ExecutorDownloadDialog() {
   const { t } = useI18n();
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
@@ -61,7 +60,6 @@ export function ExecutorDownloadDialog({ children }: { children: ReactNode }) {
         });
       }}
     >
-      {children}
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto overscroll-contain p-5 sm:max-w-xl sm:p-7">
         <DialogHeader className="gap-3 pr-5">
           <DialogTitle className="text-xl font-semibold">

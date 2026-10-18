@@ -19,12 +19,13 @@ export function persistAttachmentDraft(
   const key = attachmentDraftKey(workspaceId, sessionId);
   const durable = attachments
     .filter((item) => !item.id.startsWith('local-'))
-    .map(({ id, name, byteSize, revision, status, uploadFingerprint }) => ({
+    .map(({ id, name, byteSize, revision, status, uploadFingerprint, presentationKind }) => ({
       id,
       name,
       byteSize,
       revision,
       status,
+      ...(presentationKind === undefined ? {} : { presentationKind }),
       ...(uploadFingerprint === undefined ? {} : { uploadFingerprint }),
     }));
   if (durable.length === 0) {
@@ -69,6 +70,7 @@ export function restoreAttachmentDraft(
         byteSize: number;
         revision: number;
         uploadFingerprint?: unknown;
+        presentationKind?: unknown;
       };
       return [
         {
@@ -77,6 +79,7 @@ export function restoreAttachmentDraft(
           byteSize: item.byteSize,
           revision: item.revision,
           status: 'processing' as const,
+          ...(item.presentationKind === 'image' ? { presentationKind: 'image' as const } : {}),
           ...(typeof item.uploadFingerprint === 'string'
             ? { uploadFingerprint: item.uploadFingerprint }
             : {}),

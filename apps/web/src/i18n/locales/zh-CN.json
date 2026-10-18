@@ -47,6 +47,14 @@
       "zoomIn": "放大",
       "zoomOut": "缩小"
     },
+    "imageThumbnails": {
+      "failed": "失败",
+      "previewTitle": "图片预览",
+      "processing": "处理中…",
+      "remove": "移除图片",
+      "retry": "重试",
+      "uploading": "上传中…"
+    },
     "listPagination": {
       "next": "下一页",
       "previous": "上一页"
@@ -64,7 +72,6 @@
     "browserHint": "浏览器操作需另行安装配套扩展。",
     "card": {
       "description": "连接你的电脑，拓展智能体的行动能力",
-      "dismiss": "暂时隐藏，刷新页面后恢复",
       "title": "让 AI 动手执行"
     },
     "description": "让智能体在你授权后，使用本机文件、命令行、浏览器和桌面工具。",
@@ -826,9 +833,11 @@
       "writeContent": "写入内容"
     },
     "composer": {
+      "addImages": "添加图片",
       "addTools": "添加到消息",
       "attachFiles": "附加文件",
       "attachments": {
+        "removeFailed": "无法移除附件。",
         "statusFailed": "失败",
         "statusProcessing": "校验与处理中",
         "statusRejected": "已拒绝",
@@ -840,7 +849,12 @@
       "attachmentUploadFailed": "附件上传失败。",
       "commandFailed": "命令执行失败。",
       "commandsTooltip": "命令",
+      "dropFiles": "释放以添加图片或文件",
       "goalTooltip": "目标",
+      "imageModelHint": "当前模型不能直接看图。切换到支持图片的模型后可发送纯图片；附带文字时，图片仍会作为文件引用提供。",
+      "images": {
+        "sourceRequired": "请重新选择同一图片以继续上传，或移除后重新添加。"
+      },
       "mentionTooltip": "提及文件或文件夹",
       "newlineHint": "{{newline}} 换行",
       "placeholderDefault": "向 Dr.Octopus 随便问…",

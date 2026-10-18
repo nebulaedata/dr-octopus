@@ -98,7 +98,7 @@ export function WorkModeSelect({
       <SelectTrigger
         size="sm"
         className={cn(
-          'min-w-0 border-0 hover:bg-muted data-[size=sm]:h-8',
+          'min-w-0 border-0 bg-transparent hover:bg-muted aria-expanded:bg-muted dark:bg-transparent dark:hover:bg-muted/50 data-[size=sm]:h-8',
           mobile
             ? 'w-8 shrink-0 justify-center gap-0 px-0 [&>svg]:hidden'
             : 'w-fit shrink justify-between gap-1.5 pl-2.5 pr-2'

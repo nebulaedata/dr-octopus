@@ -11,7 +11,8 @@ import type { ComposerAttachmentViewModel } from '@/stores/session';
 export function toComposerAttachment(
   resource: AttachmentResourceDto,
   localKey?: string,
-  uploadFingerprint?: string
+  uploadFingerprint?: string,
+  localImage?: File
 ): ComposerAttachmentViewModel {
   let status: 'failed' | 'ready' | 'rejected' | 'processing' | 'uploading';
   if (resource.status === 'initiated' || resource.status === 'uploading') {
@@ -23,7 +24,19 @@ export function toComposerAttachment(
   } else {
     status = resource.status;
   }
+  const presentationKind =
+    resource.presentationKind ?? (resource.declaredMediaType?.startsWith('image/') ? 'image' : undefined);
+  const sourceRequired = status === 'uploading' && localKey === undefined && presentationKind === 'image';
+  let error: ComposerAttachmentViewModel['error'] = resource.error;
+  if (sourceRequired) {
+    error = {
+      code: 'UPLOAD_SOURCE_REQUIRED',
+      message: 'Select the same image again to resume, or remove it and add a new image.',
+      retryable: false,
+    };
+  }
   return {
+    ...(localImage === undefined || resource.status === 'ready' ? {} : { localImage }),
     id: resource.id,
     ...(localKey === undefined ? {} : { localKey }),
     ...(uploadFingerprint === undefined ? {} : { uploadFingerprint }),
@@ -31,9 +44,9 @@ export function toComposerAttachment(
     byteSize: resource.byteSize,
     coverage: resource.coverage,
     revision: resource.revision,
-    status,
+    status: sourceRequired ? 'failed' : status,
     ...(resource.detectedMediaType === undefined ? {} : { detectedMediaType: resource.detectedMediaType }),
-    ...(resource.presentationKind === undefined ? {} : { presentationKind: resource.presentationKind }),
-    ...(resource.error === undefined ? {} : { error: resource.error }),
+    ...(presentationKind === undefined ? {} : { presentationKind }),
+    ...(error === undefined ? {} : { error }),
   };
 }

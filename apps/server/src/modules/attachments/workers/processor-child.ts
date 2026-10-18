@@ -107,7 +107,7 @@ async function processSource(
       .clone()
       .resize({ width: 2_048, height: 2_048, fit: 'inside', withoutEnlargement: true });
     const model = metadata.hasAlpha
-      ? await modelPipeline.png({ compressionLevel: 9 }).toBuffer()
+      ? await modelPipeline.png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer()
       : await modelPipeline.jpeg({ quality: 85, mozjpeg: true }).toBuffer();
     outputs.push(
       await writeOutput(outputDirectory, 'preview.webp', 'preview-image', 'image/webp', preview, {

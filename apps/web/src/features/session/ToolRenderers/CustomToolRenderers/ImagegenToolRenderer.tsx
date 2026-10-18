@@ -7,6 +7,7 @@ import { useParams } from '@tanstack/react-router';
 import { DownloadIcon, ImageOffIcon, ChevronRightIcon } from 'lucide-react';
 import { buttonVariants } from '@octopus/ui/components/button';
 import { useI18n } from '@/i18n/use-i18n';
+import { ImagePreviewDialog } from '@/components/ImagePreviewDialog';
 import { projectImagegen } from '@/features/session/utils/imagegen-projection';
 import { ToolContent } from '../ToolRendererParts';
 import type { ToolRendererProps } from '../ToolRendererParts';
@@ -44,6 +45,7 @@ function GeneratedImage({
 }) {
   const { t } = useI18n();
   const [missing, setMissing] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const base = `/api/workspaces/${encodeURIComponent(workspaceId)}/files`;
   const query = `?path=${encodeURIComponent(image.relativePath)}`;
   return (
@@ -57,11 +59,10 @@ function GeneratedImage({
           {t('session.imagegen.missing', 'This image is missing or cannot be previewed.')}
         </div>
       ) : (
-        <a
+        <button
+          type="button"
           className="relative block w-full shrink-0 cursor-zoom-in overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          href={`${base}/image${query}`}
-          target="_blank"
-          rel="noreferrer"
+          onClick={() => setPreviewOpen(true)}
           aria-label="Open full-size image"
         >
           <img
@@ -73,7 +74,7 @@ function GeneratedImage({
             loading="lazy"
             onError={() => setMissing(true)}
           />
-        </a>
+        </button>
       )}
       <figcaption className="flex min-w-0 flex-col gap-2 border-t px-3 py-2">
         <div className="flex items-center justify-between gap-2">
@@ -110,6 +111,13 @@ function GeneratedImage({
           </p>
         </details>
       </figcaption>
+      <ImagePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        src={`${base}/image${query}`}
+        title={image.relativePath.split('/').at(-1) ?? image.relativePath}
+        description={`${image.width} × ${image.height} · ${image.mimeType}`}
+      />
     </figure>
   );
 }

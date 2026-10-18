@@ -45,6 +45,7 @@ export function Layout() {
       <ConnectionStatus />
       <SidebarProvider defaultOpen className="h-dvh">
         <WorkbenchLayout />
+        <ExecutorDownloadDialog />
       </SidebarProvider>
     </>
   );
@@ -276,7 +277,7 @@ function WorkbenchLayout() {
 
   if (isMobile) {
     return (
-      <ExecutorDownloadDialog>
+      <>
         <div className="relative flex h-full w-full overflow-hidden">
           {openMobile && (
             <>
@@ -294,12 +295,12 @@ function WorkbenchLayout() {
           {mainContent}
         </div>
         {settingsDialog}
-      </ExecutorDownloadDialog>
+      </>
     );
   }
 
   return (
-    <ExecutorDownloadDialog>
+    <>
       <div className="flex h-full w-full">
         <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
           <ResizablePanel
@@ -353,7 +354,7 @@ function WorkbenchLayout() {
         </ResizablePanelGroup>
       </div>
       {settingsDialog}
-    </ExecutorDownloadDialog>
+    </>
   );
 }
 

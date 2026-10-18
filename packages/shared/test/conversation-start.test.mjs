@@ -27,6 +27,22 @@ test('first-message admission validates identity, content, version and explicit 
   }
 });
 
+test('media-only submissions retain empty text while truly empty submissions remain invalid', () => {
+  const input = {
+    submissionId: randomUUID(),
+    draftId: randomUUID(),
+    draftVersion: 0,
+    message: '   ',
+    attachmentIds: [randomUUID()],
+    selection: { mode: 'follow-default' },
+  };
+  const parsed = ConversationStartSchema.parse(input);
+  assert.equal(parsed.message, '');
+  assert.deepEqual(parsed.attachmentIds, input.attachmentIds);
+  assert.equal(ConversationStartSchema.safeParse({ ...input, attachmentIds: [] }).success, false);
+  assert.equal(ConversationStartSchema.safeParse({ ...input, attachmentIds: undefined }).success, false);
+});
+
 test('draft knowledge scope shares the runtime validation contract and retains inactive selection', () => {
   const controls = {
     workMode: 'knowledge',

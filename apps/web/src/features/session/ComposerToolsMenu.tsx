@@ -5,7 +5,14 @@
 
 import { useRef } from 'react';
 import { useEventListener } from 'ahooks';
-import { AtSignIcon, PaperclipIcon, PlusIcon, SquareSlashIcon, TargetIcon } from 'lucide-react';
+import {
+  AtSignIcon,
+  ImagePlusIcon,
+  PaperclipIcon,
+  PlusIcon,
+  SquareSlashIcon,
+  TargetIcon,
+} from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
 import {
   DropdownMenu,
@@ -15,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@octopus/ui/components/dropdown-menu';
 import { useI18n } from '@/i18n/use-i18n';
+import { COMPOSER_IMAGE_ACCEPT } from './utils/composer-images';
 import type { ComposerTrigger } from '@/components/AgentComposerEditor/types';
 
 export interface ComposerToolsMenuProps {
@@ -23,6 +31,10 @@ export interface ComposerToolsMenuProps {
    * Stages files using the owning Composer's existing upload flow.
    */
   onAttach(files: File[]): void;
+  /**
+   * Stages visual inputs through the same resource admission flow as other files.
+   */
+  onAttachImages(files: File[]): void;
   /**
    * Restores the editor caret and opens the corresponding typeahead.
    */
@@ -43,15 +55,23 @@ export interface ComposerToolsMenuProps {
 export function ComposerToolsMenu({
   disabled = false,
   onAttach,
+  onAttachImages,
   onInsertTrigger,
   onInsertGoal,
   onReturnFocus,
 }: ComposerToolsMenuProps) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
-  const pendingEditorAction = useRef<(() => void) | undefined>(undefined);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const pendingAction = useRef<(() => void) | 'picker' | undefined>(undefined);
   useEventListener('cancel', onReturnFocus, { target: inputRef });
+  useEventListener('cancel', onReturnFocus, { target: imageInputRef });
   const items = [
+    {
+      id: 'image',
+      label: t('session.composer.addImages', 'Add images'),
+      icon: ImagePlusIcon,
+    },
     {
       id: 'attachment',
       label: t('session.composer.attachFiles', 'Attach files'),
@@ -79,23 +99,43 @@ export function ComposerToolsMenu({
    */
   function handleAction(id: (typeof items)[number]['id']): void {
     switch (id) {
+      case 'image':
+        pendingAction.current = 'picker';
+        imageInputRef.current?.click();
+        break;
       case 'attachment':
+        pendingAction.current = 'picker';
         inputRef.current?.click();
         break;
       case 'commands':
-        pendingEditorAction.current = () => onInsertTrigger('/');
+        pendingAction.current = () => onInsertTrigger('/');
         break;
       case 'mention':
-        pendingEditorAction.current = () => onInsertTrigger('@');
+        pendingAction.current = () => onInsertTrigger('@');
         break;
       case 'goal':
-        pendingEditorAction.current = onInsertGoal;
+        pendingAction.current = onInsertGoal;
         break;
     }
   }
 
   return (
     <>
+      <input
+        ref={imageInputRef}
+        type="file"
+        multiple
+        accept={COMPOSER_IMAGE_ACCEPT}
+        disabled={disabled}
+        className="hidden"
+        aria-label="Composer images"
+        onChange={(event) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          event.currentTarget.value = '';
+          onAttachImages(files);
+          onReturnFocus();
+        }}
+      />
       <input
         ref={inputRef}
         type="file"
@@ -113,7 +153,7 @@ export function ComposerToolsMenu({
       <DropdownMenu
         onOpenChange={(open) => {
           if (open) {
-            pendingEditorAction.current = undefined;
+            pendingAction.current = undefined;
           }
         }}
       >
@@ -136,13 +176,13 @@ export function ComposerToolsMenu({
           side="top"
           className="w-60 max-w-[calc(100vw-2rem)]"
           finalFocus={() => {
-            const action = pendingEditorAction.current;
-            pendingEditorAction.current = undefined;
-            if (action) {
+            const action = pendingAction.current;
+            pendingAction.current = undefined;
+            if (typeof action === 'function') {
               action();
               return false;
             }
-            return true;
+            return action !== 'picker';
           }}
         >
           <DropdownMenuGroup>

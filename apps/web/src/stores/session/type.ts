@@ -28,6 +28,10 @@ import type {
 } from '@octopus/shared/protocol/attachments';
 
 export interface ComposerAttachmentViewModel {
+  /**
+   * Transient local image source for immediate preview; never serialized into draft or message payloads.
+   */
+  localImage?: File;
   coverage?: DocumentCoverageV1;
   id: string;
   localKey?: string;

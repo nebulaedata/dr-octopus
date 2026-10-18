@@ -93,20 +93,15 @@ test(
           .evaluate((element) => element.naturalWidth)
       )
       .toBe(512);
-    const previewLink = page.getByRole('link', { name: 'Open full-size image' });
-    const cover = previewLink.locator('img').first();
-    const contain = previewLink.locator('img').last();
-    await page.mouse.move(0, 0);
-    await expect(cover).toHaveCSS('opacity', '1');
-    const previewBounds = await previewLink.boundingBox();
-    await previewLink.hover();
-    await expect(contain).toHaveCSS('opacity', '1');
-    await expect(cover).toHaveCSS('opacity', '0');
-    const hoveredBounds = await previewLink.boundingBox();
-    assert.equal(hoveredBounds.width, previewBounds.width);
-    assert.equal(hoveredBounds.height, previewBounds.height);
-    await page.mouse.move(0, 0);
-    await expect(cover).toHaveCSS('opacity', '1');
+    const previewButton = page.getByRole('button', { name: 'Open full-size image' });
+    await previewButton.click();
+    const dialog = page.getByRole('dialog', { name: 'a.png' });
+    await expect(dialog.getByRole('img', { name: 'a.png' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Zoom in', exact: true })).toBeEnabled();
+    await dialog.getByRole('button', { name: 'Zoom in', exact: true }).click();
+    await expect(dialog.getByText('125%')).toBeVisible();
+    await dialog.press('Escape');
+    await expect(dialog).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Download', exact: true })).toHaveAttribute(
       'href',
       /files\/download\?path=generated-images/
@@ -116,10 +111,7 @@ test(
     await filePath.click();
     await expect(page.locator('figure').getByText('generated-images/a.png', { exact: true })).toBeVisible();
     await filePath.click();
-    await expect(page.getByRole('link', { name: 'Open full-size image' })).toHaveAttribute(
-      'target',
-      '_blank'
-    );
+    await expect(previewButton).toBeVisible();
     await page.evaluate(() => globalThis.document.documentElement.classList.add('dark'));
     await page.setViewportSize({ width: 390, height: 844 });
     if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click();

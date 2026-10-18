@@ -5,7 +5,7 @@
 
 import { useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { FileIcon, ImageIcon, RefreshCwIcon, XIcon } from 'lucide-react';
+import { FileIcon, RefreshCwIcon, XIcon } from 'lucide-react';
 import { useStore } from 'zustand';
 import {
   Attachment,
@@ -19,28 +19,46 @@ import {
 } from '@octopus/ui/components/attachment';
 import { Progress } from '@octopus/ui/components/progress';
 import { Spinner } from '@octopus/ui/components/spinner';
-import { deleteAttachment, getAttachments, retryAttachment } from '@/api/attachments';
+import {
+  attachmentContentUrl,
+  attachmentPreviewUrl,
+  deleteAttachment,
+  getAttachments,
+  retryAttachment,
+} from '@/api/attachments';
 import { HorizontalArea } from '@/components/HorizontalArea';
+import { ImageThumbnailList } from '@/components/ImageThumbnailList';
 import { useI18n } from '@/i18n/use-i18n';
 import { sessionStores } from '@/stores/session';
 import { AttachmentDiagnostics } from './AttachmentDiagnostics';
 import { documentCoverageLabel } from '@/features/session/utils/document-coverage-label';
 import { abortAttachmentUploadTask } from '@/stores/session';
 import { toComposerAttachment } from '@/features/session/utils/attachment-projection';
+import { isComposerImage } from './utils/composer-images';
 import { cn } from '@octopus/ui/lib/utils';
 import type { ComposerAttachmentViewModel } from '@/stores/session';
 import type { Translate } from '@/i18n/use-i18n';
+import type { ImageThumbnailItem } from '@/components/ImageThumbnailList';
 
 export interface ComposerAttachmentsProps {
   disabled?: boolean;
   sessionId: string;
   workspaceId: string;
+  /**
+   * Restarts an upload that failed before a durable identity was assigned, using its retained browser File.
+   */
+  onRetryLocalImage?(file: File): Promise<void>;
 }
 
 /**
  * Owns event-driven revision reconciliation, monotonic merge, retry, removal, and task-state presentation.
  */
-export function ComposerAttachments({ disabled = false, sessionId, workspaceId }: ComposerAttachmentsProps) {
+export function ComposerAttachments({
+  disabled = false,
+  sessionId,
+  workspaceId,
+  onRetryLocalImage,
+}: ComposerAttachmentsProps) {
   const { t } = useI18n();
   const store = sessionStores.ensure(sessionId);
   const attachments = useStore(store, (state) => state.attachments);
@@ -63,7 +81,7 @@ export function ComposerAttachments({ disabled = false, sessionId, workspaceId }
         const resource = incoming.get(current.id);
         return resource === undefined || resource.revision < current.revision
           ? current
-          : toComposerAttachment(resource, current.localKey, current.uploadFingerprint);
+          : toComposerAttachment(resource, current.localKey, current.uploadFingerprint, current.localImage);
       }),
     }));
   }, [query.data, store]);
@@ -131,82 +149,167 @@ export function ComposerAttachments({ disabled = false, sessionId, workspaceId }
     if (disabled || item.status !== 'failed' || item.error?.retryable !== true) {
       return;
     }
+    if (item.id.startsWith('local-') && item.localImage !== undefined && onRetryLocalImage) {
+      const file = item.localImage;
+      store
+        .getState()
+        .setAttachments(store.getState().attachments.filter((candidate) => candidate.id !== item.id));
+      void onRetryLocalImage(file).catch((error: unknown) => {
+        store
+          .getState()
+          .setError(
+            error instanceof Error
+              ? error.message
+              : t('session.composer.attachmentUploadFailed', 'Attachment upload failed.')
+          );
+      });
+      return;
+    }
     retry.mutate(item, {
       onSuccess: (resource) =>
         store.setState((state) => ({
           attachments: state.attachments.map((candidate) =>
             candidate.id === item.id
-              ? toComposerAttachment(resource, candidate.localKey, candidate.uploadFingerprint)
+              ? toComposerAttachment(
+                  resource,
+                  candidate.localKey,
+                  candidate.uploadFingerprint,
+                  candidate.localImage
+                )
               : candidate
           ),
         })),
     });
   }
 
+  /**
+   * Reports cancellation errors through the owning Composer while mutation failures restore the resource.
+   */
+  function handleRemove(item: ComposerAttachmentViewModel): void {
+    void removeAttachment(item).catch((error: unknown) => {
+      store
+        .getState()
+        .setError(
+          error instanceof Error
+            ? error.message
+            : t('session.composer.attachments.removeFailed', 'Could not remove attachment.')
+        );
+    });
+  }
+  const files = attachments.filter((item) => !isComposerImage(item));
+  const images: ImageThumbnailItem[] = attachments.filter(isComposerImage).map((item) => {
+    let state: ImageThumbnailItem['state'] = 'failed';
+    if (item.status === 'ready' || item.status === 'uploading' || item.status === 'processing') {
+      state = item.status;
+    }
+    if (item.status === 'deleted') {
+      state = 'processing';
+    }
+    return {
+      id: item.localKey ?? item.id,
+      name: item.name,
+      state,
+      blob: item.localImage,
+      src: item.status === 'ready' ? attachmentPreviewUrl(workspaceId, item.id) : undefined,
+      fullSrc: item.status === 'ready' ? attachmentContentUrl(workspaceId, item.id) : undefined,
+      error:
+        item.error?.code === 'UPLOAD_SOURCE_REQUIRED'
+          ? t(
+              'session.composer.images.sourceRequired',
+              'Select the same image again to resume, or remove it and add a new image.'
+            )
+          : item.error?.message,
+      progress: item.progress?.percentage,
+      disabled: item.status === 'deleted',
+      retryable:
+        item.status === 'failed' &&
+        item.error?.retryable === true &&
+        (item.revision > 0 ||
+          (item.localImage !== undefined && item.id.startsWith('local-') && onRetryLocalImage !== undefined)),
+    };
+  });
   return (
-    <HorizontalArea aria-label="Composer attachments" className="w-full">
-      <AttachmentGroup className="w-max min-w-full flex-nowrap overflow-visible pb-3 *:data-[slot=attachment]:w-72 *:data-[slot=attachment]:max-w-full">
-        {attachments.map((item) => {
-          /**
-           * Selects attachment media content in the existing condition order.
-           */
-          function renderAttachmentMediaContent() {
-            if (item.status === 'processing' || item.status === 'deleted') {
-              return <Spinner />;
-            } else if (item.presentationKind === 'image') {
-              return <ImageIcon />;
-            } else {
-              return <FileIcon />;
-            }
-          }
-          return (
-            <Attachment
-              key={item.id}
-              state={attachmentState(item.status)}
-              size="sm"
-              className={cn(
-                'h-16 cursor-default hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-white/15 transition-shadow duration-200 ease-in-out',
-                item.status === 'failed' || item.status === 'deleted' ? 'border-destructive' : '',
-                item.status === 'rejected' && 'border-warning'
-              )}
-            >
-              <AttachmentMedia variant="icon">{renderAttachmentMediaContent()}</AttachmentMedia>
-              <AttachmentContent>
-                <AttachmentTitle title={item.name}>{item.name}</AttachmentTitle>
-                <AttachmentDescription>
-                  {item.status === 'ready' && documentCoverageLabel(t, item.coverage) ? (
-                    <AttachmentDiagnostics text={documentCoverageLabel(t, item.coverage)!} />
-                  ) : (
-                    <span title={description(t, item)}>{description(t, item)}</span>
+    <>
+      {files.length > 0 && (
+        <HorizontalArea aria-label="Composer attachments" className="w-full">
+          <AttachmentGroup className="w-max min-w-full flex-nowrap overflow-visible pb-3 *:data-[slot=attachment]:w-72 *:data-[slot=attachment]:max-w-full">
+            {files.map((item) => {
+              /**
+               * Selects attachment media content in the existing condition order.
+               */
+              function renderAttachmentMediaContent() {
+                if (item.status === 'processing' || item.status === 'deleted') {
+                  return <Spinner />;
+                } else {
+                  return <FileIcon />;
+                }
+              }
+              return (
+                <Attachment
+                  key={item.id}
+                  state={attachmentState(item.status)}
+                  size="sm"
+                  className={cn(
+                    'h-16 cursor-default hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-white/15 transition-shadow duration-200 ease-in-out',
+                    item.status === 'failed' || item.status === 'deleted' ? 'border-destructive' : '',
+                    item.status === 'rejected' && 'border-warning'
                   )}
-                </AttachmentDescription>
-                {item.status === 'uploading' && item.progress !== undefined && (
-                  <Progress value={item.progress.percentage} className="mt-2" />
-                )}
-              </AttachmentContent>
-              <AttachmentActions>
-                {item.status === 'failed' && item.error?.retryable === true ? (
-                  <AttachmentAction
-                    aria-label={`Retry ${item.name}`}
-                    disabled={disabled || retry.isPending}
-                    onClick={() => retryProcessing(item)}
-                  >
-                    <RefreshCwIcon />
-                  </AttachmentAction>
-                ) : null}
-                <AttachmentAction
-                  aria-label={`Remove ${item.name}`}
-                  disabled={disabled || item.status === 'deleted'}
-                  onClick={() => void removeAttachment(item)}
                 >
-                  <XIcon />
-                </AttachmentAction>
-              </AttachmentActions>
-            </Attachment>
-          );
-        })}
-      </AttachmentGroup>
-    </HorizontalArea>
+                  <AttachmentMedia variant="icon">{renderAttachmentMediaContent()}</AttachmentMedia>
+                  <AttachmentContent>
+                    <AttachmentTitle title={item.name}>{item.name}</AttachmentTitle>
+                    <AttachmentDescription>
+                      {item.status === 'ready' && documentCoverageLabel(t, item.coverage) ? (
+                        <AttachmentDiagnostics text={documentCoverageLabel(t, item.coverage)!} />
+                      ) : (
+                        <span title={description(t, item)}>{description(t, item)}</span>
+                      )}
+                    </AttachmentDescription>
+                    {item.status === 'uploading' && item.progress !== undefined && (
+                      <Progress value={item.progress.percentage} className="mt-2" />
+                    )}
+                  </AttachmentContent>
+                  <AttachmentActions>
+                    {item.status === 'failed' && item.error?.retryable === true ? (
+                      <AttachmentAction
+                        aria-label={`Retry ${item.name}`}
+                        disabled={disabled || retry.isPending}
+                        onClick={() => retryProcessing(item)}
+                      >
+                        <RefreshCwIcon />
+                      </AttachmentAction>
+                    ) : null}
+                    <AttachmentAction
+                      aria-label={`Remove ${item.name}`}
+                      disabled={disabled || item.status === 'deleted'}
+                      onClick={() => handleRemove(item)}
+                    >
+                      <XIcon />
+                    </AttachmentAction>
+                  </AttachmentActions>
+                </Attachment>
+              );
+            })}
+          </AttachmentGroup>
+        </HorizontalArea>
+      )}
+      <ImageThumbnailList
+        images={images}
+        disabled={disabled}
+        onRemove={(id) => {
+          const item = attachments.find((candidate) => candidate.id === id || candidate.localKey === id);
+          if (item) {
+            handleRemove(item);
+          }
+        }}
+        onRetry={(id) => {
+          const item = attachments.find((candidate) => candidate.id === id || candidate.localKey === id);
+          if (item) {
+            retryProcessing(item);
+          }
+        }}
+      />
+    </>
   );
 }
 

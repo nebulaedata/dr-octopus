@@ -66,6 +66,10 @@ test(
     await file.dblclick();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
+    await expect(dialog).not.toHaveAttribute('data-nested');
+    const overlay = page.locator('[data-slot="dialog-overlay"]');
+    await expect(overlay).toBeVisible();
+    await expect(overlay).toHaveCSS('backdrop-filter', /blur\([1-9]/);
     await expect(dialog.getByRole('img', { name: imageName })).toBeVisible();
     await expect(dialog).toHaveCSS('opacity', '1');
     await page.screenshot({ path: '.playwright-artifacts/file-explorer-image-preview-desktop.png' });
@@ -105,5 +109,40 @@ test(
     await expect(dialog.getByRole('button', { name: 'Reset image view' })).toBeVisible();
     await page.screenshot({ path: '.playwright-artifacts/file-explorer-image-preview-dark.png' });
     assert.deepEqual(errors, []);
+  }
+);
+
+test(
+  'download and Settings dialogs retain their own blurred overlays across responsive layout changes',
+  { timeout: 120000 },
+  async (t) => {
+    const page = await browser.newPage({ locale: 'en-US', viewport: { width: 1440, height: 900 } });
+    t.after(() => page.close());
+    await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+    const fixture = await installSessionFixture(page);
+    await page.goto(new URL(fixture.path, baseURL).href);
+    // Compile the lazy Settings graph before measuring UI behavior in this development-server fixture.
+    await page.evaluate(async () => {
+      await import('/src/features/settings/layout/SettingsDialogHost.tsx');
+    });
+    const download = page.getByRole('button', { name: 'Download Executor', exact: true });
+    await download.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).not.toHaveAttribute('data-nested');
+    await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCSS('backdrop-filter', /blur\([1-9]/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).not.toHaveAttribute('data-nested');
+    await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCSS('backdrop-filter', /blur\([1-9]/);
+    await dialog.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog).not.toHaveAttribute('data-nested');
+    await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCSS('backdrop-filter', /blur\([1-9]/);
+    await dialog.press('Escape');
+    await expect(dialog).toHaveCount(0);
   }
 );

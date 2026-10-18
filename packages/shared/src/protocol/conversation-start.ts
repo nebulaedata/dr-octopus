@@ -28,16 +28,21 @@ export const DraftControlsSchema = z.object({
     .optional(),
 });
 export type DraftControls = z.infer<typeof DraftControlsSchema>;
-export const ConversationStartSchema = z.object({
-  submissionId: z.string().uuid(),
-  draftId: z.string().uuid(),
-  draftVersion: z.number().int().nonnegative(),
-  message: z.string().trim().min(1).max(200000),
-  attachmentIds: z.array(z.string()).max(100).default([]),
-  workspaceReferences: WorkspaceReferencesSchema.default([]),
-  selection: ModelSelectionSchema,
-  controls: DraftControlsSchema.optional(),
-});
+export const ConversationStartSchema = z
+  .object({
+    submissionId: z.string().uuid(),
+    draftId: z.string().uuid(),
+    draftVersion: z.number().int().nonnegative(),
+    message: z.string().trim().max(200000),
+    attachmentIds: z.array(z.string()).max(100).default([]),
+    workspaceReferences: WorkspaceReferencesSchema.default([]),
+    selection: ModelSelectionSchema,
+    controls: DraftControlsSchema.optional(),
+  })
+  .refine((value) => value.message.length > 0 || value.attachmentIds.length > 0, {
+    message: 'A message or attachment is required.',
+    path: ['message'],
+  });
 export type ModelSelection = z.infer<typeof ModelSelectionSchema>;
 export type ConversationStartInput = z.infer<typeof ConversationStartSchema>;
 export type ConversationStartStatus =

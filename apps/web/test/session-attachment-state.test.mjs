@@ -58,6 +58,26 @@ test('attachment drafts retain durable identities and restore processing state w
   assert.deepEqual(restoreAttachmentDraft('workspace-1', 'session-1'), []);
 });
 
+test('image drafts retain their presentation hint without serializing a File or preview bytes', (t) => {
+  const records = storageFixture(t);
+  const file = new File(['private image bytes'], 'screenshot.png', { type: 'image/png' });
+  persistAttachmentDraft('workspace-image', 'session-image', [
+    {
+      id: 'durable-image',
+      name: file.name,
+      byteSize: file.size,
+      revision: 2,
+      status: 'processing',
+      presentationKind: 'image',
+      localImage: file,
+    },
+  ]);
+  const saved = records.get('octopus:attachment-draft:workspace-image:session-image');
+  assert.equal(saved.includes('private image bytes'), false);
+  assert.equal(saved.includes('localImage'), false);
+  assert.equal(restoreAttachmentDraft('workspace-image', 'session-image')[0].presentationKind, 'image');
+});
+
 test('upload cancellation forgets the shared task before awaiting abort and settlement removes it', async (t) => {
   const key = 'attachment-test-active';
   t.after(() => unregisterAttachmentUploadTask(key));

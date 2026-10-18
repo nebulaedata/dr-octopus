@@ -35,6 +35,8 @@ Only components and their types are exported from component files, preserving Fa
 
 ## Result contract
 
+Generated-image originals open in the shared `ImagePreviewDialog`, matching conversation images, Composer and file previews. The inline image remains the only preview trigger, with metadata and downloads independently accessible; preview controls follow `apps/web/DESIGN.md`.
+
 The `image_generate` renderer reads a versioned image receipt from `details`: actual provider/model, workspace-relative and absolute paths, MIME types and dimensions. Images load through the workspace image preview endpoint; downloading uses the existing file endpoint. Live and restored receipts share the same parser. Unknown versions, malformed receipts and tool failures retain `ToolContent`; missing files show an explicit unavailable state. Generated-image cards share a responsive width capped at 448px. Images fill that width and use their original aspect ratio to determine height, without cropping or a letterboxed preview area. Missing-image states retain a compact fixed-height placeholder. The image itself uses a zoom-in cursor and opens the original; no overlay preview button is shown. Model, dimensions, download and optional file paths remain below the preview. No raw image base64 is stored in receipt metadata. See [image generation](imagegen.md).
 
 Pi `0.84.3` tool content contains only text and image blocks. The browser projection separates model-facing content from UI-oriented structured data:
