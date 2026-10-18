@@ -638,3 +638,13 @@ Computer 返回值已从 unknown 改为明确结果类型，MCP 图像输出取�
 根因是 Windows Git 自动换行转换：仓库及固定上游原文均为 1,070 字节、LF，SHA-256 为 376944252ab78ca6b41aee44ddea8894927ee67891e77e61eb9d59af63e35094；Windows 工作副本转换为 CRLF 后为 1,091 字节，摘要变为 1eda211d873cf624198d343951c383c7ec717cc311432e3e8e5f5f707275f211。根 .gitattributes 为该固定原文添加精确路径 eol=lf，保留既有原文字节摘要校验。
 
 本地以 core.autocrlf=true、core.eol=crlf 执行独立 checkout-index，检出仍为 1,070 字节且摘要匹配；pnpm --filter @octopus/executor assemble:packaging 复验通过。仅调整检出属性和说明，没有改变应用源码、依赖或许可证原文；未重跑无关的应用测试、lint 和 typecheck。修复后的完整远端构建、安装和下载功能仍待验证。
+
+## 2026-10-18：远端第二次构建的临时目录短路径修正
+
+远端运行 [39128659668](https://github.com/nebulaedata/dr-octopus/actions/runs/39128659668) 使用源码 89636e49efe0e419727a6b3befaefd579a460970。许可证及全部资源装配已通过；扩展 build/lint/typecheck 和 22 项测试通过，Executor build/lint/typecheck 通过，Executor 测试为 239 项中 99 项通过、140 项失败，尚未进入打包。原始失败日志保留在该运行及诊断附件，本地按验证批次保存，未以重跑覆盖。
+
+本次失败来自 runner 默认临时目录 C:\Users\RUNNER~1\AppData\Local\Temp 的 8.3 别名：125 项直接触发 Native paths must be canonical local DOS paths，其余出现真实路径不等、RELEASE_ROOT_ALIAS、持久记录初始化失败和后续等待中断。工作流在依赖安装前创建本次 run/attempt 专属临时目录，用 realpathSync.native 展开真实路径并校验本地 DOS 路径及无短路径别名，再经 GITHUB_ENV 同时设置后续步骤的 TEMP/TMP。仅调整本次 CI 作业的环境，不放宽原生路径、链接、清单或测试断言。
+
+本地使用真实存在的 8.3 临时目录别名复现，security 和 native/device-identity 两个测试文件共 7 项中 5 项失败；执行从修改后 YAML 提取的原始准备步骤，再加载其环境输出，相同 7 项全部通过。该演练故意给 RUNNER_TEMP 传入短路径，确认步骤会展开真实目录，而非仅替换到另一个未经核验的路径。
+
+Executor 新构建、lint 和 typecheck 通过。首次本地全量复验为 239 项中 224 项通过、15 项失败：短路径复现目录又嵌套了过长的父目录，触发 PowerShell 脚本路径长度和子进程启动问题，原始 executor-test.log 保留。随后给同一 YAML 准备步骤传入与 runner 相近的 D 盘短根目录，复验覆盖所有 15 项失败的五个原生测试文件，35 项全部通过、零跳过；私有 npm 仍使用原 30 秒预算，未修改断言或应用实现。其余 224 项包含实际 2 GiB 往返传输。actionlint v1.7.12、全部十个 PowerShell run 块 AST 语法检查与工作流格式检查通过。远端完整测试、打包、交付附件、安装和下载功能仍待实际验证。
