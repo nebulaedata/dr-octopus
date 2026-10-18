@@ -672,3 +672,17 @@ Executor 新构建、lint 和 typecheck 通过。首次本地全量复验为 239
 为后续 v0.0.13 接入 release:published 触发及独立发布任务。构建任务仍为 contents:read，只在发布任务授予 contents:write；通过 artifact-id 接收当前验收附件，复核全部摘要、产品身份、验收结论及实际 Tag 提交后附加 EXE/ZIP 和版本化元数据。支持同字节保留、部分上传失败后从原任务继续，拒绝重名不同摘要覆盖。Web 从仓库 Release 与独立 Executor 产品版本生成同 Tag 的下载路径，Turbo 追踪版本清单与公开配置覆盖，避免复用旧链接。
 
 本地 Web build、tsc -b、lint/i18n 及 284 项测试通过；Executor lint/typecheck 和 112 项根级测试通过，发布与工程入口聚焦检查 19 项通过。新增发布用例使用独立文件及 GitHub 协议替身，覆盖篡改字节、遗漏清单、路径穿越、非 Tag 来源、未完成验收、草稿/移动 Tag、资产冲突及部分失败恢复，没有修改真实 Release。actionlint v1.7.12 和工作流 run 块语法检查通过。新版本实际 npm/GitHub 发布、远端构建上传及浏览器下载入口尚待执行；未将本地替身验证提升为公网交付证据。
+
+### v0.0.13 实际发布与下载复验
+
+正常版本流程将仓库版本从 0.0.12 升至 0.0.13，并推送提交 50e235a7aaba9e8116bd8d50585f2807873473fa 及注解 Tag v0.0.13。pnpm release:publish --resume --yes 完成新构建、npm 上传及 GitHub Release 创建；npm 曾明确返回处理中，等待后公开查询已为 200，bin[dr-octopus] 正确保留为 bin/dr-octopus.mjs。没有重复发布同版本或移动既有 Tag。
+
+发布事件自动触发 [Executor 运行 39135969013](https://github.com/nebulaedata/dr-octopus/actions/runs/39135969013) 和 [Docker 运行 39135968982](https://github.com/nebulaedata/dr-octopus/actions/runs/39135968982)，两者最终均为 success。Executor 实际为扩展 22 项、源码含原生回归 255 项、ZIP 有限验收 6 项全部通过，零失败和跳过；验收后独立发布任务上传五项资产，无需人工搬运旧包。Docker 等待公开 npm 版本后完成镜像构建、冒烟、推送、拉取验证和安装包上传。
+
+[Release v0.0.13](https://github.com/nebulaedata/dr-octopus/releases/tag/v0.0.13) 的 ID 为 416495453，含 Docker ZIP、Executor 0.0.1 unsigned EXE/ZIP 及版本化 BUILD-INFO、acceptance-artifacts 和 SHA256SUMS，共六个上传资产，网页另列两个源码归档。Executor productBuildId 为 2175ec0aab16a6cbbf41062b8261b62ff521a50bd192472a5002aaff3773c85c；公开 BUILD-INFO 的 sourceCommit、sourceRef=refs/tags/v0.0.13 与 event=release 均准确对应本次自动构建。EXE 为 216,039,571 字节，SHA-256 为 2dd6f9df9725e26d09afd74816b0c3bb75eb236853e5bda3671516c2d98cd69f；ZIP 为 270,025,738 字节，SHA-256 为 aa265cfe9b369af7f613aadc7bb2409fbbc31c8db0cdcee4968b45271d7c70a0。
+
+生产 Web 构建实际包含两个 /releases/download/v0.0.13/ 地址，不再包含旧站点版本路径。通过独立 Server/Agent 数据目录运行生产页面，在真实 Chrome 中关闭下载弹窗，再从 Executor 卡片重新打开：Windows 安装程序与 ZIP 链接、独立 v0.0.1 展示及验收说明正确，页面非空、无框架错误覆盖、无相关控制台错误。两个公开 URL 的匿名 HEAD 均为 200，Content-Disposition 文件名与 Content-Length 精确匹配 Release 资产。
+
+通过页面 ZIP 链接实际点击下载后，浏览器工具的 download 事件等待超时；未重复点击或绕过浏览器保护。随后确认 Chrome 已完成下载，Downloads 中本次新文件的大小和 SHA-256 均与上述 ZIP 及 GitHub 摘要一致。原事件超时及独立文件复核结果一起记录，未把工具事件超时解释为下载失败或忽略原始现象。截图、完整发布日志、公开构建元数据、下载响应与文件校验 JSON 按同一验证批次保存；私有测试服务已停止。
+
+本次完成公开 Release Assets 自动交付及网站下载路径/实际 ZIP 下载复验，仍为 unsigned 验收包；未执行产品安装、升级、卸载、正式 Host 注册、独立硬件或代码签名，不提升对应 G4/G5/G6 状态。
