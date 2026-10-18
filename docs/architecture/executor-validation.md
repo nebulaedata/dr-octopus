@@ -648,3 +648,11 @@ Computer 返回值已从 unknown 改为明确结果类型，MCP 图像输出取�
 本地使用真实存在的 8.3 临时目录别名复现，security 和 native/device-identity 两个测试文件共 7 项中 5 项失败；执行从修改后 YAML 提取的原始准备步骤，再加载其环境输出，相同 7 项全部通过。该演练故意给 RUNNER_TEMP 传入短路径，确认步骤会展开真实目录，而非仅替换到另一个未经核验的路径。
 
 Executor 新构建、lint 和 typecheck 通过。首次本地全量复验为 239 项中 224 项通过、15 项失败：短路径复现目录又嵌套了过长的父目录，触发 PowerShell 脚本路径长度和子进程启动问题，原始 executor-test.log 保留。随后给同一 YAML 准备步骤传入与 runner 相近的 D 盘短根目录，复验覆盖所有 15 项失败的五个原生测试文件，35 项全部通过、零跳过；私有 npm 仍使用原 30 秒预算，未修改断言或应用实现。其余 224 项包含实际 2 GiB 往返传输。actionlint v1.7.12、全部十个 PowerShell run 块 AST 语法检查与工作流格式检查通过。远端完整测试、打包、交付附件、安装和下载功能仍待实际验证。
+
+## 2026-10-18：远端第三次构建的 Electron 发行资源准备修正
+
+运行 [39130530914](https://github.com/nebulaedata/dr-octopus/actions/runs/39130530914) 使用源码 449429b7114cb4ba179b41c0265be2019fd6a299。临时目录准备、资源装配、扩展及 Executor 的 build/lint/typecheck 全部通过；扩展 22 项、Executor 239 项测试全部通过，零失败和跳过，确认上一轮短路径问题已在真实 runner 解决。随后 package:acceptance 因指定 electronDist 不存在而失败，未上传交付包；原始运行日志与诊断附件保留。
+
+锁定的 electron 44.4.5 package.json 不再提供 postinstall，而是提供 install-electron 二进制命令。pnpm rebuild electron 不会执行其发行资源安装，源码构建和非交互测试也不需要 Electron dist，因而直到打包才暴露缺失。工作流改为显式执行已安装锁定包的 install-electron，沿用官方安装脚本及 checksums.json；随后读取 electron 入口、实际二进制和 dist/version，要求版本与依赖包精确一致并独立保存日志。保留 --frozen-lockfile、--ignore-scripts、固定版本及全部原生测试，不开放工作区生命周期脚本。
+
+本地从没有 dist/path.txt 的独立目录复制未修改的锁定 Electron 安装脚本、package.json 和 checksums.json，使用同一依赖解析执行官方安装，生成 electron.exe、path.txt 及匹配的 44.4.5 版本；完整工作区的 install-electron 和同一版本检查也通过。该验证不是干净机器安装或产品 GUI 启动。应用源码与依赖版本未改变，239 项远端测试的源码结论继续有效；修正后的远端打包与交付仍待验证。
