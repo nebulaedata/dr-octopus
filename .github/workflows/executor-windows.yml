@@ -45,8 +45,16 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24.20.0'
-      - name: Prepare diagnostic directory
-        run: New-Item -ItemType Directory -Path $env:EXECUTOR_CI_LOG_DIRECTORY | Out-Null
+      - name: Prepare canonical temporary and diagnostic directories
+        run: |
+          New-Item -ItemType Directory -Path $env:EXECUTOR_CI_LOG_DIRECTORY | Out-Null
+          # Hosted Windows TEMP can contain an 8.3 alias that the native path boundary rejects.
+          $taskTemporary = Join-Path $env:RUNNER_TEMP "executor-temp-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Path $taskTemporary | Out-Null
+          $taskTemporary = node -e "console.log(require('node:fs').realpathSync.native(process.argv[1]))" $taskTemporary
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($taskTemporary -notmatch '^[A-Za-z]:\\' -or $taskTemporary.Contains('~')) { throw 'Expected a canonical local DOS temporary directory.' }
+          @("TEMP=$taskTemporary", "TMP=$taskTemporary") | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Install frozen dependencies without workspace lifecycle scripts
         run: |
           $taskPackageManager = (Get-Content -LiteralPath package.json -Raw | ConvertFrom-Json).packageManager
