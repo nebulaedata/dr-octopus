@@ -656,3 +656,13 @@ Executor 新构建、lint 和 typecheck 通过。首次本地全量复验为 239
 锁定的 electron 44.4.5 package.json 不再提供 postinstall，而是提供 install-electron 二进制命令。pnpm rebuild electron 不会执行其发行资源安装，源码构建和非交互测试也不需要 Electron dist，因而直到打包才暴露缺失。工作流改为显式执行已安装锁定包的 install-electron，沿用官方安装脚本及 checksums.json；随后读取 electron 入口、实际二进制和 dist/version，要求版本与依赖包精确一致并独立保存日志。保留 --frozen-lockfile、--ignore-scripts、固定版本及全部原生测试，不开放工作区生命周期脚本。
 
 本地从没有 dist/path.txt 的独立目录复制未修改的锁定 Electron 安装脚本、package.json 和 checksums.json，使用同一依赖解析执行官方安装，生成 electron.exe、path.txt 及匹配的 44.4.5 版本；完整工作区的 install-electron 和同一版本检查也通过。该验证不是干净机器安装或产品 GUI 启动。应用源码与依赖版本未改变，239 项远端测试的源码结论继续有效；修正后的远端打包与交付仍待验证。
+
+## 2026-10-18：远端第四次构建完成未签名交付
+
+运行 [39131666369](https://github.com/nebulaedata/dr-octopus/actions/runs/39131666369) 基于源码 7a87adb24f1240512d3d2954d744a022fcf24532，于 2026-10-18 21:39:49（UTC+08:00）成功完成，耗时 11 分 45 秒。显式 Electron 安装输出 Prepared Electron 44.4.5；资源装配、扩展和 Executor 的 build/lint/typecheck 全部通过，扩展 22 项、Executor 239 项及实际 ZIP 的六项非交互验收全部通过，零失败、取消或跳过。打包目录、实际 ZIP、交付暂存目录的离线预检及清单检查均成功，确认两个已修正的 CI 问题均已越过原失败阶段。
+
+已上传 [交付附件 12138915414](https://github.com/nebulaedata/dr-octopus/actions/runs/39131666369/artifacts/12138915414)，名称 executor-windows-x64-unsigned-39131666369-1，488,313,547 字节，附件归档 SHA-256 为 2fe7b57c0f5a842f3cf7f10fa1e52d76d8ab0ae6117b15fe920d0c2a41be2b36，按工作流保留 14 天。产品版本 0.0.1，productBuildId 为 ab687f2822045866e99de0f1aff9e224eebc3203c1516a6adf7a56885737779e。Summary 公布 ZIP SHA-256 为 b44d6896e6f513a1580f5549526a639fcd5da3a1fd41a91949134567897d5481，EXE 为 938c2cb9a3944d8c89bdef2fc23523ac41f24dfbfecf7dedd3534864e63fed70。诊断附件 12138855625 独立保留 7 天；原始成功日志、结果 JSON 和网页截图与先前失败日志分开保存。
+
+同轮本地使用从 YAML 提取的原始 package、verify 和六项有限测试步骤完成独立演练。新包目录标识 0.0.1-unsigned-41a78420-51e2-464a-aaaa-97c0149861b5，productBuildId 为 9cefe4f3fb0c55ddde787721407a4e4729645876adcd96350b29e081a371ce59；EXE/ZIP 生成、随包离线预检、两个产品树清单及 6/6 非交互验收通过。该本地产物与远端交付产物分别按身份记录，不混用摘要或提升为相同构建。
+
+本轮仅完成未签名 Actions 交付附件，没有创建 GitHub Release，没有在日常环境安装、启动产品 GUI、修改 Host 注册或测试网站下载入口。网站下载、真实安装/升级/卸载、G4/G5/G6、独立电脑硬件和签名发行继续待验，不因 CI 成功改变这些状态。
