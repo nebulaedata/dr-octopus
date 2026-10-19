@@ -6,6 +6,10 @@
 
 ### 发布升版后的版本契约回归
 
+仓库 v0.0.17 / Executor 0.0.4 的 Tag 源码为 `3cf4c849f983f71bc1bc2e7919d8f400cdadd76c`。[远端首次验收](https://github.com/nebulaedata/dr-octopus/actions/runs/39209488240)完成 Executor 267 项测试、实际 ZIP 六项交付测试、构建、lint 和 typecheck，全部通过。未签名产物 productBuildId 为 `1e346ec8bb09389b72344caee4ad93be797baa4448a416a70e45fdb8a92d296c`；EXE/ZIP 的公开下载 HTTP 200、长度和 GitHub 摘要均与 CI 预检记录一致。签名、干净机器和独立硬件门禁维持原状态。
+
+本次同时修复 Web 子目录 Turbo 配置覆盖根版本输入的问题：0.0.16 曾命中 0.0.15 的缓存键 `973b19a8f332af03`，导致页面版本和 Executor 下载链接滞后。修复后 0.0.17 使用缓存键 `524da531e9ebeb54`，实际版本文件均纳入输入；发行归档 SHA-256 为 `549a8560478dab042a73465481f05998714aff1b74b54e83281627d90e91729d`。归档的“关于”页、版本标识均为 0.0.17，下载链接指向同一 Release 的 Executor 0.0.4，并与浏览器实测字节一致。Web 287 项、CLI 86 项和桌面/手机四项浏览器回归通过。CLI 首轮一项 dry-run 在并行构建期间超时，原命令、原期限复验 86/86 通过；首次记录与归档核验结果保存在约定的 release-v0.0.17 批次。
+
 最终交付为仓库 v0.0.16 / Executor 0.0.3，Tag 源码为 `01c26c8d943335bf2d65a7b1036f9ebce37fb42f`。[远端第二次验收](https://github.com/nebulaedata/dr-octopus/actions/runs/39202386109/attempts/2)完成扩展 22 项、Executor 267 项、实际 ZIP 六项交付测试，以及构建、lint、typecheck；均零失败、零跳过。0.0.3 的 productBuildId 为 `5b2e3232337973442cd365abb7be37a3bb72836ad1c14c8c8d7091e194fd6234`。Release 的未签名 EXE/ZIP 已核对公开下载 HTTP 200、文件长度及 GitHub 摘要与 CI 离线预检记录一致。公共 npm 的 latest 为 0.0.16，隔离全局安装后的命令版本与帮助验证通过。
 
 v0.0.16 的[首次远端验收](https://github.com/nebulaedata/dr-octopus/actions/runs/39202386109/attempts/1)为 266/267：2 GiB 下载记录已传完全部字节，但最终返回 TRANSFER_FAILED / cleanupPending。原因仍未确定。本地单项复验通过，同一 Tag 的第二次远端完整验收也通过；复验保持相同期限和断言，开启 Actions 调试日志。首次失败、单项诊断及第二次 CI 日志/预检报告分别保留在约定批次，不用后续通过将首次失败定性为已确认的环境问题。
