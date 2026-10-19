@@ -9,6 +9,38 @@ import test from 'node:test';
 import { EventEmitter } from 'node:events';
 import { build } from 'esbuild';
 
+test('startup failure codes survive child exit without exposing child error text or accepting late readiness', async () => {
+  const entry = new URL('../src/main/runtime-manager.ts', import.meta.url);
+  const built = await build({
+    entryPoints: [fileURLToPath(entry)],
+    bundle: true,
+    write: false,
+    platform: 'node',
+    format: 'cjs',
+    packages: 'external',
+  });
+  const child = new EventEmitter();
+  child.pid = 314;
+  const require = createRequire(import.meta.url);
+  const module = { exports: {} };
+  /**
+   * Retains the real manager and contract validation with a single owned child transport.
+   */
+  const load = (id) => (id === 'electron' ? { utilityProcess: { fork: () => child } } : require(id));
+  new Function('require', 'module', 'exports', built.outputFiles[0].text)(load, module, module.exports);
+  const manager = new module.exports.RuntimeManager('unused', 'unused', 'unused');
+  manager.snapshot.state = 'starting';
+  const rejected = assert.rejects(manager.launch(), /before readiness/);
+  child.emit('message', { type: 'startup-failed', code: 'CONTROL_STORE_INVALID', message: 'secret' });
+  assert.equal(manager.readStatus().startupFailure, null);
+  child.emit('message', { type: 'startup-failed', code: 'CONTROL_STORE_INVALID' });
+  child.emit('exit', 1);
+  await rejected;
+  assert.equal(manager.readStatus().state, 'failed');
+  assert.equal(manager.readStatus().startupFailure, 'CONTROL_STORE_INVALID');
+  assert.ok(!JSON.stringify(manager.readStatus()).includes('secret'));
+});
+
 test('startup deadline kills only the owned child, preserves timeout and refuses late readiness', async (context) => {
   const built = await build({
     entryPoints: [fileURLToPath(new URL('../src/main/runtime-manager.ts', import.meta.url))],

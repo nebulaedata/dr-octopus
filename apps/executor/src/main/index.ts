@@ -15,6 +15,8 @@ import { executionResourceRoot, resolveUiAsset } from './resource-paths';
 import { registerDesktopIpc } from './desktop-ipc';
 import { executorProduct } from '../contracts/product';
 import { developmentRestartExitCode } from '../contracts/runtime';
+import { RuntimeRecovery } from '../maintenance/runtime-recovery';
+import { NativeFileCommit } from '../runtime/basic/native-file-commit';
 
 app.setName(executorProduct.name);
 nativeTheme.themeSource = 'system';
@@ -71,6 +73,7 @@ let unregisterIpc: (() => void) | null = null;
 let exiting = false;
 let drained = false;
 let restartRequested = false;
+let recovery: RuntimeRecovery | null = null;
 
 /**
  * Coalesces explicit restart requests and lets the existing bounded quit flow drain the Runtime first.
@@ -299,8 +302,8 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
     exiting = true;
-    void runtime
-      .stop()
+    void Promise.resolve(recovery?.close())
+      .then(() => runtime.stop())
       .then(() => {
         unsubscribeIndicator?.();
         computerEscape?.dispose();
@@ -369,7 +372,11 @@ if (!app.requestSingleInstanceLock()) {
         indicator?.update(snapshot.computerUse);
         computerEscape?.update(snapshot);
       });
-      unregisterIpc = registerDesktopIpc(runtime, windows, uiOrigin, !testMode, requestRestart);
+      recovery = new RuntimeRecovery(
+        runtime,
+        new NativeFileCommit(resolve(executionRoot, 'native/file-commit.node'))
+      );
+      unregisterIpc = registerDesktopIpc(runtime, windows, uiOrigin, !testMode, requestRestart, recovery);
       const settings = await runtime.readSettings();
       nativeTheme.themeSource = settings.ok ? settings.data.themeSource : 'system';
       tray = createTray();

@@ -160,7 +160,9 @@ Summary 展示上传结果、下载链接、源提交、版本、productBuildId 
 
 ### GitHub Release Assets 与 Web 下载地址
 
-正常发版沿用仓库根 pnpm release:publish：先成功发布 npm，再用个人发布身份创建对应 Tag 的 GitHub Release。Release 发布事件同时触发 Docker 与 Executor 流水线。新 Tag 必须包含本工作流及其工程脚本；不将当前 main 的产物附加到旧源码 Tag。仓库 Release 版本与 Executor 产品版本独立，例如 v0.0.14 可以分发 Executor 0.0.1。
+正常发版沿用仓库根 pnpm release:publish：先明确选择仓库和 Executor 的独立升级幅度，预览后将两个版本提交到同一个仓库 Tag，再构建并成功发布 npm，最后用发布身份创建该 Tag 的 GitHub Release。参数、CI 凭据及恢复流程统一见 [CLI 联合发布指南](../../apps/cli/README.md#非交互发布与-github-actions)。Executor 产品版本以 apps/executor/package.json 为唯一来源，product.ts 静态引用并由构建内联，普通构建和发布恢复不升版。
+
+Release 发布事件同时触发 Docker 与 Executor 流水线；两个构建任务只读取 Tag 已确定的版本。新 Tag 必须包含本工作流及其工程脚本；不将当前 main 的产物附加到旧源码 Tag。仓库 Release 版本与 Executor 产品版本独立，例如 v0.0.14 可以分发 Executor 0.0.1。
 
 发布任务只下载 acceptance 任务输出的单一 artifact-id，先验证完整 SHA256SUMS 清单、原始文件、产品身份、六项验收结论及实际检出提交，再查询目标 Release 的当前 Tag 提交；全部一致才允许上传。只给该任务 contents:write，PR 不运行发布任务。首次上传失败不自动重放；修复后使用原运行的 Re-run failed jobs，复用已验收的相同附件。与既有资产名称、大小和 SHA-256 一致时保留；冲突或未知摘要时失败，不使用 clobber 删除或替换已发布文件。
 

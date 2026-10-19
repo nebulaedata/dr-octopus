@@ -1,8 +1,16 @@
 # Executor 验证状态与已知限制
 
-更新日期：2026-10-15。本文汇总已完成开发、实际检查与尚未完成的交付条件，替代按日期累计的阶段报告。接口见 [架构入口](executor.md)，发布门禁见 [交付](executor-delivery.md#发布门禁)。
+更新日期：2026-10-19。本文汇总已完成开发、实际检查与尚未完成的交付条件，替代按日期累计的阶段报告。接口见 [架构入口](executor.md)，发布门禁见 [交付](executor-delivery.md#发布门禁)。
 
 ## 当前状态
+
+### 启动故障的独立恢复入口
+
+2026-10-19 新增独立维护恢复模块与状态页 Alert/actions。当前仅对 `CONTROL_STORE_INVALID` 开放用户确认后的授权/连接配置/任务历史重置；其他错误保留详情与启动重试。隔离测试验证旧 `computer.observe` 数据逐字节备份、原目录保留、无旧授权/任务重放、设置与设备身份保留，以及备份失败、部分重置失败、并发和退出等待。
+
+实际检查：`pnpm --filter @octopus/executor build`、lint、typecheck 通过；完整 `test` 263/263 通过，新增维护 IPC 边界测试另行 1/1 通过。真实 Electron 恢复流程 1/1、三页导航回归 1/1 通过；发行包隔离副本在限制 PATH 下完成旧数据失败、确认/取消、备份、重置和服务就绪验证 1/1，1040×760 与 720×560 截图已检查，无相关页面异常。发行副本只启用测试所需 inspector，并将 Host 注册脚本替换为无副作用夹具，不改变原发行包或日常注册。构建输出的 Main/Preload/Renderer/Runtime 共 19 个文件与该包逐字节一致。
+
+首次构建因其他测试进程占用原生文件而失败，释放后按原命令通过。首轮维护测试暴露私有目录命名不符合原生约束，修正为既有 recovery 前缀后通过。集成夹具的异步等待、toast/dialog 定位、Preload 严格拒绝额外字段的断言和新增 API 清单分别保留首次输出后修正；未放宽业务校验或扩大重置范围。原始本地集成日志、截图与产物一致性结果位于项目约定的 `build/validation-evidence/runtime-recovery` 批次目录。本次未重置正式用户数据，未执行完整安装/卸载、签名发行或独立电脑验收；生成的包为 unsigned 验证产物。
 
 ### Browser 现场断线诊断
 
@@ -718,3 +726,23 @@ Docker 流水线完成精确 npm 版本构建、镜像启动/Web/三个持久卷
 首次批次在同步 latest 前发现 Docker Hub latest 摘要 4c10763b1bf81664bf35d54f60a2e363024cf2becb22540710401f5dbda06e61 与版本标签不同，保护检查明确拒绝推送，原日志保留。原始 manifest 复核确认版本为 OCI、latest 为 Docker schema 2，首层压缩字节亦不同，其余七层摘要相同；两者配置字节摘要均为 5c687aa1477d89034ed386d29b385b28203c9155cc2f4daf5b91bfca473ceb23，且配置记录同一有序解压层摘要。没有将 manifest 摘要不同忽略为相同字节，也没有修改 Docker Hub 标签。
 
 随后用 docker buildx imagetools create --prefer-index=false，将 Harbor 已校验的固定版本摘要提升到同仓库 latest，避免再次复制 Docker Hub latest 的另一种表示。最终独立核对 Docker Hub 0.0.14、Harbor 0.0.14 与 Harbor latest，三者均为 sha256:9d2bed6485fdce9365ecc11e9c4039a585d6fef6cd33bd0451d6f07cb31c7353。本次同步与标签更新通过，没有重新构建镜像、创建项目或部署运行环境；原始复制、保护拒绝、配置复核、提升及最终摘要报告分别保留。
+
+## 2026-10-19：统一升版入口与 CI 非交互参数
+
+根 pnpm release:publish 新发版入口明确选择仓库与 Executor 各自的 patch/minor/major，在写入文件、提交与推送前显示并确认两个版本；通过 release-it 标准插件在同一个提交和 Tag 中更新 release.config.json 与 apps/executor/package.json。默认的底层仅升版入口为 Executor 递增 patch。Executor package.json 为唯一产品版本来源，product.ts 静态引用并在 Node/Renderer 构建中内联；普通构建、打包及发布恢复不递增版本，扩展独立版本不改。
+
+非交互新版本必须同时提供 --increment 与 --executor-increment，并明确使用 --yes 或 --ci；--ci 隐含 --yes。无 TTY、CI 环境及显式非交互模式均不等待菜单；缺少参数或恢复/升版冲突在认证、构建和 Git 写入之前失败。可选 .env.publish 不再阻止直接使用 CI 环境凭据，npm 认证仍由 npm 配置管理。Actions Token 与下游 release:published 事件的要求统一记录在 CLI 联合发布指南，未新增或触发真实工作流。
+
+首次聚焦复验暴露锁定的 release-it 21.0.2 拒绝自定义 CLI 参数 --executorIncrement；保留原失败输出。改用程序化 API 传递标准插件配置，根 release-it 配置没有引入 Schema 外的自定义字段。复验 22 项通过；真实 Git 演练只使用临时仓库和本地 bare remote，覆盖版本提交/注解 Tag、独立幅度、dry run、取消、非法输入、脏工作区与不变版本拒绝。额外隔离用例确认缺少 .env.publish 时可读取 CI 环境，并仅访问本地 npm 认证替身，没有接触发布服务或写入真实版本。
+
+CLI 全量 84 项及额外 CI 环境用例 1 项通过，Executor 含原生回归 256 项全部通过，Web 下载配置 6 项通过；CLI/Executor 构建、lint/typecheck，七个根发布模块的显式 lint、格式与换行检查通过。单一产品来源用例在独立目录将版本改为 0.9.7，确认 Node 和浏览器 bundle 均内联新值且不保留 package.json 运行时读取；发布计划到 Web 下载地址的用例确认独立仓库/产品版本准确组合。原 lint 路径/扫描范围问题与实际零警告复验分别记录，没有将被忽略文件当作已检查。
+
+本批原始材料按 version-release/20261019-ci 保存。测试期间工作区存在其他并行改动，记录只对应各次检查读取的源码与本轮生成产物；没有覆盖或提交其他改动。仓库版本仍为 0.0.14、Executor 为 0.0.1，未执行真实升版、Tag 推送、npm/GitHub/Harbor 发布或日常产品安装；独立电脑、硬件及签名门禁不提升。
+
+### 同批新包与冻结源码对照复验
+
+从本轮已完成的 Executor 构建执行工作流原始 package、verify、六项有限验收步骤，生成新目录 0.0.1-unsigned-63a4e0d6-9a2e-47f2-bc51-c5251d5916c6，productBuildId 为 08dda1583c2402a824ae3b91e6480937f4feab834aee57c4cede105e4ffd5edd。EXE/ZIP 文件名及产品版本符合单一来源；离线预检、产品树与实际 ZIP 清单均通过，ZIP 共核验 8,265 个清单文件、672,404,256 字节。
+
+首次包级验收为 5/6：并行构建改写共享 dist/renderer 后，原 Renderer 对照文件已不存在。没有恢复覆盖共享 dist，也没有删除字节比较断言；从冻结的原始 HEAD 源码加本次产品版本契约，在独立目录重新构建 Renderer。其字节对照通过后，安装指南又因并行编辑与原包不同而失败；进一步使用同一原始源码归档按仓库 CRLF 约定恢复指南对照，未从产品包提取期望值。最终对同一 EXE/ZIP 运行原六项验收，6/6 全部通过、零跳过；两次失败与最终完整 TAP 分别保留。验收脚本中元数据、窗口标题、Electron 版本和 MCP 服务版本四处固定 0.0.1 断言同步改为读取唯一产品版本，避免下一次合法升版被旧断言阻断；GUI/安装用例本轮未执行。
+
+本地 ZIP SHA-256 为 4515c327097e0465306edf21d58715616d9b59d099264074a01546d9f3c8398d，EXE 为 db759e760d2efe06c8285648a2cbef3ac42d23882d88ffa6e7ec9a5f7670bc3e。这是本地未签名验证产物，不替换 v0.0.14 的已发布文件或对应摘要；真实后续版本与远端 CI 仍需由维护者显式发起。

@@ -69,6 +69,7 @@ export class RuntimeManager {
     pid: null,
     startedAt: null,
     message: '执行服务尚未启动',
+    startupFailure: null,
     computerUse: { revision: 0, activityId: null, state: 'idle', activeCalls: 0, activeTasks: 0 },
     health: { state: 'unknown', checkedAt: null },
     capabilities: {
@@ -229,7 +230,13 @@ export class RuntimeManager {
     if (this.child || this.stopping) {
       return Promise.reject(new Error('Runtime is still stopping.'));
     }
-    this.update({ state: 'starting', pid: null, startedAt: null, message: '执行服务正在启动' });
+    this.update({
+      state: 'starting',
+      pid: null,
+      startedAt: null,
+      message: '执行服务正在启动',
+      startupFailure: null,
+    });
     this.starting = this.loadSettings()
       .then((settings) => {
         if (this.snapshot.state !== 'starting') {
@@ -384,9 +391,25 @@ export class RuntimeManager {
       const onMessage = (message: unknown) => {
         const result = runtimeMessageSchema.safeParse(message);
         if (
+          result.success &&
+          result.data.type === 'startup-failed' &&
+          this.child === child &&
+          !settled &&
+          this.snapshot.state === 'starting'
+        ) {
+          this.update({ startupFailure: result.data.code });
+          try {
+            child.postMessage({ type: 'startup-failed-ack' });
+          } catch {
+            // Retain the diagnostic even if the child has already disconnected; its exit remains authoritative.
+          }
+          return;
+        }
+        if (
           !result.success ||
           result.data.type !== 'ready' ||
           result.data.pid !== child.pid ||
+          this.snapshot.startupFailure !== null ||
           this.snapshot.state !== 'starting'
         ) {
           return;

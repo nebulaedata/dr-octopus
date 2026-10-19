@@ -18,6 +18,7 @@ import { ShellExecutor } from './basic/shell-executor';
 import { NodeResources } from './basic/node-resources';
 
 import { BasicTools } from './basic/basic-tools';
+import { BasicToolError } from './basic/basic-inputs';
 import { NativeFileCommit } from './basic/native-file-commit';
 import { FilePublication } from './basic/file-publication';
 import { SearchTools } from './basic/search-tools';
@@ -262,9 +263,26 @@ initialized.then(
       });
     }
   },
-  () => {
+  (error: unknown) => {
     clearInterval(keepAlive);
+    // Wait for Main to retain the safe code before exiting; immediate process.exit can discard queued IPC.
+    const deadline = setTimeout(() => process.exit(1), 1000);
+    /**
+     * Confirms safe failure delivery without delaying exit indefinitely if Main has disconnected.
+     */
+    const acknowledged = (event: { data: unknown }) => {
+      const message = runtimeMessageSchema.safeParse(event.data);
+      if (message.success && message.data.type === 'startup-failed-ack') {
+        clearTimeout(deadline);
+        port.removeListener('message', acknowledged);
+        process.exit(1);
+      }
+    };
+    port.on('message', acknowledged);
+    port.postMessage({
+      type: 'startup-failed',
+      code: error instanceof BasicToolError ? error.code : 'STARTUP_FAILED',
+    });
     console.error('[executor] Basic Runtime initialization failed.');
-    process.exit(1);
   }
 );

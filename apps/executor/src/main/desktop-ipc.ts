@@ -25,6 +25,9 @@ import type { BrowserWindow, IpcMainInvokeEvent } from 'electron';
 import type { RuntimeManager } from './runtime-manager';
 import type { StatusResponse, DesktopActionResponse } from '../contracts/runtime';
 import type { BrowserDiagnosticsResponse } from '../contracts/runtime';
+import { maintenanceActionSchema } from '../contracts/maintenance';
+import type { MaintenanceResponse } from '../contracts/maintenance';
+import type { RuntimeRecovery } from '../maintenance/runtime-recovery';
 
 /**
  * Checks the actual sender frame and rejects auxiliary windows or opaque origins.
@@ -51,7 +54,8 @@ export function registerDesktopIpc(
   windows: Set<BrowserWindow>,
   origin: string,
   automaticBrowserSetup = false,
-  restartApplication?: () => boolean
+  restartApplication?: () => boolean,
+  recovery?: RuntimeRecovery
 ): () => void {
   const resourceRoot = executionResourceRoot(app.isPackaged, process.resourcesPath, app.getAppPath());
   const native = new NativeFileCommit(join(resourceRoot, 'native/file-commit.node'));
@@ -61,6 +65,59 @@ export function registerDesktopIpc(
   let configuringBrowser = false;
   let configuredEpoch = '';
   const browserSetupLifetime = new AbortController();
+  ipcMain.handle(ipcChannels.readMaintenance, (event, input: unknown): MaintenanceResponse => {
+    if (
+      !isTrustedSender(event, windows, origin) ||
+      !emptyRequestSchema.safeParse(input).success ||
+      !recovery
+    ) {
+      return { ok: false, message: '此页面无法读取恢复状态' };
+    }
+    return { ok: true, data: recovery.read() };
+  });
+  ipcMain.handle(
+    ipcChannels.maintenanceAction,
+    async (event, input: unknown): Promise<DesktopActionResponse> => {
+      const parsed = maintenanceActionSchema.safeParse(input);
+      if (!isTrustedSender(event, windows, origin) || !parsed.success || !recovery || restarting) {
+        return { ok: false, message: '此页面无法执行恢复操作' };
+      }
+      const { action, revision } = parsed.data;
+      try {
+        if (action === 'reset' || action === 'retry') {
+          if (changing || manager.isSavingSettings()) {
+            return { ok: false, message: '请等待当前保存或授权操作完成' };
+          }
+          await recovery.run(action, revision);
+        } else if (action === 'dismiss') {
+          recovery.dismiss();
+        } else if (action === 'copy-details') {
+          const state = recovery.read();
+          clipboard.writeText(
+            JSON.stringify({ issue: state.issue, phase: state.phase, message: state.message }, null, 2)
+          );
+        } else {
+          const backup = recovery.read().backupPath;
+          if (!backup || recovery.isBusy()) {
+            return { ok: false, message: '备份尚不可用' };
+          }
+          const info = await native.inspect(backup);
+          if (!info.ok || !info.directory || !info.privateAcl || !isTrustedSender(event, windows, origin)) {
+            return { ok: false, message: '无法打开备份目录' };
+          }
+          if (await shell.openPath(backup)) {
+            return { ok: false, message: '无法打开备份目录' };
+          }
+        }
+        return { ok: true };
+      } catch (error) {
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message.slice(0, 200) : '恢复操作失败，请刷新后重试',
+        };
+      }
+    }
+  );
   ipcMain.handle(
     ipcChannels.restartApplication,
     async (event, input: unknown): Promise<DesktopActionResponse> => {
@@ -71,6 +128,7 @@ export function registerDesktopIpc(
       if (
         !isTrustedSender(event, windows, origin) ||
         restarting ||
+        recovery?.isBusy() ||
         manager.isSavingSettings() ||
         !settings.ok ||
         !settings.data.pendingRestart
@@ -203,7 +261,7 @@ export function registerDesktopIpc(
     if (!isTrustedSender(event, windows, origin)) {
       return { ok: false, code: 'FORBIDDEN', message: '此页面无法管理连接设置' };
     }
-    if (restarting) {
+    if (restarting || recovery?.isBusy()) {
       return { ok: false, code: 'UNAVAILABLE', message: '执行器正在重启，暂不可保存设置' };
     }
     const parsed = settingsInputSchema.safeParse(input);
@@ -413,6 +471,8 @@ export function registerDesktopIpc(
     browserSetupLifetime.abort();
     unsubscribe();
     ipcMain.removeHandler(ipcChannels.restartApplication);
+    ipcMain.removeHandler(ipcChannels.readMaintenance);
+    ipcMain.removeHandler(ipcChannels.maintenanceAction);
     ipcMain.removeHandler(ipcChannels.readSettings);
     ipcMain.removeHandler(ipcChannels.setBrowserEnabled);
     ipcMain.removeHandler(ipcChannels.browserDiagnostics);

@@ -172,7 +172,7 @@ Browser 来源在构建期确定，配套插件和 Executor 使用同一[身份�
 ## 5. 正式候选构建
 
 1. 确认第 4 节工程已完成，并记录实际正式入口名称。当前仓库尚不能执行所谓 package:release；以下命令只完成已支持的构建和基础检查。
-2. 确认发布版本同时覆盖 apps/executor/package.json 与 [product.ts](src/contracts/product.ts)，不要用根 CLI 的发版命令代替 Executor 版本管理。
+2. 产品版本以 apps/executor/package.json 为唯一来源，[product.ts](src/contracts/product.ts) 静态引用并由构建内联。使用仓库统一发版入口选择独立的 Executor 升级幅度，提交与 Tag 之前完成更新；普通构建、打包及恢复发布不递增版本。命令与非交互参数见 [CLI 联合发布指南](../cli/README.md#非交互发布与-github-actions)。
 3. 获得 Chrome/Edge 商店实际 ID，并按[插件 SOP](../browser-extension/RELEASE.md#3-先取得商店身份再完成-native-host-适配)核对 Native 来源；正式插件与候选 Executor 来自同一已审查版本。
 4. 按交付指南准备原生头文件、私有资源、许可证及打包工具，在仓库根按顺序执行：
 

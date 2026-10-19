@@ -12,10 +12,14 @@ import type {
   ClientConfigurationActionResponse,
 } from './client-configuration';
 import { z } from 'zod';
+import type { MaintenanceAction, MaintenanceResponse } from './maintenance';
 
 export const developmentRestartExitCode = 75;
+export const startupFailureCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{0,99}$/);
 
 export const ipcChannels = {
+  readMaintenance: 'executor:maintenance:read',
+  maintenanceAction: 'executor:maintenance:action',
   restartApplication: 'executor:application:restart',
   readAccess: 'executor:access:read',
   approveAccess: 'executor:access:approve',
@@ -49,6 +53,7 @@ export const runtimeSnapshotSchema = z
     pid: z.number().int().positive().nullable(),
     startedAt: z.string().datetime().nullable(),
     message: z.string().max(200),
+    startupFailure: startupFailureCodeSchema.nullable().default(null),
     computerUse: computerUseSchema.default({
       revision: 0,
       activityId: null,
@@ -69,6 +74,8 @@ export const runtimeSnapshotSchema = z
 export const emptyRequestSchema = z.object({}).strict();
 export const browserSelectionSchema = z.strictObject({ browser: z.enum(['chrome', 'edge']) });
 export const runtimeMessageSchema = z.discriminatedUnion('type', [
+  z.strictObject({ type: z.literal('startup-failed-ack') }),
+  z.strictObject({ type: z.literal('startup-failed'), code: startupFailureCodeSchema }),
   z
     .object({
       type: z.literal('ready'),
@@ -114,6 +121,14 @@ export const browserDiagnosticsSchema = z.discriminatedUnion('ok', [
 export type BrowserDiagnosticsResponse = z.infer<typeof browserDiagnosticsSchema>;
 
 export interface ExecutorDesktopApi {
+  /**
+   * Reads safe maintenance status even while the Runtime is unavailable.
+   */
+  readMaintenance(): Promise<MaintenanceResponse>;
+  /**
+   * Requests a finite recovery action bound to the observed lifecycle revision, never a filesystem path.
+   */
+  maintenanceAction(input: MaintenanceAction): Promise<DesktopActionResponse>;
   /**
    * Requests a complete application restart with already saved settings and no executable arguments.
    */

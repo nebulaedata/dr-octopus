@@ -74,7 +74,7 @@ async function digest(path: string): Promise<string> {
 /**
  * Records ordinary files and empty directories under explicit file/byte limits; the caller must keep the app stopped.
  */
-async function inventory(native: NativeFileCommit, root: string): Promise<Inventory> {
+async function inventory(native: NativeFileCommit, root: string, entries?: string[]): Promise<Inventory> {
   await ordinary(root);
   if (!(await native.inspect(root)).ok) {
     throw new Error('DATA_PATH_REPARSE_REJECTED');
@@ -88,7 +88,8 @@ async function inventory(native: NativeFileCommit, root: string): Promise<Invent
    * Traverses only owned inventory paths and refuses links or unsupported filesystem entries.
    */
   async function visit(prefix: string): Promise<void> {
-    for (const name of (await readdir(join(root, prefix))).sort()) {
+    const names = (await readdir(join(root, prefix))).sort();
+    for (const name of names.filter((name) => prefix || !entries || entries.includes(name))) {
       const path = prefix ? prefix + '/' + name : name;
       pathSchema.parse(path);
       const target = join(root, path);
@@ -120,11 +121,17 @@ async function inventory(native: NativeFileCommit, root: string): Promise<Invent
 /**
  * Refuses existing output, nested source/output paths and non-private output creation before copying any secrets.
  */
-async function destination(native: NativeFileCommit, source: string, output: string): Promise<void> {
-  for (const [root, target] of [
-    [source, output],
-    [output, source],
-  ]) {
+async function destination(
+  native: NativeFileCommit,
+  source: string,
+  output: string,
+  entries?: string[]
+): Promise<void> {
+  const sources = entries ? entries.map((entry) => join(source, entry)) : [source];
+  for (const [root, target] of sources.flatMap((path) => [
+    [path, output],
+    [output, path],
+  ])) {
     const path = relative(root, target);
     if (!path || (!path.startsWith('..\\') && path !== '..' && !isAbsolute(path))) {
       throw new Error('DATA_PATH_OVERLAP');
@@ -172,12 +179,24 @@ async function copy(
 }
 
 /**
- * Backs up stopped data to a new private directory; no application file, registration or existing backup is overwritten.
+ * Backs up stopped data to a new private directory; optional top-level entries permit scoped in-project backups outside those entries.
+ * No application file, registration or existing backup is overwritten.
  */
-export async function backupData(native: NativeFileCommit, source: string, output: string) {
+export async function backupData(
+  native: NativeFileCommit,
+  source: string,
+  output: string,
+  entries?: string[]
+) {
   source = resolve(source);
   output = resolve(output);
-  const expected = await inventory(native, source);
+  if (entries) {
+    z.array(z.string().regex(/^[a-z][a-z-]*$/))
+      .min(1)
+      .max(20)
+      .parse(entries);
+  }
+  const expected = await inventory(native, source, entries);
   const manifest = manifestSchema.parse({
     schemaVersion: 1,
     product: executorProduct.name,
@@ -187,11 +206,11 @@ export async function backupData(native: NativeFileCommit, source: string, outpu
   if (Buffer.byteLength(JSON.stringify(manifest)) > 8 * 1024 * 1024) {
     throw new Error('DATA_MANIFEST_LIMIT');
   }
-  await destination(native, source, output);
+  await destination(native, source, output, entries);
   const payload = join(output, 'data');
   await mkdir(payload);
   await copy(native, source, payload, expected);
-  if (JSON.stringify(await inventory(native, source)) !== JSON.stringify(expected)) {
+  if (JSON.stringify(await inventory(native, source, entries)) !== JSON.stringify(expected)) {
     throw new Error('DATA_SOURCE_CHANGED');
   }
   const file = await open(join(output, 'executor-data-backup.json'), 'wx');

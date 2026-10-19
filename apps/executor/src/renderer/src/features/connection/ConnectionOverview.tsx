@@ -37,6 +37,8 @@ import { BrowserBridgeStatus } from './BrowserBridgeStatus';
 import { ToolOverview } from './ToolOverview';
 import { ExecutorTitleBar } from './ExecutorTitleBar';
 import { ExecutorScrollArea } from './ExecutorScrollArea';
+import { RuntimeRecoveryAlert } from '../maintenance';
+import { maintenanceQuery } from '@/queries/maintenance-queries';
 
 const labels = {
   stopped: '已停止',
@@ -53,6 +55,8 @@ export function ConnectionOverview() {
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [tab, setTab] = useState<string>('status');
   const runtime = useQuery(runtimeStatusQuery);
+  const maintenance = useQuery(maintenanceQuery);
+  const showRecovery = !!maintenance.data && (!!maintenance.data.issue || maintenance.data.phase !== 'idle');
   const ready = runtime.data?.state === 'ready' && runtime.data.health.state === 'healthy';
   const starting = runtime.data?.state === 'starting';
   const access = useQuery({ ...accessQuery, enabled: ready, refetchInterval: 2000 });
@@ -192,7 +196,12 @@ export function ConnectionOverview() {
               <h1 className="text-3xl font-semibold tracking-tight">运行状态</h1>
               <p className="text-sm text-muted-foreground">查看执行服务与本机工具的可用情况。</p>
             </div>
-            <Collapsible defaultOpen={false} className="rounded-xl bg-muted/40 p-4 sm:p-5">
+            <RuntimeRecoveryAlert onConnect={() => setTab('connections')} />
+            <Collapsible
+              hidden={showRecovery && maintenance.data?.phase !== 'succeeded'}
+              defaultOpen={false}
+              className="rounded-xl bg-muted/40 p-4 sm:p-5"
+            >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
                   {statusIndicator}

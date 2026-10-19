@@ -67,7 +67,7 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 - Browser 身份只在构建期从插件 browser-identity.json 唯一解析，两个商店 ID 在所有模式下必填；客户端不读取根 .env 或身份环境变量，将同一精确来源集合编入 launcher、Host、Runtime 与注册脚本；运行时不读取 .env 或接受身份覆盖。生成模块随构建缓存恢复，不手工改生成文件。
 - 客户端校验核对当前身份策略 fingerprint、协议版本和已完成构建的消费者摘要，不读取插件输出；策略不含插件 profile 或产品版本。打包另核对所附插件各渠道身份、协议、产物模式和 manifest 版本；不要求两端完整身份指纹相同。未知身份、不兼容协议或产物记录失配即失败。正式签名若改变消费者字节，在受控签名步骤之后重新生成身份摘要，再生成最终 runtime-manifest。
 - package:acceptance 只打包已有输出，不自动 build 或准备缺失资源；每次生成 release/<version>-unsigned-<UUID>/ 下的新 EXE、ZIP、清单和验收工具。保留既有产物，不把源码/文档更新当作旧包已更新。
-- 产品展示版本与 package.json、src/contracts/product.ts 一致；应用 ID/数据目录/Host 不随展示名改变。
+- 产品版本以 package.json 为唯一来源，src/contracts/product.ts 静态引用并在构建时内联；构建/打包不升版。仓库统一发版入口在提交与 Tag 前更新该版本，恢复发布保持版本不变；应用 ID/数据目录/Host 不随展示名改变。
 - 固定私有 Node/Python、搜索、原生组件、品牌和许可随包；普通 build/start 不下载资源，Node 只用 assemble:node。Shell 按 [ADR-0084](../../docs/adr/0084-executor-system-shell.md) 使用固定系统 Windows PowerShell 5.1，不内置 PortableGit、不通过 PATH 选择解释器。业务子命令可使用经过筛选的本机 PATH；Linux/macOS 仅显式 if-else、注释与未实现错误，不宣称已支持。
 - Node 清单从验证归档生成并编译摘要，Computer 清单只供构建/打包；最终 runtime-manifest 在 PE/Fuse 修改后生成，不在运行时重建信任锚。
 - 验收入口保持 unsigned 行为；prepare:acceptance-kit 只新增 UUID 工具目录，不改安装程序/ZIP 或覆盖报告。按[签名发布 SOP](RELEASE.md)维护正式流程，待接入配置与可执行命令分开，签名标记依据最终实际验证，不靠命名或环境变量冒充成功。

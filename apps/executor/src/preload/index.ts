@@ -15,6 +15,7 @@ import type { ExecutorDesktopApi } from '../contracts/runtime';
 import { settingsResponseSchema, settingsInputSchema } from '../contracts/connection-settings';
 import { accessResponseSchema, approvalInputSchema, revokeInputSchema } from '../contracts/access';
 import { z } from 'zod';
+import { maintenanceActionSchema, maintenanceResponseSchema } from '../contracts/maintenance';
 import {
   clientConfigurationInputSchema,
   clientConfigurationResponseSchema,
@@ -22,6 +23,20 @@ import {
 } from '../contracts/client-configuration';
 
 const api: ExecutorDesktopApi = {
+  /**
+   * Reads credential-free maintenance status through a fixed channel.
+   */
+  async readMaintenance() {
+    return maintenanceResponseSchema.parse(await ipcRenderer.invoke(ipcChannels.readMaintenance, {}));
+  },
+  /**
+   * Sends only finite validated maintenance actions without paths or executable arguments.
+   */
+  async maintenanceAction(input) {
+    return desktopActionResponseSchema.parse(
+      await ipcRenderer.invoke(ipcChannels.maintenanceAction, maintenanceActionSchema.parse(input))
+    );
+  },
   /**
    * Requests only the fixed application restart operation through the trusted Main.
    */

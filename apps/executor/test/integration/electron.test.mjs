@@ -171,10 +171,12 @@ test(
             'copyClientConfiguration',
             'copyEndpoint',
             'downloadClientConfiguration',
+            'maintenanceAction',
             'onStatusChanged',
             'openBrowserExtensionFolder',
             'readAccess',
             'readClientConfiguration',
+            'readMaintenance',
             'readSettings',
             'readStatus',
             'restartApplication',
@@ -221,6 +223,15 @@ test(
       const unauthorized = app.windows().find((candidate) => candidate !== page);
       await unauthorized.waitForFunction(() => Boolean(window.executor));
       assert.equal((await unauthorized.evaluate(() => window.executor.readStatus())).code, 'FORBIDDEN');
+      assert.equal((await unauthorized.evaluate(() => window.executor.readMaintenance())).ok, false);
+      assert.equal(
+        (
+          await unauthorized.evaluate(() =>
+            window.executor.maintenanceAction({ action: 'reset', revision: 0 })
+          )
+        ).ok,
+        false
+      );
       assert.equal((await unauthorized.evaluate(() => window.executor.configureBrowserHost())).ok, false);
       assert.equal(
         (await unauthorized.evaluate(() => window.executor.openBrowserExtensionFolder({ browser: 'chrome' })))

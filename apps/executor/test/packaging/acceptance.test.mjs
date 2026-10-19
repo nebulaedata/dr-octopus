@@ -5,6 +5,7 @@
 import { createClientConfiguration } from '../integration/client-configuration.mjs';
 import { bridgeVersion } from '@octopus/shared/protocol/browser-bridge';
 import { deviceConnectionKey } from '../../src/contracts/device-identity.ts';
+import { executorProduct } from '../../src/contracts/product.ts';
 import { parseBrowserIdentity } from '../../../browser-extension/scripts/lib/browser-identity.mjs';
 import {
   verifyBuiltBrowserIdentity,
@@ -309,7 +310,7 @@ test('release disables Node injection and inspector and requires an integrity-ch
   }
   assert.equal(artifact.signed, false);
   assert.equal(artifact.productName, 'Dr.Octopus Executor');
-  assert.equal(artifact.version, '0.0.1');
+  assert.equal(artifact.version, executorProduct.version);
   const builderRequire = createRequire(createRequire(import.meta.url).resolve('electron-builder'));
   const asar = builderRequire('@electron/asar');
   const entries = asar
@@ -524,10 +525,10 @@ test(
           cause: error,
         });
       }
-      assert.equal(await page.title(), 'Dr.Octopus Executor v0.0.1');
+      assert.equal(await page.title(), `Dr.Octopus Executor v${executorProduct.version}`);
       record('packaged-runtime-ready');
       assert.equal(await app.evaluate(({ app }) => app.getName()), 'Dr.Octopus Executor');
-      assert.equal(await app.evaluate(({ app }) => app.getVersion()), '0.0.1');
+      assert.equal(await app.evaluate(({ app }) => app.getVersion()), executorProduct.version);
       assert.equal(
         await app.evaluate(async ({ app }) => (await app.getFileIcon(process.execPath)).isEmpty()),
         false
@@ -665,7 +666,7 @@ test(
           stderr: 'pipe',
         })
       );
-      assert.equal(client.getServerVersion().version, '0.0.1');
+      assert.equal(client.getServerVersion().version, executorProduct.version);
       record('packaged-stdio-ready');
       /**
        * Checks real SDK envelopes while retaining useful domain failure diagnostics.
