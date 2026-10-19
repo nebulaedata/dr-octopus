@@ -2,6 +2,7 @@
  * @author Codex
  * @description Inspect complete memory and provenance before an explicit edit or revision-checked forget.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { ChevronRightIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -110,7 +111,7 @@ export function MemoryDetail({ reference, onClose }: { reference: MemoryRef; onC
                 onClick={() => {
                   if (result.data) {
                     mutation.mutate({
-                      requestId: crypto.randomUUID(),
+                      requestId: uuidv4(),
                       ref: reference,
                       expectedRevision: result.data.revision,
                     });

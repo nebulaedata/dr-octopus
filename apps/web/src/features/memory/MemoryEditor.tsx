@@ -2,6 +2,7 @@
  * @author Codex
  * @description Explicit memory authoring with complete-document loading and revision-safe updates.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
@@ -30,7 +31,7 @@ export function MemoryEditor({ document, onClose }: { document?: MemoryDocument;
   const { t } = useI18n();
   const client = useQueryClient();
   const request = useRef<{ signature: string; id: string } | undefined>(undefined);
-  const [identity] = useState(() => crypto.randomUUID());
+  const [identity] = useState(() => uuidv4());
   const mutation = useMutation({
     mutationFn: rememberMemory,
     onSuccess: async () => {
@@ -53,7 +54,7 @@ export function MemoryEditor({ document, onClose }: { document?: MemoryDocument;
     onSubmit: async ({ value }) => {
       const signature = JSON.stringify([value, document?.revision]);
       if (request.current?.signature !== signature) {
-        request.current = { signature, id: crypto.randomUUID() };
+        request.current = { signature, id: uuidv4() };
       }
       await mutation.mutateAsync({
         ...value,
@@ -82,9 +83,16 @@ export function MemoryEditor({ document, onClose }: { document?: MemoryDocument;
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{document ? t('memory.editor.editTitle', 'Edit memory') : t('memory.remember', 'Remember something')}</DialogTitle>
+          <DialogTitle>
+            {document
+              ? t('memory.editor.editTitle', 'Edit memory')
+              : t('memory.remember', 'Remember something')}
+          </DialogTitle>
           <DialogDescription>
-            {t('memory.editor.description', 'After saving, every workspace and session can consult this memory.')}
+            {t(
+              'memory.editor.description',
+              'After saving, every workspace and session can consult this memory.'
+            )}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -135,7 +143,9 @@ export function MemoryEditor({ document, onClose }: { document?: MemoryDocument;
               {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? t('memory.editor.saving', 'Saving…') : t('memory.editor.save', 'Save memory')}
+              {mutation.isPending
+                ? t('memory.editor.saving', 'Saving…')
+                : t('memory.editor.save', 'Save memory')}
             </Button>
           </DialogFooter>
         </form>

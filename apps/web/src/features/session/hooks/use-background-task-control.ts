@@ -2,6 +2,7 @@
  * @author Codex
  * @description Correlates task controls with acknowledgements and authoritative session observations.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useMemoizedFn } from 'ahooks';
 import { isBackgroundTaskActive } from '@octopus/shared/protocol';
 import { useRealtimeCommand } from '@/hooks/use-realtime';
@@ -21,7 +22,7 @@ export function useBackgroundTaskControl(sessionId: string) {
   return useMemoizedFn(async (action: BackgroundTaskAction, taskId?: string): Promise<void> => {
     const store = sessionStores.ensure(sessionId);
     const before = store.getState();
-    const requestId = crypto.randomUUID();
+    const requestId = uuidv4();
     const target = { requestId, sessionId, runtimeId: before.runtimeId, epoch: before.epoch };
     await awaitRealtimeCommand(realtimeClient, requestId, () => {
       if (action === 'all') {

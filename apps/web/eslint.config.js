@@ -44,6 +44,11 @@ export default defineConfig([
       'no-restricted-syntax': [
         'error',
         {
+          selector:
+            "MemberExpression[property.name='randomUUID'], MemberExpression[computed=true][property.value='randomUUID']",
+          message: 'Web UUID 必须使用 uuid 的 v4()；浏览器 crypto.randomUUID() 在局域网 HTTP 下不可用。',
+        },
+        {
           selector: "Property[key.name='refetchInterval'], Property[key.value='refetchInterval']",
           message: '业务状态禁止定时轮询；请在统一 SSE/WS 事件同步入口失效对应 Query。',
         },

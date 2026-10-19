@@ -2,6 +2,7 @@
  * @author Codex
  * @description Applies confirmed deletion and scoped indexing to an explicit document selection.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { RefreshCcwDotIcon, Trash2Icon } from 'lucide-react';
@@ -98,7 +99,7 @@ export function KnowledgeDocumentBatchActions({
       reindexKnowledgeCollection(
         workspaceId,
         collectionId,
-        crypto.randomUUID(),
+        uuidv4(),
         selection.map((document) => document.id)
       ),
     onMutate: () => onPendingChange(true),
@@ -114,11 +115,7 @@ export function KnowledgeDocumentBatchActions({
   const pending = remove.isPending || reindex.isPending;
   return (
     <>
-      <div
-        role="group"
-        aria-label="Selected document actions"
-        className="flex flex-wrap items-center gap-2"
-      >
+      <div role="group" aria-label="Selected document actions" className="flex flex-wrap items-center gap-2">
         {documents.length > 0 ? (
           <span className="text-xs text-muted-foreground mr-2">
             {t('knowledge.batchActions.selectedCount', '{{count}} selected', { count: documents.length })}
@@ -133,7 +130,9 @@ export function KnowledgeDocumentBatchActions({
           >
             {remove.isPending ? <Spinner /> : <Trash2Icon />}
           </TooltipTrigger>
-          <TooltipContent>{t('knowledge.batchActions.deleteTooltip', 'Delete the selected documents')}</TooltipContent>
+          <TooltipContent>
+            {t('knowledge.batchActions.deleteTooltip', 'Delete the selected documents')}
+          </TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger

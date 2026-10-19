@@ -2,6 +2,7 @@
  * @author Codex
  * @description Edits up to four home quick phrases and their Agent modes in appearance settings.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useForm } from '@tanstack/react-form';
 import { PlusIcon, Trash2Icon } from 'lucide-react';
 import { toast } from '@octopus/ui/components/toast';
@@ -81,7 +82,7 @@ export function SnippetsSettingsPage() {
                       disabled={field.state.value.length >= MAX_SNIPPETS}
                       onClick={() =>
                         field.pushValue({
-                          id: crypto.randomUUID(),
+                          id: uuidv4(),
                           title: '',
                           message: '',
                           workMode: 'agent',

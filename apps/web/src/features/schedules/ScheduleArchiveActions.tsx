@@ -2,6 +2,7 @@
  * @author Codex
  * @description Confirms archived task recovery and irreversible deletion with visible pending/error feedback.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LoaderCircleIcon } from 'lucide-react';
@@ -60,7 +61,7 @@ export function ScheduleArchiveActions({ task }: { task: ScheduledTask }) {
         disabled={!!task.hasActiveRun || mutation.isPending}
         onClick={() => {
           mutation.reset();
-          setKey(crypto.randomUUID());
+          setKey(uuidv4());
           setAction('restore');
         }}
       >
@@ -72,7 +73,7 @@ export function ScheduleArchiveActions({ task }: { task: ScheduledTask }) {
         disabled={!!task.hasActiveRun || mutation.isPending}
         onClick={() => {
           mutation.reset();
-          setKey(crypto.randomUUID());
+          setKey(uuidv4());
           setAction('purge');
         }}
       >

@@ -2,6 +2,7 @@
  * @author Codex
  * @description Groups collection reIndexing, revision-aware metadata editing and explicit visibility revocation.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -64,7 +65,7 @@ export function KnowledgeCollectionActions({
     queryFn: ({ signal }) => getKnowledgeJob(workspaceId, jobId!, signal),
   });
   const reindex = useMutation({
-    mutationFn: () => reindexKnowledgeCollection(workspaceId, collection.id, crypto.randomUUID()),
+    mutationFn: () => reindexKnowledgeCollection(workspaceId, collection.id, uuidv4()),
     onSuccess: (value) => setJobId(value.id),
     onError: (error) =>
       toast.add({

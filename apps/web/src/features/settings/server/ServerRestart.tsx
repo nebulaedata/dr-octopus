@@ -2,6 +2,7 @@
  * @author Codex
  * @description Confirms interruption and resolves a single accepted Server restart without replaying mutations.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useRef } from 'react';
 import { useCountDown, useSafeState } from 'ahooks';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -98,7 +99,7 @@ export function ServerRestart({
     try {
       const response = await restartServer(
         { revision: snapshot.revision, expectedServiceInstanceId: snapshot.serviceInstanceId },
-        crypto.randomUUID()
+        uuidv4()
       );
       setStartedAt(Date.now());
       setAccepted(response.operation);

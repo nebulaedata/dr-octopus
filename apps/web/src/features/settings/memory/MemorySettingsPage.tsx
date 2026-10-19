@@ -2,6 +2,7 @@
  * @author Codex
  * @description Configures the shared memory policy inside canonical and dialog Settings surfaces.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
@@ -107,7 +108,7 @@ export function MemorySettingsPage() {
                     policy.mutate({
                       mode: next,
                       expectedRevision: status.data.revision,
-                      requestId: crypto.randomUUID(),
+                      requestId: uuidv4(),
                     });
                   }
                 }}

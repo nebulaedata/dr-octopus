@@ -2,6 +2,7 @@
  * @author Codex
  * @description Document management, import outcomes and paginated indexing state for one collection.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileTextIcon, UploadIcon, ChevronDownIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react';
@@ -190,7 +191,7 @@ export function KnowledgeDocuments({
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) {
-                  upload.mutate({ file, requestId: crypto.randomUUID() });
+                  upload.mutate({ file, requestId: uuidv4() });
                 }
                 event.target.value = '';
               }}
@@ -240,7 +241,7 @@ export function KnowledgeDocuments({
         <KnowledgeTextDialog
           onClose={() => setTextOpen(false)}
           onSave={async (file) => {
-            await upload.mutateAsync({ file, requestId: crypto.randomUUID() });
+            await upload.mutateAsync({ file, requestId: uuidv4() });
             setTextOpen(false);
           }}
         />

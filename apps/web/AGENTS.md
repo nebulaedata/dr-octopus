@@ -31,6 +31,7 @@ Before changing `src/features/session/ToolRenderers/` or the `ToolProjection` pi
 
 ## Shared Infrastructure and Utilities
 
+- Generate browser UUIDs with `import { v4 as uuidv4 } from 'uuid'`. Do not call native `crypto.randomUUID()` in Web code: supported LAN HTTP deployments are not secure contexts. Preserve operation-owned ID lifetimes and reuse idempotency keys for retries of the same operation.
 - Keep `src/lib/` for long-lived connections, listener registries and application runtime ownership. Use `lib/runtime/` for WebSocket transport, command acknowledgement and Session retention; use `lib/shortcuts/` for shortcut infrastructure. Do not introduce a parallel app-wide core directory.
 - Put callable helpers with bounded side effects, such as clipboard copying and feedback, in `src/utils/`. Keep framework-neutral helpers cohesive with their owning infrastructure when appropriate; do not move every pure function out of lib.
 - React lifecycle adapters belong in `src/hooks/`. Shortcut Hooks live in `hooks/use-shortcut.ts`; `lib/shortcuts/shortcut-runtime.ts` owns the existing singleton wiring and `lib/shortcuts/index.ts` explicitly re-exports public infrastructure. The entry still initializes the existing runtime through its export; it is not side-effect-free on import.

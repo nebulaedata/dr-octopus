@@ -2,6 +2,7 @@
  * @author Codex
  * @description Document row menu: revision-fenced rename, source replacement and confirmed deletion behind one compact dropdown.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useRef, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -79,7 +80,7 @@ export function KnowledgeDocumentActions({
       });
     },
     mutationFn: (file: File) =>
-      uploadKnowledgeDocument(workspaceId, document.collectionId, file, crypto.randomUUID(), document),
+      uploadKnowledgeDocument(workspaceId, document.collectionId, file, uuidv4(), document),
     onSuccess: onJob,
   });
   const remove = useMutation({

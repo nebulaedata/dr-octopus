@@ -2,6 +2,7 @@
  * @author Codex
  * @description Presents persistent task authority for explicit user review and revocation.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@octopus/ui/components/button';
@@ -206,7 +207,7 @@ export function ScheduleAuthorization({
                   preview.data.taskRevision !== task.revision ||
                   reviewRevision !== task.revision
                 }
-                onClick={() => mutation.mutate({ revoke: false, key: crypto.randomUUID() })}
+                onClick={() => mutation.mutate({ revoke: false, key: uuidv4() })}
               >
                 {authorizing && <Spinner data-icon="inline-start" aria-hidden="true" />}
                 {renderButtonContent()}
@@ -216,7 +217,7 @@ export function ScheduleAuthorization({
               <Button
                 variant="destructive"
                 disabled={mutation.isPending}
-                onClick={() => mutation.mutate({ revoke: true, key: crypto.randomUUID() })}
+                onClick={() => mutation.mutate({ revoke: true, key: uuidv4() })}
               >
                 {revoking && <Spinner data-icon="inline-start" aria-hidden="true" />}
                 {revoking

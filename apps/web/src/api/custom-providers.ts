@@ -2,6 +2,7 @@
  * @author Codex
  * @description Provides typed HTTP access to user-added providers and local model discovery.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { request } from '@/utils/request';
 import type {
   ConfigureCustomProviderBody,
@@ -26,7 +27,7 @@ export function createCustomProvider(input: CreateCustomProviderBody) {
     url: '/settings/local-providers',
     method: 'POST',
     data: input,
-    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    headers: { 'Idempotency-Key': uuidv4() },
   });
 }
 /**

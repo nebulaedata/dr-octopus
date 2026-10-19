@@ -2,6 +2,7 @@
  * @author Codex
  * @description Manages every Workspace schedule and its durable execution history from the Workbench.
  */
+import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { Page } from '@/components/Page';
 import { PageHero } from '@/components/PageHero';
@@ -123,7 +124,7 @@ export function SchedulesPage({
   function act(targetWorkspaceId: string, input: Omit<ScheduleMutationInput, 'key'>): void {
     mutation.mutate({
       workspaceId: targetWorkspaceId,
-      input: { ...input, key: crypto.randomUUID() },
+      input: { ...input, key: uuidv4() },
     });
   }
   const workspaceFilter = (
@@ -409,7 +410,7 @@ export function SchedulesPage({
                   await mutation.mutateAsync({
                     workspaceId: editor.workspaceId,
                     input: {
-                      key: crypto.randomUUID(),
+                      key: uuidv4(),
                       operation: 'update',
                       taskId: editor.task.id,
                       revision: editor.task.revision,
