@@ -1,10 +1,10 @@
 /**
  * @author Codex
- * @description Verifies provider creation in a real insecure HTTP browser context without native randomUUID.
+ * @description Verifies built release identity and provider creation in a real insecure HTTP browser context without native randomUUID.
  */
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, expect } from '@playwright/test';
@@ -15,10 +15,15 @@ import { installSessionFixture } from './session-fixture.mjs';
 let browser;
 let server;
 let baseURL;
-const artifacts = join(tmpdir(), 'octopus-provider-uuid-qa');
+const artifacts = process.env.OCTOPUS_WEB_E2E_ARTIFACTS || join(tmpdir(), 'octopus-provider-uuid-qa');
+const release = JSON.parse(
+  await readFile(new URL('../../../../release.config.json', import.meta.url), 'utf8')
+);
 before(async () => {
   await mkdir(artifacts, { recursive: true });
-  await build({ logLevel: 'error' });
+  if (process.env.OCTOPUS_WEB_E2E_SKIP_BUILD !== '1') {
+    await build({ logLevel: 'error' });
+  }
   server = await preview({
     preview: { host: '127.0.0.1', port: 0, open: false, allowedHosts: ['octopus-uuid.test'] },
   });
@@ -39,6 +44,33 @@ after(async () => {
 });
 
 for (const width of [1280, 390]) {
+  test(`built About page and metadata match the release at ${width}px`, async (t) => {
+    const page = await browser.newPage({ viewport: { width, height: 900 }, locale: 'en-US' });
+    t.after(() => page.close());
+    await installSessionFixture(page);
+    await page.addInitScript(() => localStorage.setItem('i18nextLng', 'en'));
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        errors.push(message.text());
+      }
+    });
+    await page.goto(new URL('settings/about', baseURL).href);
+    await expect(page.getByText(`v${release.manifest.version}`, { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'View this release on GitHub' })).toHaveAttribute(
+      'href',
+      `https://github.com/nebulaedata/dr-octopus/releases/tag/v${release.manifest.version}`
+    );
+    assert.deepEqual(await page.evaluate(async () => (await fetch('/build-meta.json')).json()), {
+      schemaVersion: 1,
+      version: release.manifest.version,
+    });
+    assert.deepEqual(errors, []);
+    assert.equal(await page.locator('vite-error-overlay').count(), 0);
+    await page.screenshot({ path: join(artifacts, `about-${release.manifest.version}-${width}.png`) });
+  });
+
   test(`provider creation succeeds over insecure HTTP at ${width}px`, async (t) => {
     const page = await browser.newPage({ viewport: { width, height: 900 }, locale: 'en-US' });
     t.after(() => page.close());

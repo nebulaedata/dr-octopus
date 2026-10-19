@@ -49,6 +49,8 @@ Windows 的 MCP 命令工具为 powershell，使用系统 Windows PowerShell 5.1
 
 构建产物使用 `pnpm release:build`；执行 `pnpm release:publish` 先选择仓库与 Executor 的独立升级幅度，在同一个提交和 Tag 前完成版本更新，再发布 npm 和 GitHub Release。需要 npm 登录及具有仓库 Contents 读写权限的 `GITHUB_TOKEN`。发布脚本加载可选的根 `.env.publish`，已有进程环境变量优先，CI 可直接注入凭据。若 GitHub 发布失败，使用 `pnpm release:publish --github-only` 补发当前版本。完整命令、预发布和重试说明见 [CLI 版本发版](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版)。
 
+Web 构建缓存统一在根 `turbo.json` 声明，包含 `release.config.json`、Executor 的 `package.json` 与 `VITE_*` 环境变量；子目录配置不得覆盖丢失这些输入。Vite 将页面使用的版本同时写入 `dist/client/build-meta.json`，发行组装在归档前检查该标识与目标版本一致；缺失、损坏或版本不符时拒绝打包，需先重新构建 Web。
+
 ### 发布失败后的恢复
 
 若发布失败后又提交了修复，导致当前 HEAD 不再是原版本 tag 指向的提交，先确认工作区干净，再执行以下命令，交互选择新版本、提交并推送新 tag，然后发布：

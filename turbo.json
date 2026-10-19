@@ -86,7 +86,7 @@
         ".env",
         ".env.*"
       ],
-      "env": ["VITE_EXECUTOR_*"],
+      "env": ["VITE_*"],
       "outputs": ["dist/**"]
     },
     "@octopus/web#test": {

@@ -47,6 +47,8 @@ From the repository root, run `pnpm release:dry patch` to preview a release, or 
 
 Build release artifacts with `pnpm release:build`. Run `pnpm release:publish` to select independent repository and Executor increments, commit both before the shared Tag, then publish npm and create the matching GitHub Release. This requires npm authentication and a `GITHUB_TOKEN` with repository Contents read/write permissions. The publish script loads the optional root `.env.publish`; existing process environment variables take precedence, so CI can use injected credentials directly. If GitHub publication fails, retry the current version with `pnpm release:publish --github-only`. See [CLI version releases](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版) for commands, prereleases, and retries.
 
+Web build caching is declared in the root `turbo.json`, including `release.config.json`, the Executor `package.json`, and `VITE_*` environment variables. Package overrides must preserve these inputs. Vite also writes the UI's release version to `dist/client/build-meta.json`; assembly checks this identity before creating the archive and rejects missing, malformed, or mismatched builds. Rebuild Web before retrying.
+
 ### Recovering from a failed publication
 
 If you committed a fix after a failed publication and HEAD no longer matches the original version tag, ensure the working tree is clean, then run the following command to select a new version, commit and push its tag, and publish:

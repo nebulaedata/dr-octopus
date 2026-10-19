@@ -67,6 +67,21 @@ export async function assembleRelease(root, target, projects, config) {
       }
     }
     await lstat(join(workspace, layout.paths.webClient, 'index.html'));
+    let webBuild;
+    try {
+      webBuild = JSON.parse(
+        await readFile(join(workspace, layout.paths.webClient, 'build-meta.json'), 'utf8')
+      );
+    } catch (error) {
+      throw new Error('Web build metadata is missing or invalid; rebuild @octopus/web before release.', {
+        cause: error,
+      });
+    }
+    if (webBuild?.schemaVersion !== 1 || webBuild.version !== config.manifest.version) {
+      throw new Error(
+        `Web build version ${String(webBuild?.version)} does not match release ${config.manifest.version}; rebuild @octopus/web.`
+      );
+    }
     await writeFile(join(workspace, 'release-layout.json'), JSON.stringify(layout, null, 2) + '\n');
     await assertPortableTree(workspace);
     for (const file of legalFiles) {

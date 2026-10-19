@@ -52,6 +52,19 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      {
+        name: 'octopus-release-identity',
+        /**
+         * Emits the same release identity embedded in the UI so packaging rejects stale cached assets.
+         */
+        generateBundle() {
+          this.emitFile({
+            type: 'asset',
+            fileName: 'build-meta.json',
+            source: JSON.stringify({ schemaVersion: 1, version: releaseConfig.manifest.version }) + '\n',
+          });
+        },
+      },
       viteFastify({ spa: true }),
       react(),
       babel({ presets: [reactCompilerPreset()] }),

@@ -86,6 +86,11 @@ async function fixture(t) {
   await file(source, 'relocated/cli/compiled/gateway.mjs', 'export {};');
   await file(source, 'relocated/server/compiled/runtime.js', 'export {};');
   await file(source, 'relocated/web/compiled/site/index.html', '<html>fixture</html>');
+  await file(
+    source,
+    'relocated/web/compiled/site/build-meta.json',
+    JSON.stringify({ schemaVersion: 1, version: config.manifest.version })
+  );
   await file(source, '.env', 'excluded');
   await file(source, config.readme, '# Published fixture\r\n[中文](./README.zh-CN.md)\r\n');
   await file(source, config.readmeTranslations['README.zh-CN.md'], '# 中文\r\n[English](./README.md)\r\n');
@@ -95,6 +100,26 @@ async function fixture(t) {
   const layout = await assembleRelease(source, target, projects, config);
   return { temporary, source, target, layout, config, projects };
 }
+
+test('assembly rejects stale, missing and malformed Web build identities before replacing the archive', async (t) => {
+  const { source, target, config, projects } = await fixture(t);
+  const metadata = join(source, 'relocated/web/compiled/site/build-meta.json');
+  const archive = join(target, config.archive);
+  const original = await readFile(archive);
+  for (const value of [
+    JSON.stringify({ schemaVersion: 1, version: '1.2.2' }),
+    JSON.stringify({ schemaVersion: 2, version: config.manifest.version }),
+    '{invalid',
+    null,
+  ]) {
+    if (value === null) await rm(metadata);
+    else await writeFile(metadata, value);
+    await assert.rejects(assembleRelease(source, target, projects, config), /Web build/);
+    assert.deepEqual(await readFile(archive), original);
+  }
+  await writeFile(metadata, JSON.stringify({ schemaVersion: 1, version: config.manifest.version }));
+  await assembleRelease(source, target, projects, config);
+});
 
 test('assembly rejects missing or directory-valued compiled command entries', async (t) => {
   const { source, target, config, projects } = await fixture(t);
