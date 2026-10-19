@@ -29,7 +29,10 @@ const fileSchema = z.strictObject({
   sha256: digest,
 });
 export const releaseMetadataSchema = z.strictObject({
-  product: z.strictObject({ name: z.literal('Dr.Octopus Executor'), version: z.literal('0.0.1') }),
+  product: z.strictObject({
+    name: z.literal('Dr.Octopus Executor'),
+    version: version.regex(/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/),
+  }),
   platform: z.literal('win32'),
   arch: z.literal('x64'),
   components: z.strictObject({

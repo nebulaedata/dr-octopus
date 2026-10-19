@@ -6,11 +6,27 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { executorProduct } from './src/contracts/product';
 
 export default defineConfig({
   root: fileURLToPath(new URL('./src/renderer', import.meta.url)),
   base: './',
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    {
+      name: 'executor-product-title',
+      /**
+       * Embeds the authoritative product version in the built and development HTML.
+       */
+      transformIndexHtml(html) {
+        return html.replace(
+          '<title>Dr.Octopus Executor</title>',
+          `<title>${executorProduct.name} v${executorProduct.version}</title>`
+        );
+      },
+    },
+    react(),
+    tailwindcss(),
+  ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src/renderer/src', import.meta.url)) } },
   build: {
     outDir: '../../dist/renderer',

@@ -28,7 +28,7 @@ const pathSchema = z
 const manifestSchema = z.strictObject({
   schemaVersion: z.literal(1),
   product: z.literal('Dr.Octopus Executor'),
-  productVersion: z.literal('0.0.1'),
+  productVersion: z.literal(executorProduct.version),
   directories: z.array(pathSchema).max(10000),
   files: z
     .array(

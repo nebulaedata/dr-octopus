@@ -81,6 +81,27 @@ test('release identity is reproducible and verifier rejects changed, missing and
   });
 });
 
+test('portable inventories support new product versions while binding the version to the build identity', async () => {
+  await fixture(async (root) => {
+    for (const version of ['0.0.2', '0.0.3', '0.9.7', '1.2.3-rc.1']) {
+      const manifest = await createRuntimeManifest(root, {
+        ...metadata,
+        product: { ...metadata.product, version },
+      });
+      assert.equal(manifest.product.version, version);
+      await verifyRuntimeManifest(root, manifest);
+      await assert.rejects(
+        verifyRuntimeManifest(root, { ...manifest, product: { ...manifest.product, version: '9.9.9' } })
+      );
+    }
+    for (const version of ['', 'invalid', '0.1', '../0.0.1']) {
+      await assert.rejects(
+        createRuntimeManifest(root, { ...metadata, product: { ...metadata.product, version } })
+      );
+    }
+  });
+});
+
 test('manifest rejects traversal, missing references, modified metadata, duplicate inventory and false availability', async () => {
   await fixture(async (root) => {
     const manifest = await createRuntimeManifest(root, metadata);

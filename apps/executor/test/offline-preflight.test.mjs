@@ -72,7 +72,7 @@ async function fixture() {
   const bytes = Buffer.from('artifact fixture');
   const metadata = {
     productName: 'Dr.Octopus Executor',
-    version: '0.0.1',
+    version: '0.9.7',
     signed: false,
     computerEnabled: true,
     files: [],
@@ -137,6 +137,7 @@ for (const scenario of [
   'unsafe artifact path',
   'missing resource',
   'existing report',
+  'mismatched product version',
 ]) {
   test(`offline preflight: ${scenario}`, { timeout: 30000 }, async () => {
     const values = await fixture();
@@ -153,6 +154,17 @@ for (const scenario of [
       }
       if (scenario === 'existing report') {
         await writeFile(values.report, 'retain original evidence');
+      }
+      if (scenario === 'mismatched product version') {
+        const manifest = JSON.stringify({
+          schemaVersion: 1,
+          productBuildId: 'a'.repeat(64),
+          product: { name: values.metadata.productName, version: '0.9.8' },
+        });
+        await writeFile(join(values.product, 'runtime-manifest.json'), manifest);
+        values.metadata.productBuildId = 'a'.repeat(64);
+        values.metadata.runtimeManifestSha256 = createHash('sha256').update(manifest).digest('hex');
+        await writeFile(join(values.root, 'acceptance-artifacts.json'), JSON.stringify(values.metadata));
       }
       const result = await check(values);
       if (scenario === 'existing report') {

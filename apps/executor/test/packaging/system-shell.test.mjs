@@ -15,6 +15,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { ConnectionSettings } from '../../src/main/connection-settings.ts';
 import { NativeFileCommit } from '../../src/runtime/basic/native-file-commit.ts';
 import { createServer } from 'node:net';
+import { executorProduct } from '../../src/contracts/product.ts';
 
 /**
  * Uses a fresh loopback port in actual private settings before the packaged Runtime starts.
@@ -94,7 +95,7 @@ test(
       });
       const page = await app.firstWindow();
       await page.getByTestId('runtime-state').filter({ hasText: '已启动' }).waitFor({ timeout: 30000 });
-      assert.equal(await page.title(), 'Dr.Octopus Executor v0.0.1');
+      assert.equal(await page.title(), `${executorProduct.name} v${executorProduct.version}`);
       assert.equal(await app.evaluate(({ app }) => app.isPackaged), true);
       await app.evaluate(({ clipboard }) => {
         clipboard.writeText = (text) => {

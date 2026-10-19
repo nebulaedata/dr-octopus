@@ -14,7 +14,8 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSHOME 'Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1')
 $taskArtifact = Get-Content -LiteralPath (Join-Path $ArtifactDirectory 'acceptance-artifacts.json') -Raw | ConvertFrom-Json
-if ($taskArtifact.productName -cne 'Dr.Octopus Executor' -or $taskArtifact.version -cne '0.0.1' -or
+if ($taskArtifact.productName -cne 'Dr.Octopus Executor' -or $taskArtifact.version -isnot [string] -or
+    $taskArtifact.version.Length -gt 256 -or $taskArtifact.version -cnotmatch '^\d+\.\d+\.\d+(-[\w.-]+)?$' -or
     $taskArtifact.signed -ne $false -or $taskArtifact.computerEnabled -ne $true -or
     $taskArtifact.productBuildId -cnotmatch '^[a-f0-9]{64}$') { throw 'Unsupported acceptance artifact identity.' }
 if ($EvidenceFiles.Count -gt 20) { throw 'Too many evidence files.' }

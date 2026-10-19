@@ -59,7 +59,8 @@ try {
   $metadata = Read-Metadata $artifactRoot 'acceptance-artifacts.json' 16384
   if ($metadata.signed -isnot [bool] -or $metadata.signed -ne $false -or
       $metadata.computerEnabled -isnot [bool] -or $metadata.computerEnabled -ne $true -or
-      $metadata.productName -cne 'Dr.Octopus Executor' -or $metadata.version -cne '0.0.1' -or @($metadata.files).Count -ne 2) {
+      $metadata.productName -cne 'Dr.Octopus Executor' -or $metadata.version -isnot [string] -or
+      $metadata.version.Length -gt 256 -or $metadata.version -cnotmatch '^\d+\.\d+\.\d+(-[\w.-]+)?$' -or @($metadata.files).Count -ne 2) {
     throw 'Expected the unsigned acceptance package with Computer enabled and two artifacts.'
   }
   $report.product = @{ name = $metadata.productName; version = $metadata.version; signed = $metadata.signed }
@@ -70,7 +71,8 @@ try {
       throw 'Runtime manifest digest mismatch.'
     }
     $manifest = Read-Metadata $productRoot 'runtime-manifest.json' 8388608
-    if ($manifest.schemaVersion -ne 1 -or $manifest.productBuildId -cne $metadata.productBuildId) {
+    if ($manifest.schemaVersion -ne 1 -or $manifest.productBuildId -cne $metadata.productBuildId -or
+        $manifest.product.name -cne $metadata.productName -or $manifest.product.version -cne $metadata.version) {
       throw 'Runtime manifest identity mismatch.'
     }
     $report.runtimeManifest = @{ productBuildId = $manifest.productBuildId; digestVerified = $true; fullInventory = 'run-verify-runtime-manifest-separately' }
