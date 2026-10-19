@@ -56,6 +56,18 @@ test('a visible exact version proceeds immediately', async () => {
   assert.match(state.calls[0].url, /\/dr-octopus\/1\.2\.3$/);
 });
 
+test('default deadline permits publication that becomes visible after eighteen minutes', async () => {
+  const state = registry([...Array(18).fill(404), metadata, 200]);
+  const options = { ...state.options };
+  delete options.timeoutMs;
+  await waitForNpmVersion('1.2.3', options);
+  assert.equal(
+    state.pauses.reduce((total, duration) => total + duration, 0),
+    18 * 60_000
+  );
+  assert.deepEqual(state.calls.at(-1), { url: tarball, method: 'HEAD' });
+});
+
 test('temporary registry failures retry within the deadline and explain manual recovery', async () => {
   for (const failure of [404, 429, 503, new Error('offline')]) {
     const state = registry([failure, failure, failure]);

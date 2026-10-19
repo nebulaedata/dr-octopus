@@ -17,7 +17,7 @@ export async function waitForNpmVersion(
     request = fetch,
     pause = sleep,
     now = Date.now,
-    timeoutMs = 900_000,
+    timeoutMs = 1_800_000,
     intervalMs = 60_000,
     log = console.log,
   } = {}

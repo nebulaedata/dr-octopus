@@ -64,7 +64,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node deploy/docker/release.mjs prepare
 
-      - name: Wait up to 15 minutes for the public npm package
+      - name: Wait up to 30 minutes for the public npm package
         if: steps.release.outputs.digest == ''
         env:
           NPM_VERSION: ${{ steps.release.outputs.version }}
