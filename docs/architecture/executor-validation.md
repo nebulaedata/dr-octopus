@@ -698,3 +698,23 @@ Executor 新构建、lint 和 typecheck 通过。首次本地全量复验为 239
 按用户对截图红框附件的清理要求，已先备份并核对 v0.0.13 的 acceptance-artifacts.json、BUILD-INFO.json 和 SHA256SUMS.txt 三个 Release 资产，再按精确资产 ID 删除。删除后重新查询，Docker ZIP 和 Executor EXE/ZIP 的 ID、大小、摘要均保持不变；旧版本程序下载路径继续存在。备份与删除回执按本批验证材料保存，未删除 CI 内的原始校验材料。
 
 发布前确认 0.0.14 的 npm、GitHub Release/Tag、Docker Hub 和 Harbor 标签均未占用。Harbor latest 可通过现有 Docker/Buildx 凭据读取；docker login 预检因本机 Docker Desktop Linux Engine 管道未运行而失败，没有认证拒绝证据。该失败记录保留；新版本发布后的真实镜像复制和摘要核验尚待执行，不将只读检查提升为推送权限验证。
+
+### v0.0.14 实际发布与浏览器复验
+
+实现提交 f87a8c3 随版本提交 118e29a3a4a29a4fba301957c1c1649def203d01 发布为 v0.0.14；Executor 产品版本保持 0.0.1。pnpm release:publish --resume --yes 完成 npm 上传与 GitHub Release 创建，npm 返回处理中后等待公开索引，最终精确版本查询与 tarball 均可用，bin[dr-octopus] 为 bin/dr-octopus.mjs。没有重复上传同版本或移动 Tag。
+
+[Executor 运行 39185731953](https://github.com/nebulaedata/dr-octopus/actions/runs/39185731953) 与 [Docker 运行 39185732033](https://github.com/nebulaedata/dr-octopus/actions/runs/39185732033) 均成功。Executor 的扩展 22 项、源码含原生回归 255 项、实际 ZIP 验收 6 项全部通过，零失败和跳过；build/lint/typecheck、离线预检与实际 ZIP 清单核验均通过。完整交付附件 12158231699 与独立诊断附件 12158720341 继续保存 JSON、校验文件、验收工具和报告，Release 独立发布任务只上传两个程序文件。远端 productBuildId 为 12fcb9a24422c416eb3fe20524d0509730fbc2b89bdce93faeb4b2a93a4d8633，与本地产物分别记录。
+
+[Release v0.0.14](https://github.com/nebulaedata/dr-octopus/releases/tag/v0.0.14) 的 ID 为 416821170，上传资产恰为 Docker ZIP、Dr.Octopus-Executor-0.0.1-win-x64-setup-unsigned.exe 和 Dr.Octopus-Executor-0.0.1-win-x64-unpacked-unsigned.zip，页面加上两个自动源码归档共五项，没有辅助 JSON/TXT。EXE 为 216,039,604 字节，SHA-256 为 7712aa5c990ca62fbc2a1b5239c66d202085f724861144a03ae2e75eaa657e37；ZIP 为 270,025,812 字节，SHA-256 为 2096786197980e215117c0fd9a10ac481225cd50efc27d3b22ef071cbce490ad。
+
+使用生产 Web 构建与独立测试数据，在真实 Chrome 的 http://127.0.0.1:63071/?executorDownload=true 验证下载弹窗：Windows installer 与 Windows no-install (ZIP) 标签、v0.0.1 展示、v0.0.14 精确下载地址及安装或完整解压说明正确；关闭后从 Executor 卡片可重新打开，1920×911 页面无空白、框架错误覆盖或相关控制台警告/错误，截图确认布局及背景模糊。两个匿名下载 HEAD 均为 200，文件名、Content-Length 与上述资产一致。
+
+通过页面实际点击 ZIP 时，Chrome 导航至 release-assets.githubusercontent.com 后显示 ERR_BLOCKED_BY_CLIENT，Downloads 中未发现本次新文件；保留拦截截图和结果，没有重复点击、绕过保护或将 HEAD 成功算作浏览器完整下载成功。本轮浏览器下载到盘仍未通过，移动视口及产品安装/升级/卸载未执行。测试页面已关闭，独立服务正常退出；公开 Release 页面保留。独立电脑、硬件、Host 注册和正式代码签名仍待验，不提升 G4/G5/G6。
+
+### Harbor 实际同步与标签摘要核验
+
+Docker 流水线完成精确 npm 版本构建、镜像启动/Web/三个持久卷冒烟、Docker Hub 发布及匿名拉取验证。现有 deploy/docker/sync-harbor.mjs 的 syncHarbor 将 Docker Hub 0.0.14 按固定摘要复制到 harbor.n.nebulaedata.com/nebulae/dr-octopus:0.0.14，复制后独立读取摘要匹配；该路径无需运行本机 Docker Engine，原 login 管道预检失败不影响使用现有凭据完成本次 registry 复制。
+
+首次批次在同步 latest 前发现 Docker Hub latest 摘要 4c10763b1bf81664bf35d54f60a2e363024cf2becb22540710401f5dbda06e61 与版本标签不同，保护检查明确拒绝推送，原日志保留。原始 manifest 复核确认版本为 OCI、latest 为 Docker schema 2，首层压缩字节亦不同，其余七层摘要相同；两者配置字节摘要均为 5c687aa1477d89034ed386d29b385b28203c9155cc2f4daf5b91bfca473ceb23，且配置记录同一有序解压层摘要。没有将 manifest 摘要不同忽略为相同字节，也没有修改 Docker Hub 标签。
+
+随后用 docker buildx imagetools create --prefer-index=false，将 Harbor 已校验的固定版本摘要提升到同仓库 latest，避免再次复制 Docker Hub latest 的另一种表示。最终独立核对 Docker Hub 0.0.14、Harbor 0.0.14 与 Harbor latest，三者均为 sha256:9d2bed6485fdce9365ecc11e9c4039a585d6fef6cd33bd0451d6f07cb31c7353。本次同步与标签更新通过，没有重新构建镜像、创建项目或部署运行环境；原始复制、保护拒绝、配置复核、提升及最终摘要报告分别保留。
