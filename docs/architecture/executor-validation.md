@@ -6,6 +6,10 @@
 
 ### 发布升版后的版本契约回归
 
+最终交付为仓库 v0.0.16 / Executor 0.0.3，Tag 源码为 `01c26c8d943335bf2d65a7b1036f9ebce37fb42f`。[远端第二次验收](https://github.com/nebulaedata/dr-octopus/actions/runs/39202386109/attempts/2)完成扩展 22 项、Executor 267 项、实际 ZIP 六项交付测试，以及构建、lint、typecheck；均零失败、零跳过。0.0.3 的 productBuildId 为 `5b2e3232337973442cd365abb7be37a3bb72836ad1c14c8c8d7091e194fd6234`。Release 的未签名 EXE/ZIP 已核对公开下载 HTTP 200、文件长度及 GitHub 摘要与 CI 离线预检记录一致。公共 npm 的 latest 为 0.0.16，隔离全局安装后的命令版本与帮助验证通过。
+
+v0.0.16 的[首次远端验收](https://github.com/nebulaedata/dr-octopus/actions/runs/39202386109/attempts/1)为 266/267：2 GiB 下载记录已传完全部字节，但最终返回 TRANSFER_FAILED / cleanupPending。原因仍未确定。本地单项复验通过，同一 Tag 的第二次远端完整验收也通过；复验保持相同期限和断言，开启 Actions 调试日志。首次失败、单项诊断及第二次 CI 日志/预检报告分别保留在约定批次，不用后续通过将首次失败定性为已确认的环境问题。
+
 2026-10-19，仓库 v0.0.15 将 Executor 从 0.0.1 升至 0.0.2 后，[首次远端验收](https://github.com/nebulaedata/dr-octopus/actions/runs/39199423303)出现 7 项失败：备份清单仍限定 0.0.1，阻断备份和启动恢复。升版前的本地 264 项通过没有覆盖该条件；升版后的原条件本地复现同样 7 项失败，原始输出分别保留。继续检查发现最终产品清单、离线脚本和 HTML 标题也存在固定版本。
 
 修正后备份校验跟随当前产品版本，便携清单验证格式并将版本绑定到 productBuildId，离线预检额外核对清单与产物版本一致，窗口标题由同一产品契约生成。新增回归通过编译输入模拟 0.9.7，实际完成原生备份和恢复，且拒绝其他产品版本；不修改工作区版本或放宽备份兼容策略。23 项聚焦回归、完整 267 项测试（零失败、零跳过）、构建、lint、typecheck 已通过。新生成的 0.0.2 unsigned 产物 productBuildId 为 `6e21249a5399c01e3d3739c4e4eae880df5d15534b51cc9a44c66c6558e243da`，离线预检、解包目录与实际 ZIP 的 8,265 文件完整性验证均通过。实际 ZIP 的六项非交互交付测试与构建版 Electron 六项集成（含故障恢复 UI）均通过。原始材料保留于约定的 release-v0.0.15 验证批次；这些检查不构成干净机器或签名发行验收。
