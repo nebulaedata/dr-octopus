@@ -3,6 +3,7 @@
  * @description Selects a publication action from verified npm and GitHub states without mutating the release.
  */
 import { confirm, isCancel, select } from '@clack/prompts';
+import { isInteractivePublication } from './publication-options.mjs';
 
 /**
  * Offers continuation only for incomplete publication; automation must explicitly choose its action.
@@ -13,7 +14,7 @@ export async function choosePublicationAction(
   version,
   state,
   options,
-  { prompt = select, interactive = Boolean(process.stdin.isTTY) } = {}
+  { prompt = select, interactive = isInteractivePublication(options) } = {}
 ) {
   const complete = state.npm === 'published' && state.github === 'published';
   const continuation = state.npm === 'published' ? 'github-only' : 'resume';
@@ -57,15 +58,51 @@ export async function choosePublicationAction(
 export async function confirmPublication(
   manifest,
   options,
-  { githubOnly = false, prompt = confirm, interactive = Boolean(process.stdin.isTTY) } = {}
+  { githubOnly = false, prompt = confirm, interactive = isInteractivePublication(options) } = {}
 ) {
   if (options.yes || options.dryRun) return true;
   if (!interactive) throw new Error('Noninteractive publication requires --yes.');
   const approved = await prompt({
     message: githubOnly
       ? `Create GitHub Release v${manifest.version} (npm already published)?`
-      : `Publish ${manifest.name}@${manifest.version} to ${options.registry} and GitHub Release?`,
+      : `Publish ${manifest.name}@${manifest.version}${manifest.executorVersion ? ` with Executor ${manifest.executorVersion}` : ''} to ${options.registry} and GitHub Release?`,
     initialValue: false,
   });
   return !isCancel(approved) && approved;
+}
+
+/**
+ * Selects both product increments before a version commit; automation must supply both values explicitly.
+ * Cancellation returns null and leaves version files untouched.
+ */
+export async function chooseReleaseIncrements(
+  options,
+  { prompt = select, interactive = isInteractivePublication(options) } = {}
+) {
+  const selected = {};
+  for (const [key, label] of [
+    ['increment', 'Dr.Octopus'],
+    ['executorIncrement', 'Executor'],
+  ]) {
+    let value = options[key];
+    if (!value) {
+      if (!interactive)
+        throw new Error(
+          `Specify ${key === 'increment' ? '--increment' : '--executor-increment'} for noninteractive --bump.`
+        );
+      value = await prompt({
+        message: `请选择 ${label} 的版本升级幅度`,
+        initialValue: 'patch',
+        options: [
+          { value: 'patch', label: 'patch', hint: '修复版本' },
+          { value: 'minor', label: 'minor', hint: '功能版本' },
+          { value: 'major', label: 'major', hint: '主版本' },
+        ],
+      });
+      if (isCancel(value)) return null;
+    }
+    if (!['patch', 'minor', 'major'].includes(value)) throw new Error(`Invalid ${label} version increment.`);
+    selected[key] = value;
+  }
+  return selected;
 }

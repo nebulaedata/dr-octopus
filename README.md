@@ -171,6 +171,20 @@ dr-octopus gateway restart
 
 Each new version installs its corresponding runtime dependencies on demand when first run. Preview old runtimes with `dr-octopus runtimes prune --dry-run`, then run `dr-octopus runtimes prune` to remove unused old versions.
 
+## Release delivery
+
+Release downloads are delivered in stages:
+
+1. The unified publication script selects the repository and Executor version increments, commits both versions and creates their shared repository tag. It then publishes the npm package and creates the matching GitHub Release. Retrying an incomplete publication keeps both versions unchanged.
+2. The Release's `published` event starts two GitHub Actions workflows in parallel, both using that tag's source:
+   - **Executor Windows unsigned delivery** builds, tests, packages and verifies the Windows client. After acceptance succeeds, a separate publishing job uploads the `setup-unsigned.exe` installer and `unpacked-unsigned.zip` no-install archive to the same Release.
+   - **Docker release** waits for the exact npm version to become publicly downloadable, builds and tests its image, publishes it to Docker Hub, and attaches `dr-octopus-docker-<image-tag>.zip` to the same Release.
+3. Each workflow adds its downloads when its checks succeed. **Assets are filled in asynchronously**: a newly published Release may initially show only GitHub's source archives. Check both workflows in Actions and wait for the relevant download to appear before installing.
+
+Executor's product version is managed independently of the repository release version, with its package manifest as the single source. The publication script supports explicit noninteractive version arguments for CI; see the [publication guide](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#非交互发布与-github-actions). Its build metadata, checksum files and acceptance reports remain in Actions artifacts; only the installer and no-install ZIP are attached as Executor Release assets.
+
+For publishing commands and recovery, see the [development guide](https://github.com/nebulaedata/dr-octopus/blob/main/README.dev.md#version-releases). For Executor asset verification and Web download paths, see the [delivery guide](https://github.com/nebulaedata/dr-octopus/blob/main/docs/architecture/executor-delivery.md#github-release-assets-与-web-下载地址).
+
 ## Development
 
 For source setup, development commands, and architecture documentation, see the [development guide](https://github.com/nebulaedata/dr-octopus/blob/main/README.dev.md).

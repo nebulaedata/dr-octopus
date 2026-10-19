@@ -45,7 +45,7 @@ For public distribution, follow the [Windows signing SOP](apps/executor/RELEASE.
 
 From the repository root, run `pnpm release:dry patch` to preview a release, or `pnpm release` to select a version interactively. The workflow then updates `release.config.json`, commits the change, creates a tag, and pushes the current branch. All working-tree changes must be committed, and the branch must have an upstream configured.
 
-Build release artifacts with `pnpm release:build`. Run `pnpm release:publish` to publish npm first, then create the matching GitHub Release through release-it. This requires npm authentication and a `GITHUB_TOKEN` with repository Contents read/write permissions. The publish script automatically loads the repository-root `.env.publish`; existing process environment variables take precedence. If the file is missing, it prints a warning and exits with code 1 before building or publishing. If GitHub publication fails, retry the current version with `pnpm release:publish --github-only`. See [CLI version releases](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版) for commands, prereleases, and retries.
+Build release artifacts with `pnpm release:build`. Run `pnpm release:publish` to select independent repository and Executor increments, commit both before the shared Tag, then publish npm and create the matching GitHub Release. This requires npm authentication and a `GITHUB_TOKEN` with repository Contents read/write permissions. The publish script loads the optional root `.env.publish`; existing process environment variables take precedence, so CI can use injected credentials directly. If GitHub publication fails, retry the current version with `pnpm release:publish --github-only`. See [CLI version releases](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版) for commands, prereleases, and retries.
 
 ### Recovering from a failed publication
 
@@ -95,7 +95,7 @@ pnpm release:publish --bump         # Select and publish the next version
 pnpm release:publish --github-only  # Complete GitHub after npm publication
 ```
 
-With `--bump`, select a new version, such as `patch → 0.0.10` from `0.0.9`. Do not use `--bump` to retry `0.0.9`; selecting the same version is rejected before changing files or committing. Noninteractive invocation requires `--resume`, `--bump`, or `--github-only`. `--yes` skips the final confirmation but does not select an action.
+With `--bump`, select both repository and Executor increments; the version preview is approved before changing files or committing. Use `--resume` for retries to keep both versions unchanged. Noninteractive new releases require `--increment`, `--executor-increment` and `--yes` or `--ci`; see [CI parameters and token requirements](apps/cli/README.md#非交互发布与-github-actions). CI retains logs and never waits for a prompt.
 
 ### Resume 0.0.9 from the current code after a Git push timeout
 

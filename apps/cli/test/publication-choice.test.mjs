@@ -7,9 +7,17 @@ import test from 'node:test';
 import { CANCEL_SYMBOL } from '@clack/prompts';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { choosePublicationAction, confirmPublication } from '../../../scripts/publication-choice.mjs';
+import {
+  choosePublicationAction,
+  chooseReleaseIncrements,
+  confirmPublication,
+} from '../../../scripts/publication-choice.mjs';
 import { getGithubPublicationState } from '../../../scripts/github-publication-state.mjs';
-import { createPublicationCommand } from '../../../scripts/publication-options.mjs';
+import {
+  assertPublicationArguments,
+  createPublicationCommand,
+  isInteractivePublication,
+} from '../../../scripts/publication-options.mjs';
 import { getNpmPublicationState } from '../../../scripts/npm-publication-state.mjs';
 
 /**
@@ -251,6 +259,7 @@ test('CLI help and invalid arguments exit before loading publication credentials
   const output = execFileSync(process.execPath, ['--import', 'tsx', script, '--help'], { encoding: 'utf8' });
   assert.match(output, /Usage: publish-release.mjs/);
   assert.match(output, /--resume/);
+  assert.match(output, /--executor-increment/);
   assert.throws(
     () =>
       execFileSync(process.execPath, ['--import', 'tsx', script, '--resume', '--bump'], {
@@ -258,5 +267,97 @@ test('CLI help and invalid arguments exit before loading publication credentials
         stdio: ['ignore', 'pipe', 'pipe'],
       }),
     (error) => error.status === 1 && /cannot be used with/.test(error.stderr)
+  );
+});
+
+test('CI arguments require an explicit action and both increments without opening any prompts', async () => {
+  const options = parseArgs(['--bump', '--increment', 'patch', '--executor-increment', 'minor', '--ci']);
+  assert.equal(options.yes, true);
+  assertPublicationArguments(options, { interactive: false });
+  assert.deepEqual(
+    await chooseReleaseIncrements(options, {
+      interactive: false,
+      prompt: async () => assert.fail('must not prompt'),
+    }),
+    {
+      increment: 'patch',
+      executorIncrement: 'minor',
+    }
+  );
+  for (const args of [
+    ['--bump', '--ci'],
+    ['--bump', '--increment', 'patch', '--yes'],
+    ['--executor-increment', 'patch', '--ci'],
+  ]) {
+    assert.throws(() => assertPublicationArguments(parseArgs(args), { interactive: false }), /requires both/);
+  }
+  assert.throws(
+    () => assertPublicationArguments(parseArgs(['--yes']), { interactive: false }),
+    /Choose --resume/
+  );
+  assert.throws(
+    () => assertPublicationArguments(parseArgs(['--resume']), { interactive: false }),
+    /requires --yes or --ci/
+  );
+  for (const action of ['--resume', '--github-only']) {
+    assertPublicationArguments(parseArgs([action, '--ci']), { interactive: false });
+    for (const increment of ['--increment', '--executor-increment']) {
+      assert.throws(() => parseArgs([action, increment, 'patch']), /cannot be used with/);
+    }
+  }
+  for (const value of ['keep', '1.2.3', 'prerelease', 'PATCH', 'patch;echo secret']) {
+    assert.throws(() => parseArgs(['--executor-increment', value]), /invalid/);
+  }
+});
+
+test('interactive increments default to patch, and cancellation prevents a version plan', async () => {
+  const calls = [];
+  assert.deepEqual(
+    await chooseReleaseIncrements(
+      {},
+      {
+        interactive: true,
+        prompt: async ({ message, initialValue }) => {
+          calls.push(message);
+          assert.equal(initialValue, 'patch');
+          return calls.length === 1 ? 'minor' : 'major';
+        },
+      }
+    ),
+    { increment: 'minor', executorIncrement: 'major' }
+  );
+  assert.equal(calls.length, 2);
+  assert.equal(
+    await chooseReleaseIncrements(
+      { increment: 'patch' },
+      { interactive: true, prompt: async () => CANCEL_SYMBOL }
+    ),
+    null
+  );
+});
+
+test('CI and yes flags suppress prompts even with an allocated terminal', () => {
+  assert.equal(isInteractivePublication({}, { terminal: true, environment: {} }), true);
+  for (const options of [{ ci: true }, { yes: true }]) {
+    assert.equal(isInteractivePublication(options, { terminal: true, environment: {} }), false);
+  }
+  for (const environment of [{ CI: 'true' }, { GITHUB_ACTIONS: 'true' }]) {
+    assert.equal(isInteractivePublication({}, { terminal: true, environment }), false);
+  }
+  assert.equal(isInteractivePublication({}, { terminal: true, environment: { CI: 'false' } }), true);
+});
+
+test('incomplete noninteractive version selection exits before npm or GitHub authentication', () => {
+  const script = fileURLToPath(new URL('../../../scripts/publish-release.mjs', import.meta.url));
+  assert.throws(
+    () =>
+      execFileSync(process.execPath, ['--import', 'tsx', script, '--bump', '--ci'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }),
+    (error) =>
+      error.status === 1 &&
+      /requires both --increment and --executor-increment/.test(error.stderr) &&
+      !/Authenticated|npm whoami|Not authenticated/.test(error.stderr)
   );
 });

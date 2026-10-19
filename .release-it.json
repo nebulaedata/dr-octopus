@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/release-it@21/schema/release-it.json",
   "hooks": {
     "before:bump": "node scripts/validate-release-version.mjs ${version}",
-    "after:bump": "prettier --write release.config.json"
+    "after:bump": "prettier --write release.config.json apps/executor/package.json"
   },
   "git": {
     "requireCleanWorkingDir": true,
@@ -23,6 +23,7 @@
     "release": false
   },
   "plugins": {
+    "./scripts/executor-release-plugin.mjs": { "increment": "patch" },
     "@release-it/bumper": {
       "in": {
         "file": "release.config.json",

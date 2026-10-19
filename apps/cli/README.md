@@ -4,7 +4,9 @@
 
 ## 版本发版
 
-在仓库根目录执行 `pnpm release`，交互选择 patch、minor、major 或预发布版本；选择后自动更新根 `release.config.json` 的 `manifest.version`，创建 `chore(release): v<版本>` 提交、`v<版本>` annotated tag，并推送当前分支和 tag。
+推荐使用 `pnpm release:publish` 统一完成升版和发布。新发版先选择 Dr.Octopus 与 Executor 各自的 patch、minor、major 升级幅度，显示两个目标版本与发布目标，确认后更新根 `release.config.json` 的 `manifest.version` 和 `apps/executor/package.json` 的 `version`，将两者放入同一个 `chore(release): v<仓库版本>` 提交及 `v<仓库版本>` annotated tag，再推送、构建和发布。两者独立计数；例如仓库 0.0.14 → 0.0.15、Executor 0.0.1 → 0.0.2，扩展版本保持独立。
+
+`pnpm release` 是底层的仅升版入口，仍可选择仓库 patch、minor、major 或预发布版本，Executor 默认升 patch；它也会提交并推送，不能用来重试已有版本。需要明确选择 Executor 幅度时使用上面的统一入口。
 
 ```powershell
 pnpm release:dry patch           # 预览，不修改文件、不提交、不创建或推送 tag
@@ -15,13 +17,13 @@ pnpm release minor --preRelease=beta  # 例如 0.1.0 → 0.2.0-beta.0
 
 版本操作由根 [.release-it.json](../../.release-it.json) 配置，要求已提交当前改动、当前分支有 upstream，且本机拥有远端 Git 推送权限。使用当前分支的 upstream；联合发布要求 `origin` 指向 GitHub，且对应 tag 已推送到该仓库。正式命令会推送代码，应先使用 `release:dry` 检查版本和目标远端。
 
-开发包的 package.json 版本与 pnpm 锁文件不随发版更新。版本发版不构建产物、不执行 npm publish、不创建 GitHub/GitLab Release；本机无需 npm 或 GitHub API Token。`pnpm release:publish` 负责构建、发布 npm，并在 npm 成功后通过 release-it 创建同版本的 GitHub Release。
+Executor 的 package.json 是其产品版本唯一来源，product.ts、进程构建、打包和 Web 下载地址由它派生；其他开发包的 package.json 与 pnpm 锁文件不随发版更新。仅升版入口不构建产物、不执行 npm publish、不创建 GitHub/GitLab Release；本机无需 npm 或 GitHub API Token。`pnpm release:publish` 负责构建、发布 npm，并在 npm 成功后通过 release-it 创建同版本的 GitHub Release。普通 build、package:acceptance 与发布失败恢复均不递增版本。
 
 `pnpm release:build` 仍仅负责本地构建交付包，两条命令用途不同。首次要发布配置中的当前版本，可执行 `pnpm release:publish --resume` 自动创建 tag；必须先提交该版本的源码与配置。遇到推送失败，先检查本地提交、tag 和远端状态；已存在的本地版本提交和 tag 可直接重试 Git push，不要为重试再次执行 patch 升版。
 
 ## npm 与 GitHub 联合发布
 
-先运行 `npm login`，并在仓库根目录的 `.env.publish` 中配置 `GITHUB_TOKEN`，或通过当前进程环境设置；Token 需要目标仓库的 Contents 读写权限。发布脚本自动加载 `.env.publish`，已有进程环境变量优先，文件不存在时输出警告并终止（退出码 1），即使进程环境已有 Token 也不会继续。此要求同样适用于 `--dry-run` 和 `--github-only`；`--help` 无需该文件。该文件已被 `.gitignore` 忽略，不会自动读取开发用的 `.env`。
+先运行 `npm login`，并通过进程环境或仓库根目录可选的 `.env.publish` 设置 `GITHUB_TOKEN`；Token 需要目标仓库的 Contents 读写权限。进程环境变量优先，CI 可直接注入 Secrets，无需创建 `.env.publish`。该文件已被 `.gitignore` 忽略，不会自动读取开发用的 `.env`。npm 凭据继续由 npm 配置管理，例如 actions/setup-node 配合 NODE_AUTH_TOKEN；发布脚本不会自动写入认证配置。`--dry-run` 仍需 npm 认证，`--help` 和参数错误不要求发布凭据。
 
 ```dotenv
 GITHUB_TOKEN=your_github_token
@@ -37,7 +39,40 @@ pnpm release:publish --dry-run       # npm 打包预览，不升版或发布到�
 pnpm release:publish --github-only   # npm 已成功时，只补发当前版本的 GitHub Release
 ```
 
-发布参数使用 Commander 解析，选项和确认使用 `@clack/prompts`（方向键选择、回车确认、Ctrl+C 取消）。发布入口先查询当前版本在 npm 和 GitHub 的状态，只有未完整发布时才显示“继续发布当前版本”；两边均已成功时只显示“发布下一版本”。`--resume` 显式继续当前版本，`--bump` 显式选择下一版本。非交互环境必须指定操作，`--yes` 只跳过最终确认。查询失败会中止，已有 draft 需要先处理。
+发布参数使用 Commander 解析，选项和确认使用 `@clack/prompts`（方向键选择、回车确认、Ctrl+C 取消）。发布入口先查询当前版本在 npm 和 GitHub 的状态，只有未完整发布时才显示“继续发布当前版本”；两边均已成功时只显示“发布下一版本”。`--resume` 显式继续当前版本，`--bump` 选择下一版本及两个产品的升级幅度。新发版的确认发生在修改版本、提交和推送之前，后续沿用该次批准；查询失败会中止，已有 draft 需要先处理。
+
+### 非交互发布与 GitHub Actions
+
+统一入口支持以下参数，不需要自动输入终端菜单：
+
+| 参数                                       | 含义                                                 |
+| ------------------------------------------ | ---------------------------------------------------- |
+| `--bump`                                   | 创建一个新的仓库版本，并交付新 Executor              |
+| `--increment patch\|minor\|major`          | 明确指定仓库版本升级幅度，隐含 `--bump`              |
+| `--executor-increment patch\|minor\|major` | 明确指定 Executor 升级幅度，隐含 `--bump`            |
+| `--yes` / `-y`                             | 批准发布并禁止交互，不替代升级幅度参数               |
+| `--ci`                                     | 非交互 CI 模式，隐含 `--yes`，保留进度、错误和退出码 |
+| `--resume` / `--github-only`               | 恢复已有版本，两者均不升版                           |
+
+```sh
+pnpm release:publish --bump --increment patch --executor-increment minor --ci
+pnpm release:publish --resume --ci
+pnpm release:publish --github-only --ci
+```
+
+非交互模式（无 TTY、CI 环境、`--ci` 或 `--yes`）必须明确选择操作；新版本必须同时给出两个升级幅度。缺少参数、非法幅度或“恢复 + 升版”冲突会在认证、构建、修改版本及 Git 写入前退出。每次完整新发版都会重新构建 Executor，故不提供保持 Executor 版本的升版选项；保持版本使用开发构建或恢复入口。重复运行 `--bump` 会创建下一版本，失败重试必须使用 `--resume` 或 `--github-only`。
+
+在 Actions 中，先检出具有 upstream 的目标分支和完整 Tag 历史，配置 Git 提交身份、推送凭据、Node/pnpm 与 npm 认证；可在现有作业添加下面的步骤。所有统一发版作业应共用固定 concurrency group 且 cancel-in-progress=false，避免并发计算同一新版本。
+
+```yaml
+- name: Publish a new version
+  env:
+    GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  run: pnpm release:publish --bump --increment patch --executor-increment patch --ci
+```
+
+`RELEASE_TOKEN` 使用有仓库 Contents 读写权限的 PAT 或 GitHub App installation token，Git 推送也须配置对应权限。要保留 Release published 自动触发下游 Executor/Docker 的流程，不使用 Actions 默认 GITHUB_TOKEN 创建 Release：默认令牌产生的普通事件不会再触发其他工作流，见 [GitHub 官方触发规则](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-when-your-workflow-runs/triggering-a-workflow#triggering-a-workflow-from-a-workflow)。这里的静默只指不出现输入提示，不会隐藏失败、跳过测试或改变签名状态。
 
 继续当前版本时，若 npm 与 GitHub 均尚未发布，脚本在干净的当前 HEAD 创建或重建该版本 tag，使用 `--force-with-lease` 更新远端并重新构建，不需要切换旧 tag 或再次升版。若推送超时，重复运行 `pnpm release:publish --resume`；恢复时会重新检查状态，远端并发修改会使推送失败而非被覆盖。`--resume` 的 npm 发布不能搭配 `--skip-build`。
 

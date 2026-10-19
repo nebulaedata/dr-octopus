@@ -47,7 +47,7 @@ Windows 的 MCP 命令工具为 powershell，使用系统 Windows PowerShell 5.1
 
 在仓库根目录执行 `pnpm release:dry patch` 预览，或执行 `pnpm release` 交互选择版本，随后自动更新 `release.config.json`、提交、创建 tag 并推送当前分支。要求工作区已提交且分支配置了 upstream。
 
-构建产物使用 `pnpm release:build`；执行 `pnpm release:publish` 会在 npm 发布成功后通过 release-it 创建同版本的 GitHub Release，需要 npm 登录及具有仓库 Contents 读写权限的 `GITHUB_TOKEN`。发布脚本自动加载仓库根目录的 `.env.publish`，已有进程环境变量优先；文件不存在时输出警告并以退出码 1 终止，不会构建或发布。若 GitHub 发布失败，使用 `pnpm release:publish --github-only` 补发当前版本。完整命令、预发布和重试说明见 [CLI 版本发版](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版)。
+构建产物使用 `pnpm release:build`；执行 `pnpm release:publish` 先选择仓库与 Executor 的独立升级幅度，在同一个提交和 Tag 前完成版本更新，再发布 npm 和 GitHub Release。需要 npm 登录及具有仓库 Contents 读写权限的 `GITHUB_TOKEN`。发布脚本加载可选的根 `.env.publish`，已有进程环境变量优先，CI 可直接注入凭据。若 GitHub 发布失败，使用 `pnpm release:publish --github-only` 补发当前版本。完整命令、预发布和重试说明见 [CLI 版本发版](https://github.com/nebulaedata/dr-octopus/blob/main/apps/cli/README.md#版本发版)。
 
 ### 发布失败后的恢复
 
@@ -97,7 +97,7 @@ pnpm release:publish --bump         # 选择并发布下一个版本
 pnpm release:publish --github-only  # npm 已成功，仅补发 GitHub Release
 ```
 
-`--bump` 必须选择新版本，例如从 `0.0.9` 选择 `patch → 0.0.10`。不要用 `--bump` 重试 `0.0.9`；选择相同版本会在修改文件和提交之前被拒绝。非交互环境需要显式指定 `--resume`、`--bump` 或 `--github-only`；`--yes` 只跳过最终发布确认，不替你选择操作。
+`--bump` 分别选择仓库和 Executor 的升级幅度，在修改文件及提交前预览并确认。重试使用 `--resume`，两个版本均保持不变。非交互新发版必须提供 `--increment`、`--executor-increment` 及 `--yes` 或 `--ci`，完整参数和 Token 要求见 [CI 发版说明](apps/cli/README.md#非交互发布与-github-actions)；CI 保留日志且不会等待输入提示。
 
 ### Git 推送超时后，用当前代码继续发布 0.0.9
 

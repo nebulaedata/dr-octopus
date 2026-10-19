@@ -14,8 +14,13 @@ import { findConfiguration } from '../apps/cli/src/distribution/location.ts';
 import { assertGithubReleaseReady, publishGithubRelease } from './github-release.mjs';
 import { getGithubPublicationState } from './github-publication-state.mjs';
 import { getNpmPublicationState } from './npm-publication-state.mjs';
-import { choosePublicationAction, confirmPublication } from './publication-choice.mjs';
-import { createPublicationCommand } from './publication-options.mjs';
+import {
+  choosePublicationAction,
+  chooseReleaseIncrements,
+  confirmPublication,
+} from './publication-choice.mjs';
+import { assertPublicationArguments, createPublicationCommand } from './publication-options.mjs';
+import { planReleaseVersions } from './release-versions.mjs';
 import { npmCommand } from './npm-command.mjs';
 import { resumeReleaseTag } from './resume-release-tag.mjs';
 
@@ -34,10 +39,6 @@ try {
   loadEnvFile(join(repoRoot, '.env.publish'));
 } catch (error) {
   if (error.code !== 'ENOENT') throw error;
-  console.warn(
-    '⚠ Missing .env.publish in the repository root. Create it and configure GITHUB_TOKEN before publishing. Publication aborted.'
-  );
-  process.exit(1);
 }
 let config = readReleaseConfig(configPath);
 const release = join(repoRoot, config.outputDirectory);
@@ -77,20 +78,53 @@ async function getVersionState(name, version) {
 }
 
 /**
- * Runs release-it to bump release.config.json manifest.version, then reloads the configuration.
+ * Previews and approves both versions before release-it writes, commits or pushes them together.
+ * Returns false on cancellation; successful preparation also approves the later npm/GitHub publication.
  */
 async function bumpVersion() {
-  console.log('→ Bumping version (release-it --only-version)...');
-  const previousVersion = config.manifest.version;
-  await execute(pnpm.command, [...pnpm.args, 'run', 'release'], repoRoot, 'inherit', BUMP_TIMEOUT);
+  const increments = await chooseReleaseIncrements(options);
+  if (!increments) return false;
+  const plan = await planReleaseVersions(repoRoot, increments);
+  console.log(`→ Dr.Octopus: ${plan.repository.current} → ${plan.repository.next}`);
+  console.log(`→ Executor: ${plan.executor.current} → ${plan.executor.next}`);
+  if ((await getVersionState(config.manifest.name, plan.repository.next)) === 'published') {
+    throw new Error(
+      `${config.manifest.name}@${plan.repository.next} is already published; no version changes made.`
+    );
+  }
+  if ((await getGithubPublicationState(repoRoot, plan.repository.next)) !== 'absent') {
+    throw new Error(`GitHub Release v${plan.repository.next} already exists; no version changes made.`);
+  }
+  if (
+    !(await confirmPublication(
+      { ...config.manifest, version: plan.repository.next, executorVersion: plan.executor.next },
+      options
+    ))
+  )
+    return false;
+  await execute(
+    process.execPath,
+    [
+      join(repoRoot, 'scripts/bump-release.mjs'),
+      `--increment=${plan.repository.next}`,
+      `--executor-increment=${increments.executorIncrement}`,
+    ],
+    repoRoot,
+    'inherit',
+    BUMP_TIMEOUT
+  );
   config = readReleaseConfig(configPath);
-  if (config.manifest.version === previousVersion) {
-    throw new Error(`Version bump did not change ${previousVersion}; aborting publication.`);
+  const executor = JSON.parse(await readFile(join(repoRoot, 'apps/executor/package.json'), 'utf8'));
+  if (config.manifest.version !== plan.repository.next || executor.version !== plan.executor.next) {
+    throw new Error(
+      'Version commit does not match the approved repository and Executor versions; publication aborted.'
+    );
   }
   if ((await getVersionState(config.manifest.name, config.manifest.version)) === 'published') {
     throw new Error(`${config.manifest.name}@${config.manifest.version} is already published; aborting.`);
   }
   console.log(`✓ Version bumped to ${config.manifest.version}`);
+  return true;
 }
 
 /**
@@ -127,9 +161,13 @@ async function publish(manifest) {
  * Inspects both platforms, selects continuation or a new version, then executes only the missing publication steps.
  */
 async function main() {
+  assertPublicationArguments(options);
   if (!options.dryRun && !process.env.GITHUB_TOKEN) {
-    throw new Error('GITHUB_TOKEN is required (repository Contents: read and write).');
+    throw new Error(
+      'GITHUB_TOKEN is required (repository Contents: read and write). Set it in the environment or the optional root .env.publish.'
+    );
   }
+  let publicationApproved = false;
   await assertAuthenticated();
   const state = await getVersionState(config.manifest.name, config.manifest.version);
   if (options.dryRun) {
@@ -156,7 +194,8 @@ async function main() {
       return;
     }
     if (action === 'bump') {
-      await bumpVersion();
+      publicationApproved = await bumpVersion();
+      if (!publicationApproved) return cancel('Publish aborted.');
     } else {
       if (options.skipBuild)
         throw new Error('Continuing the current version requires a fresh build; remove --skip-build.');
@@ -182,7 +221,8 @@ async function main() {
   if (!options.dryRun && (await getVersionState(manifest.name, manifest.version)) === 'published') {
     throw new Error(`${manifest.name}@${manifest.version} is already published; aborting.`);
   }
-  if (!(await confirmPublication(manifest, options))) return cancel('Publish aborted.');
+  if (!publicationApproved && !(await confirmPublication(manifest, options)))
+    return cancel('Publish aborted.');
   await publish(manifest);
   if (!options.dryRun && !githubExists) {
     try {

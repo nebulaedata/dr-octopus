@@ -40,9 +40,52 @@ export function createPublicationCommand() {
       new Option('--bump', 'Select and publish the next version').conflicts(['githubOnly', 'dryRun'])
     )
     .addOption(
+      new Option('--increment <level>', 'Repository version increment for --bump')
+        .choices(['patch', 'minor', 'major'])
+        .conflicts(['resume', 'githubOnly', 'dryRun'])
+        .implies({ bump: true })
+    )
+    .addOption(
+      new Option('--executor-increment <level>', 'Executor version increment for --bump')
+        .choices(['patch', 'minor', 'major'])
+        .conflicts(['resume', 'githubOnly', 'dryRun'])
+        .implies({ bump: true })
+    )
+    .addOption(
       new Option('--github-only', 'Complete GitHub Release after npm publication').conflicts('dryRun')
     )
     .option('--dry-run', 'Preview npm publication without uploading or changing tags')
     .option('--skip-build', 'Reuse the existing release directory')
-    .option('-y, --yes', 'Skip the final publication confirmation');
+    .option('-y, --yes', 'Approve publication without prompting; version increments stay explicit')
+    .addOption(new Option('--ci', 'Run without prompts; implies --yes').implies({ yes: true }));
+}
+
+/**
+ * Keeps terminal prompts disabled for explicit automation and CI, even when a terminal is allocated.
+ */
+export function isInteractivePublication(
+  options,
+  { terminal = Boolean(process.stdin.isTTY), environment = process.env } = {}
+) {
+  const ci = environment.CI && !['0', 'false'].includes(environment.CI.toLowerCase());
+  return terminal && !ci && environment.GITHUB_ACTIONS !== 'true' && !options.ci && !options.yes;
+}
+
+/**
+ * Rejects incomplete automation before authentication, building, version writes, or Git mutations.
+ */
+export function assertPublicationArguments(
+  options,
+  { interactive = isInteractivePublication(options) } = {}
+) {
+  if (interactive || options.dryRun) return;
+  if (!options.bump && !options.resume && !options.githubOnly) {
+    throw new Error('Choose --resume, --bump, or --github-only for noninteractive publication.');
+  }
+  if (!options.yes) throw new Error('Noninteractive publication requires --yes or --ci.');
+  if (options.bump && (!options.increment || !options.executorIncrement)) {
+    throw new Error(
+      'Noninteractive --bump requires both --increment and --executor-increment (patch, minor, or major).'
+    );
+  }
 }
