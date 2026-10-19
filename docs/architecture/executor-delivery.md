@@ -126,8 +126,8 @@ node apps/executor/test/packaging/cross-machine-transfer.mjs --config 'apps/exec
 
 package:acceptance 生成 `apps/executor/release/<version>-unsigned-<UUID>/`，每次使用新目录，包含：
 
-- `Dr.Octopus-Executor-<version>-win-x64-unsigned.exe`：当前用户安装程序，无需管理员权限；安装说明、私有资源和两份扩展随包。
-- `Dr.Octopus-Executor-<version>-win-x64-unsigned.zip`：完整解压版，保留全部文件后运行 Dr.Octopus Executor.exe。
+- `Dr.Octopus-Executor-<version>-win-x64-setup-unsigned.exe`：当前用户安装程序，无需管理员权限；安装说明、私有资源和两份扩展随包。
+- `Dr.Octopus-Executor-<version>-win-x64-unpacked-unsigned.zip`：完整解压版，保留全部文件后运行 Dr.Octopus Executor.exe。
 - `acceptance-artifacts.json`、win-unpacked/runtime-manifest.json：包身份、文件摘要与可用能力清单。
 - `acceptance-kit-<UUID>/`：独立验收工具及文档，打包时自动生成。
 
@@ -160,15 +160,15 @@ Summary 展示上传结果、下载链接、源提交、版本、productBuildId 
 
 ### GitHub Release Assets 与 Web 下载地址
 
-正常发版沿用仓库根 pnpm release:publish：先成功发布 npm，再用个人发布身份创建对应 Tag 的 GitHub Release。Release 发布事件同时触发 Docker 与 Executor 流水线。新 Tag 必须包含本工作流及其工程脚本；不将当前 main 的产物附加到旧源码 Tag。仓库 Release 版本与 Executor 产品版本独立，例如 v0.0.13 可以分发 Executor 0.0.1。
+正常发版沿用仓库根 pnpm release:publish：先成功发布 npm，再用个人发布身份创建对应 Tag 的 GitHub Release。Release 发布事件同时触发 Docker 与 Executor 流水线。新 Tag 必须包含本工作流及其工程脚本；不将当前 main 的产物附加到旧源码 Tag。仓库 Release 版本与 Executor 产品版本独立，例如 v0.0.14 可以分发 Executor 0.0.1。
 
 发布任务只下载 acceptance 任务输出的单一 artifact-id，先验证完整 SHA256SUMS 清单、原始文件、产品身份、六项验收结论及实际检出提交，再查询目标 Release 的当前 Tag 提交；全部一致才允许上传。只给该任务 contents:write，PR 不运行发布任务。首次上传失败不自动重放；修复后使用原运行的 Re-run failed jobs，复用已验收的相同附件。与既有资产名称、大小和 SHA-256 一致时保留；冲突或未知摘要时失败，不使用 clobber 删除或替换已发布文件。
 
-Release Assets 包含 Dr.Octopus-Executor-<executor-version>-win-x64-unsigned.exe、同名 ZIP，以及同前缀的 -BUILD-INFO.json、-acceptance-artifacts.json、-SHA256SUMS.txt。Release 专用摘要覆盖这四个实际公开文件；Actions 附件仍保留完整验收工具、报告及原始交付摘要。文件名中的 unsigned 和元数据 signed=false 保留，附加资产不意味着 Windows 签名发行或 G4/G5/G6 已通过。
+Executor 的 Release Assets 只上传 Dr.Octopus-Executor-<executor-version>-win-x64-setup-unsigned.exe 和 Dr.Octopus-Executor-<executor-version>-win-x64-unpacked-unsigned.zip。BUILD-INFO.json、acceptance-artifacts.json、SHA256SUMS.txt、完整验收工具及报告继续保留在 Actions 交付附件中，不单独上传为 Release Assets；发布任务仍校验整个交付目录及源码身份。GitHub 提供两个公开资产的 SHA-256 摘要，下载后可据此核对。文件名中的 unsigned 和元数据 signed=false 保留，附加资产不意味着 Windows 签名发行或 G4/G5/G6 已通过。
 
-需要补跑已发布的新版本时，在 Executor 工作流的 Run workflow 中填写 release_tag（例如 v0.0.13）。该输入会检出精确 Tag，并在验收后尝试上传到已有非草稿 Release；留空则只交付 Actions 附件。重建产物若与已上传字节不同会拒绝覆盖；应优先重跑原失败发布任务，需要更改源码时发布新版本。
+需要补跑已发布的新版本时，在 Executor 工作流的 Run workflow 中填写 release_tag（例如 v0.0.14）。该输入会检出精确 Tag，并在验收后尝试上传到已有非草稿 Release；留空则只交付 Actions 附件。重建产物若与已上传字节不同会拒绝覆盖；应优先重跑原失败发布任务，需要更改源码时发布新版本。
 
-Web 的 Vite 构建从 release.config.json 读取 Release Tag，从 apps/executor/package.json 读取独立产品版本，默认生成 https://github.com/nebulaedata/dr-octopus/releases/download/v<release-version>/Dr.Octopus-Executor-<executor-version>-win-x64-unsigned.exe 及 .zip。Turbo 构建缓存显式追踪这两份清单和 VITE_EXECUTOR_*，防止升版复用旧链接。可以通过 apps/web/.env.example 中的公开构建变量覆盖镜像地址；变量不设置时使用自动默认值，显式空字符串禁用对应格式。下载入口仍保留未签名验收说明。
+Web 的 Vite 构建从 release.config.json 读取 Release Tag，从 apps/executor/package.json 读取独立产品版本，默认使用 https://github.com/nebulaedata/dr-octopus/releases/download/v<release-version>/ 为下载根路径，安装版文件名为 Dr.Octopus-Executor-<executor-version>-win-x64-setup-unsigned.exe，免安装版为 Dr.Octopus-Executor-<executor-version>-win-x64-unpacked-unsigned.zip。Turbo 构建缓存显式追踪这两份清单和 VITE_EXECUTOR_*，防止升版复用旧链接。可以通过 apps/web/.env.example 中的公开构建变量覆盖镜像地址；变量不设置时使用自动默认值，显式空字符串禁用对应格式。下载入口仍保留未签名验收说明。
 
 runtime-manifest.json 在 builder 完成 PE/Fuse 修改后生成，覆盖最终 ZIP 树、实际组件版本、入口、Schema 投影及许可；acceptance-artifacts.json 锚定其摘要和 productBuildId。生产 JS、原生组件、私有资源与两份扩展必须属于同一产物，旧包不会随源码更新。
 

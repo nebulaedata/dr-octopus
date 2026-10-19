@@ -68,7 +68,7 @@
   },
   "executorDownload": {
     "acceptance": "验收版",
-    "archive": "下载 ZIP 解压版",
+    "archive": "Windows 免安装版（ZIP）",
     "browserHint": "浏览器操作需另行安装配套扩展。",
     "card": {
       "description": "连接你的电脑，拓展智能体的行动能力",
@@ -76,13 +76,13 @@
     },
     "description": "让智能体在你授权后，使用本机文件、命令行、浏览器和桌面工具。",
     "guide": "安装与连接说明",
-    "installer": "下载 Windows 安装包",
+    "installer": "Windows 安装版",
     "mcpSettings": "打开 MCP 设置",
-    "setupTitle": "安装后，三步接入",
+    "setupTitle": "启动后，三步接入",
     "steps": {
       "authorize": "在执行体中创建授权，复制客户端配置",
       "connect": "将配置添加到智能体的 MCP 设置",
-      "install": "安装并启动执行体"
+      "install": "安装或完整解压后，启动执行体"
     },
     "title": "下载执行体",
     "unavailable": "下载暂未开放",

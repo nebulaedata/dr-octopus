@@ -77,15 +77,15 @@ test('default downloads use the current repository Release with the independent 
   );
   const configured = readExecutorRelease(environment);
   assert.equal(configured.version, executor.version);
-  for (const [key, extension] of [
-    ['installerUrl', 'exe'],
-    ['archiveUrl', 'zip'],
+  for (const [key, variant, extension] of [
+    ['installerUrl', 'setup', 'exe'],
+    ['archiveUrl', 'unpacked', 'zip'],
   ]) {
     const url = new URL(configured[key]);
     assert.equal(url.origin, 'https://github.com');
     assert.equal(
       url.pathname,
-      `/nebulaedata/dr-octopus/releases/download/v${release.manifest.version}/Dr.Octopus-Executor-${executor.version}-win-x64-unsigned.${extension}`
+      `/nebulaedata/dr-octopus/releases/download/v${release.manifest.version}/Dr.Octopus-Executor-${executor.version}-win-x64-${variant}-unsigned.${extension}`
     );
   }
 });

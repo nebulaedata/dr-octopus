@@ -255,7 +255,7 @@ async function packageAcceptance() {
         { from: join(stage, 'INSTALLATION.md'), to: 'INSTALLATION.md' },
         { from: join(stage, 'third-party-licenses'), to: 'third-party-licenses' },
       ],
-      artifactName: 'Dr.Octopus-Executor-${version}-win-${arch}-unsigned.${ext}',
+      artifactName: 'Dr.Octopus-Executor-${version}-win-${arch}-unpacked-unsigned.${ext}',
       toolsets: { nsis: '1.2.1', winCodeSign: '1.1.0' },
       electronFuses: {
         runAsNode: false,
@@ -272,6 +272,7 @@ async function packageAcceptance() {
         requestedExecutionLevel: 'asInvoker',
       },
       nsis: {
+        artifactName: 'Dr.Octopus-Executor-${version}-win-${arch}-setup-unsigned.${ext}',
         installerIcon: join(root, 'assets/brand/app.ico'),
         uninstallerIcon: join(root, 'assets/brand/app.ico'),
         oneClick: true,

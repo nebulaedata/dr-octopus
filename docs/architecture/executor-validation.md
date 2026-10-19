@@ -686,3 +686,15 @@ Executor 新构建、lint 和 typecheck 通过。首次本地全量复验为 239
 通过页面 ZIP 链接实际点击下载后，浏览器工具的 download 事件等待超时；未重复点击或绕过浏览器保护。随后确认 Chrome 已完成下载，Downloads 中本次新文件的大小和 SHA-256 均与上述 ZIP 及 GitHub 摘要一致。原事件超时及独立文件复核结果一起记录，未把工具事件超时解释为下载失败或忽略原始现象。截图、完整发布日志、公开构建元数据、下载响应与文件校验 JSON 按同一验证批次保存；私有测试服务已停止。
 
 本次完成公开 Release Assets 自动交付及网站下载路径/实际 ZIP 下载复验，仍为 unsigned 验收包；未执行产品安装、升级、卸载、正式 Host 注册、独立硬件或代码签名，不提升对应 G4/G5/G6 状态。
+
+## 2026-10-19：安装版/免安装版命名与精简 Release 附件
+
+新分发名称按 setup-unsigned.exe 与 unpacked-unsigned.zip 区分安装版和解压版，产品版本仍为 0.0.1；打包、发布校验、Web 默认 URL、双语按钮和安装说明同步更新。当前流水线将 Executor 的 Release Assets 精简为这两个二进制文件；两份 JSON、SHA256SUMS、验收工具与报告仍留在完整 Actions 附件，发布前继续逐项核对摘要、验收结论及 Tag 源码身份。
+
+本地 Browser/Executor/Web 构建通过；Web 284 项测试、Executor 112 项根级测试、发布聚焦 16 项及 lint/typecheck/i18n 检查通过。首次本地打包尝试顶层 zip 配置被锁定的 electron-builder 26.15.3 Schema 拒绝；改为归档使用全局 artifactName、NSIS 使用专用 artifactName 后，新 EXE/ZIP 的真实文件名均符合约定，离线预检、产品目录与实际 ZIP 清单及六项包级验收全部通过。原失败日志与修复后日志分开保留。
+
+本地新包目录标识 0.0.1-unsigned-8d7bba0c-e04e-46c2-9368-be538146190e，productBuildId 为 a59fa5c5983b23eea422a4fa536c7a8f330009ab56cd2a24b71d850a000e48dd；该记录只对应本地产物，远端新版本尚待构建。
+
+按用户对截图红框附件的清理要求，已先备份并核对 v0.0.13 的 acceptance-artifacts.json、BUILD-INFO.json 和 SHA256SUMS.txt 三个 Release 资产，再按精确资产 ID 删除。删除后重新查询，Docker ZIP 和 Executor EXE/ZIP 的 ID、大小、摘要均保持不变；旧版本程序下载路径继续存在。备份与删除回执按本批验证材料保存，未删除 CI 内的原始校验材料。
+
+发布前确认 0.0.14 的 npm、GitHub Release/Tag、Docker Hub 和 Harbor 标签均未占用。Harbor latest 可通过现有 Docker/Buildx 凭据读取；docker login 预检因本机 Docker Desktop Linux Engine 管道未运行而失败，没有认证拒绝证据。该失败记录保留；新版本发布后的真实镜像复制和摘要核验尚待执行，不将只读检查提升为推送权限验证。

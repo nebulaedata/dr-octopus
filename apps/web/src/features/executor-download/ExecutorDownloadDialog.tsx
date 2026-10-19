@@ -38,10 +38,10 @@ export function ExecutorDownloadDialog() {
   const navigate = useNavigate();
   const primaryUrl = release.installerUrl ?? release.archiveUrl;
   const primaryLabel = release.installerUrl
-    ? t('executorDownload.installer', 'Download Windows installer')
-    : t('executorDownload.archive', 'Download ZIP archive');
+    ? t('executorDownload.installer', 'Windows installer')
+    : t('executorDownload.archive', 'Windows no-install (ZIP)');
   const steps = [
-    t('executorDownload.steps.install', 'Install and start Executor.'),
+    t('executorDownload.steps.install', 'Install or fully extract, then start Executor.'),
     t(
       'executorDownload.steps.authorize',
       'Create an authorization in Executor and copy the client configuration.'
@@ -127,7 +127,7 @@ export function ExecutorDownloadDialog() {
               href={release.archiveUrl}
               className="self-center rounded-sm text-xs text-muted-foreground underline underline-offset-4 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {t('executorDownload.archive', 'Download ZIP archive')}
+              {t('executorDownload.archive', 'Windows no-install (ZIP)')}
             </a>
           )}
         </section>

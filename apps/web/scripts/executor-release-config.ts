@@ -19,14 +19,14 @@ export function executorReleaseDefines(
 ) {
   const version = environment.VITE_EXECUTOR_VERSION?.trim() || executorVersion;
   const base = `https://github.com/nebulaedata/dr-octopus/releases/download/v${releaseVersion}`;
-  const stem = `Dr.Octopus-Executor-${version}-win-x64-unsigned`;
+  const stem = `Dr.Octopus-Executor-${version}-win-x64`;
   return {
     'import.meta.env.VITE_EXECUTOR_VERSION': JSON.stringify(version),
     'import.meta.env.VITE_EXECUTOR_WINDOWS_INSTALLER_URL': JSON.stringify(
-      environment.VITE_EXECUTOR_WINDOWS_INSTALLER_URL ?? `${base}/${stem}.exe`
+      environment.VITE_EXECUTOR_WINDOWS_INSTALLER_URL ?? `${base}/${stem}-setup-unsigned.exe`
     ),
     'import.meta.env.VITE_EXECUTOR_WINDOWS_ZIP_URL': JSON.stringify(
-      environment.VITE_EXECUTOR_WINDOWS_ZIP_URL ?? `${base}/${stem}.zip`
+      environment.VITE_EXECUTOR_WINDOWS_ZIP_URL ?? `${base}/${stem}-unpacked-unsigned.zip`
     ),
   };
 }

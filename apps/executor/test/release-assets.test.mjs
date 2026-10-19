@@ -10,8 +10,9 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { prepareReleaseAssets, publishReleaseAssets } from '../scripts/lib/package/release-assets.mjs';
 
-const identity = { repository: 'nebulaedata/dr-octopus', tag: 'v0.0.13', sourceCommit: 'a'.repeat(40) };
-const stem = 'Dr.Octopus-Executor-0.0.1-win-x64-unsigned';
+const identity = { repository: 'nebulaedata/dr-octopus', tag: 'v0.0.14', sourceCommit: 'a'.repeat(40) };
+const installer = 'Dr.Octopus-Executor-0.0.1-win-x64-setup-unsigned.exe';
+const archive = 'Dr.Octopus-Executor-0.0.1-win-x64-unpacked-unsigned.zip';
 
 /**
  * Computes deterministic fixture digests without using production helper internals.
@@ -27,7 +28,7 @@ async function fixture(run, overrides = {}) {
   const root = await mkdtemp(join(tmpdir(), 'octopus-release-'));
   const directory = join(root, 'delivery');
   await mkdir(join(directory, 'verification'), { recursive: true });
-  const contents = { [`${stem}.exe`]: 'installer fixture', [`${stem}.zip`]: 'archive fixture' };
+  const contents = { [installer]: 'installer fixture', [archive]: 'archive fixture' };
   const files = Object.entries(contents).map(([path, bytes]) => ({
     path,
     size: Buffer.byteLength(bytes),
@@ -111,7 +112,7 @@ function github({ commit = identity.sourceCommit, failOnce = false, assets = [],
           id: 42,
           draft,
           tag_name: identity.tag,
-          html_url: 'https://github.com/nebulaedata/dr-octopus/releases/tag/v0.0.13',
+          html_url: 'https://github.com/nebulaedata/dr-octopus/releases/tag/v0.0.14',
           upload_url:
             'https://uploads.github.com/repos/nebulaedata/dr-octopus/releases/42/assets{?name,label}',
         });
@@ -130,27 +131,17 @@ function github({ commit = identity.sourceCommit, failOnce = false, assets = [],
   };
 }
 
-test('verified delivery produces five exact Release assets with independently versioned filenames', async () => {
+test('verified delivery publishes only the installer and archive while retaining complete CI metadata', async () => {
   await fixture(async (directory) => {
     const before = await readFile(join(directory, 'SHA256SUMS.txt'));
     const prepared = await prepareReleaseAssets(directory, identity);
-    assert.equal(prepared.assets.length, 5);
+    assert.equal(prepared.assets.length, 2);
     assert.deepEqual(
       prepared.assets.map((file) => file.name),
-      [
-        `${stem}.exe`,
-        `${stem}.zip`,
-        `${stem}-BUILD-INFO.json`,
-        `${stem}-acceptance-artifacts.json`,
-        `${stem}-SHA256SUMS.txt`,
-      ]
+      [installer, archive]
     );
     for (const asset of prepared.assets) {
       assert.equal(digest(await readFile(asset.path)), asset.sha256);
-    }
-    const sums = await readFile(prepared.assets[4].path, 'utf8');
-    for (const asset of prepared.assets.slice(0, 4)) {
-      assert.ok(sums.includes(`${asset.sha256}  ${asset.name}\n`));
     }
     assert.deepEqual(await readFile(join(directory, 'SHA256SUMS.txt')), before);
     assert.equal((await readdir(directory)).length, 6);
@@ -162,7 +153,7 @@ test('changed bytes, omitted files and unsafe checksum paths are rejected before
     await t.test(kind, async () =>
       fixture(async (directory) => {
         if (kind === 'installer') {
-          await writeFile(join(directory, `${stem}.exe`), 'changed');
+          await writeFile(join(directory, installer), 'changed');
         }
         if (kind === 'report') {
           await writeFile(join(directory, 'verification/zip-inventory.json'), 'changed');
@@ -206,14 +197,14 @@ test('partial publication resumes identical bytes and a completed retry performs
     const api = github({ failOnce: true });
     const options = { token: 'fixture-token', request: api.request };
     await assert.rejects(publishReleaseAssets(delivery, options), /HTTP 500/);
-    assert.deepEqual(api.posts, [`${stem}.exe`, `${stem}.zip`]);
+    assert.deepEqual(api.posts, [installer, archive]);
     const resumed = await publishReleaseAssets(delivery, options);
-    assert.equal(resumed.uploaded.length, 4);
+    assert.equal(resumed.uploaded.length, 1);
     assert.equal(resumed.retained, 1);
     const complete = await publishReleaseAssets(delivery, options);
     assert.equal(complete.uploaded.length, 0);
-    assert.equal(complete.retained, 5);
-    assert.equal(api.uploaded.length, 5);
+    assert.equal(complete.retained, 2);
+    assert.equal(api.uploaded.length, 2);
     assert.equal(api.posts.filter((name) => name.endsWith('.exe')).length, 1);
   });
 });
@@ -233,7 +224,7 @@ test('retagging, drafts and conflicting assets stop before uploading any new fil
         if (kind === 'collision') {
           options.assets = [
             {
-              name: `${stem}.zip`,
+              name: archive,
               state: 'uploaded',
               size: delivery.assets[1].size,
               digest: `sha256:${'f'.repeat(64)}`,

@@ -4,8 +4,8 @@
  */
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { lstat, mkdtemp, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { lstat, readFile, readdir, realpath } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 
 /**
  * Hashes large installers and archives without loading their complete contents into memory.
@@ -37,7 +37,7 @@ async function deliveryFiles(directory, prefix = '') {
 }
 
 /**
- * Validates all staged checksums and CI provenance, then creates separately named Release metadata.
+ * Validates every staged checksum and CI provenance, then selects only the two public binary downloads.
  * The original verified delivery is never modified. Executor and repository release versions remain independent.
  */
 export async function prepareReleaseAssets(directory, { repository, tag, sourceCommit }) {
@@ -107,7 +107,7 @@ export async function prepareReleaseAssets(directory, { repository, tag, sourceC
   ) {
     throw new Error('Release delivery has not completed all required CI verification.');
   }
-  const stem = `Dr.Octopus-Executor-${metadata.version}-win-x64-unsigned`;
+  const productStem = `Dr.Octopus-Executor-${metadata.version}-win-x64`;
   if (
     !Array.isArray(metadata.files) ||
     metadata.files.length !== 2 ||
@@ -118,7 +118,8 @@ export async function prepareReleaseAssets(directory, { repository, tag, sourceC
   }
   const assets = [];
   for (const extension of ['exe', 'zip']) {
-    const name = `${stem}.${extension}`;
+    const variant = extension === 'exe' ? 'setup' : 'unpacked';
+    const name = `${productStem}-${variant}-unsigned.${extension}`;
     const file = metadata.files.find((entry) => entry.path === name);
     const record = provenance.artifacts.find((entry) => entry.path === name);
     const path = join(root, name);
@@ -135,24 +136,6 @@ export async function prepareReleaseAssets(directory, { repository, tag, sourceC
     }
     assets.push({ name, path, size, sha256: file.sha256 });
   }
-  const output = await mkdtemp(join(dirname(root), 'executor-release-metadata-'));
-  for (const name of ['BUILD-INFO.json', 'acceptance-artifacts.json']) {
-    const destination = `${stem}-${name}`;
-    const path = join(output, destination);
-    const bytes = await readFile(join(root, name));
-    await writeFile(path, bytes, { flag: 'wx' });
-    assets.push({ name: destination, path, size: bytes.length, sha256: checksums.get(name) });
-  }
-  const checksumName = `${stem}-SHA256SUMS.txt`;
-  const bytes = Buffer.from(assets.map((asset) => `${asset.sha256}  ${asset.name}\n`).join(''));
-  const path = join(output, checksumName);
-  await writeFile(path, bytes, { flag: 'wx' });
-  assets.push({
-    name: checksumName,
-    path,
-    size: bytes.length,
-    sha256: createHash('sha256').update(bytes).digest('hex'),
-  });
   return { repository, tag, sourceCommit, productBuildId: metadata.productBuildId, assets };
 }
 

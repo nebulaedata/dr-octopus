@@ -69,7 +69,7 @@ $signTool = (Get-ChildItem -Path "${env:ProgramFiles(x86)}/Windows Kits/10/bin/*
 if (!$signTool) { throw 'Windows SDK SignTool 未找到。' }
 
 $thumbprint = '替换为实际代码签名证书的Thumbprint'
-$unsignedInstaller = 'D:/待签名验收包/Dr.Octopus-Executor-0.0.1-win-x64-unsigned.exe'
+$unsignedInstaller = 'D:/待签名验收包/Dr.Octopus-Executor-0.0.1-win-x64-setup-unsigned.exe'
 $timestampUrl = 'http://timestamp.digicert.com'
 $signingTestRoot = Join-Path $env:TEMP ('executor-sign-test-' + [guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $signingTestRoot | Out-Null
@@ -196,7 +196,7 @@ Browser 来源在构建期确定，配套插件和 Executor 使用同一[身份�
 在同一签名验证会话中，为最终安装程序设置实际路径，然后检查签名、时间戳和 SHA-256：
 
 ```powershell
-$installer = 'D:/正式发布目录/Dr.Octopus-Executor-实际版本-win-x64.exe'
+$installer = 'D:/正式发布目录/Dr.Octopus-Executor-实际版本-win-x64-setup.exe'
 & $signTool verify /pa /all /v /tw $installer
 if ($LASTEXITCODE -ne 0) { throw '正式安装程序签名验证失败。' }
 Get-AuthenticodeSignature -LiteralPath $installer |

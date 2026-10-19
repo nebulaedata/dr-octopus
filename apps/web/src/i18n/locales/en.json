@@ -69,7 +69,7 @@
   },
   "executorDownload": {
     "acceptance": "Acceptance build",
-    "archive": "Download ZIP archive",
+    "archive": "Windows no-install (ZIP)",
     "browserHint": "Browser tools require the companion browser extension.",
     "card": {
       "description": "Connect your computer. Expand what your agent can do.",
@@ -77,13 +77,13 @@
     },
     "description": "Let your agent use local files, shell, browser, and desktop tools after you authorize access.",
     "guide": "Installation and connection guide",
-    "installer": "Download Windows installer",
+    "installer": "Windows installer",
     "mcpSettings": "Open MCP settings",
     "setupTitle": "Connect in three steps",
     "steps": {
       "authorize": "Create an authorization in Executor and copy the client configuration.",
       "connect": "Add the configuration to your agent’s MCP settings.",
-      "install": "Install and start Executor."
+      "install": "Install or fully extract, then start Executor."
     },
     "title": "Download Executor",
     "unavailable": "Downloads are not available yet",
