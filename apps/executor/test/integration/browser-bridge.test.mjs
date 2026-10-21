@@ -107,8 +107,8 @@ test(
       page.setDefaultTimeout(20000);
       await page.getByRole('heading', { name: 'MCP 服务已启动', exact: true }).waitFor();
       await page.getByRole('tab', { name: '连接', exact: true }).click();
-      await page.getByRole('button', { name: '启用浏览器桥接', exact: true }).click();
-      await page.getByRole('button', { name: '关闭浏览器桥接', exact: true }).waitFor();
+      await page.getByRole('switch', { name: '浏览器桥接', exact: true }).click();
+      await expect(page.getByRole('switch', { name: '浏览器桥接', exact: true })).toBeChecked();
       const workers = [];
       const browserFlavor = process.env.EXECUTOR_BROWSER_FLAVOR ?? 'chromium';
       assert.ok(['chromium', 'installed'].includes(browserFlavor), 'Unknown browser validation flavor.');
@@ -177,7 +177,7 @@ test(
         BrowserWindow.getAllWindows()[0].show();
         BrowserWindow.getAllWindows()[0].focus();
       });
-      await bridge.getByRole('button', { name: '关闭浏览器桥接', exact: true }).focus();
+      await bridge.getByRole('switch', { name: '浏览器桥接', exact: true }).focus();
       await page.keyboard.press('Tab');
       await expect(connectedBadges.first()).toBeFocused();
       await expect(readyExplanation).toHaveText('浏览器工具已就绪；每次操作都会校验当前网站的访问权限。');

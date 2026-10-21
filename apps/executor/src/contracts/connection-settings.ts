@@ -16,6 +16,25 @@ export const networkAddressSchema = z.ipv4().refine((address) => {
     (first === 100 && second >= 64 && second <= 127)
   );
 }, '请填写内网或 VPN IPv4 地址');
+export const networkAddressesSchema = z
+  .array(
+    z.strictObject({
+      address: networkAddressSchema,
+      interfaceName: z.string().min(1).max(1024),
+    })
+  )
+  .max(256);
+export const networkAddressesResponseSchema = z.discriminatedUnion('ok', [
+  z.strictObject({ ok: z.literal(true), data: networkAddressesSchema }),
+  z.strictObject({
+    ok: z.literal(false),
+    code: z.enum(['FORBIDDEN', 'INVALID_REQUEST', 'UNAVAILABLE']),
+    message: z.string().max(200),
+  }),
+]);
+export type NetworkAddress = z.infer<typeof networkAddressesSchema>[number];
+export type NetworkAddressesResponse = z.infer<typeof networkAddressesResponseSchema>;
+
 export const themeSourceSchema = z.enum(['system', 'light', 'dark']);
 export const closeBehaviorSchema = z.enum(['exit', 'taskbar', 'tray']);
 export const settingsInputSchema = z.strictObject({

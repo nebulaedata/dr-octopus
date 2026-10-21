@@ -10,7 +10,7 @@ import { ComputerRuntime } from './computer/computer-runtime';
 import { ComputerBackend } from './computer/computer-backend';
 import { ControlStore } from './mcp/control-store';
 import { TaskAuthority } from './mcp/task-authority';
-import { HttpGateway } from './mcp/http-gateway';
+import { HttpGateway, HttpListenError } from './mcp/http-gateway';
 import { runtimeMessageSchema } from '../contracts/runtime';
 import { mkdir } from 'node:fs/promises';
 import { isAbsolute, dirname, join } from 'node:path';
@@ -282,6 +282,7 @@ initialized.then(
     port.postMessage({
       type: 'startup-failed',
       code: error instanceof BasicToolError ? error.code : 'STARTUP_FAILED',
+      listenFailure: error instanceof HttpListenError ? error.diagnostic : null,
     });
     console.error('[executor] Basic Runtime initialization failed.');
   }

@@ -20,6 +20,9 @@ test('maintenance handlers validate frame, action and revision and serialize wit
   const contents = { mainFrame: frame };
   const window = { isDestroyed: () => false, webContents: contents };
   const event = { sender: contents, senderFrame: frame };
+  let interfaceSnapshot = { Ethernet: [{ address: '192.168.14.100', family: 'IPv4', internal: false }] };
+  let discoveryFailed = false;
+  let savedNetworkAddress = null;
   let saving = false;
   let busy = false;
   const entry = new URL('../src/main/desktop-ipc.ts', import.meta.url);
@@ -41,11 +44,28 @@ test('maintenance handlers validate frame, action and revision and serialize wit
       removeHandler: (name) => handlers.delete(name),
     },
     clipboard: { writeText: (text) => calls.push(['clipboard', text]) },
+    nativeTheme: { themeSource: 'system' },
   };
   /**
    * Replaces only desktop side effects; the production sender checks, schemas and handlers remain intact.
    */
-  const load = (name) => (name === 'electron' ? electron : require(name));
+  const load = (name) => {
+    if (name === 'electron') {
+      return electron;
+    }
+    if (name === 'node:os') {
+      return {
+        ...require(name),
+        networkInterfaces: () => {
+          if (discoveryFailed) {
+            throw new Error('secret OS exception');
+          }
+          return interfaceSnapshot;
+        },
+      };
+    }
+    return require(name);
+  };
   new Function('require', 'module', 'exports', built.outputFiles[0].text)(load, module, module.exports);
   try {
     const recovery = {
@@ -63,6 +83,10 @@ test('maintenance handlers validate frame, action and revision and serialize wit
       subscribe: () => () => {},
       isSavingSettings: () => saving,
       readSettings: async () => ({ ok: true, data: { pendingRestart: true } }),
+      saveSettings: async (input) => {
+        savedNetworkAddress = input.networkAddress;
+        return { ok: true, data: { themeSource: 'system' } };
+      },
     };
     const unregister = module.exports.registerDesktopIpc(
       manager,
@@ -98,6 +122,35 @@ test('maintenance handlers validate frame, action and revision and serialize wit
     busy = true;
     assert.equal((await handlers.get(ipcChannels.restartApplication)(event, {})).ok, false);
     assert.equal((await action(event, { action: 'open-backup', revision: 3 })).ok, false);
+    const discover = handlers.get(ipcChannels.readNetworkAddresses);
+    const save = handlers.get(ipcChannels.saveSettings);
+    for (const foreign of [
+      { sender: {}, senderFrame: frame },
+      { sender: contents, senderFrame: { origin: 'app://ui' } },
+    ]) {
+      assert.equal(discover(foreign, {}).code, 'FORBIDDEN');
+      assert.equal(
+        (await save(foreign, { port: 19876, networkAddress: '192.168.14.100' })).code,
+        'FORBIDDEN'
+      );
+    }
+    assert.equal(discover(event, { command: 'scan' }).code, 'INVALID_REQUEST');
+    assert.deepEqual(discover(event, {}).data, [{ address: '192.168.14.100', interfaceName: 'Ethernet' }]);
+    busy = false;
+    const input = { port: 19876, networkAddress: '192.168.14.100' };
+    interfaceSnapshot = {};
+    assert.equal((await save(event, input)).code, 'INVALID_REQUEST');
+    assert.equal(savedNetworkAddress, null);
+    discoveryFailed = true;
+    assert.equal(discover(event, {}).code, 'UNAVAILABLE');
+    assert.ok(!JSON.stringify(discover(event, {})).includes('secret'));
+    assert.equal((await save(event, input)).code, 'UNAVAILABLE');
+    // Local-only settings remain saveable even if OS discovery is unavailable.
+    assert.equal((await save(event, { port: 19876, networkAddress: null })).ok, true);
+    discoveryFailed = false;
+    interfaceSnapshot = { Ethernet: [{ address: input.networkAddress, family: 'IPv4', internal: false }] };
+    assert.equal((await save(event, input)).ok, true);
+    assert.equal(savedNetworkAddress, input.networkAddress);
     unregister();
     assert.equal(handlers.size, 0);
   } finally {

@@ -162,7 +162,7 @@ if ($Mode -eq 'install') {
         page.setDefaultTimeout(20000);
         await page.getByTestId('runtime-state').filter({ hasText: '已启动' }).waitFor();
         await page.getByRole('tab', { name: '连接', exact: true }).click();
-        await page.getByRole('button', { name: '启用浏览器桥接', exact: true }).click();
+        await page.getByRole('switch', { name: '浏览器桥接', exact: true }).click();
         const configPath = join(temporary, 'client.json');
         await app.evaluate(({ dialog }, path) => {
           dialog.showOpenDialog = async () => {

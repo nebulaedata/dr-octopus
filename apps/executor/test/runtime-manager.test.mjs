@@ -33,11 +33,19 @@ test('startup failure codes survive child exit without exposing child error text
   const rejected = assert.rejects(manager.launch(), /before readiness/);
   child.emit('message', { type: 'startup-failed', code: 'CONTROL_STORE_INVALID', message: 'secret' });
   assert.equal(manager.readStatus().startupFailure, null);
-  child.emit('message', { type: 'startup-failed', code: 'CONTROL_STORE_INVALID' });
+  const diagnostic = {
+    stage: 'mcp-listen',
+    address: '192.168.0.78',
+    port: 19876,
+    systemCode: 'EADDRNOTAVAIL',
+  };
+  child.emit('message', { type: 'startup-failed', code: 'MCP_LISTEN_FAILED', listenFailure: diagnostic });
   child.emit('exit', 1);
   await rejected;
   assert.equal(manager.readStatus().state, 'failed');
-  assert.equal(manager.readStatus().startupFailure, 'CONTROL_STORE_INVALID');
+  assert.equal(manager.readStatus().startupFailure, 'MCP_LISTEN_FAILED');
+  assert.deepEqual(manager.readStatus().listenFailure, diagnostic);
+  assert.equal(manager.readStatus().message, '执行服务初始化失败');
   assert.ok(!JSON.stringify(manager.readStatus()).includes('secret'));
 });
 

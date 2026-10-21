@@ -17,6 +17,20 @@ import { createMcpServer } from './mcp-server';
 import type { BrowserBridge } from '../browser/browser-bridge';
 import { networkAddressSchema } from '../../contracts/connection-settings';
 
+import { listenFailureSchema, type ListenFailure } from '../../contracts/listen-failure';
+
+export class HttpListenError extends BasicToolError {
+  /**
+   * Retains only the attempted endpoint and a bounded system code for startup diagnostics.
+   */
+  constructor(readonly diagnostic: ListenFailure) {
+    super(
+      diagnostic.systemCode === 'EADDRINUSE' ? 'PORT_IN_USE' : 'MCP_LISTEN_FAILED',
+      'The configured MCP endpoint could not be opened.'
+    );
+  }
+}
+
 type Session = {
   clientId: string;
   transport: StreamableHTTPServerTransport;
@@ -138,11 +152,14 @@ export class HttpGateway {
         accept();
       });
     }).catch((error: unknown) => {
-      throw new BasicToolError(
-        error instanceof Error && 'code' in error && error.code === 'EADDRINUSE'
-          ? 'PORT_IN_USE'
-          : 'MCP_LISTEN_FAILED',
-        'The configured MCP endpoint could not be opened.'
+      const diagnostic = listenFailureSchema.safeParse({
+        stage: 'mcp-listen',
+        address,
+        port,
+        systemCode: error instanceof Error && 'code' in error ? error.code : 'UNKNOWN',
+      });
+      throw new HttpListenError(
+        diagnostic.success ? diagnostic.data : { stage: 'mcp-listen', address, port, systemCode: 'UNKNOWN' }
       );
     });
   }

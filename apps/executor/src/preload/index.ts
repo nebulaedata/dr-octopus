@@ -12,7 +12,11 @@ import {
   browserSelectionSchema,
 } from '../contracts/runtime';
 import type { ExecutorDesktopApi } from '../contracts/runtime';
-import { settingsResponseSchema, settingsInputSchema } from '../contracts/connection-settings';
+import {
+  networkAddressesResponseSchema,
+  settingsResponseSchema,
+  settingsInputSchema,
+} from '../contracts/connection-settings';
 import { accessResponseSchema, approvalInputSchema, revokeInputSchema } from '../contracts/access';
 import { z } from 'zod';
 import { maintenanceActionSchema, maintenanceResponseSchema } from '../contracts/maintenance';
@@ -81,7 +85,15 @@ const api: ExecutorDesktopApi = {
     return desktopActionResponseSchema.parse(await ipcRenderer.invoke(ipcChannels.copyEndpoint, {}));
   },
   /**
-   * Reads only safe persisted connection settings.
+   * Reads only eligible local IPv4 addresses and their interface names.
+   */
+  async readNetworkAddresses() {
+    return networkAddressesResponseSchema.parse(
+      await ipcRenderer.invoke(ipcChannels.readNetworkAddresses, {})
+    );
+  },
+  /**
+   * Reads saved connection settings independently of Runtime availability.
    */
   async readSettings() {
     return settingsResponseSchema.parse(await ipcRenderer.invoke(ipcChannels.readSettings, {}));

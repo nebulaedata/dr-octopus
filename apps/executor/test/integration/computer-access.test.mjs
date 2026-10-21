@@ -60,7 +60,7 @@ test(
         )
         .toBe(true);
       const desktopRow = page.getByRole('button', { name: '查看桌面控制工具', exact: true });
-      await expect(desktopRow.getByText('支持 9 项', { exact: true })).toBeVisible();
+      await expect(desktopRow).not.toContainText('支持 9 项');
       await expect(desktopRow.getByText('已就绪', { exact: true })).toBeVisible();
       await desktopRow.click();
       await expect(page.getByRole('dialog').getByText(/当前状态：已就绪/)).toBeVisible();
@@ -152,8 +152,8 @@ test(
         []
       );
       await page.getByRole('tab', { name: '状态', exact: true }).click();
-      await expect(desktopRow.getByText('支持 9 项', { exact: true })).toBeVisible();
-      await expect(desktopRow.getByText('不可用', { exact: true })).toBeVisible();
+      await expect(desktopRow).not.toContainText('支持 9 项');
+      await expect(desktopRow.getByText('未就绪', { exact: true })).toBeVisible();
       await desktopRow.click();
       await expect(page.getByRole('dialog').getByText(/当前状态：不可用/)).toBeVisible();
       await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();

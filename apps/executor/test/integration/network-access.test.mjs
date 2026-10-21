@@ -83,9 +83,21 @@ test(
       await current.page.getByRole('tab', { name: '设置', exact: true }).click();
       await current.page.getByLabel('MCP 服务端口').fill(String(port));
       await current.page.getByRole('switch', { name: '允许内网 / VPN 客户端连接' }).check();
-      await current.page.getByLabel('本机内网 / VPN IPv4 地址').fill('8.8.8.8');
+      await current.page.getByText('请选择本机内网 / VPN IPv4 地址。', { exact: true }).waitFor();
       assert.equal(await current.page.getByRole('button', { name: '保存设置' }).isDisabled(), true);
-      await current.page.getByLabel('本机内网 / VPN IPv4 地址').fill(address);
+      await assert.rejects(
+        current.page.evaluate(
+          (port) => window.executor.saveSettings({ port, networkAddress: '8.8.8.8' }),
+          port
+        )
+      );
+      const choices = (await current.page.evaluate(() => window.executor.readNetworkAddresses())).data;
+      const choice = choices.find((item) => item.address === address);
+      assert.ok(choice);
+      await current.page.getByLabel('本机内网 / VPN IPv4 地址').click();
+      await current.page
+        .getByRole('option', { name: `${choice.interfaceName} · ${address}`, exact: true })
+        .click();
       await current.page.locator('#network-address[aria-invalid="false"]').waitFor();
       await current.page.getByRole('button', { name: '保存设置' }).click();
       await current.page.getByText('已保存的设置待重启生效', { exact: true }).waitFor();
@@ -109,9 +121,7 @@ test(
       );
       await current.page.evaluate(() => window.executor.setBrowserEnabled({ enabled: true }));
       const records = (await readdir(join(data, 'project', 'browser'))).sort();
-      const bootstrap = JSON.parse(
-        await readFile(join(data, 'project', 'browser', records.at(-1)), 'utf8')
-      );
+      const bootstrap = JSON.parse(await readFile(join(data, 'project', 'browser', records.at(-1)), 'utf8'));
       assert.equal(bootstrap.endpoint, `http://127.0.0.1:${port}/browser-bridge`);
       assert.equal(
         (await fetch(live.remoteEndpoint, { headers: { Authorization: 'Bearer ' + bootstrap.credential } }))

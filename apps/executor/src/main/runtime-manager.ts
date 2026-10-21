@@ -70,6 +70,7 @@ export class RuntimeManager {
     startedAt: null,
     message: '执行服务尚未启动',
     startupFailure: null,
+    listenFailure: null,
     computerUse: { revision: 0, activityId: null, state: 'idle', activeCalls: 0, activeTasks: 0 },
     health: { state: 'unknown', checkedAt: null },
     capabilities: {
@@ -236,6 +237,7 @@ export class RuntimeManager {
       startedAt: null,
       message: '执行服务正在启动',
       startupFailure: null,
+      listenFailure: null,
     });
     this.starting = this.loadSettings()
       .then((settings) => {
@@ -397,7 +399,11 @@ export class RuntimeManager {
           !settled &&
           this.snapshot.state === 'starting'
         ) {
-          this.update({ startupFailure: result.data.code });
+          this.update({
+            startupFailure: result.data.code,
+            listenFailure: result.data.listenFailure,
+            message: '执行服务初始化失败',
+          });
           try {
             child.postMessage({ type: 'startup-failed-ack' });
           } catch {
@@ -460,6 +466,8 @@ export class RuntimeManager {
           exitMessage = '执行服务已停止';
         } else if (startupTimedOut) {
           exitMessage = '执行服务启动超时';
+        } else if (this.snapshot.startupFailure) {
+          exitMessage = this.snapshot.message;
         }
         this.update({
           state: expected ? 'stopped' : 'failed',

@@ -102,15 +102,45 @@ test(
       const alert = page.getByTestId('runtime-recovery-alert');
       await expect(alert).toContainText('授权与任务数据不兼容或损坏');
       await expect(alert.getByRole('button', { name: '备份并重置', exact: true })).toBeEnabled();
-      await alert.getByRole('button', { name: '查看详情' }).click();
+      await expect(alert.getByRole('button', { name: '技术详情' })).toHaveAttribute('aria-expanded', 'false');
+      await expect(alert.getByText('CONTROL_STORE_INVALID', { exact: true })).toBeHidden();
+      const overview = page.getByRole('region', { name: '工具与桥接' });
+      await expect(overview.getByText('未就绪', { exact: true })).toHaveCount(5);
+      await expect(overview).not.toContainText('清单读取中');
+      await expect(overview).not.toContainText('状态未知');
+      const evidence = process.env.EXECUTOR_RECOVERY_EVIDENCE;
+      if (evidence) {
+        await mkdir(evidence, { recursive: true });
+        await page.screenshot({ path: join(evidence, 'failure-collapsed.png') });
+      }
+      await page.getByRole('button', { name: '查看文件传输', exact: true }).click();
+      const transferDialog = page.getByRole('dialog', { name: '文件传输', exact: true });
+      await expect(transferDialog.getByText('暂无工具清单', { exact: true })).toBeVisible();
+      await expect(transferDialog.getByRole('heading', { name: '工具清单', exact: true })).toHaveCount(0);
+      const transferHelp = transferDialog.getByRole('button', { name: '使用说明', exact: true });
+      await expect(transferHelp).toHaveAttribute('aria-expanded', 'false');
+      if (evidence) {
+        await transferDialog.screenshot({ path: join(evidence, 'transfer-empty.png') });
+      }
+      await transferHelp.click();
+      await expect(transferDialog).toContainText('智能体已有本地 HTTP 工具');
+      await expect(transferHelp).toHaveAttribute('aria-expanded', 'true');
+      await transferDialog.getByRole('button', { name: '关闭', exact: true }).click();
+      await page.getByRole('button', { name: '查看桌面控制工具' }).click();
+      const computerDialog = page.getByRole('dialog', { name: '桌面控制工具', exact: true });
+      await expect(computerDialog).toContainText('当前状态：');
+      await computerDialog.getByRole('button', { name: '关闭', exact: true }).click();
+      await page.getByRole('button', { name: '查看浏览器桥接' }).click();
+      const browserDialog = page.getByRole('dialog', { name: '浏览器桥接', exact: true });
+      await expect(browserDialog).toContainText('状态未知');
+      await browserDialog.getByRole('button', { name: '关闭', exact: true }).click();
+      await alert.getByRole('button', { name: '技术详情' }).click();
       await expect(alert).toContainText('CONTROL_STORE_INVALID');
       await alert.getByRole('button', { name: '复制错误信息' }).click();
       const copied = await app.evaluate(() => globalThis.recoveryCopied);
       assert.match(copied, /CONTROL_STORE_INVALID/);
       assert.ok(!copied.includes('tokenHash'));
-      const evidence = process.env.EXECUTOR_RECOVERY_EVIDENCE;
       if (evidence) {
-        await mkdir(evidence, { recursive: true });
         await page.screenshot({ path: join(evidence, 'failure-desktop.png') });
         await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(720, 560));
         await page.screenshot({ path: join(evidence, 'failure-compact.png') });

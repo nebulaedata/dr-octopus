@@ -182,22 +182,23 @@ test(
       await page.getByRole('tab', { name: '应用商店安装', exact: true }).click();
       assert.equal(await page.getByRole('button', { name: 'Chrome 商店 · 尚未上架' }).isDisabled(), true);
       await page.getByRole('tab', { name: '本地安装', exact: true }).click();
-      await page
-        .getByRole('group', { name: '选择浏览器' })
-        .getByRole('button', { name: 'Edge', exact: true })
-        .click();
       await app.evaluate(({ shell }) => {
         shell.openPath = async (path) => {
           globalThis.openedExtensionFolder = path;
           return '';
         };
       });
-      await page.getByRole('button', { name: '打开 Edge 插件目录', exact: true }).click();
-      await page.locator('[data-slot="toast"]').filter({ hasText: '插件目录已打开' }).waitFor();
-      assert.equal(
-        await app.evaluate(() => globalThis.openedExtensionFolder),
-        join(appRoot, '../browser-extension/.output/edge-mv3')
-      );
+      for (const [browser, name] of [
+        ['chrome', 'Chrome'],
+        ['edge', 'Edge'],
+      ]) {
+        await page.getByRole('button', { name: `打开 ${name} 插件目录`, exact: true }).click();
+        await page.locator('[data-slot="toast"]').filter({ hasText: '插件目录已打开' }).waitFor();
+        await expect
+          .poll(() => app.evaluate(() => globalThis.openedExtensionFolder))
+          .toBe(join(appRoot, `../browser-extension/.output/${browser}-mv3`));
+        await expect(page.getByText(`在 ${name} 菜单中打开`, { exact: false })).toBeVisible();
+      }
       await page.getByText('高级诊断', { exact: true }).click();
       await page.getByText('执行器数据目录：', { exact: false }).waitFor();
       await instructions.click();
@@ -274,16 +275,18 @@ test(
       );
       await page.getByRole('switch', { name: '允许内网 / VPN 客户端连接', exact: true }).click();
       await page.getByRole('status').filter({ hasText: '有未保存的更改' }).waitFor();
-      await page.getByText('请输入本机有效的内网 / VPN IPv4 地址。', { exact: true }).waitFor();
+      await page.getByText('请选择本机内网 / VPN IPv4 地址。', { exact: true }).waitFor();
       assert.equal(await page.getByRole('button', { name: '保存设置', exact: true }).isDisabled(), true);
       const addressBounds = await page.getByLabel('本机内网 / VPN IPv4 地址', { exact: true }).boundingBox();
       assert.equal(addressBounds.width, controls[0].width);
       assert.equal(addressBounds.x, controls[0].left);
-      await page.getByLabel('本机内网 / VPN IPv4 地址', { exact: true }).fill('192.168.1.10');
-      assert.equal(
-        await page.getByText('请输入本机有效的内网 / VPN IPv4 地址。', { exact: true }).count(),
-        0
-      );
+      const addresses = (await page.evaluate(() => window.executor.readNetworkAddresses())).data;
+      assert.ok(addresses.length > 0);
+      await page.getByLabel('本机内网 / VPN IPv4 地址', { exact: true }).click();
+      await page
+        .getByRole('option', { name: `${addresses[0].interfaceName} · ${addresses[0].address}`, exact: true })
+        .click();
+      assert.equal(await page.getByText('请选择本机内网 / VPN IPv4 地址。', { exact: true }).count(), 0);
       await page.getByRole('switch', { name: '允许内网 / VPN 客户端连接', exact: true }).click();
       assert.equal(await page.getByText('有未保存的更改', { exact: true }).count(), 0);
       assert.equal(await page.getByRole('button', { name: '保存设置', exact: true }).isDisabled(), true);

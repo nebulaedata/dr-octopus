@@ -10,6 +10,7 @@ import type { MaintenanceSnapshot } from '../contracts/maintenance';
 import type { NativeFileCommit } from '../runtime/basic/native-file-commit';
 import { backupData } from './data-backup';
 import { recoveryUnits } from './recovery-units';
+import { explainListenFailure } from './listen-failure';
 
 type RuntimeLifecycle = {
   projectRoot: string;
@@ -57,13 +58,16 @@ export class RuntimeRecovery {
       }
       const code = status.startupFailure ?? 'RUNTIME_UNAVAILABLE';
       const unit = recoveryUnits.find((item) => item.code === code);
+      const listener = status.listenFailure ? explainListenFailure(status.listenFailure) : null;
       result.issue = {
         revision: status.revision,
         code,
-        title: unit?.title ?? '执行服务无法启动',
-        description: unit?.description ?? status.message,
+        title: listener?.title ?? unit?.title ?? '执行服务无法启动',
+        description: listener?.description ?? unit?.description ?? status.message,
         impact: unit?.impact ?? null,
-        recoverable: !!unit,
+        recoverable: !listener && !!unit,
+        guidance: listener?.guidance ?? null,
+        listenFailure: status.listenFailure ?? null,
       };
     } else if (result.phase === 'failed' && result.issue) {
       result.issue.revision = status.revision;

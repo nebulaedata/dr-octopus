@@ -54,6 +54,7 @@ const labels = {
 export function ConnectionOverview() {
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [tab, setTab] = useState<string>('status');
+  const [focusServiceSettings, setFocusServiceSettings] = useState(false);
   const runtime = useQuery(runtimeStatusQuery);
   const maintenance = useQuery(maintenanceQuery);
   const showRecovery = !!maintenance.data && (!!maintenance.data.issue || maintenance.data.phase !== 'idle');
@@ -116,13 +117,14 @@ export function ConnectionOverview() {
       ).length;
       if (connectedCount > 0) {
         browserStatus = `${connectedCount} 项已连接`;
-        browserVariant = 'success';
+        browserVariant = 'secondary';
         browserDetail = '扩展已连接，浏览器工具尚未就绪。';
         if (
           browser.connections.some(
             (connection) => connection.state === 'connected' && connection.toolsAvailable
           )
         ) {
+          browserVariant = 'success';
           browserDetail = '让智能体调用 Chrome / Edge 浏览器工具。';
         }
       } else if (browser.connections.some((connection) => connection.state === 'incompatible')) {
@@ -184,7 +186,10 @@ export function ConnectionOverview() {
   return (
     <Tabs
       value={tab}
-      onValueChange={(value) => setTab(String(value))}
+      onValueChange={(value) => {
+        setFocusServiceSettings(false);
+        setTab(String(value));
+      }}
       className="executor-shell gap-0 bg-background text-foreground"
     >
       <ExecutorTitleBar />
@@ -196,7 +201,13 @@ export function ConnectionOverview() {
               <h1 className="text-3xl font-semibold tracking-tight">运行状态</h1>
               <p className="text-sm text-muted-foreground">查看执行服务与本机工具的可用情况。</p>
             </div>
-            <RuntimeRecoveryAlert onConnect={() => setTab('connections')} />
+            <RuntimeRecoveryAlert
+              onConnect={() => setTab('connections')}
+              onNetworkSettings={() => {
+                setFocusServiceSettings(true);
+                setTab('settings');
+              }}
+            />
             <Collapsible
               hidden={showRecovery && maintenance.data?.phase !== 'succeeded'}
               defaultOpen={false}
@@ -304,7 +315,7 @@ export function ConnectionOverview() {
             />
           </TabsContent>
           <TabsContent value="settings">
-            <ConnectionSettings onDirtyChange={setSettingsDirty} />
+            <ConnectionSettings onDirtyChange={setSettingsDirty} focusService={focusServiceSettings} />
           </TabsContent>
           {runtime.data?.computerUse && runtime.data.computerUse.state !== 'idle' ? (
             <Alert

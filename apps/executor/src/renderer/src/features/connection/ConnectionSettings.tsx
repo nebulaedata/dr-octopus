@@ -6,6 +6,7 @@ import { deviceNameSchema } from '../../../../contracts/device-identity';
 import { useEffect, useState } from 'react';
 import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@octopus/ui/components/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@octopus/ui/components/tooltip';
 import { Badge } from '@octopus/ui/components/badge';
 import { toast } from '@octopus/ui/components/toast';
 import { Input } from '@octopus/ui/components/input';
@@ -29,10 +30,10 @@ import {
   SelectItem,
 } from '@octopus/ui/components/select';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
-import { CheckCircle2Icon, CircleAlertIcon, ClockIcon, CircleIcon } from 'lucide-react';
-import { connectionSettingsQuery } from '@/queries/connection-settings-queries';
+import { CheckCircle2Icon, CircleAlertIcon, ClockIcon, CircleIcon, RefreshCwIcon } from 'lucide-react';
+import { connectionSettingsQuery, networkAddressesQuery } from '@/queries/connection-settings-queries';
 import { saveConnectionSettings } from '@/api/connection-settings';
-import { networkAddressSchema, type SettingsInput } from '../../../../contracts/connection-settings';
+import type { SettingsInput } from '../../../../contracts/connection-settings';
 import {
   defaultTransferSettings,
   transferSettingsSchema,
@@ -85,12 +86,22 @@ function transferDraft(settings: TransferSettings): Record<keyof TransferSetting
 /**
  * Saves only dirty valid values and leaves current tasks and listeners running until the next application start.
  */
-export function ConnectionSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {}) {
+export function ConnectionSettings({
+  onDirtyChange,
+  focusService = false,
+}: { onDirtyChange?: (dirty: boolean) => void; focusService?: boolean } = {}) {
   const restarting = useMutationState({
     filters: { mutationKey: ['executor', 'restart'] },
     select: (mutation) => mutation.state.status === 'pending' || mutation.state.status === 'success',
   }).some(Boolean);
   const query = useQuery(connectionSettingsQuery);
+  useEffect(() => {
+    if (focusService && query.isSuccess) {
+      const heading = document.getElementById('service-settings-heading');
+      heading?.scrollIntoView({ block: 'start' });
+      heading?.focus({ preventScroll: true });
+    }
+  }, [focusService, query.isSuccess]);
   const cache = useQueryClient();
   const [draft, setDraft] = useState<{
     deviceName: string;
@@ -132,6 +143,38 @@ export function ConnectionSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
     address: query.data?.networkAddress ?? '',
     transfer: transferDraft(query.data?.transfer ?? defaultTransferSettings),
   };
+  const networkAddresses = useQuery({ ...networkAddressesQuery, enabled: values.enabled });
+  const availableAddresses = networkAddresses.data ?? [];
+  const selectedAvailable = availableAddresses.some((item) => item.address === values.address);
+  const pendingNetwork = values.enabled && networkAddresses.isFetching;
+  const networkSelectionValid =
+    !values.enabled || (networkAddresses.isSuccess && !networkAddresses.isFetching && selectedAvailable);
+  let networkAddressError: string | null = null;
+  if (values.enabled && networkAddresses.isError) {
+    networkAddressError = '无法读取本机网络地址，请刷新重试；也可关闭内网访问，仅在本机使用。';
+  } else if (values.enabled && networkAddresses.isSuccess && !selectedAvailable) {
+    if (availableAddresses.length === 0) {
+      networkAddressError = '未检测到可用的内网 / VPN IPv4 地址。请连接网络或 VPN 后刷新，或关闭内网访问。';
+    } else if (values.address) {
+      networkAddressError = `地址 ${values.address} 当前不在本机。请重新选择，或关闭内网访问。`;
+    } else {
+      networkAddressError = '请选择本机内网 / VPN IPv4 地址。';
+    }
+  }
+  const addressOptions = availableAddresses.map((item) => ({
+    value: item.address,
+    label: `${item.interfaceName} · ${item.address}`,
+    disabled: false,
+  }));
+  if (values.address && !selectedAvailable) {
+    let label = `${values.address}（当前不可用）`;
+    if (pendingNetwork) {
+      label = `${values.address}（正在检测）`;
+    } else if (networkAddresses.isError) {
+      label = `${values.address}（可用性未知）`;
+    }
+    addressOptions.unshift({ value: values.address, label, disabled: true });
+  }
   const transfer = Object.fromEntries(
     transferFields.map(({ key }) => [
       key,
@@ -141,7 +184,7 @@ export function ConnectionSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
   const transferValidation = transferSettingsSchema.safeParse(transfer);
   const transferErrors = transferValidation.success ? [] : transferValidation.error.issues;
   const invalidName = !deviceNameSchema.safeParse(values.deviceName).success;
-  const invalidAddress = values.enabled && !networkAddressSchema.safeParse(values.address).success;
+  const invalidAddress = !!networkAddressError;
   const port = Number(values.port);
   const invalidPort = !values.port || !Number.isInteger(port) || port < 1 || port > 65535;
   const dirty =
@@ -168,7 +211,13 @@ export function ConnectionSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
         className="flex flex-col gap-8"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!transferValidation.success || invalidName || invalidAddress || invalidPort) {
+          if (
+            !transferValidation.success ||
+            invalidName ||
+            invalidAddress ||
+            invalidPort ||
+            !networkSelectionValid
+          ) {
             return;
           }
           mutation.mutate({
@@ -344,7 +393,7 @@ export function ConnectionSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
         <section className="flex flex-col gap-5" aria-labelledby="service-settings-heading">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
-              <h2 id="service-settings-heading" className="text-xl font-semibold">
+              <h2 id="service-settings-heading" tabIndex={-1} className="text-xl font-semibold">
                 服务接入
               </h2>
               <Badge variant="secondary">
@@ -394,7 +443,7 @@ export function ConnectionSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
             >
               <FieldContent>
                 <FieldLabel htmlFor="network-enabled">允许内网 / VPN 客户端连接</FieldLabel>
-                <FieldDescription>开启后配置本机内网地址，客户端仍需访问授权。</FieldDescription>
+                <FieldDescription>开启后选择本机网卡地址，客户端仍需访问授权。</FieldDescription>
               </FieldContent>
               <Switch
                 id="network-enabled"
@@ -414,27 +463,75 @@ export function ConnectionSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
               >
                 <FieldContent>
                   <FieldLabel htmlFor="network-address">本机内网 / VPN IPv4 地址</FieldLabel>
-                  <FieldDescription>填写本机网卡上的私有地址或 VPN 地址。</FieldDescription>
+                  <FieldDescription>
+                    选择其他电脑可访问的网卡地址。切换网络或连接 VPN 后，可刷新列表。
+                  </FieldDescription>
                 </FieldContent>
                 <div className="flex min-w-0 w-full flex-col gap-2">
-                  <Input
-                    id="network-address"
-                    name="network-address"
-                    value={values.address}
-                    placeholder="例如 192.168.1.10"
-                    className="w-full max-w-60"
-                    maxLength={15}
-                    required
-                    aria-invalid={invalidAddress}
-                    aria-describedby={invalidAddress ? 'network-address-error' : undefined}
-                    disabled={disabled}
-                    onChange={(event) => {
-                      mutation.reset();
-                      setDraft({ ...values, address: event.target.value });
-                    }}
-                  />
-                  {invalidAddress ? (
-                    <FieldError id="network-address-error">请输入本机有效的内网 / VPN IPv4 地址。</FieldError>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Select
+                      value={values.address || null}
+                      items={addressOptions}
+                      disabled={
+                        disabled ||
+                        pendingNetwork ||
+                        !networkAddresses.isSuccess ||
+                        availableAddresses.length === 0
+                      }
+                      onValueChange={(address) => {
+                        if (address && availableAddresses.some((item) => item.address === address)) {
+                          mutation.reset();
+                          setDraft({ ...values, address });
+                        }
+                      }}
+                    >
+                      <SelectTrigger
+                        id="network-address"
+                        className="w-full max-w-60"
+                        aria-invalid={invalidAddress}
+                        aria-describedby={invalidAddress ? 'network-address-error' : 'network-address-status'}
+                      >
+                        <SelectValue className="min-w-0 truncate" placeholder="选择本机网卡地址" />
+                      </SelectTrigger>
+                      <SelectContent className="max-w-[calc(100vw-2rem)]">
+                        <SelectGroup>
+                          {addressOptions.map((item) => (
+                            <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
+                              <span className="truncate" title={item.label}>
+                                {item.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            disabled={disabled || pendingNetwork}
+                            aria-label="刷新本机网络地址"
+                            onClick={async () => {
+                              await networkAddresses.refetch({ throwOnError: false });
+                            }}
+                          />
+                        }
+                      >
+                        <RefreshCwIcon />
+                      </TooltipTrigger>
+                      <TooltipContent role="tooltip">刷新本机网络地址</TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <FieldDescription id="network-address-status" role="status">
+                    {pendingNetwork
+                      ? '正在检测本机网络地址…'
+                      : '仅列出本机内网 / VPN IPv4 地址；选择后需保存并重启应用。'}
+                  </FieldDescription>
+                  {networkAddressError ? (
+                    <FieldError id="network-address-error">{networkAddressError}</FieldError>
                   ) : null}
                 </div>
               </Field>
@@ -523,6 +620,7 @@ export function ConnectionSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
                 invalidName ||
                 !!invalidPort ||
                 invalidAddress ||
+                !networkSelectionValid ||
                 !transferValidation.success
               }
               type="submit"

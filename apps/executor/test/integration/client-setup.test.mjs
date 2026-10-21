@@ -3,7 +3,7 @@
  * @description Verifies connection guide clipboard boundaries and compact permissions in the real Electron UI.
  */
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,13 +54,24 @@ test(
           globalThis.setupClipboard = text;
         };
       });
+      const evidence =
+        process.env.EXECUTOR_LAYOUT_CAPTURE ??
+        join(
+          appRoot,
+          'build/validation-evidence/tool-overview',
+          new Date().toISOString().replace(/[:.]/g, '-') + '-' + process.pid
+        );
+      await mkdir(evidence, { recursive: true });
       const access = await page.evaluate(() => window.executor.readAccess());
       assert.equal(access.ok, true);
       const catalog = access.data.toolCatalog;
       assert.ok(catalog.basic.includes('powershell'));
       assert.ok(!catalog.basic.includes('bash'));
       const toolSection = page.getByRole('region', { name: '工具与桥接' });
-      await expect(toolSection.getByText(`${catalog.basic.length} 项已注册`, { exact: true })).toBeVisible();
+      await expect(toolSection.getByRole('button', { name: '查看基础工具', exact: true })).toContainText(
+        '已就绪'
+      );
+      await expect(toolSection).not.toContainText('清单读取中');
       const toolText = await toolSection.innerText();
       for (const name of Object.values(catalog).flat()) {
         assert.equal(toolText.includes(name), false, name + ' should be in details only');
@@ -82,7 +93,11 @@ test(
         }
         assert.equal(await dialog.getByRole('listitem').count(), names.length);
         if (title === '文件传输') {
-          await dialog.screenshot({ path: join(appRoot, 'build', 'tool-dialog-transfer.png') });
+          await expect(dialog.getByRole('button', { name: '使用说明', exact: true })).toHaveAttribute(
+            'aria-expanded',
+            'false'
+          );
+          await dialog.screenshot({ path: join(evidence, 'tool-dialog-transfer.png') });
         }
         await page.keyboard.press('Escape');
         await expect(dialog).toHaveCount(0);
@@ -90,8 +105,12 @@ test(
       }
       await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1040, 760));
       await toolSection.scrollIntoViewIfNeeded();
-      await page.screenshot({ path: join(appRoot, 'build', 'tool-overview-dialogs.png') });
-      await toolSection.getByRole('button', { name: '管理浏览器桥接', exact: true }).click();
+      await page.screenshot({ path: join(evidence, 'tool-overview-dialogs.png') });
+      await toolSection.getByRole('button', { name: '查看浏览器桥接', exact: true }).click();
+      await page
+        .getByRole('dialog', { name: '浏览器桥接', exact: true })
+        .getByRole('button', { name: '管理浏览器桥接', exact: true })
+        .click();
       await expect(page.getByRole('region', { name: '浏览器桥接设置' })).toBeVisible();
       await expect(page.getByRole('dialog')).toHaveCount(0);
       await page.getByText('浏览器工具 · ' + catalog.browser.length + ' 项', { exact: true }).click();

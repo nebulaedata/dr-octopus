@@ -6,13 +6,13 @@ import { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@octopus/ui/components/tabs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@octopus/ui/components/button';
+import { Switch } from '@octopus/ui/components/switch';
 import { toast } from '@octopus/ui/components/toast';
-import { ToggleGroup, ToggleGroupItem } from '@octopus/ui/components/toggle-group';
 import { Badge } from '@octopus/ui/components/badge';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@octopus/ui/components/collapsible';
 import { Alert, AlertDescription } from '@octopus/ui/components/alert';
 import { Item, ItemGroup, ItemContent, ItemTitle, ItemActions } from '@octopus/ui/components/item';
-import { ChevronRightIcon, CircleAlert, Power, RefreshCw } from 'lucide-react';
+import { ChevronRightIcon, CircleAlert, RefreshCw } from 'lucide-react';
 import { BrowserBrandIcon } from './BrowserBrandIcon';
 import { ConnectionBadge } from './ConnectionBadge';
 import { ToolNameList } from './ToolNameList';
@@ -88,33 +88,17 @@ export function BrowserBridgeStatus({
   }
   return (
     <section role="region" aria-label="浏览器桥接设置" className="flex flex-col gap-3">
-      {toolNames?.length ? (
-        <Collapsible className="order-last">
-          <CollapsibleTrigger render={<Button variant="ghost" className="group -ml-2.5" />}>
-            <ChevronRightIcon
-              data-icon="inline-start"
-              className="motion-safe:transition-transform group-aria-expanded:rotate-90"
-            />
-            浏览器工具 · {toolNames.length} 项
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-3">
-            <ToolNameList names={toolNames} />
-          </CollapsibleContent>
-        </Collapsible>
-      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold">浏览器桥接</h2>
           <ConnectionBadge variant={data?.enabled ? 'success' : 'secondary'}>{bridgeLabel}</ConnectionBadge>
         </div>
-        <Button
-          variant={data?.enabled ? 'destructive' : 'outline'}
+        <Switch
+          aria-label="浏览器桥接"
+          checked={data?.enabled ?? false}
           disabled={!ready || !data || change.isPending}
-          onClick={() => change.mutate(!data!.enabled)}
-        >
-          <Power data-icon="inline-start" />
-          {data?.enabled ? '关闭浏览器桥接' : '启用浏览器桥接'}
-        </Button>
+          onCheckedChange={(enabled) => change.mutate(enabled)}
+        />
       </div>
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -170,6 +154,20 @@ export function BrowserBridgeStatus({
             })}
           </ItemGroup>
         ) : null}
+        {toolNames?.length ? (
+          <Collapsible>
+            <CollapsibleTrigger render={<Button variant="ghost" className="group -ml-2.5" />}>
+              <ChevronRightIcon
+                data-icon="inline-start"
+                className="motion-safe:transition-transform group-aria-expanded:rotate-90"
+              />
+              浏览器工具 · {toolNames.length} 项
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3">
+              <ToolNameList names={toolNames} />
+            </CollapsibleContent>
+          </Collapsible>
+        ) : null}
         <Collapsible
           open={instructionsOpen}
           onOpenChange={(open) => {
@@ -208,34 +206,25 @@ export function BrowserBridgeStatus({
                   </div>
                 </TabsContent>
                 <TabsContent value="local" className="flex flex-col gap-3">
+                  <p className="text-muted-foreground">点击浏览器，打开对应的本地插件目录。</p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <ToggleGroup
-                      aria-label="选择浏览器"
-                      variant="outline"
-                      value={[browser]}
-                      disabled={folder.isPending}
-                      onValueChange={(values) => {
-                        const choice = values[0];
-                        if (choice === 'chrome' || choice === 'edge') {
+                    {(['chrome', 'edge'] as const).map((choice) => (
+                      <Button
+                        key={choice}
+                        variant="outline"
+                        disabled={folder.isPending}
+                        aria-label={`打开 ${choice === 'edge' ? 'Edge' : 'Chrome'} 插件目录`}
+                        aria-busy={folder.isPending && folder.variables === choice}
+                        onClick={() => {
                           setBrowser(choice);
-                          folder.reset();
-                        }
-                      }}
-                    >
-                      {(['chrome', 'edge'] as const).map((choice) => (
-                        <ToggleGroupItem key={choice} value={choice}>
-                          <BrowserBrandIcon browser={choice} />
-                          {choice === 'edge' ? 'Edge' : 'Chrome'}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                    <Button
-                      variant="outline"
-                      disabled={folder.isPending}
-                      onClick={() => folder.mutate(browser)}
-                    >
-                      打开 {browserName} 插件目录
-                    </Button>
+                          folder.mutate(choice);
+                        }}
+                      >
+                        <BrowserBrandIcon browser={choice} />
+                        {choice === 'edge' ? 'Edge' : 'Chrome'}
+                        {folder.isPending && folder.variables === choice ? ' · 正在打开…' : null}
+                      </Button>
+                    ))}
                   </div>
                   <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-muted-foreground">
                     <li>在 {browserName} 菜单中打开“扩展 → 管理扩展”，开启“开发者模式”。</li>
@@ -257,27 +246,21 @@ export function BrowserBridgeStatus({
               </Tabs>
             </section>
             <section aria-label="连接浏览器插件" className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-medium">2. 连接执行器</h3>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={!ready || setup.isPending}
-                    onClick={() => setup.mutate()}
-                  >
-                    {setup.isPending ? '正在配置…' : '配置浏览器连接'}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={!ready}
-                    onClick={() => {
-                      void cache.invalidateQueries({ queryKey: accessQuery.queryKey });
-                    }}
-                  >
-                    <RefreshCw data-icon="inline-start" />
-                    检查连接
-                  </Button>
-                </div>
+              <h3 className="font-medium">2. 连接执行器</h3>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" disabled={!ready || setup.isPending} onClick={() => setup.mutate()}>
+                  {setup.isPending ? '正在配置…' : '配置浏览器连接'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={!ready}
+                  onClick={() => {
+                    void cache.invalidateQueries({ queryKey: accessQuery.queryKey });
+                  }}
+                >
+                  <RefreshCw data-icon="inline-start" />
+                  检查连接
+                </Button>
               </div>
               <p className="text-muted-foreground">
                 安装程序已配置连接。解压版或连接失败时点击“配置浏览器连接”，无需运行命令。

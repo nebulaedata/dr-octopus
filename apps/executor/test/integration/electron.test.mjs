@@ -177,6 +177,7 @@ test(
             'readAccess',
             'readClientConfiguration',
             'readMaintenance',
+            'readNetworkAddresses',
             'readSettings',
             'readStatus',
             'restartApplication',

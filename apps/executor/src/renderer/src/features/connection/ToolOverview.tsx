@@ -3,9 +3,17 @@
  * @description Presents uniform capability rows with concise copy and accessible dialogs for Runtime tool catalogs.
  */
 import type { ComponentProps, ReactNode } from 'react';
-import { ArrowUpDownIcon, ChevronRightIcon, MonitorCogIcon, WrenchIcon } from 'lucide-react';
+import {
+  ArrowUpDownIcon,
+  ChevronRightIcon,
+  ClipboardListIcon,
+  MonitorCogIcon,
+  WrenchIcon,
+} from 'lucide-react';
 import windowsIcon from '@/assets/platforms/windows.svg';
 import { Button } from '@octopus/ui/components/button';
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@octopus/ui/components/empty';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@octopus/ui/components/collapsible';
 import {
   Dialog,
   DialogClose,
@@ -55,12 +63,14 @@ function ToolDialogRow({
   status,
   groups,
   note,
-  summary,
+  onManage,
+  collapsibleNote = false,
 }: Omit<RowProps, 'action'> & {
   status: Status;
   groups: { title: string; names: string[] }[];
   note: string;
-  summary?: string;
+  onManage?: () => void;
+  collapsibleNote?: boolean;
 }) {
   return (
     <Dialog>
@@ -70,35 +80,66 @@ function ToolDialogRow({
         icon={icon}
         action={
           <DialogTrigger render={<Button variant="ghost" className="shrink-0" aria-label={`查看${title}`} />}>
-            {summary && <span className="text-muted-foreground">{summary}</span>}
-            <ConnectionBadge variant={status.variant}>{status.label}</ConnectionBadge>
+            <ConnectionBadge variant={status.variant === 'success' ? 'success' : 'secondary'}>
+              {status.variant === 'success' ? '已就绪' : '未就绪'}
+            </ConnectionBadge>
             <ChevronRightIcon data-icon="inline-end" />
           </DialogTrigger>
         }
       />
       <DialogContent className="max-h-[calc(100dvh-4rem)] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <div className="flex flex-wrap items-center gap-3 pr-6">
+            <DialogTitle>{title}</DialogTitle>
+            <ConnectionBadge variant={status.variant}>{status.label}</ConnectionBadge>
+          </div>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-5">
           {groups.map((group) => (
             <section key={group.title} aria-label={group.title} className="flex flex-col gap-2">
-              <h4 className="text-sm font-medium">
-                {group.title}
-                {group.names.length ? ` · ${group.names.length} 项` : ''}
-              </h4>
               {group.names.length ? (
-                <ToolNameList names={group.names} />
+                <>
+                  <h4 className="text-sm font-medium">
+                    {group.title} · {group.names.length} 项
+                  </h4>
+                  <ToolNameList names={group.names} />
+                </>
               ) : (
-                <p className="text-sm text-muted-foreground">暂未取得工具清单，请等待执行服务就绪。</p>
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <ClipboardListIcon aria-hidden="true" />
+                    </EmptyMedia>
+                    <EmptyTitle>暂无工具清单</EmptyTitle>
+                    <EmptyDescription>暂未取得工具清单，请等待执行服务就绪。</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               )}
             </section>
           ))}
-          <p className="text-xs leading-relaxed text-muted-foreground">{note}</p>
+          {collapsibleNote ? (
+            <Collapsible>
+              <CollapsibleTrigger
+                render={<Button variant="ghost" className="group w-full justify-between" />}
+              >
+                使用说明
+                <ChevronRightIcon
+                  data-icon="inline-end"
+                  className="motion-safe:transition-transform group-aria-expanded:rotate-90"
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="px-2.5 pt-2">
+                <p className="text-sm leading-relaxed text-muted-foreground">{note}</p>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <p className="text-xs leading-relaxed text-muted-foreground">{note}</p>
+          )}
         </div>
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>关闭</DialogClose>
+          {onManage ? <DialogClose render={<Button onClick={onManage} />}>管理浏览器桥接</DialogClose> : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -123,7 +164,7 @@ export function ToolOverview({
    * Counts only the current service catalog and does not claim that any individual tool was executed.
    */
   const registration = (names: string[] | undefined): Status => ({
-    label: names?.length ? `${names.length} 项已注册` : '未就绪',
+    label: names?.length ? '已就绪' : '未就绪',
     variant: names?.length ? 'success' : 'secondary',
   });
   const note = '清单由执行服务提供，实际调用取决于客户端授权和连接状态。已注册不代表逐项执行验证。';
@@ -140,6 +181,7 @@ export function ToolOverview({
       />
       <ToolDialogRow
         title="文件传输"
+        collapsibleNote
         description="在智能体与执行器之间上传、下载文件并管理传输。"
         icon={<ArrowUpDownIcon />}
         status={registration(catalog?.transfer)}
@@ -159,13 +201,12 @@ export function ToolOverview({
         description="查看本机桌面，控制窗口、鼠标与键盘。"
         icon={<img src={windowsIcon} alt="" className="size-5 object-contain rounded-xs" />}
         status={computer}
-        summary={catalog?.computer ? '支持 ' + catalog.computer.length + ' 项' : '清单读取中'}
         groups={[{ title: '工具清单', names: catalog?.computer ?? [] }]}
         note={`当前状态：${computer.label}。${computer.description} 支持数量来自产品目录；客户端实际可用工具取决于授权和后端状态。`}
       />
-      <ToolRow
+      <ToolDialogRow
         title="浏览器桥接"
-        description={browser.description}
+        description="连接 Chrome / Edge 扩展，让智能体调用浏览器工具。"
         icon={
           <div className="relative size-5">
             <span className="absolute top-0 left-0 [&>img]:size-3.5">
@@ -176,12 +217,10 @@ export function ToolOverview({
             </span>
           </div>
         }
-        action={
-          <Button variant="ghost" className="shrink-0" aria-label="管理浏览器桥接" onClick={onManageBrowser}>
-            <ConnectionBadge variant={browser.variant}>{browser.label}</ConnectionBadge>
-            <ChevronRightIcon data-icon="inline-end" />
-          </Button>
-        }
+        status={browser}
+        groups={[{ title: '工具清单', names: catalog?.browser ?? [] }]}
+        note={browser.description}
+        onManage={onManageBrowser}
       />
     </section>
   );

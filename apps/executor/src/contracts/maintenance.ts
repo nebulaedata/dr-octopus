@@ -3,6 +3,7 @@
  * @description Defines credential-free recovery status and finite maintenance actions across desktop IPC.
  */
 import { z } from 'zod';
+import { listenFailureSchema } from './listen-failure';
 
 export const maintenanceActionSchema = z.strictObject({
   action: z.enum(['reset', 'retry', 'dismiss', 'open-backup', 'copy-details']),
@@ -20,6 +21,8 @@ export const maintenanceSnapshotSchema = z.strictObject({
       description: z.string().max(300),
       impact: z.string().max(300).nullable(),
       recoverable: z.boolean(),
+      guidance: z.string().max(300).nullable().default(null),
+      listenFailure: listenFailureSchema.nullable().default(null),
     })
     .nullable(),
 });

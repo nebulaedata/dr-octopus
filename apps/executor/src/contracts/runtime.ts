@@ -2,7 +2,7 @@
  * @author Codex
  * @description Defines serializable executor status and named desktop IPC contracts.
  */
-import type { SettingsResponse, SettingsInput } from './connection-settings';
+import type { NetworkAddressesResponse, SettingsResponse, SettingsInput } from './connection-settings';
 import { computerUseSchema, computerRuntimeStatusSchema } from './computer-use';
 import { endpointSchema } from './access';
 import type { ApprovalInput, AccessResponse } from './access';
@@ -12,6 +12,7 @@ import type {
   ClientConfigurationActionResponse,
 } from './client-configuration';
 import { z } from 'zod';
+import { listenFailureSchema } from './listen-failure';
 import type { MaintenanceAction, MaintenanceResponse } from './maintenance';
 
 export const developmentRestartExitCode = 75;
@@ -28,6 +29,7 @@ export const ipcChannels = {
   copyClientConfiguration: 'executor:client-configuration:copy',
   copyAgentGuide: 'executor:client-configuration:copy-agent-guide',
   downloadClientConfiguration: 'executor:client-configuration:download',
+  readNetworkAddresses: 'executor:connection-settings:network-addresses',
   readSettings: 'executor:connection-settings:read',
   saveSettings: 'executor:connection-settings:save',
   readStatus: 'executor:status:read',
@@ -54,6 +56,7 @@ export const runtimeSnapshotSchema = z
     startedAt: z.string().datetime().nullable(),
     message: z.string().max(200),
     startupFailure: startupFailureCodeSchema.nullable().default(null),
+    listenFailure: listenFailureSchema.nullable().default(null),
     computerUse: computerUseSchema.default({
       revision: 0,
       activityId: null,
@@ -75,7 +78,11 @@ export const emptyRequestSchema = z.object({}).strict();
 export const browserSelectionSchema = z.strictObject({ browser: z.enum(['chrome', 'edge']) });
 export const runtimeMessageSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('startup-failed-ack') }),
-  z.strictObject({ type: z.literal('startup-failed'), code: startupFailureCodeSchema }),
+  z.strictObject({
+    type: z.literal('startup-failed'),
+    code: startupFailureCodeSchema,
+    listenFailure: listenFailureSchema.nullable().default(null),
+  }),
   z
     .object({
       type: z.literal('ready'),
@@ -157,6 +164,10 @@ export interface ExecutorDesktopApi {
    * Reads next-start listener settings and whether a restart is needed.
    */
   readSettings(): Promise<SettingsResponse>;
+  /**
+   * Enumerates current private IPv4 interfaces without changing settings or starting a listener.
+   */
+  readNetworkAddresses(): Promise<NetworkAddressesResponse>;
   /**
    * Persists next-start local/network listener choices without interrupting active tool calls.
    */

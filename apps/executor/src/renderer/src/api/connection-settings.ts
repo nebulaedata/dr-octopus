@@ -2,7 +2,25 @@
  * @author Codex
  * @description Adapts named Preload connection settings with checked safe replies.
  */
-import { settingsResponseSchema, type SettingsInput } from '../../../contracts/connection-settings';
+import {
+  networkAddressesResponseSchema,
+  settingsResponseSchema,
+  type SettingsInput,
+} from '../../../contracts/connection-settings';
+
+/**
+ * Lists eligible local IPv4 addresses through the trusted Main without network requests.
+ */
+export async function readNetworkAddresses() {
+  if (!window.executor) {
+    throw new Error('请从执行器应用打开此界面');
+  }
+  const reply = networkAddressesResponseSchema.parse(await window.executor.readNetworkAddresses());
+  if (!reply.ok) {
+    throw new Error(reply.message);
+  }
+  return reply.data;
+}
 
 /**
  * Reads settings without depending on external network connectivity.

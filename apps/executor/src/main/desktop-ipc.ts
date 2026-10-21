@@ -10,7 +10,8 @@ import { z } from 'zod';
 import { executionResourceRoot } from './resource-paths';
 import { configureBrowserHost, browserExtensionFolder } from './browser-installation';
 import { settingsInputSchema } from '../contracts/connection-settings';
-import type { SettingsResponse } from '../contracts/connection-settings';
+import { listNetworkAddresses } from './network-addresses';
+import type { NetworkAddressesResponse, SettingsResponse } from '../contracts/connection-settings';
 import { approvalInputSchema, revokeInputSchema } from '../contracts/access';
 import type { AccessResponse } from '../contracts/access';
 import { NativeFileCommit } from '../runtime/basic/native-file-commit';
@@ -248,6 +249,19 @@ export function registerDesktopIpc(
       return { ok: false, message: '连接地址复制失败' };
     }
   });
+  ipcMain.handle(ipcChannels.readNetworkAddresses, (event, input: unknown): NetworkAddressesResponse => {
+    if (!isTrustedSender(event, windows, origin)) {
+      return { ok: false, code: 'FORBIDDEN', message: '此页面无法读取本机网络地址' };
+    }
+    if (!emptyRequestSchema.safeParse(input).success) {
+      return { ok: false, code: 'INVALID_REQUEST', message: '请求参数无效' };
+    }
+    try {
+      return { ok: true, data: listNetworkAddresses() };
+    } catch {
+      return { ok: false, code: 'UNAVAILABLE', message: '无法读取本机网络地址，请刷新重试' };
+    }
+  });
   ipcMain.handle(ipcChannels.readSettings, async (event, input: unknown): Promise<SettingsResponse> => {
     if (!isTrustedSender(event, windows, origin)) {
       return { ok: false, code: 'FORBIDDEN', message: '此页面无法管理连接设置' };
@@ -267,6 +281,19 @@ export function registerDesktopIpc(
     const parsed = settingsInputSchema.safeParse(input);
     if (!parsed.success) {
       return { ok: false, code: 'INVALID_REQUEST', message: '连接设置参数无效' };
+    }
+    if (parsed.data.networkAddress !== null) {
+      try {
+        if (!listNetworkAddresses().some((item) => item.address === parsed.data.networkAddress)) {
+          return {
+            ok: false,
+            code: 'INVALID_REQUEST',
+            message: '所选内网地址当前不在本机，请刷新地址列表后重新选择，或关闭内网访问',
+          };
+        }
+      } catch {
+        return { ok: false, code: 'UNAVAILABLE', message: '无法确认本机网络地址，请刷新重试' };
+      }
     }
     const reply = await manager.saveSettings(parsed.data);
     if (reply.ok) {
@@ -473,6 +500,7 @@ export function registerDesktopIpc(
     ipcMain.removeHandler(ipcChannels.restartApplication);
     ipcMain.removeHandler(ipcChannels.readMaintenance);
     ipcMain.removeHandler(ipcChannels.maintenanceAction);
+    ipcMain.removeHandler(ipcChannels.readNetworkAddresses);
     ipcMain.removeHandler(ipcChannels.readSettings);
     ipcMain.removeHandler(ipcChannels.setBrowserEnabled);
     ipcMain.removeHandler(ipcChannels.browserDiagnostics);
