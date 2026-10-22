@@ -4,7 +4,8 @@
  */
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PencilIcon } from 'lucide-react';
+import { CheckCircle2Icon, PencilIcon } from 'lucide-react';
+import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { Field, FieldContent, FieldLabel, FieldDescription } from '@octopus/ui/components/field';
 import {
@@ -84,15 +85,25 @@ export function ToolPolicySettings() {
   }
 
   return (
-    <section aria-label="工具权限策略" className="flex flex-col gap-3">
-      <Field className="grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+    <section aria-labelledby="tool-policy-heading" className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 id="tool-policy-heading" className="text-xl font-semibold">
+          工具权限策略
+        </h2>
+        <Badge variant="secondary">
+          <CheckCircle2Icon />
+          选择后立即生效
+        </Badge>
+      </div>
+      <Field
+        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"
+        data-disabled={!settings || mutation.isPending}
+      >
         <FieldContent>
-          <FieldLabel htmlFor="tool-policy">
-            <h2 className="text-xl font-semibold">工具权限策略</h2>
-          </FieldLabel>
+          <FieldLabel htmlFor="tool-policy">当前策略</FieldLabel>
           <FieldDescription>控制客户端可以调用的工具。</FieldDescription>
         </FieldContent>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 w-full max-w-60 items-center gap-2 sm:justify-self-end">
           <Select
             value={settings?.selectedId ?? 'readonly'}
             items={options}
@@ -105,7 +116,7 @@ export function ToolPolicySettings() {
               }
             }}
           >
-            <SelectTrigger id="tool-policy" className="w-52">
+            <SelectTrigger id="tool-policy" className="min-w-0 flex-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

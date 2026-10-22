@@ -210,7 +210,7 @@ test(
       const settingsForm = page.locator('form').filter({
         has: page.getByLabel('MCP 服务端口', { exact: true }),
       });
-      await expect(settingsForm.locator('[data-slot="separator"]')).toHaveCount(1);
+      await expect(settingsForm.locator('[data-slot="separator"]')).toHaveCount(0);
       const controls = await Promise.all(
         ['界面主题', '关闭窗口时', 'MCP 服务端口'].map((label) =>
           page.getByLabel(label, { exact: true }).evaluate((node) => {
@@ -319,7 +319,7 @@ test(
         assert.equal(await page.evaluate(() => window.innerWidth), width);
         for (const name of ['状态', '连接', '设置']) {
           await page.getByRole('tab', { name, exact: true }).click();
-          assert.equal(await page.locator('[data-slot="separator"]').count(), name === '设置' ? 1 : 0);
+          assert.equal(await page.locator('[data-slot="separator"]').count(), 0);
           assert.equal(
             await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
             true

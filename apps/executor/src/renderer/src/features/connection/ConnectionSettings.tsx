@@ -21,7 +21,6 @@ import {
   FieldError,
 } from '@octopus/ui/components/field';
 import { Switch } from '@octopus/ui/components/switch';
-import { Separator } from '@octopus/ui/components/separator';
 import {
   Select,
   SelectTrigger,
@@ -203,13 +202,12 @@ export function ConnectionSettings({
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
   const disabled = !query.data || mutation.isPending || restarting;
   return (
-    <section aria-label="应用设置" className="flex flex-col gap-7">
+    <section aria-label="应用设置" className="flex flex-col gap-8">
       <div className="flex flex-col gap-1.5">
         <h1 className="text-3xl font-semibold tracking-tight">应用设置</h1>
         <p className="text-sm text-muted-foreground">管理界面主题、窗口行为与客户端接入方式。</p>
       </div>
       <ToolPolicySettings />
-      <Separator />
       <form
         className="flex flex-col gap-8"
         onSubmit={(event) => {
@@ -608,7 +606,6 @@ export function ConnectionSettings({
           </FieldGroup>
         </section>
         <div className="flex flex-col gap-5">
-          <Separator />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {dirty ? (
               <p className="flex items-center gap-2 text-sm" role="status">

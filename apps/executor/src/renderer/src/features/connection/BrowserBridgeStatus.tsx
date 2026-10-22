@@ -101,17 +101,19 @@ export function BrowserBridgeStatus({
         />
       </div>
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-4 text-sm">
-          <span className="flex items-center gap-2">
+        <p className="text-sm text-muted-foreground">
+          连接{' '}
+          <span className="inline-flex items-center gap-1 align-middle whitespace-nowrap">
             <BrowserBrandIcon browser="chrome" />
             Chrome
           </span>
-          <span className="flex items-center gap-2">
+          {' / '}
+          <span className="inline-flex items-center gap-1 align-middle whitespace-nowrap">
             <BrowserBrandIcon browser="edge" />
             Edge
           </span>
-        </div>
-        <p className="text-sm text-muted-foreground">连接 Chrome / Edge 扩展，让智能体调用浏览器工具。</p>
+          {' 扩展，让智能体调用浏览器工具。'}
+        </p>
         {data?.enabled || !data ? <p className="text-xs text-muted-foreground">{bridgeMessage}</p> : null}
         {data?.connections.length ? (
           <ItemGroup className="gap-3">
@@ -233,9 +235,6 @@ export function BrowserBridgeStatus({
                       ”，选择刚才打开的整个插件文件夹。
                     </li>
                   </ol>
-                  <p className="text-xs text-muted-foreground">
-                    无需访问商店。请保留插件目录；安装新版后在扩展管理页重新加载。
-                  </p>
                   {folder.error ? (
                     <Alert variant="destructive">
                       <CircleAlert />
