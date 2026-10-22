@@ -8,6 +8,13 @@ import { DeviceIdentityStore } from './device-identity';
 import type { DeviceIdentity } from '../contracts/device-identity';
 import { NativeFileCommit } from '../runtime/basic/native-file-commit';
 import type { SettingsResponse, SettingsInput } from '../contracts/connection-settings';
+import {
+  defaultToolPolicySettings,
+  toolPolicySettingsSchema,
+  type ToolPoliciesResponse,
+  type ToolPolicySettings,
+} from '../contracts/tool-policy';
+import { policyTools, selectedPolicyTools } from '../runtime/mcp/tool-policy';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { defaultTransferSettings, type TransferSettings } from '../contracts/transfer-settings';
@@ -56,6 +63,7 @@ export class RuntimeManager {
   private activeDevice: DeviceIdentity | null = null;
   private activeTransfer: TransferSettings = { ...defaultTransferSettings };
   private savingSettings = false;
+  private activeToolPolicies = structuredClone(defaultToolPolicySettings);
   private networkAddress: string | null = null;
   private child: UtilityProcess | null = null;
   private starting: Promise<void> | null = null;
@@ -154,7 +162,67 @@ export class RuntimeManager {
   }
 
   /**
-   * Reports whether settings publication must finish before a complete restart can be admitted.
+   * Reads policy settings and distinguishes persisted choices from confirmed Runtime application.
+   */
+  async readToolPolicies(): Promise<ToolPoliciesResponse> {
+    try {
+      const settings = (await this.loadSettings()).readToolPolicies();
+      return {
+        ok: true,
+        data: {
+          settings,
+          tools: structuredClone(policyTools),
+          applied: this.snapshot.state === 'ready' && this.activeToolPolicies.revision === settings.revision,
+        },
+      };
+    } catch {
+      return { ok: false, message: '无法读取工具策略，请检查设置保留记录' };
+    }
+  }
+
+  /**
+   * Serializes policy publication with settings and refuses stale drafts or lifecycle transitions.
+   * Publication precedes Runtime acknowledgement; uncertain application stays visible on subsequent reads.
+   */
+  async saveToolPolicies(input: ToolPolicySettings): Promise<ToolPoliciesResponse> {
+    if (this.savingSettings || ['starting', 'stopping'].includes(this.snapshot.state)) {
+      return { ok: false, message: '执行器正在处理设置或切换服务，请稍后重试' };
+    }
+    this.savingSettings = true;
+    try {
+      const settings = await this.loadSettings();
+      const parsed = toolPolicySettingsSchema.parse(input);
+      if (parsed.revision !== settings.readToolPolicies().revision) {
+        return { ok: false, message: '策略已发生变化，请重新打开后编辑' };
+      }
+      const next = { ...parsed, revision: parsed.revision + 1 };
+      await settings.saveToolPolicies(next);
+      if (this.snapshot.state === 'ready') {
+        const child = this.child;
+        const reply = await this.request({
+          type: 'tool-policy-set',
+          revision: next.revision,
+          enabledTools: selectedPolicyTools(next),
+        });
+        if (
+          !reply.response.ok ||
+          reply.response.data.toolPolicyRevision !== next.revision ||
+          this.child !== child
+        ) {
+          throw new Error('Policy application not confirmed.');
+        }
+        this.activeToolPolicies = next;
+      }
+      return this.readToolPolicies();
+    } catch {
+      return { ok: false, message: '策略保存或应用未获确认，请刷新检查；已保存的策略将在下次启动时加载' };
+    } finally {
+      this.savingSettings = false;
+    }
+  }
+
+  /**
+   * Reports whether settings publication must finish before restart.
    */
   isSavingSettings(): boolean {
     return this.savingSettings;
@@ -222,6 +290,9 @@ export class RuntimeManager {
    * Merges concurrent starts; readiness requires a validated child handshake.
    */
   start(): Promise<void> {
+    if (this.savingSettings) {
+      return Promise.reject(new Error('Settings publication is in progress.'));
+    }
     if (this.starting) {
       return this.starting;
     }
@@ -251,6 +322,7 @@ export class RuntimeManager {
         this.networkAddress = saved.networkAddress;
         this.activeDevice = this.identity!.read();
         this.activeTransfer = saved.transfer;
+        this.activeToolPolicies = settings.readToolPolicies();
         return this.launch();
       })
       .catch((error: unknown) => {
@@ -333,6 +405,10 @@ export class RuntimeManager {
             JSON.stringify(this.activeDevice),
             JSON.stringify(this.activeTransfer),
             this.projectRoot,
+            JSON.stringify({
+              revision: this.activeToolPolicies.revision,
+              enabledTools: selectedPolicyTools(this.activeToolPolicies),
+            }),
           ],
           {
             stdio: 'pipe',

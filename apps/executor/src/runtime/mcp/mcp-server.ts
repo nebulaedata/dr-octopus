@@ -190,6 +190,7 @@ export function createMcpServer(
       async (input, extra) => {
         try {
           authority.requireGrant(clientId);
+          authority.requireToolEnabled(name);
           const request = input as Record<string, unknown>;
           let data: unknown;
           switch (name) {
@@ -309,6 +310,7 @@ export function createMcpServer(
       tools: Object.entries(schemaMap)
         .filter(
           ([name]) =>
+            authority.isToolEnabled(name) &&
             (!Object.hasOwn(computerSchemas, name) ||
               Object.hasOwn(authority.computerTools(clientId), name)) &&
             (!name.startsWith('browser_') || Object.hasOwn(authority.browserTools(clientId), name))

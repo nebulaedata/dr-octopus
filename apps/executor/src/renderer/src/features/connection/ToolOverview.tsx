@@ -3,6 +3,8 @@
  * @description Presents uniform capability rows with concise copy and accessible dialogs for Runtime tool catalogs.
  */
 import type { ComponentProps, ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { toolPoliciesQuery } from '@/queries/tool-policy-queries';
 import {
   ArrowUpDownIcon,
   ChevronRightIcon,
@@ -61,17 +63,23 @@ function ToolDialogRow({
   description,
   icon,
   status,
+  enabledTools,
+  policyDescription,
   groups,
   note,
   onManage,
   collapsibleNote = false,
 }: Omit<RowProps, 'action'> & {
   status: Status;
+  enabledTools?: ReadonlySet<string>;
+  policyDescription: string;
   groups: { title: string; names: string[] }[];
   note: string;
   onManage?: () => void;
   collapsibleNote?: boolean;
 }) {
+  const names = groups.flatMap((group) => group.names);
+  const enabledCount = enabledTools ? names.filter((name) => enabledTools.has(name)).length : undefined;
   return (
     <Dialog>
       <ToolRow
@@ -80,6 +88,9 @@ function ToolDialogRow({
         icon={icon}
         action={
           <DialogTrigger render={<Button variant="ghost" className="shrink-0" aria-label={`查看${title}`} />}>
+            <span className="text-xs text-muted-foreground">
+              {enabledTools ? `${enabledCount} / ${names.length} 已启用` : '策略待确认'}
+            </span>
             <ConnectionBadge variant={status.variant === 'success' ? 'success' : 'secondary'}>
               {status.variant === 'success' ? '已就绪' : '未就绪'}
             </ConnectionBadge>
@@ -96,6 +107,9 @@ function ToolDialogRow({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-5">
+          <p className="text-sm text-muted-foreground" role="status">
+            {policyDescription}
+          </p>
           {groups.map((group) => (
             <section key={group.title} aria-label={group.title} className="flex flex-col gap-2">
               {group.names.length ? (
@@ -103,7 +117,7 @@ function ToolDialogRow({
                   <h4 className="text-sm font-medium">
                     {group.title} · {group.names.length} 项
                   </h4>
-                  <ToolNameList names={group.names} />
+                  <ToolNameList names={group.names} enabledTools={enabledTools} showPolicy />
                 </>
               ) : (
                 <Empty>
@@ -151,15 +165,43 @@ function ToolDialogRow({
  */
 export function ToolOverview({
   catalog,
+  policyRevision,
   browser,
   computer,
   onManageBrowser,
 }: {
   catalog: AccessSnapshot['toolCatalog'];
+  policyRevision?: number;
   browser: Status & { description: string };
   computer: Status & { description: string };
   onManageBrowser: () => void;
 }) {
+  const policy = useQuery(toolPoliciesQuery);
+  const data = policy.data;
+  const settings = data?.settings;
+  const enabledTools =
+    data?.applied && settings && !policy.isError && settings.revision === policyRevision
+      ? new Set<string>(
+          settings.selectedId === 'all'
+            ? data.tools.map((tool) => tool.name)
+            : settings.selectedId === 'readonly'
+              ? data.tools.filter((tool) => tool.readOnly).map((tool) => tool.name)
+              : (settings.custom.find((item) => item.id === settings.selectedId)?.enabledTools ?? [])
+        )
+      : undefined;
+  const policyName =
+    settings?.selectedId === 'readonly'
+      ? '只读'
+      : settings?.selectedId === 'all'
+        ? '全部'
+        : settings?.custom.find((item) => item.id === settings.selectedId)?.name;
+  const policyDescription = enabledTools
+    ? `当前策略：${policyName}。灰色卡片表示已被策略禁用，客户端无法调用。已启用工具仍需客户端授权与服务就绪。`
+    : policy.isError
+      ? '暂时无法确认工具策略，启用状态未知。'
+      : data && !data.applied
+        ? '策略已保存，尚未在执行服务中生效，启用状态待确认。'
+        : '正在确认执行服务中的工具策略…';
   /**
    * Counts only the current service catalog and does not claim that any individual tool was executed.
    */
@@ -172,6 +214,8 @@ export function ToolOverview({
     <section aria-label="工具与桥接" className="flex flex-col gap-3">
       <h2 className="text-xl font-semibold">工具与桥接</h2>
       <ToolDialogRow
+        enabledTools={enabledTools}
+        policyDescription={policyDescription}
         title="基础工具"
         description="读取和编辑文件、搜索内容，以及运行命令。"
         icon={<WrenchIcon />}
@@ -180,6 +224,8 @@ export function ToolOverview({
         note={note}
       />
       <ToolDialogRow
+        enabledTools={enabledTools}
+        policyDescription={policyDescription}
         title="文件传输"
         collapsibleNote
         description="在智能体与执行器之间上传、下载文件并管理传输。"
@@ -189,6 +235,8 @@ export function ToolOverview({
         note="直接通过 MCP 准备和管理传输，再使用智能体已有本地 HTTP 工具发送或接收文件，无需额外客户端。没有本地文件传输能力不要调用；实际调用仍受文件权限和磁盘额度限制。"
       />
       <ToolDialogRow
+        enabledTools={enabledTools}
+        policyDescription={policyDescription}
         title="任务管理"
         description="查看执行状态，创建、结束或停止任务。"
         icon={<MonitorCogIcon />}
@@ -197,6 +245,8 @@ export function ToolOverview({
         note={note}
       />
       <ToolDialogRow
+        enabledTools={enabledTools}
+        policyDescription={policyDescription}
         title="桌面控制工具"
         description="查看本机桌面，控制窗口、鼠标与键盘。"
         icon={<img src={windowsIcon} alt="" className="size-5 object-contain rounded-xs" />}
@@ -205,6 +255,8 @@ export function ToolOverview({
         note={`当前状态：${computer.label}。${computer.description} 支持数量来自产品目录；客户端实际可用工具取决于授权和后端状态。`}
       />
       <ToolDialogRow
+        enabledTools={enabledTools}
+        policyDescription={policyDescription}
         title="浏览器桥接"
         description="连接 Chrome / Edge 扩展，让智能体调用浏览器工具。"
         icon={

@@ -2,6 +2,12 @@
  * @author Codex
  * @description Owns current grants, one global task admission and durable task/operation summaries for MCP and Host.
  */
+import {
+  enabledToolsSchema,
+  defaultToolPolicySettings,
+  type PolicyToolName,
+} from '../../contracts/tool-policy';
+import { selectedPolicyTools } from './tool-policy';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { homedir } from 'node:os';
 import type { DeviceIdentity } from '../../contracts/device-identity';
@@ -32,6 +38,36 @@ function digest(value: unknown): string {
 }
 
 export class TaskAuthority {
+  private enabledTools = new Set<string>(selectedPolicyTools(defaultToolPolicySettings));
+  toolPolicyRevision = 0;
+
+  /**
+   * Replaces admission switches synchronously; already admitted operations keep their original lifecycle.
+   */
+  setToolPolicy(enabledTools: PolicyToolName[], revision: number): void {
+    if (revision < this.toolPolicyRevision) {
+      throw new BasicToolError('STALE_POLICY', 'The tool policy revision is stale.');
+    }
+    this.enabledTools = new Set(enabledToolsSchema.parse(enabledTools));
+    this.toolPolicyRevision = revision;
+  }
+
+  /**
+   * Projects the current global tool switch independently of client grants and backend health.
+   */
+  isToolEnabled(name: string): boolean {
+    return this.enabledTools.has(name);
+  }
+
+  /**
+   * Refuses cached tool calls before they can create task records or dispatch work.
+   */
+  requireToolEnabled(name: string): void {
+    if (!this.isToolEnabled(name)) {
+      throw new BasicToolError('TOOL_DISABLED', 'This tool is disabled by the Executor tool policy.');
+    }
+  }
+
   private transferService?: TransferService;
 
   /**

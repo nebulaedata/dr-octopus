@@ -100,3 +100,4 @@
 | [ADR-0082](./0082-executor-upstream-computer-and-connection-experience.md) | Partially accepted | 连接与界面优化已接受；上游 Windows-MCP 迁移、控制反馈与截图协调仍为提议 |
 | [ADR-0083](./0083-executor-project-storage.md) | Accepted | Executor 业务持久目录统一命名、系统临时材料与完整路径保护，无旧布局兼容 |
 | [ADR-0084](./0084-executor-system-shell.md) | Implemented（Windows） | Windows 系统 PowerShell 替换 PortableGit；Linux/macOS 系统 Bash 仅 if-else 注释占位，保留任务与 Job 收束 |
+| [ADR-0085](./0085-executor-tool-policies.md) | Implemented | Executor 默认只读、逐工具自定义策略、受信热应用与 MCP 发现/调用双重过滤 |

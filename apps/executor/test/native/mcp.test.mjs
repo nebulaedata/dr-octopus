@@ -3,6 +3,7 @@
  * @description Exercises authenticated generic MCP against real native file tools and durable control history.
  */
 import assert from 'node:assert/strict';
+import { policyToolNameSchema } from '../../src/contracts/tool-policy.ts';
 import { mkdtemp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir, networkInterfaces } from 'node:os';
 import { join } from 'node:path';
@@ -123,6 +124,7 @@ async function fixture(run, withShell = false, networkAddress = null) {
     deviceId: '89b7dada-bb9d-4b25-a1ef-ff6a3e8b189a',
     deviceName: '办公电脑',
   });
+  authority.setToolPolicy(policyToolNameSchema.options, 0);
   const gateway = new HttpGateway(authority);
   const endpoint = await gateway.listen(0, networkAddress);
   const clients = [];

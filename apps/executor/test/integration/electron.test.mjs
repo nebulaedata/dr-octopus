@@ -180,9 +180,11 @@ test(
             'readNetworkAddresses',
             'readSettings',
             'readStatus',
+            'readToolPolicies',
             'restartApplication',
             'revokeAccess',
             'saveSettings',
+            'saveToolPolicies',
             'setBrowserEnabled',
           ],
         }

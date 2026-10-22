@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { ipcChannels } from '../src/contracts/runtime.ts';
+import { defaultToolPolicySettings } from '../src/contracts/tool-policy.ts';
 
 test('maintenance handlers validate frame, action and revision and serialize with saved settings', async () => {
   const data = await mkdtemp(join(tmpdir(), 'octopus-maintenance-ipc-'));
@@ -82,6 +83,11 @@ test('maintenance handlers validate frame, action and revision and serialize wit
       projectRoot: data,
       subscribe: () => () => {},
       isSavingSettings: () => saving,
+      readToolPolicies: async () => ({ ok: true, data: { settings: defaultToolPolicySettings } }),
+      saveToolPolicies: async (input) => {
+        calls.push(['policy', input.selectedId]);
+        return { ok: true };
+      },
       readSettings: async () => ({ ok: true, data: { pendingRestart: true } }),
       saveSettings: async (input) => {
         savedNetworkAddress = input.networkAddress;
@@ -96,6 +102,22 @@ test('maintenance handlers validate frame, action and revision and serialize wit
       () => true,
       recovery
     );
+    const policyRead = handlers.get(ipcChannels.readToolPolicies);
+    const policySave = handlers.get(ipcChannels.saveToolPolicies);
+    assert.equal((await policyRead(event, {})).ok, true);
+    assert.equal((await policyRead(event, { unexpected: true })).ok, false);
+    assert.equal((await policyRead({ sender: {}, senderFrame: frame }, {})).ok, false);
+    assert.equal((await policySave({ sender: {}, senderFrame: frame }, defaultToolPolicySettings)).ok, false);
+    assert.equal(
+      (await policySave(event, { ...defaultToolPolicySettings, selectedId: 'unknown' })).ok,
+      false
+    );
+    busy = true;
+    assert.equal((await policySave(event, defaultToolPolicySettings)).ok, false);
+    busy = false;
+    assert.deepEqual(calls, []);
+    assert.equal((await policySave(event, defaultToolPolicySettings)).ok, true);
+    assert.deepEqual(calls.pop(), ['policy', 'readonly']);
     const read = handlers.get(ipcChannels.readMaintenance);
     const action = handlers.get(ipcChannels.maintenanceAction);
     for (const foreign of [

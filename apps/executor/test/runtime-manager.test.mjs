@@ -274,3 +274,61 @@ test('computer feedback accepts only current Runtime identity and increasing rev
   });
   assert.equal(manager.readStatus().computerUse.state, 'unknown');
 });
+
+test('policy publication refuses stale drafts and never confirms an unacknowledged Runtime revision', async () => {
+  const built = await build({
+    entryPoints: [fileURLToPath(new URL('../src/main/runtime-manager.ts', import.meta.url))],
+    bundle: true,
+    write: false,
+    platform: 'node',
+    format: 'cjs',
+    packages: 'external',
+  });
+  const require = createRequire(import.meta.url);
+  const module = { exports: {} };
+  /**
+   * Leaves policy publication and lifecycle admission intact while replacing only Electron transport.
+   */
+  const load = (id) => (id === 'electron' ? { utilityProcess: {} } : require(id));
+  new Function('require', 'module', 'exports', built.outputFiles[0].text)(load, module, module.exports);
+  const manager = new module.exports.RuntimeManager('unused', 'unused', 'unused');
+  let saved = { revision: 0, selectedId: 'readonly', custom: [] };
+  manager.loadSettings = async () => ({
+    readToolPolicies: () => structuredClone(saved),
+    saveToolPolicies: async (next) => {
+      saved = structuredClone(next);
+    },
+  });
+  manager.snapshot.state = 'ready';
+  manager.child = {};
+  manager.request = async () => {
+    throw new Error('lost acknowledgement');
+  };
+  const input = { ...saved, selectedId: 'all' };
+  assert.equal((await manager.saveToolPolicies(input)).ok, false);
+  assert.equal(saved.selectedId, 'all');
+  assert.equal(saved.revision, 1);
+  assert.equal((await manager.readToolPolicies()).data.applied, false);
+  assert.equal((await manager.saveToolPolicies(input)).ok, false);
+  assert.equal(saved.revision, 1);
+
+  let confirm;
+  manager.request = (request) =>
+    new Promise((resolve) => {
+      assert.equal(request.type, 'tool-policy-set');
+      assert.ok(request.enabledTools.includes('write'));
+      confirm = () => resolve({ response: { ok: true, data: { toolPolicyRevision: request.revision } } });
+    });
+  const publishing = manager.saveToolPolicies(saved);
+  while (!confirm) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.equal(manager.isSavingSettings(), true);
+  assert.equal((await manager.saveToolPolicies(saved)).ok, false);
+  await assert.rejects(manager.start(), /publication/);
+  confirm();
+  assert.equal((await publishing).data.applied, true);
+  assert.equal(manager.isSavingSettings(), false);
+  manager.snapshot.state = 'starting';
+  assert.equal((await manager.saveToolPolicies(saved)).ok, false);
+});

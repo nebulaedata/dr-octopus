@@ -7,6 +7,7 @@ import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { toolPolicySettingsSchema, type ToolPoliciesResponse } from '../contracts/tool-policy';
 import { executionResourceRoot } from './resource-paths';
 import { configureBrowserHost, browserExtensionFolder } from './browser-installation';
 import { settingsInputSchema } from '../contracts/connection-settings';
@@ -66,6 +67,25 @@ export function registerDesktopIpc(
   let configuringBrowser = false;
   let configuredEpoch = '';
   const browserSetupLifetime = new AbortController();
+  ipcMain.handle(
+    ipcChannels.readToolPolicies,
+    async (event, input: unknown): Promise<ToolPoliciesResponse> => {
+      if (!isTrustedSender(event, windows, origin) || !emptyRequestSchema.safeParse(input).success) {
+        return { ok: false, message: '此页面无法读取工具策略' };
+      }
+      return manager.readToolPolicies();
+    }
+  );
+  ipcMain.handle(
+    ipcChannels.saveToolPolicies,
+    async (event, input: unknown): Promise<ToolPoliciesResponse> => {
+      const parsed = toolPolicySettingsSchema.safeParse(input);
+      if (!isTrustedSender(event, windows, origin) || !parsed.success || restarting || recovery?.isBusy()) {
+        return { ok: false, message: '此页面无法修改工具策略，或请求参数无效' };
+      }
+      return manager.saveToolPolicies(parsed.data);
+    }
+  );
   ipcMain.handle(ipcChannels.readMaintenance, (event, input: unknown): MaintenanceResponse => {
     if (
       !isTrustedSender(event, windows, origin) ||
@@ -498,6 +518,8 @@ export function registerDesktopIpc(
     browserSetupLifetime.abort();
     unsubscribe();
     ipcMain.removeHandler(ipcChannels.restartApplication);
+    ipcMain.removeHandler(ipcChannels.readToolPolicies);
+    ipcMain.removeHandler(ipcChannels.saveToolPolicies);
     ipcMain.removeHandler(ipcChannels.readMaintenance);
     ipcMain.removeHandler(ipcChannels.maintenanceAction);
     ipcMain.removeHandler(ipcChannels.readNetworkAddresses);

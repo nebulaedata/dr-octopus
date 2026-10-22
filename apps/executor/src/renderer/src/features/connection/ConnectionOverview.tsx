@@ -301,6 +301,7 @@ export function ConnectionOverview() {
             </Collapsible>
             <ToolOverview
               catalog={catalog}
+              policyRevision={known ? access.data?.toolPolicyRevision : undefined}
               browser={{ label: browserStatus, variant: browserVariant, description: browserDetail }}
               computer={{ label: computerStatus, variant: computerVariant, description: computerDetail }}
               onManageBrowser={() => setTab('connections')}
@@ -308,11 +309,7 @@ export function ConnectionOverview() {
           </TabsContent>
           <TabsContent value="connections" className="flex flex-col gap-7">
             <DeviceAccess ready={ready} />
-            <BrowserBridgeStatus
-              data={known ? access.data!.browser : undefined}
-              ready={ready}
-              toolNames={catalog?.browser}
-            />
+            <BrowserBridgeStatus data={known ? access.data!.browser : undefined} ready={ready} />
           </TabsContent>
           <TabsContent value="settings">
             <ConnectionSettings onDirtyChange={setSettingsDirty} focusService={focusServiceSettings} />

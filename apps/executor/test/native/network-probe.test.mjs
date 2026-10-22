@@ -3,6 +3,7 @@
  * @description Verifies the portable acceptance companion against real authenticated MCP and native reads, including failure evidence, private Node execution and report preservation.
  */
 import assert from 'node:assert/strict';
+import { policyToolNameSchema } from '../../src/contracts/tool-policy.ts';
 import test from 'node:test';
 import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -104,6 +105,7 @@ test(
     const tools = new BasicTools(publication);
     const store = await ControlStore.open(native, root);
     const authority = new TaskAuthority(tools, store);
+    authority.setToolPolicy(policyToolNameSchema.options, 0);
     const gateway = new HttpGateway(authority);
     try {
       const local = await gateway.listen(0, address);

@@ -207,7 +207,10 @@ test(
       await page.getByText('保存后立即生效', { exact: true }).waitFor();
       await page.getByText('保存并重启后生效', { exact: true }).first().waitFor();
       assert.equal(await page.getByText('无未保存的更改', { exact: true }).count(), 0);
-      assert.equal(await page.locator('[data-slot="separator"]').count(), 1);
+      const settingsForm = page.locator('form').filter({
+        has: page.getByLabel('MCP 服务端口', { exact: true }),
+      });
+      await expect(settingsForm.locator('[data-slot="separator"]')).toHaveCount(1);
       const controls = await Promise.all(
         ['界面主题', '关闭窗口时', 'MCP 服务端口'].map((label) =>
           page.getByLabel(label, { exact: true }).evaluate((node) => {

@@ -2,6 +2,7 @@
  * @author Codex
  * @description Separates immediately effective theme and window preferences from next-start MCP listener settings.
  */
+import { ToolPolicySettings } from './ToolPolicySettings';
 import { deviceNameSchema } from '../../../../contracts/device-identity';
 import { useEffect, useState } from 'react';
 import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -207,6 +208,8 @@ export function ConnectionSettings({
         <h1 className="text-3xl font-semibold tracking-tight">应用设置</h1>
         <p className="text-sm text-muted-foreground">管理界面主题、窗口行为与客户端接入方式。</p>
       </div>
+      <ToolPolicySettings />
+      <Separator />
       <form
         className="flex flex-col gap-8"
         onSubmit={(event) => {
@@ -264,7 +267,7 @@ export function ConnectionSettings({
                   }
                 }}
               >
-                <SelectTrigger id="theme-source" className="w-full max-w-60">
+                <SelectTrigger id="theme-source" className="w-full max-w-60 sm:justify-self-end">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -288,7 +291,7 @@ export function ConnectionSettings({
                     : '关闭窗口后，执行器继续在后台运行。'}
                 </FieldDescription>
               </FieldContent>
-              <div className="flex min-w-0 w-full flex-col gap-2">
+              <div className="flex min-w-0 w-full max-w-60 flex-col gap-2 sm:justify-self-end">
                 <Select
                   value={values.closeBehavior}
                   items={[
@@ -344,7 +347,7 @@ export function ConnectionSettings({
                 <FieldLabel htmlFor="device-name">设备名称</FieldLabel>
                 <FieldDescription>智能体使用此名称说明操作对象。</FieldDescription>
               </FieldContent>
-              <div className="flex min-w-0 w-full flex-col gap-2">
+              <div className="flex min-w-0 w-full max-w-60 flex-col gap-2 sm:justify-self-end">
                 <Input
                   id="device-name"
                   name="device-name"
@@ -413,7 +416,7 @@ export function ConnectionSettings({
                 <FieldLabel htmlFor="next-port">MCP 服务端口</FieldLabel>
                 <FieldDescription>修改后需更新客户端中的连接地址。</FieldDescription>
               </FieldContent>
-              <div className="flex min-w-0 w-full flex-col gap-2">
+              <div className="flex min-w-0 w-full max-w-60 flex-col gap-2 sm:justify-self-end">
                 <Input
                   id="next-port"
                   name="mcp-port"
@@ -447,6 +450,7 @@ export function ConnectionSettings({
               </FieldContent>
               <Switch
                 id="network-enabled"
+                className="sm:justify-self-end"
                 checked={values.enabled}
                 disabled={disabled}
                 onCheckedChange={(enabled) => {
@@ -467,8 +471,8 @@ export function ConnectionSettings({
                     选择其他电脑可访问的网卡地址。切换网络或连接 VPN 后，可刷新列表。
                   </FieldDescription>
                 </FieldContent>
-                <div className="flex min-w-0 w-full flex-col gap-2">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <div className="flex min-w-0 w-full max-w-70 flex-col gap-2 sm:justify-self-end">
+                  <div className="flex min-w-0 items-center gap-2">
                     <Select
                       value={values.address || null}
                       items={addressOptions}
@@ -487,7 +491,7 @@ export function ConnectionSettings({
                     >
                       <SelectTrigger
                         id="network-address"
-                        className="w-full max-w-60"
+                        className="min-w-0 flex-1"
                         aria-invalid={invalidAddress}
                         aria-describedby={invalidAddress ? 'network-address-error' : 'network-address-status'}
                       >
@@ -568,7 +572,7 @@ export function ConnectionSettings({
                     <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
                     <FieldDescription id={`${id}-description`}>{field.description}</FieldDescription>
                   </FieldContent>
-                  <div className="flex min-w-0 w-full flex-col gap-2">
+                  <div className="flex min-w-0 w-full max-w-60 flex-col gap-2 sm:justify-self-end">
                     <Input
                       id={id}
                       name={id}

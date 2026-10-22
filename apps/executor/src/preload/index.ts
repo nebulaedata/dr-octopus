@@ -2,6 +2,7 @@
  * @author Codex
  * @description Exposes validated named management actions and cancellable status subscriptions to the sandbox Renderer without credentials or generic IPC.
  */
+import { toolPoliciesResponseSchema, toolPolicySettingsSchema } from '../contracts/tool-policy';
 import { contextBridge, ipcRenderer } from 'electron';
 import {
   ipcChannels,
@@ -27,6 +28,20 @@ import {
 } from '../contracts/client-configuration';
 
 const api: ExecutorDesktopApi = {
+  /**
+   * Reads only bounded tool policy metadata through a named channel.
+   */
+  async readToolPolicies() {
+    return toolPoliciesResponseSchema.parse(await ipcRenderer.invoke(ipcChannels.readToolPolicies, {}));
+  },
+  /**
+   * Validates the policy draft without exposing generic IPC or credentials.
+   */
+  async saveToolPolicies(input) {
+    return toolPoliciesResponseSchema.parse(
+      await ipcRenderer.invoke(ipcChannels.saveToolPolicies, toolPolicySettingsSchema.parse(input))
+    );
+  },
   /**
    * Reads credential-free maintenance status through a fixed channel.
    */

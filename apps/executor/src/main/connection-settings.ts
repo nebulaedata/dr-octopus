@@ -3,6 +3,11 @@
  * @description Owns authoritative project settings without importing or falling back to previous layouts.
  */
 import { z } from 'zod';
+import {
+  defaultToolPolicySettings,
+  toolPolicySettingsSchema,
+  type ToolPolicySettings,
+} from '../contracts/tool-policy';
 import { settingsInputSchema, type SettingsInput } from '../contracts/connection-settings';
 import type { NativeFileCommit } from '../runtime/basic/native-file-commit';
 import { SettingsPublication } from './settings-publication';
@@ -10,12 +15,14 @@ import { SettingsPublication } from './settings-publication';
 const recordSchema = settingsInputSchema.omit({ deviceName: true }).extend({
   identityInitialized: z.literal(true).optional(),
   preferencesSaved: z.boolean(),
+  toolPolicies: toolPolicySettingsSchema.default(defaultToolPolicySettings),
 });
 
 export class ConnectionSettings {
   private value: z.infer<typeof recordSchema> = {
     ...settingsInputSchema.parse({ port: 19876, networkAddress: null }),
     preferencesSaved: false,
+    toolPolicies: structuredClone(defaultToolPolicySettings),
   };
 
   /**
@@ -39,7 +46,23 @@ export class ConnectionSettings {
   }
 
   /**
-   * Indicates whether absent device identity evidence must stop initialization.
+   * Returns detached policy settings independently of UI and listener preferences.
+   */
+  readToolPolicies(): ToolPolicySettings {
+    return structuredClone(this.value.toolPolicies);
+  }
+
+  /**
+   * Publishes a policy independently of listener drafts without losing other settings.
+   */
+  async saveToolPolicies(input: ToolPolicySettings): Promise<void> {
+    const next = { ...this.value, toolPolicies: toolPolicySettingsSchema.parse(input) };
+    await this.publication.save(JSON.stringify(next, null, 2) + '\n');
+    this.value = next;
+  }
+
+  /**
+   * Indicates whether identity evidence is initialized.
    */
   hasIdentity(): boolean {
     return this.value.identityInitialized === true;
@@ -73,6 +96,7 @@ export class ConnectionSettings {
     delete settings.deviceName;
     const next = recordSchema.parse({
       ...settings,
+      toolPolicies: this.value.toolPolicies,
       preferencesSaved: this.value.preferencesSaved || !initializeIdentity,
       ...(this.value.identityInitialized || initializeIdentity ? { identityInitialized: true } : {}),
     });

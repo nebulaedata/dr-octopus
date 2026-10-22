@@ -3,6 +3,7 @@
  * @description Exercises Computer authorization, shared task admission and retained results through the real HTTP MCP and native control journal without desktop input.
  */
 import assert from 'node:assert/strict';
+import { policyToolNameSchema } from '../../src/contracts/tool-policy.ts';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -34,6 +35,7 @@ async function fixture(run) {
     const basic = new BasicTools(publication);
     const store = await ControlStore.open(native, root);
     const authority = new TaskAuthority(basic, store, computer);
+    authority.setToolPolicy(policyToolNameSchema.options, 0);
     const gateway = new HttpGateway(authority);
     const endpoint = await gateway.listen(0);
     const clients = [];

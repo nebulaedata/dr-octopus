@@ -12,6 +12,7 @@ import type {
   ClientConfigurationActionResponse,
 } from './client-configuration';
 import { z } from 'zod';
+import type { ToolPoliciesResponse, ToolPolicySettings } from './tool-policy';
 import { listenFailureSchema } from './listen-failure';
 import type { MaintenanceAction, MaintenanceResponse } from './maintenance';
 
@@ -19,6 +20,8 @@ export const developmentRestartExitCode = 75;
 export const startupFailureCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{0,99}$/);
 
 export const ipcChannels = {
+  readToolPolicies: 'executor:tool-policies:read',
+  saveToolPolicies: 'executor:tool-policies:save',
   readMaintenance: 'executor:maintenance:read',
   maintenanceAction: 'executor:maintenance:action',
   restartApplication: 'executor:application:restart',
@@ -128,6 +131,14 @@ export const browserDiagnosticsSchema = z.discriminatedUnion('ok', [
 export type BrowserDiagnosticsResponse = z.infer<typeof browserDiagnosticsSchema>;
 
 export interface ExecutorDesktopApi {
+  /**
+   * Reads persisted policies, the finite catalog and Runtime application status.
+   */
+  readToolPolicies(): Promise<ToolPoliciesResponse>;
+  /**
+   * Saves revision-bound policies and applies their switches without cancelling admitted work.
+   */
+  saveToolPolicies(input: ToolPolicySettings): Promise<ToolPoliciesResponse>;
   /**
    * Reads safe maintenance status even while the Runtime is unavailable.
    */

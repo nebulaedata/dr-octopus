@@ -3,6 +3,7 @@
  * @description Exercises real native binary transfers, task authority, temporary HTTP credentials and whole-file streams without an Agent bridge.
  */
 import assert from 'node:assert/strict';
+import { policyToolNameSchema } from '../../src/contracts/tool-policy.ts';
 import test from 'node:test';
 import { executorToolCatalog } from '../../src/runtime/mcp/mcp-server.ts';
 import { mkdtemp, mkdir, writeFile, readFile, rm, open, stat } from 'node:fs/promises';
@@ -49,6 +50,7 @@ async function fixture(run) {
     authority.transferContext(...args)
   );
   await authority.attachTransfers(transfers);
+  authority.setToolPolicy(policyToolNameSchema.options, 0);
   const gateway = new HttpGateway(authority);
   const endpoint = await gateway.listen(0);
   const { grant, token } = await authority.approve({

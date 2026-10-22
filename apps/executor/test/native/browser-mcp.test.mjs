@@ -4,6 +4,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { policyToolNameSchema } from '../../src/contracts/tool-policy.ts';
 import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -78,6 +79,7 @@ test('Browser authorization, source cursor ownership and unknown results never u
   };
   const browser = new BrowserTools(peer);
   const authority = new TaskAuthority(basic, store, undefined, browser);
+  authority.setToolPolicy(policyToolNameSchema.options, 0);
   const gateway = new HttpGateway(authority);
   const endpoint = await gateway.listen(0);
   const clients = [];

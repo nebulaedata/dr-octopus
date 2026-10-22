@@ -89,7 +89,18 @@ export class HttpGateway {
   }
 
   /**
-   * Counts initialized protocol sessions by grant owner; this does not assert continuous network liveness.
+   * Notifies existing initialized clients to refresh their current tool projection.
+   */
+  notifyToolListChanged(): void {
+    for (const session of this.sessions.values()) {
+      if (session.initialized) {
+        session.server.sendToolListChanged();
+      }
+    }
+  }
+
+  /**
+   * Counts initialized sessions independently of current policy.
    */
   connections(): { clientId: string; sessions: number }[] {
     const clients = new Map<string, number>();

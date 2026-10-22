@@ -3,6 +3,7 @@
  * @description Verifies the real fixed launcher, private Node and stdio protocol against one native Runtime authority, including cancellation and failure lifetimes.
  */
 import assert from 'node:assert/strict';
+import { policyToolNameSchema } from '../../src/contracts/tool-policy.ts';
 import test from 'node:test';
 import { mkdtemp, mkdir, rm, readFile, writeFile, copyFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -53,6 +54,7 @@ async function fixture(run) {
   await search.verify();
   const tools = new BasicTools(publication, shell, search);
   const authority = new TaskAuthority(tools, await ControlStore.open(native, root));
+  authority.setToolPolicy(policyToolNameSchema.options, 0);
   const gateway = new HttpGateway(authority);
   const endpoint = await gateway.listen(0);
   const grant = await authority.approve({

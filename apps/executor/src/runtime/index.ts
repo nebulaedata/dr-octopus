@@ -2,6 +2,8 @@
  * @author Codex
  * @description Assembles one Basic tool authority with private PowerShell and drains its tasks before Utility shutdown.
  */
+import { defaultToolPolicySettings, runtimeToolPolicySchema } from '../contracts/tool-policy';
+import { selectedPolicyTools } from './mcp/tool-policy';
 import { computerStopMessageSchema } from '../contracts/computer-use';
 import { deviceIdentitySchema } from '../contracts/device-identity';
 import { hostRequestSchema, type AccessSnapshot } from '../contracts/access';
@@ -73,6 +75,11 @@ const projectRoot = process.argv[8] ?? join(userData, 'project');
 if (!isAbsolute(projectRoot)) {
   throw new Error('Runtime requires an absolute project directory.');
 }
+const toolPolicies = runtimeToolPolicySchema.parse(
+  process.argv[9]
+    ? JSON.parse(process.argv[9])
+    : { revision: 0, enabledTools: selectedPolicyTools(defaultToolPolicySettings) }
+);
 let hostRequests = 0;
 const initialized = (async () => {
   await mkdir(userData, { recursive: true });
@@ -112,6 +119,7 @@ const initialized = (async () => {
     store = await ControlStore.open(native, projectRoot);
     browser = new BrowserBridge(await BridgeStore.open(native, projectRoot));
     authority = new TaskAuthority(tools, store, computer, new BrowserTools(browser), device);
+    authority.setToolPolicy(toolPolicies.enabledTools, toolPolicies.revision);
     const transferStore = await TransferStore.open(native, projectRoot);
     const transferAuthority = authority;
     await authority.attachTransfers(
@@ -184,7 +192,10 @@ port.on('message', (event: { data: unknown }) => {
         }
         let credential: string | undefined;
         let clientId: string | undefined;
-        if (input.type === 'access-approve') {
+        if (input.type === 'tool-policy-set') {
+          runtime.authority.setToolPolicy(input.enabledTools, input.revision);
+          runtime.gateway.notifyToolListChanged();
+        } else if (input.type === 'access-approve') {
           const approved = await runtime.authority.approve(input.input);
           credential = approved.token;
           clientId = approved.grant.clientId;
@@ -195,6 +206,7 @@ port.on('message', (event: { data: unknown }) => {
           await runtime.browser.setEnabled(input.enabled);
         }
         const data: AccessSnapshot = {
+          toolPolicyRevision: runtime.authority.toolPolicyRevision,
           toolCatalog: executorToolCatalog(
             !!runtime.authority.transfers,
             runtime.tools.shellStatus().available
