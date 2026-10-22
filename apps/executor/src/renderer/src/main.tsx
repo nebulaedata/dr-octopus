@@ -11,7 +11,6 @@ import { TooltipProvider } from '@octopus/ui/components/tooltip';
 import { router } from '@/routes/router';
 import { bindRuntimeStatus } from '@/queries/runtime-queries';
 import { queryClient } from '@/queries/core/query-client';
-import '@octopus/ui/globals.css';
 import './executor.css';
 
 const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');

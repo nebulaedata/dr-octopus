@@ -2,6 +2,8 @@
  * @author Codex
  * @description Defines Executor-only neutral theme, CJK typography and the desktop viewport.
  */
+@import '@octopus/ui/globals.css';
+
 :root {
   color-scheme: light;
   --primary: var(--theme-shadcn-primary);

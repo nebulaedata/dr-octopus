@@ -228,12 +228,13 @@ export function BrowserBridgeStatus({
                       </Button>
                     ))}
                   </div>
-                  <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-muted-foreground">
+                  <ol className="flex list-disc flex-col gap-1.5 pl-5 text-muted-foreground">
                     <li>在 {browserName} 菜单中打开“扩展 → 管理扩展”，开启“开发者模式”。</li>
                     <li>
                       点击“{browser === 'edge' ? '加载解压缩的扩展' : '加载已解压的扩展'}
                       ”，选择刚才打开的整个插件文件夹。
                     </li>
+                    点击浏览器，打开对应的本地插件目录。
                   </ol>
                   {folder.error ? (
                     <Alert variant="destructive">
