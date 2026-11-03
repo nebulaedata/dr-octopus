@@ -37,6 +37,11 @@
     "./protocol/memory": {
       "types": "./dist/protocol/memory.d.ts",
       "import": "./dist/protocol/memory.js"
+    },
+    "./protocol/browser-skills": {
+      "types": "./dist/protocol/browser-skills.d.ts",
+      "import": "./dist/protocol/browser-skills.js",
+      "require": "./dist/protocol/browser-skills.js"
     }
   },
   "scripts": {
@@ -54,6 +59,7 @@
     "typescript-eslint": "^8.65.0"
   },
   "dependencies": {
+    "yaml": "2.9.1",
     "zod": "4.4.3"
   }
 }

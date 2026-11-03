@@ -4,9 +4,10 @@
  */
 import { z } from 'zod';
 import { browserCommandSchema, browserResultSchema } from './browser-tools.js';
+import { browserSkillRequestSchema, browserSkillResponseSchema } from './browser-skills.js';
 
 export const browserHostName = 'com.octopus.executor.browser';
-export const bridgeVersion = 3;
+export const bridgeVersion = 4;
 export const bridgeFrameLimit = 256 * 1024;
 
 export const bridgeHelloSchema = z
@@ -26,6 +27,7 @@ export const bridgeHelloSchema = z
     message: 'The current bridge version requires finite tool capability.',
   });
 export const extensionMessageSchema = z.union([
+  browserSkillRequestSchema,
   browserResultSchema,
   z.discriminatedUnion('type', [
     bridgeHelloSchema,
@@ -33,6 +35,7 @@ export const extensionMessageSchema = z.union([
   ]),
 ]);
 export const hostMessageSchema = z.union([
+  browserSkillResponseSchema,
   browserCommandSchema,
   z.discriminatedUnion('type', [
     z.strictObject({

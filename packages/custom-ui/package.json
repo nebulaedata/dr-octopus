@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "exports": {
+    "./components/alert": "./src/components/alert/index.tsx",
     "./components/code-block": "./src/components/code-block/index.tsx",
     "./components/timeline": "./src/components/timeline/index.tsx",
     "./components/elapsed-time": "./src/components/elapsed-time/index.ts"
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@octopus/ui": "workspace:*",
+    "lucide-react": "1.48.0",
     "motion": "^12.23.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
