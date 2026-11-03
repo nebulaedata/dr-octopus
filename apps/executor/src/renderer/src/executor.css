@@ -3,6 +3,7 @@
  * @description Defines Executor-only neutral theme, CJK typography and the desktop viewport.
  */
 @import '@octopus/ui/globals.css';
+@source '../../../../../packages/custom-ui/src/**/*.{ts,tsx}';
 
 :root {
   color-scheme: light;

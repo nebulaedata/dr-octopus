@@ -5,7 +5,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileTextIcon, UploadIcon, ChevronDownIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react';
+import { FileTextIcon, UploadIcon, ChevronDownIcon, PlusIcon } from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
 import { ListPagination } from '@/components/ListPagination';
 import {
@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@octopus/ui/components/dropdown-menu';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@octopus/ui/components/empty';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Spinner } from '@octopus/ui/components/spinner';
 import { toast } from '@octopus/ui/components/toast';
 import { getKnowledgeJob, listKnowledgeDocuments, uploadKnowledgeDocument } from '@/api/knowledge';
@@ -80,16 +80,17 @@ export function KnowledgeDocuments({
     if (documents.isError && documents.data === undefined) {
       return (
         <div className="p-5">
-          <Alert variant="destructive">
-            <TriangleAlertIcon />
-            <AlertTitle>{t('knowledge.documents.loadFailed', 'Failed to load documents')}</AlertTitle>
-            <AlertDescription>{documents.error.message}</AlertDescription>
-            <AlertAction>
+          <Alert
+            variant="danger"
+            showIcon
+            title={t('knowledge.documents.loadFailed', 'Failed to load documents')}
+            description={documents.error.message}
+            action={
               <Button variant="outline" size="sm" onClick={() => void documents.refetch()}>
                 {t('common.retry', 'Retry')}
               </Button>
-            </AlertAction>
-          </Alert>
+            }
+          />
         </div>
       );
     } else if (!documents.isPending && !documents.data?.items.length) {

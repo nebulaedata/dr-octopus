@@ -5,7 +5,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { z } from 'zod';
-import { browserSkillPackageSchema, browserSkillIssueMessages } from '../dist/protocol/browser-skills.js';
+import {
+  browserSkillPackageSchema,
+  browserSkillIssueMessages,
+  browserSkillRequestSchema,
+  browserSkillResponseSchema,
+} from '../dist/protocol/browser-skills.js';
 const workflow = {
   schemaVersion: 1,
   inputs: [{ name: 'orderNo', label: '订单编号', type: 'text', required: true }],
@@ -14,6 +19,63 @@ const workflow = {
   execution: { maxModelCalls: 12 },
   evidence: [],
 };
+
+test('skill deletion accepts only authenticated request identities and a skill UUID, never paths', () => {
+  const request = {
+    type: 'skills.delete',
+    requestId: crypto.randomUUID(),
+    connectionId: crypto.randomUUID(),
+    skillId: crypto.randomUUID(),
+  };
+  assert.equal(browserSkillRequestSchema.safeParse(request).success, true);
+  assert.equal(browserSkillRequestSchema.safeParse({ ...request, skillId: '../outside' }).success, false);
+  assert.equal(browserSkillRequestSchema.safeParse({ ...request, path: 'C:\\outside' }).success, false);
+  assert.equal(
+    browserSkillRequestSchema.safeParse({ ...request, installationId: crypto.randomUUID() }).success,
+    false
+  );
+  assert.equal(
+    browserSkillResponseSchema.safeParse({
+      type: 'skills.result',
+      requestId: request.requestId,
+      connectionId: request.connectionId,
+      value: { deleted: true },
+    }).success,
+    true
+  );
+});
+
+test('choice packages preserve false states and reject invalid URLs, roles and duplicate identities without throwing', () => {
+  const choice = {
+    id: 'choice-action-1',
+    ref: 'action-1',
+    url: 'https://example.com/search',
+    control: { role: 'checkbox', group: '通知', label: '接收通知', state: false },
+  };
+  const value = {
+    ...candidate('name: 测试\ndescription: 测试'),
+    workflow: { ...workflow, choices: [choice] },
+  };
+  assert.equal(browserSkillPackageSchema.parse(value).workflow.choices[0].control.state, false);
+  for (const patch of [
+    { url: 'not-a-url' },
+    { url: 'https://outside.test/' },
+    { control: { ...choice.control, state: ['wrong-type'] } },
+  ]) {
+    assert.equal(
+      browserSkillPackageSchema.safeParse({
+        ...value,
+        workflow: { ...workflow, choices: [{ ...choice, ...patch }] },
+      }).success,
+      false
+    );
+  }
+  assert.equal(
+    browserSkillPackageSchema.safeParse({ ...value, workflow: { ...workflow, choices: [choice, choice] } })
+      .success,
+    false
+  );
+});
 /**
  * Builds synthetic metadata with no user recording content.
  */

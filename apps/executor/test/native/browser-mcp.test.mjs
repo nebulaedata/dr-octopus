@@ -78,8 +78,10 @@ test('Browser authorization, source cursor ownership and unknown results never u
     },
   };
   const browser = new BrowserTools(peer);
-  const authority = new TaskAuthority(basic, store, undefined, browser);
-  authority.setToolPolicy(policyToolNameSchema.options, 0);
+  const authority = new TaskAuthority(basic, store, undefined, browser, undefined, {
+    revision: 0,
+    enabledTools: policyToolNameSchema.options,
+  });
   const gateway = new HttpGateway(authority);
   const endpoint = await gateway.listen(0);
   const clients = [];

@@ -12,20 +12,30 @@ See the [contributing guide](https://github.com/nebulaedata/dr-octopus/blob/main
 
 ### Executor acceptance builds
 
-Executor targets Windows x64. Prepare Node 22.19+, pnpm 11+, MSVC/Windows SDK, fixed native headers, private resources and packaging tools using the [first-time setup procedure](docs/architecture/executor-delivery.md#首次环境与资源准备). Once prepared, run these commands from the repository root in PowerShell, proceeding only after each command succeeds:
+Executor targets Windows x64. Install repository dependencies, prepare Node 22.19+, pnpm 11+ and MSVC/Windows SDK, and configure [browser identities](apps/browser-extension/RELEASE.md#33-配置身份并重新构建). Then run from the repository root in PowerShell:
 
 ```powershell
-pnpm --filter @octopus/shared build
-pnpm --filter @octopus/browser-extension build
-pnpm --filter @octopus/executor build
-pnpm --filter @octopus/executor package:acceptance
+pnpm build:executor
 ```
 
-`--filter @octopus/executor` selects the Executor workspace package; `package:acceptance` runs its acceptance-packaging script using the existing Executor dist and both extension outputs. It does not rebuild or prepare missing resources. Each run creates `apps/executor/release/<version>-unsigned-<UUID>/` with an unsigned installer, ZIP, manifests and acceptance tools. Source or documentation changes do not update existing packages.
+This command prepares missing fixed headers, Node/Python, search resources and packaging tools, builds shared dependencies, both Chrome/Edge extensions and Executor in order, then creates an unsigned installer, ZIP, manifests and acceptance tools. Any failed step stops the pipeline. Missing resources require network access on first use; existing resources are reused and checked by the build/packaging steps without automatic replacement or repair. Each run creates `apps/executor/release/<version>-unsigned-<UUID>/`. Use `pnpm build:executor --output-root D:/ExecutorBuilds` to choose another artifact root.
+
+For compilation only, use `pnpm --filter @octopus/executor build`. To package existing outputs only, use `pnpm --filter @octopus/executor package:acceptance`. These lower-level commands do not prepare missing resources; see [manual setup](docs/architecture/executor-delivery.md#首次环境与资源准备). Source or documentation changes do not update existing packages.
 
 The Windows MCP command tool is powershell, using system Windows PowerShell 5.1; PortableGit is no longer assembled or bundled. Private Node/Python and search tools remain bundled. Linux/macOS have explicit branches and TODO comments only and remain unsupported. See [ADR-0084](docs/adr/0084-executor-system-shell.md) for the contract and cleanup scope.
 
 Root `pnpm build` and `pnpm test` exclude Executor. Use `pnpm build:executor` / `pnpm test:executor` or focused package commands. `pnpm dev:executor` starts development: restart after Main/Preload/Runtime changes; Renderer supports HMR. Follow the [build and verification sequence](docs/architecture/executor-delivery.md#日常重新构建与打包) and the [Executor project rules](apps/executor/AGENTS.md).
+
+### Browser-extension live debugging
+
+Run from the repository root:
+
+```powershell
+pnpm dev:browser-extension          # Chrome
+pnpm dev:browser-extension -b edge  # Edge
+```
+
+See the [browser-extension development and debugging guide (Chinese)](apps/browser-extension/README.dev.zh-CN.md) for loading the development extension, debugging Popup/Worker/content scripts, hot reload behavior, and troubleshooting.
 
 ### Browser-extension builds
 

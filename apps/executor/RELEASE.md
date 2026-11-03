@@ -215,7 +215,7 @@ Get-FileHash -LiteralPath $installer -Algorithm SHA256
 - [ ] 停止状态下升级、卸载和重装；保留用户数据，不删除其他安装拥有的 Host 注册，不强杀用户进程。
 - [ ] 全部 G1–G6 发布门禁按现有规则记录通过/失败/未执行；Computer 已按用户决定启用，但 G5 等未执行项目继续记录为未验收；证书、源码启用或本机回归不能替代发布证据。
 
-当前未签名 packaging 测试只能作为基础回归，正式证书验证、商店身份和干净安装需要独立实际证据。验收方式及已完成范围见[验证说明](../../docs/architecture/executor-validation.md)。
+当前未签名 packaging 测试只能作为基础回归，正式证书验证、商店身份和干净安装需要独立实际证据。验收方式及已完成范围见[验证说明](../../docs/poc/executor-validation.md)。
 
 ## 7. 发布、回退与密钥维护
 

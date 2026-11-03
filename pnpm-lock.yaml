@@ -42,9 +42,18 @@ importers:
 
   apps/browser-extension:
     dependencies:
+      '@ai-sdk/openai-compatible':
+        specifier: 3.0.80
+        version: 3.0.80(zod@4.4.3)
+      '@base-ui/react':
+        specifier: 1.8.0
+        version: 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.3.0)(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@noble/hashes':
         specifier: 1.8.0
         version: 1.8.0
+      '@octopus/custom-ui':
+        specifier: workspace:*
+        version: link:../../packages/custom-ui
       '@octopus/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -54,6 +63,18 @@ importers:
       '@page-agent/page-controller':
         specifier: 1.12.4
         version: 1.12.4(patch_hash=199ca5cea368a6a5541cab1bef2c26f1cda5eee2f70cadf9758adc8952d6186f)
+      '@tanstack/react-form':
+        specifier: 1.33.5
+        version: 1.33.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      ai:
+        specifier: 7.0.155
+        version: 7.0.155(zod@4.4.3)
+      date-fns:
+        specifier: 4.4.0
+        version: 4.4.0
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
       lucide-react:
         specifier: 1.48.0
         version: 1.48.0(react@19.3.0)
@@ -167,6 +188,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(@cfworker/json-schema@4.1.1)(supports-color@8.1.1)(zod@4.4.3)
+      '@octopus/custom-ui':
+        specifier: workspace:*
+        version: link:../../packages/custom-ui
       '@octopus/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -675,6 +699,9 @@ importers:
       '@octopus/ui':
         specifier: workspace:*
         version: link:../ui
+      lucide-react:
+        specifier: 1.48.0
+        version: 1.48.0(react@19.3.0)
       motion:
         specifier: ^12.23.0
         version: 12.43.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -785,6 +812,9 @@ importers:
 
   packages/shared:
     dependencies:
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -903,6 +933,28 @@ packages:
 
   '@1natsu/wait-element@4.2.0':
     resolution: {integrity: sha512-Om0Q+WE9mNrpY4AwMTvkFiYHv8VM7TML3PvOqXy+w6kAjLjKhGYHYX+305+a6J8RVpds9s7IF2Z5aOPYwULFNw==}
+
+  '@ai-sdk/gateway@4.0.128':
+    resolution: {integrity: sha512-vAEUQPql1k+wyU3JUEosUupdwnwFD7Sts05EcxAYifY4Z1+dl+rD88y4gz8QZOnOidxzYZe2gPSBsWlo/ZahOw==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/openai-compatible@3.0.80':
+    resolution: {integrity: sha512-FoFoYodwufDyuOlPrFBnGD6HNA8nIB5a6HofyTJoPUJn9NBtDmloWudbNDyf4hYV8YTPOyR5iPfn1ufK2XD2Zg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@5.0.70':
+    resolution: {integrity: sha512-nU213UNVHWDoEKIZ5Hm3uGPmfW7EBHC2GkIJJEDKh4HLQWgh/eizrW2jmY4efxWf7Tf/yTzKD0t6sd4kVUKlyQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider@4.0.34':
+    resolution: {integrity: sha512-Ip7ZQBq/FiGpM1mmOVseTtX9PBjnzo0bLC41WTgBSBBRUBz6LhNFGbYaNUzI6hPm6ll1oNSPOAZc/q/z+3QZEQ==}
+    engines: {node: '>=22'}
 
   '@aklinker1/rollup-plugin-visualizer@5.12.0':
     resolution: {integrity: sha512-X24LvEGw6UFmy0lpGJDmXsMyBD58XmX1bbwsaMLhNoM+UMQfQ3b2RtC+nz4b/NoRK5r6QJSKJHBNVeUdwqybaQ==}
@@ -4315,6 +4367,10 @@ packages:
   '@upsetjs/venn.js@2.0.0':
     resolution: {integrity: sha512-WbBhLrooyePuQ1VZxrJjtLvTc4NVfpOyKx0sKqioq9bX1C1m7Jgykkn8gLrtwumBioXIqam8DLxp88Adbue6Hw==}
 
+  '@vercel/oidc@3.2.0':
+    resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
+    engines: {node: '>= 20'}
+
   '@vitejs/plugin-react@6.0.4':
     resolution: {integrity: sha512-XcCQz0TBpBgljhj0gMuuDj49i6Ytqh5q1osT/Gp5uAVJUCTWxyskk/l1jwYYiu2xcNHHipdMz40EGfM1VdamVg==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -4352,6 +4408,9 @@ packages:
 
   '@webext-core/match-patterns@2.0.0':
     resolution: {integrity: sha512-EsyMMKfQuSE4rWCjP/TifwvUWlhC/OhiGn5OK3p9F0d57UmtLib0nzguzPKyxM1/kZV7SkE+jYXkE8gsdPRLmw==}
+
+  '@workflow/serde@4.1.0':
+    resolution: {integrity: sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ==}
 
   '@wxt-dev/browser@0.3.4':
     resolution: {integrity: sha512-NhLuaIz0LBwudxexRN/siiUOvVvwXhvYH6zM2GARG7Ag5UEpgpQV556vi7nzWPwR2ayBHD97mlodqd5OiOMg4Q==}
@@ -4571,6 +4630,12 @@ packages:
 
   ai-motion@0.4.8:
     resolution: {integrity: sha512-9nQVjf8lrYQWSW0sZdb9bES4x8Ei1w9C0S62po2KvRbMjslmjm0WMeszyW771SEauDnu4YGWqurLZ/gCkCTosQ==}
+
+  ai@7.0.155:
+    resolution: {integrity: sha512-df/UwKgOix8Vc+dj684bQlHCClNojrG5T7Jr5aJvFyz+PlBo7gEgMALPzP7LdeD12Gxc6i0pzpboEszDh9V1wA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
 
   ajv-formats@2.1.1:
     resolution: {integrity: sha512-Wx0Kx52hxE7C18hkMEggYlEifqWZtYaRgouJor+WMdPnQyEK13vgEWyVNup7SoeeoLMsr4kf5h6dOW11I15MUA==}
@@ -6969,6 +7034,9 @@ packages:
 
   json-schema-typed@8.0.2:
     resolution: {integrity: sha512-fQhoXdcvc3V28x7C7BMs4P5+kNlgUURe2jmUT1T//oBRMDrqy1QPelJimwZGo7Hg9VPV3EQV5Bnq4hbFy2vetA==}
+
+  json-schema@0.4.0:
+    resolution: {integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==}
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
@@ -9742,6 +9810,32 @@ snapshots:
     dependencies:
       defu: 6.1.7
       many-keys-map: 3.0.3
+
+  '@ai-sdk/gateway@4.0.128(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.34
+      '@ai-sdk/provider-utils': 5.0.70(zod@4.4.3)
+      '@vercel/oidc': 3.2.0
+      zod: 4.4.3
+
+  '@ai-sdk/openai-compatible@3.0.80(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.34
+      '@ai-sdk/provider-utils': 5.0.70(zod@4.4.3)
+      zod: 4.4.3
+
+  '@ai-sdk/provider-utils@5.0.70(zod@4.4.3)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.34
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
+      eventsource-parser: 3.1.1
+      undici: 7.29.1
+      zod: 4.4.3
+
+  '@ai-sdk/provider@4.0.34':
+    dependencies:
+      json-schema: 0.4.0
 
   '@aklinker1/rollup-plugin-visualizer@5.12.0':
     dependencies:
@@ -13242,6 +13336,8 @@ snapshots:
       d3-selection: 3.0.0
       d3-transition: 3.0.1(d3-selection@3.0.0)
 
+  '@vercel/oidc@3.2.0': {}
+
   '@vitejs/plugin-react@6.0.4(@rolldown/plugin-babel@0.2.4(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.7)(rolldown@1.2.8)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.1)))(babel-plugin-react-compiler@1.0.0)(vite@8.3.0(@types/node@24.13.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.1))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
@@ -13276,6 +13372,8 @@ snapshots:
       is-potential-custom-element-name: 1.0.1
 
   '@webext-core/match-patterns@2.0.0': {}
+
+  '@workflow/serde@4.1.0': {}
 
   '@wxt-dev/browser@0.3.4':
     dependencies:
@@ -13411,6 +13509,13 @@ snapshots:
       tslib: 2.8.1
 
   ai-motion@0.4.8: {}
+
+  ai@7.0.155(zod@4.4.3):
+    dependencies:
+      '@ai-sdk/gateway': 4.0.128(zod@4.4.3)
+      '@ai-sdk/provider': 4.0.34
+      '@ai-sdk/provider-utils': 5.0.70(zod@4.4.3)
+      zod: 4.4.3
 
   ajv-formats@2.1.1(ajv@8.20.0):
     optionalDependencies:
@@ -16113,6 +16218,8 @@ snapshots:
   json-schema-typed@7.0.3: {}
 
   json-schema-typed@8.0.2: {}
+
+  json-schema@0.4.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 

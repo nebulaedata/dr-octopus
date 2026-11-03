@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { RotateCcwIcon, TriangleAlertIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { RotateCcwIcon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -50,9 +50,13 @@ export function ProviderAuthReset({ provider, disabled = false }: ProviderAuthRe
         result.providerSnapshotSynchronized
           ? {
               title: t('settings.providers.auth.resetTitle', 'Authentication reset'),
-              description: t('settings.providers.auth.resetDescription', 'Local credentials for {{name}} were cleared.', {
-                name: provider.name,
-              }),
+              description: t(
+                'settings.providers.auth.resetDescription',
+                'Local credentials for {{name}} were cleared.',
+                {
+                  name: provider.name,
+                }
+              ),
               type: 'success',
             }
           : {
@@ -116,18 +120,18 @@ export function ProviderAuthReset({ provider, disabled = false }: ProviderAuthRe
               )}
             </DialogDescription>
           </DialogHeader>
-          <Alert variant="destructive">
-            <TriangleAlertIcon />
-            <AlertTitle>
-              {t('settings.providers.auth.resetImmediateTitle', 'This deletes the credential immediately')}
-            </AlertTitle>
-            <AlertDescription>
-              {t(
-                'settings.providers.auth.resetImmediateDescription',
-                'If the runtime environment provides its own credential, the provider may still show as authenticated after a refresh.'
-              )}
-            </AlertDescription>
-          </Alert>
+          <Alert
+            variant="warning"
+            showIcon
+            title={t(
+              'settings.providers.auth.resetImmediateTitle',
+              'This deletes the credential immediately'
+            )}
+            description={t(
+              'settings.providers.auth.resetImmediateDescription',
+              'If the runtime environment provides its own credential, the provider may still show as authenticated after a refresh.'
+            )}
+          />
           {resetAuth.isError ? <p className="text-sm font-medium text-destructive">{errorMessage}</p> : null}
           <DialogFooter>
             <Button

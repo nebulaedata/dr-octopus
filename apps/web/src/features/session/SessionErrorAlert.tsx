@@ -4,9 +4,9 @@
  */
 
 import { useI18n } from '@/i18n/use-i18n';
-import { CircleAlertIcon } from 'lucide-react';
+
 import { useStore } from 'zustand';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { sessionStores } from '@/stores/session';
 
@@ -44,19 +44,21 @@ export function SessionErrorAlert({
   }
 
   return (
-    <Alert variant="destructive" className="pointer-events-auto shadow-lg shadow-black/5 dark:shadow-white/5">
-      <CircleAlertIcon />
-      <AlertTitle>
-        {runtimeError === undefined
+    <Alert
+      className="pointer-events-auto shadow-lg shadow-black/5 dark:shadow-white/5"
+      variant="danger"
+      showIcon
+      title={
+        runtimeError === undefined
           ? t('session.error.operationFailed', 'Operation failed')
-          : t('session.error.unavailable', 'Session unavailable')}
-      </AlertTitle>
-      <AlertDescription className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <span className="min-w-0 flex-1 wrap-anywhere">{error}</span>
+          : t('session.error.unavailable', 'Session unavailable')
+      }
+      description={<span className="min-w-0 flex-1 wrap-anywhere">{error}</span>}
+      action={
         <Button variant="outline" size="sm" className="shrink-0" onClick={handleAction}>
           {runtimeError === undefined ? t('common.dismiss', 'Dismiss') : t('common.retry', 'Retry')}
         </Button>
-      </AlertDescription>
-    </Alert>
+      }
+    />
   );
 }

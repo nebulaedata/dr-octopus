@@ -89,17 +89,6 @@ export class HttpGateway {
   }
 
   /**
-   * Notifies existing initialized clients to refresh their current tool projection.
-   */
-  notifyToolListChanged(): void {
-    for (const session of this.sessions.values()) {
-      if (session.initialized) {
-        session.server.sendToolListChanged();
-      }
-    }
-  }
-
-  /**
    * Counts initialized sessions independently of current policy.
    */
   connections(): { clientId: string; sessions: number }[] {

@@ -77,7 +77,7 @@ function headers(record) {
 /**
  * Creates one installation handshake with an independently generated correlation identifier.
  */
-function hello(version = 3) {
+function hello(version = 4) {
   return {
     type: 'hello',
     requestId: randomUUID(),
@@ -245,7 +245,7 @@ test('version mismatch is visible and replacement sessions reject stale replies 
       fetch(config.endpoint, { method: 'POST', headers: headers(config), body: JSON.stringify(value) });
     assert.equal((await post(body)).status, 409);
     assert.equal(bridge.snapshot().connections[0].state, 'incompatible');
-    body.version = 3;
+    body.version = 4;
     body.tools = true;
     const old = await (await post(body)).json();
     const fresh = await (await post(body)).json();

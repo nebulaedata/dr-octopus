@@ -3,6 +3,7 @@
  * @description Defines immediate theme and window preferences plus next-start connection settings without granting transport or credential access.
  */
 import { z } from 'zod';
+import { toolPolicySettingsSchema } from './tool-policy';
 import { deviceIdentitySchema, deviceNameSchema } from './device-identity';
 import { defaultTransferSettings, transferSettingsSchema } from './transfer-settings';
 
@@ -38,6 +39,7 @@ export type NetworkAddressesResponse = z.infer<typeof networkAddressesResponseSc
 export const themeSourceSchema = z.enum(['system', 'light', 'dark']);
 export const closeBehaviorSchema = z.enum(['exit', 'taskbar', 'tray']);
 export const settingsInputSchema = z.strictObject({
+  toolPolicies: toolPolicySettingsSchema.optional(),
   transfer: transferSettingsSchema.default(defaultTransferSettings),
   deviceName: deviceNameSchema.optional(),
   themeSource: themeSourceSchema.default('system'),
@@ -47,6 +49,7 @@ export const settingsInputSchema = z.strictObject({
 });
 export type SettingsInput = z.infer<typeof settingsInputSchema>;
 export const connectionSettingsSchema = z.strictObject({
+  toolPolicies: toolPolicySettingsSchema,
   transfer: transferSettingsSchema,
   device: deviceIdentitySchema,
   deviceName: deviceNameSchema,

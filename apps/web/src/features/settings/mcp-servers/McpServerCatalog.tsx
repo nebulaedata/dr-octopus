@@ -5,7 +5,7 @@
 
 import { useDeferredValue, useState } from 'react';
 import { PlusIcon, ServerIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
@@ -61,15 +61,17 @@ export function McpServerCatalog(props: McpServerCatalogProps) {
           {props.pending &&
             Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-14 w-full" />)}
           {props.error !== undefined ? (
-            <Alert variant="destructive">
-              <AlertTitle>{t('settings.mcp.loadFailed', 'Failed to load MCP configuration')}</AlertTitle>
-              <AlertDescription className="flex flex-col gap-3">
-                <span>{props.error}</span>
+            <Alert
+              variant="danger"
+              showIcon
+              title={t('settings.mcp.loadFailed', 'Failed to load MCP configuration')}
+              description={<span>{props.error}</span>}
+              action={
                 <Button variant="outline" size="sm" onClick={props.onRetry}>
                   {t('common.retry', 'Retry')}
                 </Button>
-              </AlertDescription>
-            </Alert>
+              }
+            />
           ) : null}
           {!props.pending && props.error === undefined && filtered.length === 0 ? (
             <Empty className="min-h-52">

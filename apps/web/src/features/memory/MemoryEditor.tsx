@@ -18,7 +18,7 @@ import { FieldGroup, Field, FieldLabel } from '@octopus/ui/components/field';
 import { Input } from '@octopus/ui/components/input';
 import { Textarea } from '@octopus/ui/components/textarea';
 import { Button } from '@octopus/ui/components/button';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { toast } from '@octopus/ui/components/toast';
 import { rememberMemory } from '@/api/memory';
 import { memoryQueryKey } from '@/queries/memory-queries';
@@ -133,11 +133,7 @@ export function MemoryEditor({ document, onClose }: { document?: MemoryDocument;
               </form.Field>
             ))}
           </FieldGroup>
-          {mutation.error && (
-            <Alert variant="destructive">
-              <AlertDescription>{mutation.error.message}</AlertDescription>
-            </Alert>
-          )}
+          {mutation.error && <Alert variant="danger" showIcon description={mutation.error.message} />}
           <DialogFooter>
             <Button type="button" variant="ghost" disabled={mutation.isPending} onClick={onClose}>
               {t('common.cancel', 'Cancel')}

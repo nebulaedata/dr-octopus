@@ -25,6 +25,8 @@ const bundle = await build({
  */
 function fixture(saved = {}) {
   const listeners = [];
+  let installed;
+  const deletedDatabases = [];
   const storageListeners = [];
   const alarms = new Map();
   const ports = [];
@@ -36,8 +38,13 @@ function fixture(saved = {}) {
       getURL: (path) => 'chrome-extension://owned-extension' + path,
       getManifest: () => ({ version: '0.1.2' }),
       onMessage: { addListener: (listener) => listeners.push(listener) },
+      onConnect: { addListener: () => {} },
       onStartup: { addListener: () => {} },
-      onInstalled: { addListener: () => {} },
+      onInstalled: {
+        addListener: (listener) => {
+          installed = listener;
+        },
+      },
       /**
        * Creates a connection-only peer, with no OS Host registration or page action dispatch.
        */
@@ -66,13 +73,25 @@ function fixture(saved = {}) {
     },
     tabs: {
       onActivated: { addListener: () => {} },
+      onMoved: { addListener: () => {} },
+      onDetached: { addListener: () => {} },
       onRemoved: { addListener: () => {} },
       onReplaced: { addListener: () => {} },
       onUpdated: { addListener: () => {} },
     },
+    permissions: { onRemoved: { addListener: () => {} } },
+    webNavigation: {
+      onCommitted: { addListener: () => {} },
+      onHistoryStateUpdated: { addListener: () => {} },
+    },
     storage: {
       local: {
         get: async () => ({ ...values }),
+        remove: async (keys) => {
+          for (const key of keys) {
+            delete values[key];
+          }
+        },
         /**
          * Notifies genuine pause transitions while retaining persisted labels across worker fixtures.
          */
@@ -98,7 +117,15 @@ function fixture(saved = {}) {
     },
   };
   const module = { exports: {} };
-  new Function('require', 'module', 'exports', 'setTimeout', 'clearTimeout', bundle.outputFiles[0].text)(
+  new Function(
+    'require',
+    'module',
+    'exports',
+    'setTimeout',
+    'clearTimeout',
+    'indexedDB',
+    bundle.outputFiles[0].text
+  )(
     (name) => {
       if (name === 'wxt/browser') {
         return { browser };
@@ -114,7 +141,18 @@ function fixture(saved = {}) {
       timers.add(callback);
       return callback;
     },
-    (callback) => timers.delete(callback)
+    (callback) => timers.delete(callback),
+    {
+      open: () => {
+        throw new Error('Session storage not part of connection fixture');
+      },
+      deleteDatabase: (name) => {
+        deletedDatabases.push(name);
+        const request = {};
+        queueMicrotask(() => request.onsuccess());
+        return request;
+      },
+    }
   );
   module.exports.default.main();
   /**
@@ -123,7 +161,7 @@ function fixture(saved = {}) {
   function request(message, sender = { id: browser.runtime.id, url: browser.runtime.getURL('/popup.html') }) {
     return listeners.map((listener) => listener(message, sender)).find((reply) => reply !== undefined);
   }
-  return { ports, values, alarms, request, browser };
+  return { ports, values, alarms, request, browser, installed: () => installed(), deletedDatabases };
 }
 
 /**
@@ -146,7 +184,7 @@ function connect(port) {
   port.receive({
     type: 'connected',
     requestId: port.sent[0].requestId,
-    version: 3,
+    version: 4,
     connectionId: randomUUID(),
   });
 }
@@ -278,4 +316,24 @@ test('native errors are categorized without retaining paths, messages or arbitra
   await settled(() => f.values.bridgeStatus === 'invalid_message');
   assert.equal((await f.request({ type: 'bridge.status' })).lastFailure.method, null);
   assert.equal(JSON.stringify(f.values).includes('secret-token'), false);
+});
+
+test('extension update discards only retired workflow storage and preserves model and recording settings', async () => {
+  const f = fixture({
+    paused: true,
+    workflowJob: { id: 'old' },
+    workflowHistory: [{ id: 'old' }],
+    workflowSettings: { model: 'current' },
+    workflowCredentials: { endpoint: 'synthetic' },
+    recordingSession: { id: 'current' },
+    skillRevision: 'current',
+  });
+  f.installed();
+  await settled(() => f.deletedDatabases.length === 1 && !Object.hasOwn(f.values, 'workflowHistory'));
+  assert.deepEqual(f.deletedDatabases, ['octopus-workflows']);
+  assert.equal(Object.hasOwn(f.values, 'workflowJob'), false);
+  assert.deepEqual(f.values.workflowSettings, { model: 'current' });
+  assert.deepEqual(f.values.workflowCredentials, { endpoint: 'synthetic' });
+  assert.deepEqual(f.values.recordingSession, { id: 'current' });
+  assert.equal(f.values.skillRevision, 'current');
 });

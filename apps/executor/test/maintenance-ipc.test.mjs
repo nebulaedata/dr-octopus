@@ -84,12 +84,11 @@ test('maintenance handlers validate frame, action and revision and serialize wit
       subscribe: () => () => {},
       isSavingSettings: () => saving,
       readToolPolicies: async () => ({ ok: true, data: { settings: defaultToolPolicySettings } }),
-      saveToolPolicies: async (input) => {
-        calls.push(['policy', input.selectedId]);
-        return { ok: true };
-      },
       readSettings: async () => ({ ok: true, data: { pendingRestart: true } }),
       saveSettings: async (input) => {
+        if (input.toolPolicies) {
+          calls.push(['policy', input.toolPolicies.selectedId]);
+        }
         savedNetworkAddress = input.networkAddress;
         return { ok: true, data: { themeSource: 'system' } };
       },
@@ -103,7 +102,13 @@ test('maintenance handlers validate frame, action and revision and serialize wit
       recovery
     );
     const policyRead = handlers.get(ipcChannels.readToolPolicies);
-    const policySave = handlers.get(ipcChannels.saveToolPolicies);
+    const saveSettings = handlers.get(ipcChannels.saveSettings);
+    /**
+     * Exercises policy validation through the common trusted settings endpoint.
+     */
+    function policySave(sender, toolPolicies) {
+      return saveSettings(sender, { port: 19876, networkAddress: null, toolPolicies });
+    }
     assert.equal((await policyRead(event, {})).ok, true);
     assert.equal((await policyRead(event, { unexpected: true })).ok, false);
     assert.equal((await policyRead({ sender: {}, senderFrame: frame }, {})).ok, false);

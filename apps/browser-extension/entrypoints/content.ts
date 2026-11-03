@@ -4,7 +4,9 @@
  */
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { browser } from 'wxt/browser';
+import { RecordingContent } from '../src/lib/recording/recording-content';
 import { PageControllerAdapter } from '../src/page-controller-adapter';
+import { pageOwnerSchema } from '../src/page-commands';
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_end',
@@ -21,6 +23,7 @@ export default defineContentScript({
     const receiverOwner = {};
     owner.__octopusPageReceiver = receiverOwner;
     const adapter = new PageControllerAdapter();
+    const recording = new RecordingContent();
     /**
      * Rejects foreign senders; ping establishes document identity without executing an action.
      */
@@ -28,18 +31,46 @@ export default defineContentScript({
       if (sender.id !== browser.runtime.id) {
         return;
       }
+      let ownerInput: unknown = null;
+      if (message && typeof message === 'object') {
+        if ('localRunId' in message && !('connectionId' in message)) {
+          ownerInput = { localRunId: message.localRunId };
+        } else if ('connectionId' in message && !('localRunId' in message)) {
+          ownerInput = { connectionId: message.connectionId };
+        }
+      }
+      const authority = pageOwnerSchema.safeParse(ownerInput);
+      if (
+        message &&
+        typeof message === 'object' &&
+        'type' in message &&
+        message.type === 'page.release-if-idle' &&
+        'taskId' in message &&
+        typeof message.taskId === 'string' &&
+        authority.success
+      ) {
+        return Promise.resolve(adapter.releaseIfIdle(message.taskId, authority.data));
+      }
+      if (
+        message &&
+        typeof message === 'object' &&
+        'type' in message &&
+        typeof message.type === 'string' &&
+        message.type.startsWith('recorder.')
+      ) {
+        return recording.receive(message);
+      }
       if (
         message &&
         typeof message === 'object' &&
         'type' in message &&
         message.type === 'page.ping' &&
-        'connectionId' in message &&
-        typeof message.connectionId === 'string' &&
+        authority.success &&
         'documentRevision' in message &&
         typeof message.documentRevision === 'string'
       ) {
         adapter.bind(
-          message.connectionId,
+          authority.data,
           message.documentRevision,
           'taskId' in message && typeof message.taskId === 'string' ? message.taskId : undefined
         );
@@ -52,10 +83,9 @@ export default defineContentScript({
         message.type === 'page.release' &&
         'taskId' in message &&
         typeof message.taskId === 'string' &&
-        'connectionId' in message &&
-        typeof message.connectionId === 'string'
+        authority.success
       ) {
-        adapter.endTask(message.taskId, message.connectionId);
+        adapter.endTask(message.taskId, authority.data);
         return Promise.resolve({ released: true });
       }
       if (
@@ -87,14 +117,20 @@ export default defineContentScript({
       );
     };
     browser.runtime.onMessage.addListener(receive);
-    ctx.addEventListener(window, 'pagehide', () => adapter.reset(false));
+    void recording.hello();
+    ctx.addEventListener(window, 'pagehide', () => {
+      adapter.reset(false);
+      recording.pagehide();
+    });
     ctx.addEventListener(window, 'pageshow', (event) => {
       if (event.persisted) {
         adapter.reset(true);
+        recording.pageshow();
       }
     });
     ctx.onInvalidated(() => {
       adapter.dispose();
+      recording.dispose();
       browser.runtime.onMessage.removeListener(receive);
       if (owner.__octopusPageReceiver === receiverOwner) {
         delete owner.__octopusPageReceiver;

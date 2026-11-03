@@ -2,14 +2,15 @@
  * @author Codex
  * @description Displays authoritative configuration staleness and restart outcomes using the shared Session action.
  */
-import { Alert, AlertAction, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { RestartSessionDialog } from './RestartSessionDialog';
 import { useRestartSession } from '@/features/session/hooks/use-restart-session';
 import { useI18n } from '@/i18n/use-i18n';
-import { AlertTriangleIcon } from 'lucide-react';
+
 import { Spinner } from '@octopus/ui/components/spinner';
 import type { SessionDto } from '@octopus/shared/protocol';
+import type { AlertVariant } from '@octopus/custom-ui/components/alert';
 
 /**
  * Offers manual configuration adoption while preserving the current conversation and draft.
@@ -19,6 +20,12 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
   const action = useRestartSession();
   const control = session.runtimeControl;
   const restarting = action.pending.includes(session.id) || control?.restart.status === 'restarting';
+  let alertVariant: AlertVariant = 'warning';
+  if (restarting) {
+    alertVariant = 'info';
+  } else if (control?.restart.status === 'failed') {
+    alertVariant = 'danger';
+  }
   if (
     !control?.restartRequired &&
     !restarting &&
@@ -43,12 +50,12 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
   return (
     <>
       <Alert
-        variant={control?.restart.status === 'failed' ? 'destructive' : 'default'}
-        className="pointer-events-auto shadow-lg shadow-black/5 dark:shadow-white/5 border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50"
-      >
-        {restarting ? <Spinner /> : <AlertTriangleIcon />}
-        <AlertTitle>{renderAlertTitleContent()}</AlertTitle>
-        <AlertDescription className="flex items-center justify-between gap-3">
+        className="pointer-events-auto shadow-lg shadow-black/5 dark:shadow-white/5"
+        variant={alertVariant}
+        showIcon
+        icon={restarting ? <Spinner /> : undefined}
+        title={renderAlertTitleContent()}
+        description={
           <span>
             {restarting
               ? t(
@@ -61,7 +68,9 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
                   'Takes effect after restarting the session; chat history is kept.'
                 ))}
           </span>
-          <AlertAction>
+        }
+        action={
+          <>
             {session.runtime?.state === 'running' && (
               <Button
                 size="sm"
@@ -74,6 +83,7 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
                   : t('session.configAlert.whenIdle', 'Apply after task finishes')}
               </Button>
             )}
+
             <Button
               size="sm"
               variant="outline"
@@ -84,9 +94,9 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
               {restarting && <Spinner />}
               {t('session.configAlert.restartButton', 'Restart session')}
             </Button>
-          </AlertAction>
-        </AlertDescription>
-      </Alert>
+          </>
+        }
+      />
       <RestartSessionDialog action={action} />
     </>
   );

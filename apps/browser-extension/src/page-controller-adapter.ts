@@ -3,10 +3,14 @@
  * @description Delegates page snapshots, element indices, native feedback and actions to one task-owned PageController.
  */
 import { PageController } from '@page-agent/page-controller';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
 import { browser } from 'wxt/browser';
-import { browserRequestSchema, snapshotPageSchema } from '@octopus/shared/protocol/browser-tools';
+import { snapshotPageSchema } from '@octopus/shared/protocol/browser-tools';
+import { pageRequestSchema, pageOwner, pageOwnerKey, type PageOwner } from './page-commands';
+import type { BrowserSkillChoice } from '@octopus/shared/protocol/browser-skills';
+import { safeRecordingText } from './lib/recording/recording-privacy';
+import { choiceOnPage, locateChoice, protectedChoiceElements } from './lib/recording/page-choices';
 const encoder = new TextEncoder();
 /**
  * Creates a random UUID using the CSPRNG available even on non-secure HTTP documents.
@@ -19,6 +23,125 @@ function createControllerId(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 export class PageControllerAdapter {
+  private readonly controllerOptions = { enableMask: true, interactiveBlacklist: [] as Element[] };
+  private choiceTarget?: Element;
+  private choices: BrowserSkillChoice[] = [];
+  private choiceIndexFailed = false;
+
+  /**
+   * Uses the upstream public blacklist configuration to create a singleton index for a resolved choice.
+   * The synchronous beforeUpdate hook enumerates current scopes; no private selectorMap or text parser is used.
+   */
+  private prepareChoiceIndex = (): void => {
+    this.choiceIndexFailed = false;
+    if (!this.choiceTarget && this.choices.length === 0) {
+      this.controllerOptions.interactiveBlacklist = [];
+      return;
+    }
+    try {
+      const scopes = this.collectAccessibleRoots();
+      if (this.choiceTarget) {
+        const all = scopes.flatMap((scope) => [...scope.querySelectorAll('*')]);
+        if (all.length > 20000) {
+          throw Error('SKILL_CHOICE_LIMIT');
+        }
+        this.controllerOptions.interactiveBlacklist = all.filter((element) => element !== this.choiceTarget);
+      } else {
+        this.controllerOptions.interactiveBlacklist = this.choices.length
+          ? protectedChoiceElements(scopes)
+          : [];
+      }
+    } catch {
+      this.choiceIndexFailed = true;
+    }
+  };
+
+  /**
+   * Performs one requirement-bound action and re-observes state; known refusals never dispatch a click.
+   */
+  private async applyChoice(id: string) {
+    if (!this.alive || !this.controller || !this.scopesCurrent()) {
+      return { status: 'page_changed', businessEffect: 'none', next: 'browser_snapshot' };
+    }
+    const choice = this.choices.find((item) => item.id === id);
+    if (!choice) {
+      return { status: 'invalid_requirement', businessEffect: 'none' };
+    }
+    const before = locateChoice(choice, this.scopes);
+    if (before.status !== 'resolved') {
+      return { status: before.status, businessEffect: 'none', next: 'ask_user_question' };
+    }
+    if (before.satisfied) {
+      return { status: 'satisfied', businessEffect: 'none', requirementId: id };
+    }
+    if (
+      (choice.control.role === 'radio' && choice.control.state === false) ||
+      (before.element instanceof HTMLSelectElement &&
+        (before.element.multiple ||
+          !Array.isArray(choice.control.state) ||
+          choice.control.state.length !== 1))
+    ) {
+      return { status: 'unsupported', businessEffect: 'none', next: 'ask_user_question' };
+    }
+    this.choiceTarget = before.activation;
+    this.snapshot = undefined;
+    let dispatched = false;
+    try {
+      await this.controller!.getBrowserState();
+      if (this.choiceIndexFailed) {
+        return { status: 'unsupported', businessEffect: 'none' };
+      }
+      const current = locateChoice(choice, this.scopes);
+      if (
+        !this.alive ||
+        current.status !== 'resolved' ||
+        current.element !== before.element ||
+        current.activation !== before.activation ||
+        !this.scopesCurrent()
+      ) {
+        return { status: 'page_changed', businessEffect: 'none', next: 'browser_snapshot' };
+      }
+      if (current.satisfied) {
+        return { status: 'satisfied', businessEffect: 'none', requirementId: id };
+      }
+      // All other elements were blacklisted synchronously during the same index build.
+      dispatched = true;
+      let result: { success: boolean };
+      if (current.element instanceof HTMLSelectElement && Array.isArray(choice.control.state)) {
+        const desired = choice.control.state[0];
+        const option = [...current.element.options].find((item) => safeRecordingText(item.label) === desired);
+        if (!option) {
+          return { status: 'unavailable', businessEffect: 'none' };
+        }
+        const text = option.textContent?.trim() ?? '';
+        if ([...current.element.options].filter((item) => item.textContent?.trim() === text).length !== 1) {
+          return { status: 'ambiguous', businessEffect: 'none' };
+        }
+        result = await this.controller!.selectOption(0, text);
+      } else {
+        result = await this.controller!.clickElement(0);
+      }
+      const after = locateChoice(choice, this.scopes);
+      if (
+        !result.success ||
+        after.status !== 'resolved' ||
+        !after.satisfied ||
+        !this.alive ||
+        !this.scopesCurrent()
+      ) {
+        return { status: 'outcome_unknown', businessEffect: 'unknown' };
+      }
+      return { status: 'satisfied', businessEffect: 'applied', requirementId: id };
+    } catch {
+      return {
+        status: dispatched ? 'outcome_unknown' : 'unsupported',
+        businessEffect: dispatched ? 'unknown' : 'none',
+      };
+    } finally {
+      this.choiceTarget = undefined;
+      this.controllerOptions.interactiveBlacklist = [];
+    }
+  }
   private controller: PageController | undefined;
   private controllerId = createControllerId();
   private documentId = '';
@@ -36,23 +159,24 @@ export class PageControllerAdapter {
   private busy = false;
   private screenshotRestore: (() => void) | undefined;
   private alive = true;
-  private connectionId = '';
+  private ownerKey = '';
   private taskId = '';
   private ending = false;
   private documentRevision = '';
   private scopeUrls = new Map<Document, string>();
   private scopes: (Document | ShadowRoot)[] = [document];
+  private inaccessibleFrames = 0;
   /**
-   * Collects bounded observable roots, including one same-origin frame level and open shadow DOM.
-   * Rejects unmonitorable frame trees before publishing executable references.
+   * Tracks bounded same-origin document roots while leaving inaccessible frames opaque, as the upstream extractor does.
    */
-  private collectScopes(): (Document | ShadowRoot)[] {
+  private collectAccessibleRoots(): (Document | ShadowRoot)[] {
     const scopes: (Document | ShadowRoot)[] = [];
+    this.inaccessibleFrames = 0;
     let nodes = 0;
     /**
      * Walks accessible roots without assigning or changing PageController indices.
      */
-    const visit = (root: Document | ShadowRoot, depth: number): void => {
+    const visit = (root: Document | ShadowRoot): void => {
       if (scopes.length >= 128) {
         throw new Error('SNAPSHOT_LIMIT');
       }
@@ -62,27 +186,26 @@ export class PageControllerAdapter {
           throw new Error('SNAPSHOT_LIMIT');
         }
         if (element.shadowRoot) {
-          visit(element.shadowRoot, depth);
+          visit(element.shadowRoot);
         }
         if (element.tagName === 'IFRAME' || element.tagName === 'FRAME') {
-          if (depth >= 1) {
-            throw new Error('FORBIDDEN_PAGE');
-          }
           const frame = element as HTMLIFrameElement;
           let child: Document | null;
           try {
             child = frame.contentDocument;
           } catch {
-            throw new Error('FORBIDDEN_PAGE');
+            this.inaccessibleFrames++;
+            continue;
           }
           if (!child) {
-            throw new Error('FORBIDDEN_PAGE');
+            this.inaccessibleFrames++;
+            continue;
           }
-          visit(child, depth + 1);
+          visit(child);
         }
       }
     };
-    visit(document, 0);
+    visit(document);
     return scopes;
   }
   /**
@@ -98,13 +221,14 @@ export class PageControllerAdapter {
     }
   }
   /**
-   * Rejects changed frame/shadow-root ownership without rebuilding the upstream element index.
+   * Checks observed document identity without rebuilding indices. Screenshots and choices also require complete scope coverage.
    */
-  private scopesCurrent() {
-    const current = this.collectScopes();
+  private scopesCurrent(exact = true) {
+    const current = this.collectAccessibleRoots();
+    const present = new Set(current);
     return (
-      current.length === this.scopes.length &&
-      current.every((root, index) => root === this.scopes[index]) &&
+      (!exact || current.length === this.scopes.length) &&
+      this.scopes.every((root) => present.has(root)) &&
       [...this.scopeUrls].every(([root, url]) => root.URL === url)
     );
   }
@@ -130,15 +254,16 @@ export class PageControllerAdapter {
   /**
    * Reconnection invalidates prior page references while allowing an already entered action to finish.
    */
-  bind(connectionId: string, documentRevision: string, taskId?: string) {
+  bind(owner: PageOwner, documentRevision: string, taskId?: string) {
+    const ownerKey = pageOwnerKey(owner);
     if (
-      (this.connectionId && this.connectionId !== connectionId) ||
+      (this.ownerKey && this.ownerKey !== ownerKey) ||
       (this.documentRevision && this.documentRevision !== documentRevision) ||
       (taskId && this.taskId && this.taskId !== taskId)
     ) {
       this.reset(true);
     }
-    this.connectionId = connectionId;
+    this.ownerKey = ownerKey;
     this.documentRevision = documentRevision;
     if (taskId) {
       this.taskId = taskId;
@@ -148,6 +273,9 @@ export class PageControllerAdapter {
    * Invalidates restored or detached contexts without retaining executable references.
    */
   reset(alive: boolean) {
+    this.choiceTarget = undefined;
+    this.choices = [];
+    this.controllerOptions.interactiveBlacklist = [];
     this.finishScreenshot();
     this.alive = alive;
     this.snapshot = undefined;
@@ -160,8 +288,9 @@ export class PageControllerAdapter {
   /**
    * Releases native feedback after an entered action settles; stale task cleanup cannot affect a new task.
    */
-  endTask(taskId: string, connectionId = this.connectionId) {
-    if (this.taskId !== taskId || this.connectionId !== connectionId) {
+  endTask(taskId: string, owner?: PageOwner) {
+    const ownerKey = owner ? pageOwnerKey(owner) : this.ownerKey;
+    if (this.taskId !== taskId || this.ownerKey !== ownerKey) {
       return;
     }
     if (this.busy) {
@@ -169,6 +298,20 @@ export class PageControllerAdapter {
     } else {
       this.reset(true);
     }
+  }
+
+  /**
+   * Confirms old local work has drained before a user acknowledgement releases an uncertain reservation.
+   */
+  releaseIfIdle(taskId: string, owner: PageOwner): { released: boolean } {
+    if (this.taskId !== taskId || this.ownerKey !== pageOwnerKey(owner)) {
+      return { released: true };
+    }
+    if (this.busy || this.screenshotRestore) {
+      return { released: false };
+    }
+    this.endTask(taskId, owner);
+    return { released: true };
   }
   /**
    * Disposes the upstream controller when the extension context ends.
@@ -182,7 +325,11 @@ export class PageControllerAdapter {
    * Temporarily redacts declared sensitive elements without replacing the upstream mask or DOM snapshot.
    */
   beginScreenshot(snapshotId: string, controllerId: string, documentId: string): boolean {
-    if (this.screenshotRestore || !this.snapshotCurrent(snapshotId, controllerId, documentId)) {
+    if (
+      this.screenshotRestore ||
+      !this.snapshotCurrent(snapshotId, controllerId, documentId) ||
+      this.inaccessibleFrames > 0
+    ) {
       return false;
     }
     const saved: { element: HTMLElement; value: string; priority: string; hadStyle: boolean }[] = [];
@@ -266,7 +413,10 @@ export class PageControllerAdapter {
    * Arbitrary scripts stay closed: pnpm patch removes the upstream executeJavascript method; no alternate channel is exposed.
    */
   async execute(raw: unknown) {
-    const command = browserRequestSchema.parse(raw);
+    const command = pageRequestSchema.parse(raw);
+    if (pageOwnerKey(pageOwner(command)) !== this.ownerKey) {
+      throw new Error('TARGET_CHANGED');
+    }
     if (!this.alive) {
       throw new Error('TARGET_CHANGED');
     }
@@ -284,12 +434,16 @@ export class PageControllerAdapter {
       this.taskId = command.taskId;
       const identity = await this.identity();
       const params = command.params;
+      this.choices = 'localRunId' in command ? (command.choiceRequirements ?? []) : [];
       if (!('tabId' in params)) {
         throw new Error('INVALID_MESSAGE');
       }
       if (command.method === 'browser_snapshot') {
         this.snapshot = undefined;
-        this.controller ??= new PageController({ enableMask: true });
+        if (!this.controller) {
+          this.controller = new PageController(this.controllerOptions);
+          this.controller.addEventListener('beforeUpdate', this.prepareChoiceIndex);
+        }
         const controller = this.controller;
         // Native feedback stays visible through observation, actions and caller thinking gaps.
         await controller.showMask();
@@ -297,15 +451,21 @@ export class PageControllerAdapter {
           controller.dispose();
           throw new Error('TARGET_CHANGED');
         }
-        this.rememberScopes(this.collectScopes());
+        this.rememberScopes(this.collectAccessibleRoots());
         const state = await controller.getBrowserState();
+        if (this.choiceIndexFailed) {
+          throw Error('TARGET_CHANGED');
+        }
         if (!this.alive || this.controller !== controller) {
           throw new Error('TARGET_CHANGED');
         }
-        if (state.url !== location.href || state.title !== document.title || !this.scopesCurrent()) {
+        if (state.url !== location.href || !this.scopesCurrent()) {
           throw new Error('TARGET_CHANGED');
         }
         let text = [state.header, state.content, state.footer].join('\n');
+        if (this.inaccessibleFrames) {
+          text += `\n[${this.inaccessibleFrames} 个不可访问的子页面未读取；当前快照仅包含可访问内容，不代表整页权限不足。]`;
+        }
         for (const scope of this.scopes) {
           for (const element of scope.querySelectorAll('input[type="password"],[data-executor-sensitive]')) {
             const values = [
@@ -371,7 +531,23 @@ export class PageControllerAdapter {
       if (command.method === 'browser_read_snapshot') {
         return this.page(command.params.page);
       }
-      if (!this.scopesCurrent()) {
+      if (command.method === 'apply_choice') {
+        return await this.applyChoice(command.params.requirementId);
+      }
+      if ('localRunId' in command && command.method === 'browser_click') {
+        for (const choice of this.choices.filter((item) => choiceOnPage(item, location.href))) {
+          const current = locateChoice(choice, this.scopes);
+          if (current.status !== 'resolved' || !current.satisfied) {
+            return {
+              status: 'choice_required',
+              businessEffect: 'none',
+              requirementId: choice.id,
+              next: 'apply_choice',
+            };
+          }
+        }
+      }
+      if (!this.scopesCurrent(this.choices.length > 0)) {
         throw new Error('TARGET_CHANGED');
       }
       if (!this.controller) {

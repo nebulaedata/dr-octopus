@@ -9,7 +9,7 @@ import { Field, FieldGroup, FieldLabel, FieldDescription } from '@octopus/ui/com
 import { Button, buttonVariants } from '@octopus/ui/components/button';
 import { Input } from '@octopus/ui/components/input';
 import { Switch } from '@octopus/ui/components/switch';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { toast } from '@octopus/ui/components/toast';
 import { memoryScreeningUpdateSchema } from '@octopus/shared/protocol/memory';
 import { memoryScreeningQuery } from '@/queries/memory-queries';
@@ -44,9 +44,7 @@ export function MemoryScreeningCard() {
             <p role="status">{t('memory.settings.screening.loading', 'Loading screening settings…')}</p>
           )}
           {(query.error || jev.error) && (
-            <Alert variant="destructive">
-              <AlertDescription>{query.error?.message ?? jev.error?.message}</AlertDescription>
-            </Alert>
+            <Alert variant="danger" showIcon description={query.error?.message ?? jev.error?.message} />
           )}
           {!jev.isPending && !jev.data?.hasApiKey && (
             <FieldDescription>
@@ -184,17 +182,11 @@ function ScreeningForm({ settings, hasApiKey }: { settings: MemoryScreeningSnaps
         <form.Subscribe selector={(state) => state.errors}>
           {(errors) =>
             errors.length > 0 && (
-              <Alert variant="destructive">
-                <AlertDescription>{errors.map(String).join(' ')}</AlertDescription>
-              </Alert>
+              <Alert variant="danger" showIcon description={errors.map(String).join(' ')} />
             )
           }
         </form.Subscribe>
-        {mutation.error && (
-          <Alert variant="destructive">
-            <AlertDescription>{mutation.error.message}</AlertDescription>
-          </Alert>
-        )}
+        {mutation.error && <Alert variant="danger" showIcon description={mutation.error.message} />}
         <Button type="submit" disabled={mutation.isPending}>
           {mutation.isPending
             ? t('memory.settings.screening.saving', 'Saving…')

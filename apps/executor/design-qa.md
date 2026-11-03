@@ -14,4 +14,4 @@ final result: passed
 
 本次是现有 Electron 产品的定向修改，没有创建网站原型或部署。没有剩余 P0/P1/P2 问题。
 
-图标跟进：按用户 codex-clipboard-802248ea-f2e3-4e13-80b9-a0ddea070e82.png 标注，统一使用 32px 图标槽，普通图标 28px，浏览器组合内品牌各 24px；桌面改为随包 Windows 蓝色 SVG（Devicon，来源与 MIT 许可证在 assets/platforms）。用户裁剪参考与最新完整窗口截图在同次图像输入中比较，确认工具区域视觉尺寸与对齐，不把裁剪差异作为布局偏差。Renderer 构建、类型检查、相关 lint 通过，client-setup 55.7 秒通过；日志 build/tool-icons-ui.log，最终截图 build/tool-overview-dialogs.png。final result: passed。
+图标跟进：按用户 codex-clipboard-802248ea-f2e3-4e13-80b9-a0ddea070e82.png 标注，统一使用 32px 图标槽，普通图标 28px，浏览器组合内品牌各 24px；桌面改为随包 Windows 蓝色 SVG（Devicon，MIT 许可，图标位于 assets/brand）。用户裁剪参考与最新完整窗口截图在同次图像输入中比较，确认工具区域视觉尺寸与对齐，不把裁剪差异作为布局偏差。Renderer 构建、类型检查、相关 lint 通过，client-setup 55.7 秒通过；日志 build/tool-icons-ui.log，最终截图 build/tool-overview-dialogs.png。final result: passed。

@@ -2,9 +2,10 @@
  * @author Claude Code
  * @description Confirms irreversible Skill deletion with explicit consequences.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 
 import { useState } from 'react';
-import { TriangleAlertIcon } from 'lucide-react';
+
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -48,9 +49,13 @@ export function SkillDeleteDialog({ scope, skill, open, onOpenChange }: SkillDel
       await deleteSkill.mutateAsync(skill.name);
       toast.add({
         title: t('skills.deleteDialog.deletedTitle', 'Skill deleted'),
-        description: t('skills.deleteDialog.deletedDescription', 'Skill {{name}} has been removed from this machine.', {
-          name: skill.name,
-        }),
+        description: t(
+          'skills.deleteDialog.deletedDescription',
+          'Skill {{name}} has been removed from this machine.',
+          {
+            name: skill.name,
+          }
+        ),
         type: 'success',
       });
       onOpenChange(false);
@@ -82,24 +87,27 @@ export function SkillDeleteDialog({ scope, skill, open, onOpenChange }: SkillDel
             {t('skills.deleteDialog.irreversible', 'This action cannot be undone.')}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm">
-          <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">{skill?.name}</span>
-            {'. '}
-            {t(
-              'skills.deleteDialog.warning',
-              'This deletes the skill and all {{count}} of its files from {{scope}}; ongoing sessions are unaffected, but new sessions will no longer be able to use it.',
-              {
-                count: skill?.fileCount ?? 0,
-                scope:
-                  scope.kind === 'global'
-                    ? t('skills.deleteDialog.scopeGlobal', 'the user directory on this machine')
-                    : t('skills.deleteDialog.scopeWorkspace', 'the current workspace'),
-              }
-            )}
-          </p>
-        </div>
+        <Alert
+          variant="warning"
+          showIcon
+          description={
+            <p className="text-muted-foreground">
+              <span className="font-medium text-foreground">{skill?.name}</span>
+              {'. '}
+              {t(
+                'skills.deleteDialog.warning',
+                'This deletes the skill and all {{count}} of its files from {{scope}}; ongoing sessions are unaffected, but new sessions will no longer be able to use it.',
+                {
+                  count: skill?.fileCount ?? 0,
+                  scope:
+                    scope.kind === 'global'
+                      ? t('skills.deleteDialog.scopeGlobal', 'the user directory on this machine')
+                      : t('skills.deleteDialog.scopeWorkspace', 'the current workspace'),
+                }
+              )}
+            </p>
+          }
+        />
         {submitError !== null && <p className="text-sm font-medium text-destructive">{submitError}</p>}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -2,6 +2,7 @@
  * @author Codex
  * @description Manages every Workspace schedule and its durable execution history from the Workbench.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { Page } from '@/components/Page';
@@ -294,9 +295,7 @@ export function SchedulesPage({
       <ScrollArea aria-label="content" className="min-h-0 flex-1 overflow-hidden">
         <div className="flex flex-col gap-4 px-1 pb-5">
           {(workspaces.error || mutation.error) && (
-            <p role="alert" className="text-sm text-destructive">
-              {(mutation.error ?? workspaces.error)?.message}
-            </p>
+            <Alert variant="danger" showIcon description={(mutation.error ?? workspaces.error)?.message} />
           )}
           {workspaces.isPending && (
             <p role="status" className="text-sm text-muted-foreground">

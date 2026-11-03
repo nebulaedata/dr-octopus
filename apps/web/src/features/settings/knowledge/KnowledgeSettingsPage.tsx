@@ -10,7 +10,7 @@ import { Button } from '@octopus/ui/components/button';
 import { Spinner } from '@octopus/ui/components/spinner';
 import { Empty, EmptyHeader, EmptyDescription } from '@octopus/ui/components/empty';
 import { Badge } from '@octopus/ui/components/badge';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { getKnowledgeModels, knowledgeService } from '@/api/knowledge';
 import { useI18n } from '@/i18n/use-i18n';
 import { KnowledgeModelCard } from './KnowledgeModelCard';
@@ -139,9 +139,11 @@ export function KnowledgeSettingsPage() {
         </CardContent>
       </Card>
       {service.error || models.error || lifecycle.error ? (
-        <Alert variant="destructive">
-          <AlertDescription>{(lifecycle.error ?? models.error ?? service.error)?.message}</AlertDescription>
-        </Alert>
+        <Alert
+          variant="danger"
+          showIcon
+          description={(lifecycle.error ?? models.error ?? service.error)?.message}
+        />
       ) : null}
       {models.data && active ? (
         (['embedding', 'ocr', 'reranker'] as const).map((kind) => (

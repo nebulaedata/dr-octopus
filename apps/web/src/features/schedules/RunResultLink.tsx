@@ -2,6 +2,7 @@
  * @author Codex
  * @description Resolves a retained execution into its real Session with visible loading and failure states.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowDownRightIcon, LoaderCircleIcon } from 'lucide-react';
@@ -39,11 +40,7 @@ export function RunResultLink({
           : t('schedules.runResult.openSession', 'Open session')}
         <ArrowDownRightIcon data-icon="inline-end" />
       </Button>
-      {result.error && (
-        <p role="alert" className="mt-1 text-sm text-destructive">
-          {result.error.message}
-        </p>
-      )}
+      {result.error && <Alert variant="danger" showIcon description={result.error.message} />}
     </div>
   );
 }

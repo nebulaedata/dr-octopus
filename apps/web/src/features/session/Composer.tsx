@@ -13,7 +13,7 @@ import { useStore } from 'zustand';
 import { MAX_WORKSPACE_REFERENCES } from '@octopus/shared/protocol';
 import { Button } from '@octopus/ui/components/button';
 import { Spinner } from '@octopus/ui/components/spinner';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { cn } from '@octopus/ui/lib/utils';
 import { getAttachmentCapabilities, startAttachmentUpload } from '@/api/attachments';
 import { queryKeys } from '@/queries/core/query-keys';
@@ -1014,14 +1014,15 @@ export function Composer({
         onRetryLocalImage={(file) => attach([file])}
       />
       {hasImages && selectedModel !== undefined && !supportsImages && (
-        <Alert className="mb-3 border-warning/30 bg-warning/10 text-warning-foreground">
-          <AlertDescription>
-            {t(
-              'session.composer.imageModelHint',
-              'This model cannot inspect images. Switch to an image-capable model to send images without text. With text, images remain available as file references.'
-            )}
-          </AlertDescription>
-        </Alert>
+        <Alert
+          className="mb-3"
+          variant="warning"
+          showIcon
+          description={t(
+            'session.composer.imageModelHint',
+            'This model cannot inspect images. Switch to an image-capable model to send images without text. With text, images remain available as file references.'
+          )}
+        />
       )}
       <div
         aria-label="composer"
@@ -1043,11 +1044,7 @@ export function Composer({
           onSubmit={handleEditorSubmit}
           onCommand={handleCommand}
         />
-        {speech.error && (
-          <div role="alert" className="px-4 pb-2 text-xs text-destructive">
-            {speech.error}
-          </div>
-        )}
+        {speech.error && <Alert variant="danger" showIcon description={speech.error} />}
         <ComposerToolbar items={toolbarItems} mode={toolbarMode} />
       </div>
       <RenameSessionDialog

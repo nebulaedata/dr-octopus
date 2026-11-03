@@ -30,7 +30,7 @@ import {
 } from '@octopus/ui/components/select';
 import { Switch } from '@octopus/ui/components/switch';
 import { Textarea } from '@octopus/ui/components/textarea';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Spinner } from '@octopus/ui/components/spinner';
 import { useI18n } from '@/i18n/use-i18n';
 import { mcpFormDefaults, mcpFormInput, mcpTargetChanged } from '../utils/mcp-server-form';
@@ -384,14 +384,14 @@ export function McpServerForm({ server, pending, onSubmit }: McpServerFormProps)
               <form.Subscribe selector={(state) => mcpTargetChanged(state.values, server)}>
                 {(changed) =>
                   changed && (
-                    <Alert>
-                      <AlertDescription>
-                        {t(
-                          'settings.mcp.targetSecretWarning',
-                          'Changing the target clears existing credentials and bindings. Enter new values to use them at the new target.'
-                        )}
-                      </AlertDescription>
-                    </Alert>
+                    <Alert
+                      variant="warning"
+                      showIcon
+                      description={t(
+                        'settings.mcp.targetSecretWarning',
+                        'Changing the target clears existing credentials and bindings. Enter new values to use them at the new target.'
+                      )}
+                    />
                   )
                 }
               </form.Subscribe>
@@ -639,21 +639,17 @@ export function McpServerForm({ server, pending, onSubmit }: McpServerFormProps)
             </details>
           </McpSettingsCard>
           {!!server?.externalFields?.length && (
-            <Alert>
-              <AlertDescription>
-                {t(
-                  'settings.mcp.externalFields',
-                  'Additional settings are managed outside this page: {{fields}}',
-                  { fields: server.externalFields.join(', ') }
-                )}
-              </AlertDescription>
-            </Alert>
+            <Alert
+              variant="info"
+              showIcon
+              description={t(
+                'settings.mcp.externalFields',
+                'Additional settings are managed outside this page: {{fields}}',
+                { fields: server.externalFields.join(', ') }
+              )}
+            />
           )}
-          {error && (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          {error && <Alert role="alert" variant="danger" showIcon description={error} />}
           <div className="sticky bottom-0 flex items-center justify-between gap-3 bg-background/95 py-3 backdrop-blur-sm border-t ring-1 ring-background">
             <p className="text-xs text-muted-foreground">
               {t(

@@ -4,8 +4,8 @@
  */
 
 import { copyTextWithFeedback } from '@/utils/copy-text-with-feedback';
-import { CheckCircleIcon, CopyIcon, ExternalLinkIcon, KeyRoundIcon, TriangleAlertIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { CopyIcon, ExternalLinkIcon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { Separator } from '@octopus/ui/components/separator';
@@ -42,16 +42,17 @@ export function ProviderAuthSessionContent({
   const { t } = useI18n();
   if (error !== undefined) {
     return (
-      <Alert variant="destructive">
-        <TriangleAlertIcon />
-        <AlertTitle>{t('settings.providers.auth.loadFailedTitle', 'Failed to load authentication status')}</AlertTitle>
-        <AlertDescription className="flex flex-col items-start gap-3">
-          <span>{error.message}</span>
+      <Alert
+        variant="danger"
+        showIcon
+        title={t('settings.providers.auth.loadFailedTitle', 'Failed to load authentication status')}
+        description={<span>{error.message}</span>}
+        action={
           <Button variant="outline" size="sm" onClick={onRetry}>
             {t('common.retry', 'Retry')}
           </Button>
-        </AlertDescription>
-      </Alert>
+        }
+      />
     );
   }
   if (pending || session === undefined) {
@@ -105,16 +106,25 @@ function ProviderAuthEvent({ event }: { event: AuthSessionEventDto }) {
   if (event.type === 'auth_url') {
     const url = safeHttpUrl(event.url);
     return (
-      <Alert>
-        <ExternalLinkIcon />
-        <AlertTitle>{t('settings.providers.auth.browserTitle', 'Finish authorization in the browser')}</AlertTitle>
-        <AlertDescription className="flex flex-col items-start gap-3">
-          {event.instructions === undefined ? null : <span>{event.instructions}</span>}
-          {url === undefined ? (
-            <span>
-              {t('settings.providers.auth.unsupportedUrl', 'The provider returned an unsupported authorization URL.')}
-            </span>
-          ) : (
+      <Alert
+        variant={url === undefined ? 'danger' : 'info'}
+        showIcon
+        title={t('settings.providers.auth.browserTitle', 'Finish authorization in the browser')}
+        description={
+          <>
+            {event.instructions === undefined ? null : <span>{event.instructions}</span>}
+            {url === undefined ? (
+              <span>
+                {t(
+                  'settings.providers.auth.unsupportedUrl',
+                  'The provider returned an unsupported authorization URL.'
+                )}
+              </span>
+            ) : null}
+          </>
+        }
+        action={
+          url === undefined ? null : (
             <Button
               variant="outline"
               size="sm"
@@ -123,52 +133,54 @@ function ProviderAuthEvent({ event }: { event: AuthSessionEventDto }) {
               <ExternalLinkIcon data-icon="inline-start" />
               {t('settings.providers.auth.openAuthPage', 'Open authorization page')}
             </Button>
-          )}
-        </AlertDescription>
-      </Alert>
+          )
+        }
+      />
     );
   }
   if (event.type === 'device_code') {
     const url = safeHttpUrl(event.verificationUri);
     return (
-      <Alert>
-        <KeyRoundIcon />
-        <AlertTitle>
-          {t('settings.providers.auth.deviceCodeTitle', 'Device code: {{code}}', { code: event.userCode })}
-        </AlertTitle>
-        <AlertDescription className="flex flex-wrap gap-2 mt-2">
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={() => void copyTextWithFeedback(event.userCode)}
-          >
-            <CopyIcon data-icon="inline-start" />
-            {t('settings.providers.auth.copyCode', 'Copy code')}
-          </Button>
-          {url === undefined ? null : (
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
-            >
-              <ExternalLinkIcon data-icon="inline-start" />
-              {t('settings.providers.auth.openVerification', 'Open verification page')}
+      <Alert
+        variant="info"
+        showIcon
+        title={t('settings.providers.auth.deviceCodeTitle', 'Device code: {{code}}', {
+          code: event.userCode,
+        })}
+        description={null}
+        action={
+          <>
+            <Button variant="outline" size="xs" onClick={() => void copyTextWithFeedback(event.userCode)}>
+              <CopyIcon data-icon="inline-start" />
+              {t('settings.providers.auth.copyCode', 'Copy code')}
             </Button>
-          )}
-        </AlertDescription>
-      </Alert>
+            {url === undefined ? null : (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+              >
+                <ExternalLinkIcon data-icon="inline-start" />
+                {t('settings.providers.auth.openVerification', 'Open verification page')}
+              </Button>
+            )}
+          </>
+        }
+      />
     );
   }
   return (
-    <Alert>
-      <AlertTitle>
-        {event.type === 'progress'
+    <Alert
+      variant="info"
+      showIcon
+      title={
+        event.type === 'progress'
           ? t('settings.providers.auth.progressTitle', 'Authentication progress')
-          : t('settings.providers.auth.promptTitle', 'Provider message')}
-      </AlertTitle>
-      <AlertDescription className="flex flex-col items-start gap-2">
-        <span>{event.message}</span>
-        {event.type === 'info'
+          : t('settings.providers.auth.promptTitle', 'Provider message')
+      }
+      description={<span>{event.message}</span>}
+      action={
+        event.type === 'info'
           ? event.links?.map((link) => {
               const url = safeHttpUrl(link.url);
               return url === undefined ? null : (
@@ -184,9 +196,9 @@ function ProviderAuthEvent({ event }: { event: AuthSessionEventDto }) {
                 </Button>
               );
             })
-          : null}
-      </AlertDescription>
-    </Alert>
+          : null
+      }
+    />
   );
 }
 
@@ -197,43 +209,40 @@ function ProviderAuthResult({ session }: { session: ProviderAuthSessionDto }) {
   const { t } = useI18n();
   if (session.status === 'completed') {
     return (
-      <Alert>
-        <CheckCircleIcon />
-        <AlertTitle>{t('settings.providers.auth.completedTitle', 'Authentication complete')}</AlertTitle>
-        <AlertDescription>
-          {t(
-            'settings.providers.auth.completedDescription',
-            'Provider credentials saved; model availability refreshed.'
-          )}
-        </AlertDescription>
-      </Alert>
+      <Alert
+        variant="success"
+        showIcon
+        title={t('settings.providers.auth.completedTitle', 'Authentication complete')}
+        description={t(
+          'settings.providers.auth.completedDescription',
+          'Provider credentials saved; model availability refreshed.'
+        )}
+      />
     );
   }
   if (session.status === 'committed_but_unsynced') {
     return (
-      <Alert>
-        <TriangleAlertIcon />
-        <AlertTitle>
-          {t('settings.providers.auth.unsyncedTitle', 'Credentials saved, but status not synced yet')}
-        </AlertTitle>
-        <AlertDescription>
-          {t(
-            'settings.providers.auth.unsyncedDescription',
-            'Refresh the provider; restart the service if it does not recover.'
-          )}
-        </AlertDescription>
-      </Alert>
+      <Alert
+        variant="warning"
+        showIcon
+        title={t('settings.providers.auth.unsyncedTitle', 'Credentials saved, but status not synced yet')}
+        description={t(
+          'settings.providers.auth.unsyncedDescription',
+          'Refresh the provider; restart the service if it does not recover.'
+        )}
+      />
     );
   }
   if (session.status === 'failed' || session.status === 'expired' || session.status === 'cancelled') {
     return (
-      <Alert variant="destructive">
-        <TriangleAlertIcon />
-        <AlertTitle>{authStatusLabel(t, session.status)}</AlertTitle>
-        <AlertDescription>
-          {session.error?.message ?? t('settings.providers.auth.retryHint', 'Start authentication again.')}
-        </AlertDescription>
-      </Alert>
+      <Alert
+        variant="danger"
+        showIcon
+        title={authStatusLabel(t, session.status)}
+        description={
+          session.error?.message ?? t('settings.providers.auth.retryHint', 'Start authentication again.')
+        }
+      />
     );
   }
   return null;

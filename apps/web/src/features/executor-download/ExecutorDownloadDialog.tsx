@@ -4,15 +4,8 @@
  */
 
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import {
-  AlertCircleIcon,
-  BookOpenIcon,
-  DownloadIcon,
-  InfoIcon,
-  MonitorIcon,
-  SettingsIcon,
-} from 'lucide-react';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { BookOpenIcon, DownloadIcon, InfoIcon, MonitorIcon, SettingsIcon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button, buttonVariants } from '@octopus/ui/components/button';
 import {
@@ -88,15 +81,14 @@ export function ExecutorDownloadDialog() {
               </div>
             </div>
           </div>
-          <Alert className="border-warning/30 bg-warning/10 text-warning-foreground">
-            <AlertCircleIcon aria-hidden="true" />
-            <AlertDescription className="text-xs leading-relaxed text-warning-foreground">
-              {t(
-                'executorDownload.unsignedNotice',
-                'This unsigned acceptance build has not completed public release validation.'
-              )}
-            </AlertDescription>
-          </Alert>
+          <Alert
+            variant="warning"
+            showIcon
+            description={t(
+              'executorDownload.unsignedNotice',
+              'This unsigned acceptance build has not completed public release validation.'
+            )}
+          />
           {primaryUrl ? (
             <a
               href={primaryUrl}

@@ -4,9 +4,9 @@
  */
 import { useEffect, useId, useRef } from 'react';
 import { useSafeState } from 'ahooks';
-import { ChevronRightIcon, LayersIcon, LoaderCircleIcon, ShieldAlertIcon, SquareIcon } from 'lucide-react';
+import { ChevronRightIcon, LayersIcon, LoaderCircleIcon, SquareIcon } from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import {
   Sheet,
   SheetContent,
@@ -239,13 +239,12 @@ export function BackgroundTasksView({ sessionId, snapshot, onAction }: Backgroun
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5">
             {(snapshot === null || !snapshot.accepting || error || snapshot.error) && (
               <Alert
-                variant={error || snapshot === null || snapshot?.error ? 'destructive' : 'default'}
                 className="mb-5"
-              >
-                <ShieldAlertIcon />
-                <AlertTitle>{renderAlertTitleContent()}</AlertTitle>
-                <AlertDescription>{error ?? renderAlertDescriptionContent(snapshot)}</AlertDescription>
-              </Alert>
+                variant={error || snapshot === null || snapshot?.error ? 'danger' : 'warning'}
+                showIcon
+                title={renderAlertTitleContent()}
+                description={error ?? renderAlertDescriptionContent(snapshot)}
+              />
             )}
             {[
               { title: t('session.backgroundTasks.groupRunning', 'Running'), items: active },

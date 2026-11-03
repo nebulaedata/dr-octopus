@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-28T00:00:00.000Z",
+  "title": "Design System: Dr.Octopus Browser Extension",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Ink 墨色",
+        "canonical": "oklch(0.205 0 0)",
+        "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.25 0 0)", "oklch(0.35 0 0)", "oklch(0.45 0 0)", "oklch(0.55 0 0)", "oklch(0.68 0 0)", "oklch(0.82 0 0)", "oklch(0.95 0 0)"]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite 石墨",
+        "canonical": "oklch(0.145 0 0)",
+        "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.25 0 0)", "oklch(0.35 0 0)", "oklch(0.45 0 0)", "oklch(0.55 0 0)", "oklch(0.68 0 0)", "oklch(0.82 0 0)", "oklch(0.95 0 0)"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper 纸白",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": ["oklch(0.2 0 0)", "oklch(0.32 0 0)", "oklch(0.44 0 0)", "oklch(0.56 0 0)", "oklch(0.68 0 0)", "oklch(0.79 0 0)", "oklch(0.9 0 0)", "oklch(1 0 0)"]
+      },
+      "mist": {
+        "role": "neutral",
+        "displayName": "Mist 薄雾",
+        "canonical": "oklch(0.97 0 0)",
+        "tonalRamp": ["oklch(0.25 0 0)", "oklch(0.36 0 0)", "oklch(0.48 0 0)", "oklch(0.6 0 0)", "oklch(0.72 0 0)", "oklch(0.83 0 0)", "oklch(0.92 0 0)", "oklch(0.97 0 0)"]
+      },
+      "fog": {
+        "role": "neutral",
+        "displayName": "Fog 雾灰",
+        "canonical": "oklch(0.922 0 0)",
+        "tonalRamp": ["oklch(0.25 0 0)", "oklch(0.36 0 0)", "oklch(0.48 0 0)", "oklch(0.6 0 0)", "oklch(0.72 0 0)", "oklch(0.82 0 0)", "oklch(0.92 0 0)", "oklch(0.97 0 0)"]
+      },
+      "ash": {
+        "role": "neutral",
+        "displayName": "Ash 灰烬",
+        "canonical": "oklch(0.556 0 0)",
+        "tonalRamp": ["oklch(0.2 0 0)", "oklch(0.3 0 0)", "oklch(0.4 0 0)", "oklch(0.5 0 0)", "oklch(0.62 0 0)", "oklch(0.74 0 0)", "oklch(0.85 0 0)", "oklch(0.95 0 0)"]
+      },
+      "ring": {
+        "role": "neutral",
+        "displayName": "Ring 灰环",
+        "canonical": "oklch(0.708 0 0)",
+        "tonalRamp": ["oklch(0.2 0 0)", "oklch(0.3 0 0)", "oklch(0.42 0 0)", "oklch(0.54 0 0)", "oklch(0.65 0 0)", "oklch(0.76 0 0)", "oklch(0.87 0 0)", "oklch(0.96 0 0)"]
+      },
+      "signal-red": {
+        "role": "tertiary",
+        "displayName": "Signal Red 信号红",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": ["oklch(0.25 0.09 27)", "oklch(0.35 0.15 27)", "oklch(0.45 0.2 27)", "oklch(0.577 0.245 27.325)", "oklch(0.68 0.2 27)", "oklch(0.78 0.14 27)", "oklch(0.88 0.08 27)", "oklch(0.95 0.03 27)"]
+      },
+      "ledger-green": {
+        "role": "tertiary",
+        "displayName": "Ledger Green 账面绿",
+        "canonical": "oklch(0.62 0.17 150)",
+        "tonalRamp": ["oklch(0.25 0.05 150)", "oklch(0.35 0.09 150)", "oklch(0.45 0.13 150)", "oklch(0.55 0.16 150)", "oklch(0.62 0.17 150)", "oklch(0.72 0.15 150)", "oklch(0.82 0.1 150)", "oklch(0.92 0.05 150)"]
+      }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Title", "purpose": "品牌名、卡片标题、NavigationBar 页面标题与小节标题；14px/600。" },
+      "body": { "displayName": "Body", "purpose": "一切正文、按钮、列表行与表单标签；14px/400。" },
+      "label": { "displayName": "Label", "purpose": "辅助说明、时间、计数与页脚元信息；12px，配 Ash 灰。" },
+      "mono": { "displayName": "Mono", "purpose": "错误码与诊断字段；12px ui-monospace，可换行不断词。" },
+      "meta": { "displayName": "Meta", "purpose": "仅安装实例类截断元信息标识码（连接页 footer）；11px mono，不参与常规文字层级。" }
+    },
+    "shadows": [
+      {
+        "name": "overlay-lift",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "仅用于浮于网页之上的覆盖层（录制浮条）；Popup 内部扁平无投影。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-colors",
+        "value": "color/background-color/border-color 150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "记录行与按钮的灰阶 hover/focus 反馈。"
+      },
+      {
+        "name": "press-sink",
+        "value": "translate-y 1px on :active (transition-all 150ms)",
+        "purpose": "按钮唯一的按压手感。"
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce 时全局 animation/transition 置 none",
+        "purpose": "可访问性硬规则，Popup 与 Shadow Root 均生效。"
+      }
+    ],
+    "breakpoints": [
+      { "name": "popup", "value": "360px x 600px", "purpose": "固定弹出窗口；短屏以 max-h-dvh 兜底。" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "实心 Ink 提交按钮：开始录制、停止保存、保存、加载更多等真实提交动作。",
+      "html": "<button class=\"ds-btn-primary\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"M14 4.1 12 6\"/><path d=\"m5.1 8-2.9-.8\"/><path d=\"m6 12-1.9 2\"/><path d=\"M7.2 2.2 8 5.1\"/><path d=\"M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z\"/></svg>开始录制</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 10px; background: var(--primary, oklch(0.205 0 0)); color: var(--primary-foreground, oklch(0.985 0 0)); font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif; font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; user-select: none; transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: color-mix(in oklch, var(--primary, oklch(0.205 0 0)) 80%, transparent); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: none; border-color: var(--ring, oklch(0.708 0 0)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.708 0 0)) 50%, transparent); } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Fog 描边的次操作：暂停/继续、重试加载等。",
+      "html": "<button class=\"ds-btn-outline\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"14\" height=\"14\" aria-hidden=\"true\"><rect x=\"14\" y=\"3\" width=\"5\" height=\"18\" rx=\"1\"/><rect x=\"5\" y=\"3\" width=\"5\" height=\"18\" rx=\"1\"/></svg>暂停录制</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 32px; padding: 0 10px; border: 1px solid var(--border, oklch(0.922 0 0)); border-radius: 10px; background: var(--background, oklch(1 0 0)); color: var(--foreground, oklch(0.145 0 0)); font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; user-select: none; transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-outline:hover { background: var(--muted, oklch(0.97 0 0)); } .ds-btn-outline:active { transform: translateY(1px); } .ds-btn-outline:focus-visible { outline: none; border-color: var(--ring, oklch(0.708 0 0)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.708 0 0)) 50%, transparent); } .ds-btn-outline:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "10% Signal Red 底的删除等不可逆操作；必须保留页脚内联确认步骤。",
+      "html": "<button class=\"ds-btn-destructive\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"M10 11v6\"/><path d=\"M14 11v6\"/><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\"/><path d=\"M3 6h18\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/></svg>删除录制</button>",
+      "css": ".ds-btn-destructive { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 10px; background: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 10%, transparent); color: var(--destructive, oklch(0.577 0.245 27.325)); font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; user-select: none; transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-destructive:hover { background: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); } .ds-btn-destructive:active { transform: translateY(1px); } .ds-btn-destructive:focus-visible { outline: none; border-color: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 40%, transparent); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); }"
+    },
+    {
+      "name": "Ghost Icon Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "透明底图标按钮：返回、复制、拖动把手；必须带可访问名称与 Tooltip。",
+      "html": "<button class=\"ds-btn-ghost-icon\" aria-label=\"返回\" title=\"返回\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"m12 19-7-7 7-7\"/><path d=\"M19 12H5\"/></svg></button>",
+      "css": ".ds-btn-ghost-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--foreground, oklch(0.145 0 0)); cursor: pointer; transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-ghost-icon:hover { background: var(--muted, oklch(0.97 0 0)); } .ds-btn-ghost-icon:active { transform: translateY(1px); } .ds-btn-ghost-icon:focus-visible { outline: none; border-color: var(--ring, oklch(0.708 0 0)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.708 0 0)) 50%, transparent); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-secondary",
+      "description": "状态徽章：default（Ink 底）= 健康/正向，secondary（Mist 底）= 中性/降级；图标与文字等高同距。",
+      "html": "<span class=\"ds-badge ds-badge-default\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"12\" height=\"12\" aria-hidden=\"true\"><path d=\"M21.801 10A10 10 0 1 1 17 3.335\"/><path d=\"m9 11 3 3L22 4\"/></svg>已连接</span> <span class=\"ds-badge ds-badge-secondary\">已保存</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 8px; border: 1px solid transparent; font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif; font-size: 12px; font-weight: 500; white-space: nowrap; } .ds-badge-default { background: var(--primary, oklch(0.205 0 0)); color: var(--primary-foreground, oklch(0.985 0 0)); } .ds-badge-secondary { background: var(--secondary, oklch(0.97 0 0)); color: var(--secondary-foreground, oklch(0.205 0 0)); }"
+    },
+    {
+      "name": "Card (sm)",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Popup 内容卡片：xl 圆角、Fog 细线边框、无投影；标题 + 描述 + 内容 + 页脚操作。",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><div class=\"ds-card-title\">新建录制</div></div><div class=\"ds-card-content\"><div class=\"ds-card-summary\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"20\" height=\"20\" aria-hidden=\"true\"><path d=\"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z\"/><path d=\"M14 2v5a1 1 0 0 0 1 1h5\"/></svg><div class=\"ds-card-summary-text\"><span class=\"ds-card-summary-title\">订单管理后台</span><span class=\"ds-card-summary-sub\">https://erp.example.com</span></div></div></div><div class=\"ds-card-footer\"><button class=\"ds-card-cta\">开始录制</button></div></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 16px; padding: 16px; border: 1px solid var(--border, oklch(0.922 0 0)); border-radius: 14px; background: var(--card, oklch(1 0 0)); color: var(--card-foreground, oklch(0.145 0 0)); font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif; } .ds-card-title { font-size: 14px; font-weight: 600; line-height: 1.5; } .ds-card-content { display: flex; flex-direction: column; gap: 16px; } .ds-card-summary { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; background: var(--muted, oklch(0.97 0 0)); } .ds-card-summary-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; } .ds-card-summary-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-card-summary-sub { font-size: 12px; color: var(--muted-foreground, oklch(0.556 0 0)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-card-footer { display: flex; gap: 8px; } .ds-card-cta { flex: 1; height: 32px; border: none; border-radius: 10px; background: var(--primary, oklch(0.205 0 0)); color: var(--primary-foreground, oklch(0.985 0 0)); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 150ms; } .ds-card-cta:hover { background: color-mix(in oklch, var(--primary, oklch(0.205 0 0)) 80%, transparent); }"
+    },
+    {
+      "name": "Search InputGroup",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "列表搜索：前置 Search 图标的 InputGroup；关键词变化重置游标并查询完整存储范围。",
+      "html": "<div class=\"ds-input-group\"><span class=\"ds-input-addon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"/><circle cx=\"11\" cy=\"11\" r=\"8\"/></svg></span><input class=\"ds-input\" type=\"search\" placeholder=\"搜索全部录制\" aria-label=\"搜索全部录制\" /></div>",
+      "css": ".ds-input-group { display: flex; align-items: center; height: 32px; border: 1px solid var(--input, oklch(0.922 0 0)); border-radius: 10px; background: var(--background, oklch(1 0 0)); transition: border-color 150ms, box-shadow 150ms; } .ds-input-group:focus-within { border-color: var(--ring, oklch(0.708 0 0)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.708 0 0)) 50%, transparent); } .ds-input-addon { display: inline-flex; align-items: center; padding: 0 8px; color: var(--muted-foreground, oklch(0.556 0 0)); } .ds-input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif; font-size: 14px; color: var(--foreground, oklch(0.145 0 0)); } .ds-input::placeholder { color: var(--muted-foreground, oklch(0.556 0 0)); }"
+    },
+    {
+      "name": "Record Row",
+      "kind": "custom",
+      "refersTo": "row-record",
+      "description": "可点击录制记录行（Signature）：整行语义 button、灰阶 hover/active、尾部 chevron；只读事件行不得模仿此样式。",
+      "html": "<button class=\"ds-record-row\" type=\"button\"><span class=\"ds-record-main\"><span class=\"ds-record-name\">季度报表导出流程</span><span class=\"ds-record-meta\">23 步 · 10/27/2026</span></span><span class=\"ds-record-badge\">已保存</span><svg class=\"ds-record-chevron\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"16\" height=\"16\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></button>",
+      "css": ".ds-record-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 64px; padding: 12px 8px; border: none; border-radius: 10px; background: transparent; text-align: left; cursor: pointer; font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-record-row:hover { background: var(--muted, oklch(0.97 0 0)); } .ds-record-row:active { background: var(--accent, oklch(0.97 0 0)); } .ds-record-row:focus-visible { background: var(--muted, oklch(0.97 0 0)); outline: 2px solid var(--ring, oklch(0.708 0 0)); outline-offset: -2px; } .ds-record-main { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; } .ds-record-name { font-size: 14px; font-weight: 500; color: var(--foreground, oklch(0.145 0 0)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-record-meta { font-size: 12px; color: var(--muted-foreground, oklch(0.556 0 0)); font-variant-numeric: tabular-nums; } .ds-record-badge { padding: 2px 8px; border-radius: 8px; background: var(--secondary, oklch(0.97 0 0)); color: var(--secondary-foreground, oklch(0.205 0 0)); font-size: 12px; font-weight: 500; white-space: nowrap; } .ds-record-chevron { flex-shrink: 0; color: var(--muted-foreground, oklch(0.556 0 0)); transition: color 150ms; } .ds-record-row:hover .ds-record-chevron { color: var(--foreground, oklch(0.145 0 0)); }"
+    },
+    {
+      "name": "Recording Toolbar",
+      "kind": "custom",
+      "refersTo": "recording-toolbar",
+      "description": "页面内录制浮条（Signature）：唯一允许 shadow-lg 的覆盖层；红点 = 录制中，灰点 = 已暂停；可拖动、可收起。",
+      "html": "<div class=\"ds-toolbar\" role=\"region\" aria-label=\"Dr.Octopus 录制工具栏\"><button class=\"ds-toolbar-grip\" aria-label=\"拖动录制工具栏\" title=\"拖动录制工具栏\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"14\" height=\"14\" aria-hidden=\"true\"><circle cx=\"9\" cy=\"12\" r=\"1\"/><circle cx=\"9\" cy=\"5\" r=\"1\"/><circle cx=\"9\" cy=\"19\" r=\"1\"/><circle cx=\"15\" cy=\"12\" r=\"1\"/><circle cx=\"15\" cy=\"5\" r=\"1\"/><circle cx=\"15\" cy=\"19\" r=\"1\"/></svg></button><span class=\"ds-toolbar-status\"><span class=\"ds-toolbar-dot\"></span>录制中</span><span class=\"ds-toolbar-time\">03:12</span><span class=\"ds-toolbar-count\">23 步 · 1 个页面</span><button class=\"ds-toolbar-pause\">暂停</button><button class=\"ds-toolbar-stop\">停止保存</button></div>",
+      "css": ".ds-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; padding: 8px; border: 1px solid var(--border, oklch(0.922 0 0)); border-radius: 14px; background: var(--background, oklch(1 0 0)); color: var(--foreground, oklch(0.145 0 0)); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif; } .ds-toolbar-grip { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; border-radius: 10px; background: transparent; color: inherit; cursor: move; touch-action: none; } .ds-toolbar-grip:hover { background: var(--muted, oklch(0.97 0 0)); } .ds-toolbar-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; } .ds-toolbar-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--destructive, oklch(0.577 0.245 27.325)); } .ds-toolbar-time { font-size: 12px; font-variant-numeric: tabular-nums; } .ds-toolbar-count { font-size: 12px; color: var(--muted-foreground, oklch(0.556 0 0)); } .ds-toolbar-pause { height: 28px; padding: 0 10px; border: 1px solid var(--border, oklch(0.922 0 0)); border-radius: 10px; background: var(--background, oklch(1 0 0)); font-size: 12.8px; font-weight: 500; cursor: pointer; } .ds-toolbar-pause:hover { background: var(--muted, oklch(0.97 0 0)); } .ds-toolbar-stop { height: 28px; padding: 0 10px; border: none; border-radius: 10px; background: var(--primary, oklch(0.205 0 0)); color: var(--primary-foreground, oklch(0.985 0 0)); font-size: 12.8px; font-weight: 500; cursor: pointer; } .ds-toolbar-stop:hover { background: color-mix(in oklch, var(--primary, oklch(0.205 0 0)) 80%, transparent); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Studio Monitor（监视器）",
+    "overview": "这是一台别在浏览器工具栏上的小型监视器：业务用户一眼读懂连接与录制状态，控件触手可及，其余一切退到黑白灰之后。界面不说服、不表演，只在状态变化时开口——录制红点、异常标题、缺口提示是仅有的\"声音\"。密度优先于留白：360×600 的固定窗口里，每一像素都要么是信息，要么是操作。美学哲学是\"仪器感\"而非\"生产力软件感\"：圆角边框与浅灰分区提供温和的结构，但没有任何装饰性渐变、插画或品牌色铺陈。已确认的反面参考：彩色营销风、整页滚动、装饰性图标与冗余常驻提示文案。",
+    "keyCharacteristics": [
+      "黑白灰为唯一基调；红色只表示录制中/异常，绿色只表示瞬时成功反馈",
+      "固定外框：品牌栏、Tab、导航、底部操作固定，正文唯一 ScrollArea 滚动",
+      "两级字号（14px / 12px），层级靠字重与灰阶而非字号堆叠",
+      "紧凑安静的仪器控件：hover 灰阶反馈、active 下沉 1px、禁用降透明",
+      "诚实呈现：缺口、部分保存、失败原因如实表达，不以成功态掩盖"
+    ],
+    "rules": [
+      { "name": "The Two Signals Rule（双信号灯规则）", "body": "全界面只有红与绿两枚彩色信号：红 = 录制中或异常，绿 = 瞬时成功确认。其余一切——包括品牌——保持灰阶。新颜色进入系统前必须先回答\"它是什么信号\"。", "section": "colors" },
+      { "name": "The Dark Mirror Rule（暗色镜像规则）", "body": "深色模式是同一套灰阶的镜像反转，跟随 prefers-color-scheme，不引入第二套彩色主题；注入页面的 Shadow Root 自带中性 token，不继承站点颜色。", "section": "colors" },
+      { "name": "The Two Sizes Rule（两级字号规则）", "body": "Popup 常规文字只有 14px 与 12px 两级字号；11px 是 meta 角色，仅属于安装实例类截断标识码。需要更强层级时，先加字重，再降灰阶，不许加第三级正文字号。", "section": "typography" },
+      { "name": "The One Viewport Rule（单视口规则）", "body": "任一时刻 Popup 内只有一个滚动视口——正文的共享 ScrollArea。滚动位置的保存与恢复绑定真实 viewport，不依赖外层 div。", "section": "layout" },
+      { "name": "The Flat Interior Rule（内部扁平规则）", "body": "Popup 内任何卡片、列表、表单不添加投影；需要分层时先边框、再 Mist 底。投影是\"我浮在你的页面上\"的声明，Popup 没有这句话要说。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 让正文独占一个共享 ScrollArea，导航/搜索/底部操作固定在视口内（360×600，短屏用 max-h-dvh 兜底）。",
+      "Do 用 14px/12px 两级字号 + 字重 + 灰阶表达层级；时间与计数一律 tabular-nums。",
+      "Do 提交动作用实心 Ink 按钮，删除用 destructive 并保留页脚内联确认。",
+      "Do 如实标注状态：缺口、部分保存、暂停、中断各有其名；录制红点与成功绿勾是仅有的彩色。",
+      "Do 给每个图标按钮可访问名称与 Tooltip，记录行支持键盘 Enter/Space 与 focus-visible 环。",
+      "Do 保留浅/深色与 reduced-motion（reduce 时全局关闭动画与过渡）。"
+    ],
+    "donts": [
+      "Don't 引入除 Signal Red / Ledger Green 之外的彩色；品牌也不铺色。",
+      "Don't 给 Popup 内部卡片/列表加投影；投影只属于浮于网页的覆盖层。",
+      "Don't 给只读事件行添加箭头、hover 或点击暗示；不给未开放功能渲染可点入口。",
+      "Don't 用常驻提示块重复说明；权限、敏感信息隐藏、缺口与恢复提示按需出现。",
+      "Don't 让外层 body 滚动或叠加第二个滚动容器；不为单页设置孤立固定高度。",
+      "Don't 把\"已整理/已保存\"暗示为\"已审阅可运行\"；停止是保存操作，不设为丢弃。",
+      "Don't 直接修改 packages/ui 共享 shadcn 源组件——通过 props、className 或应用级包装定制。"
+    ]
+  }
+}

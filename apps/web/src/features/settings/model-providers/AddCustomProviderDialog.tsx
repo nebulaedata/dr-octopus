@@ -4,7 +4,7 @@
  */
 import { useForm } from '@tanstack/react-form';
 import { CreateCustomProviderBodySchema } from '@octopus/shared/protocol';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Avatar, AvatarFallback, AvatarImage } from '@octopus/ui/components/avatar';
 import { Button } from '@octopus/ui/components/button';
 import {
@@ -153,20 +153,18 @@ export function AddCustomProviderDialog({
             </form.Field>
           </FieldGroup>
           {runtimes.isError && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {t('settings.providers.local.runtimesFailed', 'Failed to load provider types.')}
+            <Alert
+              variant="danger"
+              showIcon
+              description={t('settings.providers.local.runtimesFailed', 'Failed to load provider types.')}
+              action={
                 <Button type="button" variant="outline" size="sm" onClick={() => void runtimes.refetch()}>
                   {t('common.retry', 'Retry')}
                 </Button>
-              </AlertDescription>
-            </Alert>
+              }
+            />
           )}
-          {create.isError && (
-            <Alert variant="destructive">
-              <AlertDescription>{create.error.message}</AlertDescription>
-            </Alert>
-          )}
+          {create.isError && <Alert variant="danger" showIcon description={create.error.message} />}
           <DialogFooter>
             <Button type="button" variant="outline" disabled={create.isPending} onClick={onClose}>
               {t('common.cancel', 'Cancel')}

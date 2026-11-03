@@ -37,7 +37,7 @@ export async function readConnectionSettings() {
 }
 
 /**
- * Saves next-start listener choices without restarting or cancelling a task.
+ * Saves the complete page draft, including tool policies, without restarting or cancelling a task.
  */
 export async function saveConnectionSettings(input: SettingsInput) {
   if (!window.executor) {

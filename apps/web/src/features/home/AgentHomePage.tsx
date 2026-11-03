@@ -4,7 +4,7 @@
  */
 import { useRef, useState } from 'react';
 import { Button } from '@octopus/ui/components/button';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { OctopusLogo } from '@/components/OctopusLogo';
 import { Composer } from '@/features/session';
 import { ModelSetupDialog } from './ModelSetupDialog';
@@ -134,32 +134,39 @@ function HomeDraft({
           }}
         />
         {(error || operation.data?.error || operation.isError) && (
-          <Alert variant="destructive" className="mt-3">
-            <AlertDescription>
-              {error ??
-                operation.data?.error ??
-                t(
-                  'home.statusUnavailable',
-                  'Submission status is unavailable. Retry to check the same request.'
+          <Alert
+            className="mt-3"
+            variant="danger"
+            showIcon
+            description={
+              error ??
+              operation.data?.error ??
+              t(
+                'home.statusUnavailable',
+                'Submission status is unavailable. Retry to check the same request.'
+              )
+            }
+            action={
+              <>
+                {conflict && (
+                  <Button variant="outline" size="sm" onClick={separateDraft}>
+                    {t('home.separateDraft', 'Keep input in a separate conversation')}
+                  </Button>
                 )}
-              {conflict && (
-                <Button variant="outline" size="sm" onClick={separateDraft}>
-                  {t('home.separateDraft', 'Keep input in a separate conversation')}
-                </Button>
-              )}
-              {submission && operation.isError && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    await post(submission);
-                  }}
-                >
-                  {t('common.retry', 'Retry')}
-                </Button>
-              )}
-            </AlertDescription>
-          </Alert>
+                {submission && operation.isError && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      await post(submission);
+                    }}
+                  >
+                    {t('common.retry', 'Retry')}
+                  </Button>
+                )}
+              </>
+            }
+          />
         )}
       </div>
     </section>

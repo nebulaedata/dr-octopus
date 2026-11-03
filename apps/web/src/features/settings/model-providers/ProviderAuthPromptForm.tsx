@@ -4,8 +4,8 @@
  */
 
 import { useForm } from '@tanstack/react-form';
-import { TriangleAlertIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
 import { Input } from '@octopus/ui/components/input';
@@ -58,7 +58,9 @@ export function ProviderAuthPromptForm({ providerKey, authSessionId, prompt }: P
           name="answer"
           validators={{
             onSubmit: ({ value }) =>
-              value.length === 0 ? t('settings.providers.auth.answerRequired', 'Fill in the authentication information.') : undefined,
+              value.length === 0
+                ? t('settings.providers.auth.answerRequired', 'Fill in the authentication information.')
+                : undefined,
           }}
         >
           {(field) => (
@@ -116,11 +118,12 @@ export function ProviderAuthPromptForm({ providerKey, authSessionId, prompt }: P
           )}
         </form.Field>
         {submission.error === undefined ? null : (
-          <Alert variant="destructive">
-            <TriangleAlertIcon />
-            <AlertTitle>{t('settings.providers.auth.submitFailed', 'Submission failed')}</AlertTitle>
-            <AlertDescription>{submission.error.message}</AlertDescription>
-          </Alert>
+          <Alert
+            variant="danger"
+            showIcon
+            title={t('settings.providers.auth.submitFailed', 'Submission failed')}
+            description={submission.error.message}
+          />
         )}
         <form.Subscribe selector={(state) => ({ canSubmit: state.canSubmit, answer: state.values.answer })}>
           {({ canSubmit, answer }) => (

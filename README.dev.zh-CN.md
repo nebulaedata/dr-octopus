@@ -12,16 +12,15 @@ Octopus 是一个本地优先、以 Workspace 为边界的通用智能体系统�
 
 ### Executor 验收构建
 
-Executor 目标为 Windows x64。先按[首次环境与资源准备](docs/architecture/executor-delivery.md#首次环境与资源准备)配置 Node 22.19+、pnpm 11+、MSVC/Windows SDK、固定原生头文件、私有资源与打包工具。准备完成后，在仓库根目录的 PowerShell 中依次执行，每一步成功后再继续：
+Executor 目标为 Windows x64。安装仓库依赖并准备 Node 22.19+、pnpm 11+、MSVC/Windows SDK，按[身份构建流程](apps/browser-extension/RELEASE.md#33-配置身份并重新构建)配置浏览器身份后，在仓库根目录的 PowerShell 中执行：
 
 ```powershell
-pnpm --filter @octopus/shared build
-pnpm --filter @octopus/browser-extension build
-pnpm --filter @octopus/executor build
-pnpm --filter @octopus/executor package:acceptance
+pnpm build:executor
 ```
 
-`--filter @octopus/executor` 选择 Executor 子项目；`package:acceptance` 执行验收打包脚本，读取已有 Executor dist 与两份插件产物，不自动构建或装配缺失资源。每次生成新的 `apps/executor/release/<version>-unsigned-<UUID>/`，包含未签名安装程序、ZIP、清单与验收工具。源码或文档更新不会改变既有包。
+该命令自动准备缺失的固定头文件、Node/Python、搜索资源与打包工具，依次构建 shared、Chrome/Edge 插件、Executor，再生成未签名安装程序、ZIP、清单与验收工具；任一步失败即停止。首次缺失资源时需要联网，已有资源复用并由原有构建/打包流程校验，不自动覆盖或修复。产物位于新的 `apps/executor/release/<version>-unsigned-<UUID>/`。可用 `pnpm build:executor --output-root D:/ExecutorBuilds` 指定产物根目录。
+
+仅编译使用 `pnpm --filter @octopus/executor build`；仅打包已有产物使用 `pnpm --filter @octopus/executor package:acceptance`。底层命令不自动装配缺失资源，手动准备见[交付指南](docs/architecture/executor-delivery.md#首次环境与资源准备)。源码或文档更新不会改变既有包。
 
 Windows 的 MCP 命令工具为 powershell，使用系统 Windows PowerShell 5.1，不再装配或携带 PortableGit。Node/Python 和搜索工具仍随包。Linux/macOS 仅显式分支与注释占位，尚未支持；契约和清理范围见 [ADR-0084](docs/adr/0084-executor-system-shell.md)。
 
@@ -29,9 +28,26 @@ Windows 的 MCP 命令工具为 powershell，使用系统 Windows PowerShell 5.1
 
 再次执行 `pnpm dev:executor` 时，如果已有程序占用原生模块，会显示开发启动提示：选择“继续使用已有执行器”可打开当前实例（不会编译新代码）；如需重建，从系统托盘完整退出执行器并停止使用该构建目录的适配器，再点击“重新检查并构建”。“取消”保留当前实例并结束本次启动。关闭窗口可能仅隐藏到托盘，不能代替完整退出。
 
+### 浏览器插件实时调试
+
+在仓库根目录执行：
+
+```powershell
+pnpm dev:browser-extension          # Chrome
+pnpm dev:browser-extension -b edge  # Edge
+```
+
+加载开发目录、Popup/Worker/内容脚本断点、热更新范围与排错见[浏览器插件开发与实时调试指南](apps/browser-extension/README.dev.zh-CN.md)。
+
 ### 浏览器插件构建
 
-只构建插件时执行上面前两条命令。`build` 先完成 WXT 双目标，再写入依赖许可证，产物为 `apps/browser-extension/.output/chrome-mv3` 和 `.output/edge-mv3`。不分发构建未完成的目标或省略许可证。
+只构建插件时，在仓库根目录执行：
+
+```powershell
+pnpm build:browser-extension
+```
+
+该命令通过 Turbo 先构建 shared，再构建插件，并复用有效的构建缓存。插件 `build` 先完成 WXT 双目标，再写入依赖许可证，产物为 `apps/browser-extension/.output/chrome-mv3` 和 `.output/edge-mv3`。不分发构建未完成的目标或省略许可证。
 
 成功构建后按[插件 ZIP 流程](apps/browser-extension/RELEASE.md#4-构建检查并生成提交-zip)在 `.output` 外保存归档。更新插件后重新加载完整目录；交付 Executor 内置副本时重新打包。验证与交付约束见[插件项目规则](apps/browser-extension/AGENTS.md)。
 

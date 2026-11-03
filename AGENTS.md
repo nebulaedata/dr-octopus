@@ -32,7 +32,7 @@ Keep this index updated when project-level `AGENTS.md` files are added, moved, o
 
 ## Code Development Standards
 
-Read and follow [Code Development Standards](docs/code-development-standards.md) for all code changes. It defines repository layout, layering, coding, lifecycle, and verification rules. Its layout and abstraction rules take precedence over conflicting older guidance; all other applicable instructions and protected boundaries remain in force.
+Read and follow [Code Development Standards](docs/guides/code-development-standards.md) for all code changes. It defines repository layout, layering, coding, lifecycle, and verification rules. Its layout and abstraction rules take precedence over conflicting older guidance; all other applicable instructions and protected boundaries remain in force.
 
 ## Protected Core Boundaries
 
@@ -50,10 +50,37 @@ Tests use `node:test`, are named `*.test.mjs`, and keep fixtures deterministic. 
 
 ## Documentation Boundaries
 
+- Before creating, moving, or reorganizing documentation under `docs/`, read and follow the [Documentation Filing Rules](docs/README.md#归档规则) and directory table. That document owns directory placement and the requirement to obtain user approval before adding any directory, including subdirectories.
 - Product READMEs explain installation and usage, with links to development guides. Put source setup, build commands and packaging instructions in `README.dev.md` / `README.dev.zh-CN.md` or the relevant scoped guide.
 - This root file owns repository-wide rules and the project instruction index. Application-specific build, verification and delivery rules belong in that application's `AGENTS.md`; keep procedural tutorials in the linked guides.
 - Keep user installation instructions and release SOPs in the owning application's `INSTALLATION.md` and `RELEASE.md`. Maintain architecture and ADRs under `docs/`; indexes link to these documents rather than repeat their content.
 - Maintain one authoritative detailed procedure per responsibility. Keep current validation status separate from enduring rules, preserve original evidence, and distinguish executable commands from pending integration. Packaged/offline instructions must not require unavailable repository-relative links.
+- Store architecture-related feasibility studies, design reviews, test plans, acceptance matrices and validation records in `docs/poc/` (Proof of Concept). Keep design contracts in `docs/architecture/` and decisions in `docs/adr/`; link to PoC records instead of duplicating verification sections. Preserve original dates, failures, evidence locations and the distinction between planned and completed validation. Maintain the `docs/poc/README.md` index.
+
+## Visual Design Artifacts
+
+- Store product visual drafts under `docs/design/<feature>/`, using a descriptive kebab-case feature name; browser extension recorder designs belong in `docs/design/browser-extension-recorder/`.
+- Copy selected designs and subsequent review drafts into the repository before handoff; do not leave the only copy in chat, an OS temporary directory, or the image generator's default output directory. Preserve originals and create versioned filenames such as `recording-popup-v1.png`; do not overwrite approved drafts.
+- Maintain a `README.md` in each feature's design directory with preview links, source/provenance, generation method and prompt records, revision relationships, review status, and links to the owning architecture document. Distinguish `selected direction`, `pending review`, `approved`, and `superseded`; continued iteration does not imply approval of every detail. Exception: for `docs/design/browser-extension-recorder/`, the design specifications and authoritative status registry live in `apps/browser-extension/DESIGN.md` and the design-directory `README.md` is links only; images and prompt records remain in the design directory.
+- Keep the user-selected visual target identifiable. Archive unselected alternatives separately only when useful, and do not label them as approved. Reference screenshots and generated mockups must be distinguished from screenshots of implemented UI and test evidence.
+- Visual approval authorizes design refinement only; it does not authorize implementation, architecture changes, or publication unless the user explicitly requests them. Design indexes record unresolved interaction decisions without silently rewriting the architecture baseline.
+- Use synthetic or redacted data in committed visual artifacts; never include real credentials, private customer data, or unredacted sensitive screenshots. Product runtime assets remain in their owning application's asset directory rather than being loaded from `docs/design/`.
+
+### Visual Acceptance and Copy Flexibility
+
+- Visual acceptance evaluates the overall palette, layout, hierarchy, component styling and interaction structure; mockup text is illustrative, not a verbatim implementation requirement. Unless the user explicitly fixes particular wording, agents may shorten, clarify or adapt labels, descriptions and sample content to the actual feature without regenerating a visual draft or requesting renewed visual approval.
+- Copy-only differences do not invalidate an approved visual target or require a status change. Verify the resulting text still fits the approved layout and remains readable; substantial layout or interaction changes continue to follow visual review rules.
+- Copy must accurately describe approved behavior, especially permissions, privacy, data handling, destructive actions and completion states. Wording flexibility does not authorize changing those behaviors or commitments.
+
+### Visual Review Status and Retirement
+
+- The feature design `README.md` is the authoritative status registry; for browser extension recorder designs the registry lives in `apps/browser-extension/DESIGN.md` instead (the design-directory `README.md` only links to it). Use exactly these statuses: `pending review`（待审阅）, `selected direction`（已选方向）, `approved`（已批准）, `revision required`（需修订）, `superseded`（已替代）, and `deprecated`（已弃用）. Prompt logs and historical approval notes are provenance, not the current authority.
+- For each artifact, record its filename/version, status, applicable scope, status-change date, reason, and replacement link (or explicitly `none yet`). Keep current targets separate from historical or blocked drafts. Never choose an implementation target by highest version number or filename alone.
+- When user feedback invalidates any part of an approved draft, mark it `revision required` in the same work session and name the invalidated region or behavior. Unaffected parts may remain reference material only when explicitly listed; the invalidated portion must not guide new implementation. Do not describe the entire file as an unqualified approved target.
+- A new draft remains `pending review` until explicitly approved. Once approved for the same scope, mark the older target `superseded` and link both directions. Use `deprecated` when the design is explicitly abandoned without a replacement; use `superseded` when a replacement exists. An abandoned or replaced draft must not return to approved status implicitly.
+- Preserve original images and prompts without destructive overwrites. Mark retirement in the registry and review history, not by painting over the original image. If files are moved into an archive directory, update all links in the same change; moving is optional, accurate status is mandatory.
+- Before UI implementation, agents must read the registry and confirm that the target is approved for the affected scope. A selected direction permits exploration, not automatic approval of detailed screens. When the user requires new visuals before substantial frontend changes, generate and archive the revised draft first, obtain its approval, then implement that change. Existing authorization for independent backend work remains in force.
+- At handoff, report newly approved, revision-required, superseded or deprecated artifacts and verify their links. Visual approval, implementation authorization and runtime verification remain three distinct facts.
 
 ## Code Conventions
 

@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { CloudUploadIcon, FileArchiveIcon, FileTextIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { CloudUploadIcon, FileArchiveIcon, FileTextIcon, XIcon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -237,19 +237,20 @@ export function SkillUploadDialog({
           </div>
         )}
         {conflictMessage !== null && (
-          <Alert variant="destructive">
-            <TriangleAlertIcon />
-            <AlertTitle>
-              {t('skills.uploadDialog.conflictTitle', 'A skill with the same name already exists')}
-            </AlertTitle>
-            <AlertDescription>
-              {conflictMessage}{' '}
-              {t(
-                'skills.uploadDialog.conflictSuffix',
-                'Confirming will completely replace the original skill files.'
-              )}
-            </AlertDescription>
-          </Alert>
+          <Alert
+            variant="warning"
+            showIcon
+            title={t('skills.uploadDialog.conflictTitle', 'A skill with the same name already exists')}
+            description={
+              <>
+                {conflictMessage}{' '}
+                {t(
+                  'skills.uploadDialog.conflictSuffix',
+                  'Confirming will completely replace the original skill files.'
+                )}
+              </>
+            }
+          />
         )}
         {fileError !== null && <p className="text-sm font-medium text-destructive">{fileError}</p>}
         <DialogFooter>

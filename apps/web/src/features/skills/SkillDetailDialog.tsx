@@ -4,7 +4,7 @@
  */
 
 import { FilePenLineIcon, FileIcon, Trash2Icon, TriangleAlertIcon, WandSparklesIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import {
@@ -73,15 +73,16 @@ export function SkillDetailDialog({
           </div>
         )}
         {detail.isError && (
-          <Alert variant="destructive">
-            <TriangleAlertIcon />
-            <AlertTitle>{t('skills.detailDialog.loadFailed', 'Failed to load')}</AlertTitle>
-            <AlertDescription>
-              {detail.error instanceof Error
+          <Alert
+            variant="danger"
+            showIcon
+            title={t('skills.detailDialog.loadFailed', 'Failed to load')}
+            description={
+              detail.error instanceof Error
                 ? detail.error.message
-                : t('skills.detailDialog.loadFailedFallback', 'Unable to read the skill details.')}
-            </AlertDescription>
-          </Alert>
+                : t('skills.detailDialog.loadFailedFallback', 'Unable to read the skill details.')
+            }
+          />
         )}
         {skill !== undefined && (
           <div className="flex min-h-0 flex-col gap-4">
@@ -97,17 +98,18 @@ export function SkillDetailDialog({
               })}
             </p>
             {skill.warnings.length > 0 && (
-              <Alert>
-                <TriangleAlertIcon />
-                <AlertTitle>{t('skills.detailDialog.warningsTitle', 'Loader warnings')}</AlertTitle>
-                <AlertDescription>
+              <Alert
+                variant="warning"
+                showIcon
+                title={t('skills.detailDialog.warningsTitle', 'Loader warnings')}
+                description={
                   <ul className="list-inside list-disc">
                     {skill.warnings.map((warning) => (
                       <li key={warning}>{warning}</li>
                     ))}
                   </ul>
-                </AlertDescription>
-              </Alert>
+                }
+              />
             )}
             <div className="rounded-lg border">
               <ScrollArea className="max-h-72">

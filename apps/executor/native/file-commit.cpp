@@ -49,7 +49,7 @@ struct Info {
   bool privateAcl = false;
 };
 struct Work {
-  enum Kind { Inspect, Recovery, Commit, ReadSnapshot, List, PrivateConfig, ReadDigest, TransferSnapshot, TransferDigest } kind;
+  enum Kind { Inspect, Recovery, Commit, ReadSnapshot, List, PrivateConfig, ReadDigest, TransferSnapshot, TransferDigest, SkillDirectory, SkillPublish, SkillDelete } kind;
   napi_async_work work = nullptr;
   napi_deferred deferred = nullptr;
   std::vector<std::wstring> args;
@@ -256,6 +256,75 @@ static void execute(napi_env, void* data) {
       work.kind != Work::ReadDigest);
     if (work.error != ERROR_SUCCESS) { return; }
     if (work.kind == Work::Inspect) { work.error = inspectPath(work.args[0], work.info); return; }
+    if (work.kind == Work::SkillDelete) {
+      const auto& path = work.args[0];
+      auto name = path.substr(path.find_last_of(L'\\') + 1);
+      if (name.size() == 45 && name.front() == L'.' && name.substr(37) == L".pending") {
+        name = name.substr(1, 36);
+      }
+      const auto installation = path.substr(0, path.find_last_of(L'\\'));
+      const auto installationName = installation.substr(installation.find_last_of(L'\\') + 1);
+      const auto library = installation.substr(0, installation.find_last_of(L'\\'));
+      const std::wstring suffix = L"\\skills\\browser-recordings";
+      if (name.size() != 36 || installationName.size() != 36 ||
+          name.find_first_not_of(L"0123456789abcdefABCDEF-") != std::wstring::npos ||
+          installationName.find_first_not_of(L"0123456789abcdefABCDEF-") != std::wstring::npos ||
+          library.size() < suffix.size() || library.substr(library.size() - suffix.size()) != suffix) {
+        work.error = ERROR_INVALID_NAME; return;
+      }
+      Handle directory(CreateFileW(extended(path).c_str(), DELETE | FILE_READ_ATTRIBUTES | READ_CONTROL,
+        FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, nullptr));
+      if (directory.value == INVALID_HANDLE_VALUE) { work.error = GetLastError(); return; }
+      work.error = inspectHandle(directory.value, work.info);
+      if (work.error != ERROR_SUCCESS) return;
+      if (!work.info.directory || !work.info.privateAcl) { work.error = ERROR_ACCESS_DENIED; return; }
+      // Only the three product-owned files are deletable. Extra files, directories and links require manual handling.
+      WIN32_FIND_DATAW entry{};
+      HANDLE search = FindFirstFileW(extended(path + L"\\*").c_str(), &entry);
+      if (search == INVALID_HANDLE_VALUE) { work.error = GetLastError(); return; }
+      do {
+        const std::wstring child = entry.cFileName;
+        if (child == L"." || child == L"..") continue;
+        if ((child != L"SKILL.md" && child != L"workflow.json" && child != L".receipt.json") ||
+            (entry.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT))) {
+          work.error = ERROR_ACCESS_DENIED; break;
+        }
+      } while (FindNextFileW(search, &entry));
+      const auto searchError = GetLastError();
+      FindClose(search);
+      if (work.error != ERROR_SUCCESS) return;
+      if (searchError != ERROR_NO_MORE_FILES) { work.error = searchError; return; }
+      Handles files;
+      for (const auto file : { L"SKILL.md", L"workflow.json", L".receipt.json" }) {
+        auto handle = std::make_unique<Handle>(CreateFileW(extended(path + L"\\" + file).c_str(),
+          DELETE | FILE_READ_ATTRIBUTES | READ_CONTROL, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+          FILE_FLAG_OPEN_REPARSE_POINT, nullptr));
+        if (handle->value == INVALID_HANDLE_VALUE) {
+          const auto error = GetLastError();
+          if (error == ERROR_FILE_NOT_FOUND) continue;
+          work.error = error; return;
+        }
+        Info info;
+        work.error = inspectHandle(handle->value, info);
+        if (work.error != ERROR_SUCCESS) return;
+        if (info.directory || info.links != 1) { work.error = ERROR_ACCESS_DENIED; return; }
+        files.push_back(std::move(handle));
+      }
+      FILE_DISPOSITION_INFO disposition{ TRUE };
+      for (const auto& file : files) {
+        work.started = true;
+        if (!SetFileInformationByHandle(file->value, FileDispositionInfo, &disposition, sizeof(disposition))) {
+          work.error = GetLastError(); return;
+        }
+      }
+      files.clear();
+      work.started = true;
+      if (!SetFileInformationByHandle(directory.value, FileDispositionInfo, &disposition, sizeof(disposition))) {
+        work.error = GetLastError();
+      }
+      return;
+    }
     if (work.kind == Work::PrivateConfig) {
       const auto& text = work.args[1];
       const int length = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, text.data(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
@@ -362,12 +431,47 @@ static void execute(napi_env, void* data) {
       }
       return;
     }
-    if (work.kind == Work::Recovery) {
+    if (work.kind == Work::SkillPublish) {
+      const auto& source = work.args[0];
+      const auto& target = work.args[1];
+      const auto sourceParent = source.substr(0, source.find_last_of(L'\\'));
+      const auto targetParent = target.substr(0, target.find_last_of(L'\\'));
+      const auto targetName = target.substr(target.find_last_of(L'\\') + 1);
+      if (sourceParent != targetParent || targetName.size() != 36 ||
+          source.substr(source.find_last_of(L'\\') + 1) != L"." + targetName + L".pending") {
+        work.error = ERROR_INVALID_NAME; return;
+      }
+      work.error = guardAncestors(target, guards, parent);
+      if (work.error != ERROR_SUCCESS) return;
+      Info sourceInfo;
+      work.error = inspectPath(source, sourceInfo);
+      if (work.error != ERROR_SUCCESS || !sourceInfo.directory || !sourceInfo.privateAcl) {
+        if (work.error == ERROR_SUCCESS) work.error = ERROR_ACCESS_DENIED;
+        return;
+      }
+      // No REPLACE_EXISTING flag: a manually created destination must never be overwritten.
+      if (!MoveFileExW(extended(source).c_str(), extended(target).c_str(), MOVEFILE_WRITE_THROUGH)) {
+        work.error = GetLastError(); return;
+      }
+      work.started = true;
+      work.error = inspectPath(target, work.info);
+      return;
+    }
+    if (work.kind == Work::Recovery || work.kind == Work::SkillDirectory) {
       const auto name = work.args[0].substr(work.args[0].find_last_of(L'\\') + 1);
+      if (work.kind == Work::SkillDirectory) {
+        const auto parentPath = work.args[0].substr(0, work.args[0].find_last_of(L'\\'));
+        const bool rootName = name == L"skills" || (name == L"browser-recordings" && parentPath.substr(parentPath.find_last_of(L'\\') + 1) == L"skills");
+        const bool inLibrary = parentPath.find(L"\\skills\\browser-recordings") != std::wstring::npos;
+        const bool safeName = !name.empty() && name.find_first_not_of(L"0123456789abcdefABCDEF-.pending") == std::wstring::npos;
+        if (!rootName && !(inLibrary && safeName && name.size() >= 36 && name.size() <= 45)) {
+          work.error = ERROR_INVALID_NAME; return;
+        }
+      }
       const bool projectDirectory = name == L"device" || name == L"connections" || name == L"tasks" ||
         name == L"browser" || name == L"file-operations" || name == L"shell" ||
         name == L"transfers" || name == L"settings-recovery";
-      if (!projectDirectory && name.find(L".octopus-executor-recovery-") != 0 &&
+      if (work.kind == Work::Recovery && !projectDirectory && name.find(L".octopus-executor-recovery-") != 0 &&
           name.find(L"octopus-executor-") != 0) { work.error = ERROR_INVALID_NAME; return; }
       PSECURITY_DESCRIPTOR descriptor = nullptr;
       work.error = privateSecurity(descriptor);
@@ -484,10 +588,10 @@ static napi_value queue(napi_env env, napi_callback_info info) {
   size_t expected = 1;
   if (kind == Work::Commit) { expected = 6; }
   else if (kind == Work::TransferSnapshot) { expected = 3; }
-  else if (kind == Work::PrivateConfig || kind == Work::ReadDigest || kind == Work::TransferDigest) { expected = 2; }
+  else if (kind == Work::PrivateConfig || kind == Work::ReadDigest || kind == Work::TransferDigest || kind == Work::SkillPublish) { expected = 2; }
   size_t pathCount = 1;
   if (kind == Work::Commit) { pathCount = 3; }
-  else if (kind == Work::TransferSnapshot) { pathCount = 2; }
+  else if (kind == Work::TransferSnapshot || kind == Work::SkillPublish) { pathCount = 2; }
   if (count != expected) { napi_throw_type_error(env, nullptr, "Invalid native operation arguments."); return nullptr; }
   auto work = std::make_unique<Work>();
   work->kind = kind;
@@ -555,6 +659,9 @@ static napi_value initialize(napi_env env, napi_value exports) {
   napi_property_descriptor properties[] = {
     {"inspect", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::Inspect)},
     {"createRecovery", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::Recovery)},
+    {"createSkillDirectory", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::SkillDirectory)},
+    {"publishSkillDirectory", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::SkillPublish)},
+    {"deleteSkillDirectory", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::SkillDelete)},
     {"commit", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::Commit)},
     {"readSnapshot", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::ReadSnapshot)},
     {"list", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::List)},
@@ -564,7 +671,7 @@ static napi_value initialize(napi_env env, napi_value exports) {
     {"transferSnapshot", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::TransferSnapshot)},
     {"transferDigest", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::TransferDigest)}
   };
-  napi_define_properties(env, exports, 10, properties);
+  napi_define_properties(env, exports, sizeof(properties) / sizeof(properties[0]), properties);
   return exports;
 }
 NAPI_MODULE(NODE_GYP_MODULE_NAME, initialize)

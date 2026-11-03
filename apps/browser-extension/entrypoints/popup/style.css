@@ -4,15 +4,25 @@
  */
 @import '@octopus/ui/globals.css';
 @source './*.tsx';
+@source '../../src/features/**/*.tsx';
+@source '../../src/components/*.tsx';
 @source '../../../../packages/ui/src/components';
+@source '../../../../packages/custom-ui/src';
 
 :root {
   --font-sans: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
   --font-heading: var(--font-sans);
 }
 
+html,
+body {
+  overflow: hidden;
+}
+
 body {
   width: 360px;
+  /* Action popups size their initial viewport from document content, before dvh can be trusted. */
+  height: 600px;
   margin: 0;
   font-family: var(--font-sans);
 }
@@ -24,4 +34,55 @@ body {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* The injected Shadow Root projects the same neutral shadcn tokens without inheriting site colors. */
+.octopus-recorder {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --radius: 0.625rem;
+  --radius-md: 0.5rem;
+  font-family: 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+@media (prefers-color-scheme: dark) {
+  .octopus-recorder {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --border: oklch(0.35 0 0);
+    --input: oklch(0.35 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+  }
+}
+
+/* Tailwind @property initial values are not registered inside a Shadow Root. */
+.octopus-recorder,
+.octopus-recorder * {
+  --tw-border-style: solid;
+  --tw-inset-shadow: 0 0 transparent;
+  --tw-inset-ring-shadow: 0 0 transparent;
+  --tw-ring-offset-shadow: 0 0 transparent;
+  --tw-ring-shadow: 0 0 transparent;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: var(--background);
 }

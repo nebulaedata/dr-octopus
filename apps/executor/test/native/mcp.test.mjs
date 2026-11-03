@@ -120,11 +120,17 @@ async function fixture(run, withShell = false, networkAddress = null) {
   await search.verify();
   const tools = new BasicTools(publication, shell, search);
   const store = await ControlStore.open(native, root);
-  const authority = new TaskAuthority(tools, store, undefined, undefined, {
-    deviceId: '89b7dada-bb9d-4b25-a1ef-ff6a3e8b189a',
-    deviceName: '办公电脑',
-  });
-  authority.setToolPolicy(policyToolNameSchema.options, 0);
+  const authority = new TaskAuthority(
+    tools,
+    store,
+    undefined,
+    undefined,
+    {
+      deviceId: '89b7dada-bb9d-4b25-a1ef-ff6a3e8b189a',
+      deviceName: '办公电脑',
+    },
+    { revision: 0, enabledTools: policyToolNameSchema.options }
+  );
   const gateway = new HttpGateway(authority);
   const endpoint = await gateway.listen(0, networkAddress);
   const clients = [];

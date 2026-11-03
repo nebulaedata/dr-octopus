@@ -89,6 +89,36 @@ const webUrl = z
 const origin = webUrl.refine((value) => URL.canParse(value) && new URL(value).origin === value, {
   message: 'SKILL_ORIGIN_FORMAT',
 });
+export const browserChoiceStateSchema = z.union([
+  z.boolean(),
+  z.array(z.string().min(1).max(160)).max(20),
+  z.null(),
+]);
+export const browserChoiceControlSchema = z
+  .strictObject({
+    role: z.enum(['radio', 'checkbox', 'switch', 'select']),
+    group: z.string().max(160),
+    label: z.string().min(1).max(160),
+    state: browserChoiceStateSchema,
+  })
+  .superRefine((choice, context) => {
+    if (choice.state !== null && (choice.role === 'select') !== Array.isArray(choice.state)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['state'],
+        message: 'Choice state must match the control role',
+      });
+    }
+  });
+export type BrowserChoiceControl = z.infer<typeof browserChoiceControlSchema>;
+export const browserSkillChoiceSchema = z.strictObject({
+  id: z.string().regex(/^choice-action-[1-9]\d{0,4}$/),
+  ref: z.string().regex(/^action-[1-9]\d{0,4}$/),
+  url: webUrl,
+  control: browserChoiceControlSchema,
+});
+export type BrowserSkillChoice = z.infer<typeof browserSkillChoiceSchema>;
+
 export const browserSkillWorkflowSchema = z
   .strictObject({
     schemaVersion: z.literal(1),
@@ -99,6 +129,10 @@ export const browserSkillWorkflowSchema = z
           label: z.string().min(1).max(120),
           type: z.enum(['text', 'email', 'number', 'date']),
           required: z.boolean(),
+          sourceRef: z
+            .string()
+            .regex(/^action-[1-9]\d{0,4}$/)
+            .optional(),
         })
       )
       .max(20),
@@ -108,6 +142,11 @@ export const browserSkillWorkflowSchema = z
       .min(1)
       .max(16),
     execution: z.strictObject({ maxModelCalls: z.number().int().min(1).max(20) }),
+    choices: z
+      .array(browserSkillChoiceSchema)
+      .max(100)
+      .optional()
+      .describe('由录制事实和已确认的选择决策生成；不能省略或擅自改变选择。只供重放读取，不是步骤DAG。'),
     evidence: z
       .array(
         z.strictObject({
@@ -119,6 +158,18 @@ export const browserSkillWorkflowSchema = z
       .max(100),
   })
   .superRefine((value, context) => {
+    if (new Set(value.choices?.map((choice) => choice.id)).size !== (value.choices?.length ?? 0)) {
+      context.addIssue({ code: 'custom', path: ['choices'], message: 'Duplicate choice id' });
+    }
+    value.choices?.forEach((choice, index) => {
+      if (URL.canParse(choice.url) && !value.allowedOrigins.includes(new URL(choice.url).origin)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['choices', index, 'url'],
+          message: 'Choice origin is outside skill scope',
+        });
+      }
+    });
     if (new Set(value.inputs.map((item) => item.name)).size !== value.inputs.length) {
       context.addIssue({ code: 'custom', path: ['inputs'], message: 'SKILL_DUPLICATE_INPUT' });
     }
@@ -171,6 +222,7 @@ export const browserSkillRequestSchema = z.discriminatedUnion('type', [
     candidate: browserSkillPackageSchema,
   }),
   z.strictObject({ ...requestBase, type: z.literal('skills.read'), skillId: z.uuid() }),
+  z.strictObject({ ...requestBase, type: z.literal('skills.delete'), skillId: z.uuid() }),
   z.strictObject({ ...requestBase, type: z.literal('skills.receipt'), operationId: z.uuid() }),
   z.strictObject({ ...requestBase, type: z.literal('skills.open-directory'), skillId: z.uuid() }),
 ]);
@@ -193,6 +245,7 @@ export const browserSkillResponseSchema = z
         browserSkillReceiptSchema,
         browserSkillSnapshotSchema,
         z.strictObject({ opened: z.literal(true) }),
+        z.strictObject({ deleted: z.literal(true) }),
         z.null(),
       ])
       .optional(),

@@ -44,13 +44,15 @@ async function fixture(run) {
   const publication = await FilePublication.open(native, userData);
   const basic = new BasicTools(publication);
   const controls = await ControlStore.open(native, userData);
-  const authority = new TaskAuthority(basic, controls);
+  const authority = new TaskAuthority(basic, controls, undefined, undefined, undefined, {
+    revision: 0,
+    enabledTools: policyToolNameSchema.options,
+  });
   const store = await TransferStore.open(native, userData);
   const transfers = new TransferService(store, new TransferFiles(native, store.root), (...args) =>
     authority.transferContext(...args)
   );
   await authority.attachTransfers(transfers);
-  authority.setToolPolicy(policyToolNameSchema.options, 0);
   const gateway = new HttpGateway(authority);
   const endpoint = await gateway.listen(0);
   const { grant, token } = await authority.approve({

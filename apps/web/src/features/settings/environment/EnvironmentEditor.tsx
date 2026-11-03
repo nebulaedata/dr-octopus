@@ -6,7 +6,7 @@ import { useForm } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { useSafeState } from 'ahooks';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -226,28 +226,26 @@ export function EnvironmentEditor({ snapshot, entry, onClose }: EnvironmentEdito
             </form.Field>
           </FieldGroup>
           {overridden ? (
-            <Alert>
-              <AlertDescription>
-                {t(
-                  'settings.environment.overriddenAlert',
-                  'This variable is overridden by launch arguments or the process environment. The new value is saved but only used after the upper-level override is removed.'
-                )}
-              </AlertDescription>
-            </Alert>
+            <Alert
+              variant="warning"
+              showIcon
+              description={t(
+                'settings.environment.overriddenAlert',
+                'This variable is overridden by launch arguments or the process environment. The new value is saved but only used after the upper-level override is removed.'
+              )}
+            />
           ) : null}
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
+          {error ? <Alert variant="danger" showIcon description={error} /> : null}
           {exposure ? (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {t(
-                  'settings.environment.exposureAlert',
-                  'Other devices that can reach this service can access the workspace, files, Agent tools, and service settings. Only use this on trusted networks.'
-                )}
-                <div className="flex gap-2">
+            <Alert
+              variant="warning"
+              showIcon
+              description={t(
+                'settings.environment.exposureAlert',
+                'Other devices that can reach this service can access the workspace, files, Agent tools, and service settings. Only use this on trusted networks.'
+              )}
+              action={
+                <>
                   <Button
                     type="button"
                     variant="outline"
@@ -256,6 +254,7 @@ export function EnvironmentEditor({ snapshot, entry, onClose }: EnvironmentEdito
                   >
                     {t('common.cancel', 'Cancel')}
                   </Button>
+
                   <Button
                     type="button"
                     variant="destructive"
@@ -264,9 +263,9 @@ export function EnvironmentEditor({ snapshot, entry, onClose }: EnvironmentEdito
                   >
                     {t('settings.environment.confirmExposureSave', 'Confirm and save')}
                   </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
+                </>
+              }
+            />
           ) : null}
           <div className="flex flex-wrap justify-end gap-2">
             {entry?.hasStoredValue ? (

@@ -26,6 +26,8 @@ import { FilePublication } from './basic/file-publication';
 import { SearchTools } from './basic/search-tools';
 import { BrowserTools } from './browser/browser-tools';
 import { BrowserBridge } from './browser/browser-bridge';
+import { BrowserSkillFiles } from './browser/browser-skill-files';
+import { skillDirectoryResultSchema } from '../contracts/browser-skill-directory';
 import { BridgeStore } from './browser/bridge-store';
 import { networkAddressSchema } from '../contracts/connection-settings';
 import { TransferFiles } from './transfer/transfer-files';
@@ -48,6 +50,31 @@ const computerUse = new ComputerUseActivity((activity) => {
   port.postMessage({ type: 'computer-use', pid: process.pid, activity });
 });
 const keepAlive = setInterval(() => {}, 60_000);
+/**
+ * Requests one fixed skill directory in Main and removes the response listener on every completion path.
+ */
+function openSkillDirectory(installationId: string, skillId: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const requestId = crypto.randomUUID();
+    /**
+     * Correlates the result without accepting arbitrary paths from another process.
+     */
+    const response = (event: { data: unknown }) => {
+      const parsed = skillDirectoryResultSchema.safeParse(event.data);
+      if (!parsed.success || parsed.data.requestId !== requestId) {return;}
+      clearTimeout(timer);
+      port!.removeListener('message', response);
+      if (parsed.data.opened) {resolve();}
+      else {reject(new Error('SKILL_OPEN_FAILED'));}
+    };
+    const timer = setTimeout(() => {
+      port!.removeListener('message', response);
+      reject(new Error('SKILL_OPEN_FAILED'));
+    }, 10000);
+    port!.on('message', response);
+    port!.postMessage({ type: 'skill-directory.open', requestId, installationId, skillId });
+  });
+}
 const userData = process.argv[2];
 const nativePath = process.argv[3];
 if (!userData || !nativePath || !isAbsolute(userData) || !isAbsolute(nativePath)) {
@@ -117,9 +144,12 @@ const initialized = (async () => {
     await search.verify();
     tools = new BasicTools(publication, shell, search);
     store = await ControlStore.open(native, projectRoot);
-    browser = new BrowserBridge(await BridgeStore.open(native, projectRoot));
-    authority = new TaskAuthority(tools, store, computer, new BrowserTools(browser), device);
-    authority.setToolPolicy(toolPolicies.enabledTools, toolPolicies.revision);
+    browser = new BrowserBridge(
+      await BridgeStore.open(native, projectRoot),
+      new BrowserSkillFiles(native, projectRoot),
+      openSkillDirectory
+    );
+    authority = new TaskAuthority(tools, store, computer, new BrowserTools(browser), device, toolPolicies);
     const transferStore = await TransferStore.open(native, projectRoot);
     const transferAuthority = authority;
     await authority.attachTransfers(
@@ -192,10 +222,7 @@ port.on('message', (event: { data: unknown }) => {
         }
         let credential: string | undefined;
         let clientId: string | undefined;
-        if (input.type === 'tool-policy-set') {
-          runtime.authority.setToolPolicy(input.enabledTools, input.revision);
-          runtime.gateway.notifyToolListChanged();
-        } else if (input.type === 'access-approve') {
+        if (input.type === 'access-approve') {
           const approved = await runtime.authority.approve(input.input);
           credential = approved.token;
           clientId = approved.grant.clientId;

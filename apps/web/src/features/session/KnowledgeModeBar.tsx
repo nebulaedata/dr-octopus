@@ -8,7 +8,7 @@ import { BookOpenIcon, CheckIcon, CopyXIcon, GlobeIcon, Settings2Icon, SparklesI
 import { Button } from '@octopus/ui/components/button';
 import { ListPagination } from '@/components/ListPagination';
 import { Badge } from '@octopus/ui/components/badge';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import {
   Dialog,
   DialogContent,
@@ -133,14 +133,16 @@ function KnowledgeScopeEditor({ workspaceId, state, disabled, onChange }: Knowle
       return <Skeleton className="h-44 w-full" />;
     } else if (collections.error) {
       return (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {collections.error.message}
+        <Alert
+          variant="danger"
+          showIcon
+          description={collections.error.message}
+          action={
             <Button variant="link" onClick={() => void collections.refetch()}>
               {t('common.retry', 'Retry')}
             </Button>
-          </AlertDescription>
-        </Alert>
+          }
+        />
       );
     } else {
       return (
@@ -207,15 +209,14 @@ function KnowledgeScopeEditor({ workspaceId, state, disabled, onChange }: Knowle
         </ToggleGroupItem>
       </ToggleGroup>
       {selectionMode === 'auto' ? (
-        <Alert>
-          <SparklesIcon />
-          <AlertDescription>
-            {t(
-              'session.knowledgeMode.autoDescription',
-              'The Agent picks relevant materials from the current workspace and global knowledge bases, and confirms with you first when the topic is unclear.'
-            )}
-          </AlertDescription>
-        </Alert>
+        <Alert
+          variant="info"
+          showIcon
+          description={t(
+            'session.knowledgeMode.autoDescription',
+            'The Agent picks relevant materials from the current workspace and global knowledge bases, and confirms with you first when the topic is unclear.'
+          )}
+        />
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">

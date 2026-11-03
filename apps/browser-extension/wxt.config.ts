@@ -43,7 +43,8 @@ export default defineConfig({
     host_permissions: ['<all_urls>'],
     // Arbitrary scripts are disabled. pnpm patch removes PageController.executeJavascript from shipped code;
     // see patches/@page-agent__page-controller@1.12.4.patch. No debugger/userScripts or unsafe-eval is enabled.
-    permissions: ['nativeMessaging', 'storage', 'alarms', 'scripting'],
+    permissions: ['nativeMessaging', 'storage', 'alarms', 'scripting', 'webNavigation', 'sidePanel'],
+    side_panel: { default_path: 'window-panel.html' },
     action: { default_title: 'Dr.Octopus 浏览器连接', default_icon: extensionIcons },
   },
 });

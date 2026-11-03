@@ -5,7 +5,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  AlertCircleIcon,
   ChevronRightIcon,
   DownloadIcon,
   EyeIcon,
@@ -21,7 +20,7 @@ import {
   TrashIcon,
   UploadIcon,
 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@octopus/ui/components/collapsible';
 import {
@@ -130,10 +129,12 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
   if (workspace.rootError !== undefined) {
     return (
       <div className="p-3">
-        <Alert variant="destructive" aria-busy={workspace.rootLoading}>
-          <AlertCircleIcon />
-          <AlertTitle>{t('session.explorer.loadFailedTitle', 'Failed to load files')}</AlertTitle>
-          <AlertDescription className="flex flex-col items-start gap-3">
+        <Alert
+          aria-busy={workspace.rootLoading}
+          variant="danger"
+          showIcon
+          title={t('session.explorer.loadFailedTitle', 'Failed to load files')}
+          description={
             <span>
               {/timeout|timed out|超时/i.test(workspace.rootError)
                 ? t('session.explorer.loadTimeout', 'Loading timed out. Please try again later.')
@@ -142,6 +143,8 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
                     'Unable to fetch workspace files. Please try again.'
                   )}
             </span>
+          }
+          action={
             <Button
               variant="outline"
               size="sm"
@@ -157,8 +160,8 @@ export function ExplorerFileTree({ workspaceId }: ExplorerFileTreeProps) {
                 ? t('session.explorer.retrying', 'Retrying…')
                 : t('common.retry', 'Retry')}
             </Button>
-          </AlertDescription>
-        </Alert>
+          }
+        />
       </div>
     );
   }
@@ -660,16 +663,20 @@ function FileTreeEntryItem({
     if (node.error !== undefined) {
       return (
         <div className="p-2" style={{ paddingLeft: `${(depth + 1) * 14 + 8}px` }}>
-          <Alert variant="destructive" aria-busy={node.loading}>
-            <AlertCircleIcon />
-            <AlertTitle>{t('session.explorer.dirLoadFailedTitle', 'Failed to load directory')}</AlertTitle>
-            <AlertDescription className="flex flex-col items-start gap-2">
+          <Alert
+            aria-busy={node.loading}
+            variant="danger"
+            showIcon
+            title={t('session.explorer.dirLoadFailedTitle', 'Failed to load directory')}
+            description={
               <span>
                 {t(
                   'session.explorer.dirLoadFailedDescription',
                   'Unable to read this directory. Please try again.'
                 )}
               </span>
+            }
+            action={
               <Button
                 variant="outline"
                 size="sm"
@@ -683,8 +690,8 @@ function FileTreeEntryItem({
                 )}
                 {node.loading ? t('session.explorer.retrying', 'Retrying…') : t('common.retry', 'Retry')}
               </Button>
-            </AlertDescription>
-          </Alert>
+            }
+          />
         </div>
       );
     } else if (node.loaded && node.childPaths?.length === 0) {

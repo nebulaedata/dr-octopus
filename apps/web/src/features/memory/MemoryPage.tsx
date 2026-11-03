@@ -12,7 +12,7 @@ import { ListPagination } from '@/components/ListPagination';
 import { SearchInput } from '@/components/SearchInput';
 import { Badge } from '@octopus/ui/components/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@octopus/ui/components/card';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@octopus/ui/components/empty';
 import { Skeleton } from '@octopus/ui/components/skeleton';
 import { Page } from '@/components/Page';
@@ -140,24 +140,26 @@ export function MemoryPage() {
         </div>
       </section>
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error.message}
+        <Alert
+          variant="danger"
+          showIcon
+          description={error.message}
+          action={
             <Button size="sm" variant="outline" onClick={refresh}>
               {t('memory.page.refreshHome', 'Refresh and go home')}
             </Button>
-          </AlertDescription>
-        </Alert>
+          }
+        />
       )}
       {directory.data?.searchUnavailable && (
-        <Alert>
-          <AlertDescription>
-            {t(
-              'memory.page.searchUnavailable',
-              'Full-text search is unavailable. Clear the search term to browse the directory.'
-            )}
-          </AlertDescription>
-        </Alert>
+        <Alert
+          variant="warning"
+          showIcon
+          description={t(
+            'memory.page.searchUnavailable',
+            'Full-text search is unavailable. Clear the search term to browse the directory.'
+          )}
+        />
       )}
       {directory.isPending && <Skeleton className="min-h-40 w-full" />}
       {!directory.isPending && !directory.error && !directory.data?.items.length && (

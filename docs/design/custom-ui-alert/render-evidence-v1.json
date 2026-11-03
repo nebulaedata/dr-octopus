@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-30",
+  "browser": "Microsoft Edge",
+  "viewport": {
+    "width": 360,
+    "height": 510
+  },
+  "deviceScaleFactor": 2,
+  "css": "apps\\browser-extension\\.output\\chrome-mv3\\assets\\popup-bozdEu32.css",
+  "generatedBorderWarning50": true,
+  "computed": {
+    "light": {
+      "className": "group/alert relative w-full gap-0.5 rounded-lg border px-2.5 py-2 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4 border-warning/50 bg-warning/30 text-warning-foreground block min-w-0 wrap-anywhere pr-10",
+      "warningToken": "oklch(92% .12 85)",
+      "borderColor": "oklab(0.92 0.0104587 0.119543 / 0.5)",
+      "borderWidth": "1px",
+      "background": "oklab(0.92 0.0104587 0.119543 / 0.3)",
+      "text": "oklch(0.35 0.1 65)"
+    },
+    "dark": {
+      "className": "group/alert relative w-full gap-0.5 rounded-lg border px-2.5 py-2 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4 border-warning/50 bg-warning/30 text-warning-foreground block min-w-0 wrap-anywhere pr-10",
+      "warningToken": "oklch(42% .1 70)",
+      "borderColor": "oklab(0.42 0.034202 0.0939693 / 0.5)",
+      "borderWidth": "1px",
+      "background": "oklab(0.42 0.034202 0.0939693 / 0.3)",
+      "text": "oklch(0.92 0.12 85)"
+    }
+  },
+  "pageErrors": [],
+  "source": "Live React components and production popup CSS; synthetic fixture, isolated component preview"
+}

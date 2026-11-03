@@ -6,7 +6,7 @@ import { BookOpenIcon, LibraryBigIcon, SearchIcon, SearchXIcon } from 'lucide-re
 import { cn } from '@octopus/ui/lib/utils';
 import { Badge } from '@octopus/ui/components/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@octopus/ui/components/card';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
 import { Skeleton } from '@octopus/ui/components/skeleton';
 import { useI18n } from '@/i18n/use-i18n';
@@ -70,15 +70,16 @@ export function KnowledgeToolRenderer({ tool }: ToolRendererProps) {
         </div>
       )}
       {(data.coverage === 'partial' || data.coverage === 'unavailable') && (
-        <Alert>
-          <SearchXIcon />
-          <AlertTitle>
-            {data.coverage === 'unavailable'
+        <Alert
+          variant={data.coverage === 'unavailable' ? 'danger' : 'warning'}
+          showIcon
+          title={
+            data.coverage === 'unavailable'
               ? t('session.knowledgeTool.coverageUnavailableTitle', 'Unable to search materials right now')
-              : t('session.knowledgeTool.coveragePartialTitle', 'Some sources temporarily unavailable')}
-          </AlertTitle>
-          <AlertDescription>
-            {data.coverage === 'unavailable'
+              : t('session.knowledgeTool.coveragePartialTitle', 'Some sources temporarily unavailable')
+          }
+          description={
+            data.coverage === 'unavailable'
               ? t(
                   'session.knowledgeTool.coverageUnavailableDescription',
                   'Knowledge sources are temporarily inaccessible. Please try again later.'
@@ -86,9 +87,9 @@ export function KnowledgeToolRenderer({ tool }: ToolRendererProps) {
               : t(
                   'session.knowledgeTool.coveragePartialDescription',
                   'Showing results from available sources; current evidence may be incomplete.'
-                )}
-          </AlertDescription>
-        </Alert>
+                )
+          }
+        />
       )}
       {!hits.length && data.coverage !== 'unavailable' && (
         <KnowledgeEmpty

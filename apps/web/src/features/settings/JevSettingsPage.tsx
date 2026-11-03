@@ -18,7 +18,7 @@ import {
 } from '@octopus/ui/components/select';
 import { Input } from '@octopus/ui/components/input';
 import { Button } from '@octopus/ui/components/button';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { toast } from '@octopus/ui/components/toast';
 import { jevSettingsUpdateSchema } from '@octopus/shared/protocol';
 import { jevSettingsQuery, jevModelsQuery } from '@/queries/jev-queries';
@@ -36,11 +36,7 @@ export function JevSettingsPage() {
   return (
     <SettingContainer>
       {query.isPending && <p role="status">{t('settings.jev.loading', 'Loading Jev settings…')}</p>}
-      {query.error && (
-        <Alert variant="destructive">
-          <AlertDescription>{query.error.message}</AlertDescription>
-        </Alert>
-      )}
+      {query.error && <Alert variant="danger" showIcon description={query.error.message} />}
       {query.data && (
         <>
           <JevCredentialForm key={query.data.environmentRevision} settings={query.data} />
@@ -142,9 +138,11 @@ function JevSettingsForm({ settings }: { settings: JevSettingsSnapshot }) {
                       </FieldDescription>
                     )}
                     {settings.hasApiKey && models.error && (
-                      <Alert variant="destructive">
-                        <AlertDescription>
-                          {models.error.message}
+                      <Alert
+                        variant="danger"
+                        showIcon
+                        description={models.error.message}
+                        action={
                           <Button
                             type="button"
                             variant="outline"
@@ -154,8 +152,8 @@ function JevSettingsForm({ settings }: { settings: JevSettingsSnapshot }) {
                           >
                             {t('settings.jev.modelsRetry', 'Retry loading models')}
                           </Button>
-                        </AlertDescription>
-                      </Alert>
+                        }
+                      />
                     )}
                     <FieldDescription>
                       {t(
@@ -172,23 +170,11 @@ function JevSettingsForm({ settings }: { settings: JevSettingsSnapshot }) {
       </Card>
       <form.Subscribe selector={(state) => state.errors}>
         {(errors) =>
-          errors.length > 0 && (
-            <Alert variant="destructive">
-              <AlertDescription>{errors.map(String).join(' ')}</AlertDescription>
-            </Alert>
-          )
+          errors.length > 0 && <Alert variant="danger" showIcon description={errors.map(String).join(' ')} />
         }
       </form.Subscribe>
-      {mutation.error && (
-        <Alert variant="destructive">
-          <AlertDescription>{mutation.error.message}</AlertDescription>
-        </Alert>
-      )}
-      {probe.error && (
-        <Alert variant="destructive">
-          <AlertDescription>{probe.error.message}</AlertDescription>
-        </Alert>
-      )}
+      {mutation.error && <Alert variant="danger" showIcon description={mutation.error.message} />}
+      {probe.error && <Alert variant="danger" showIcon description={probe.error.message} />}
       {probe.data && (
         <p role="status" className="text-sm text-success">
           {t('settings.jev.probeSuccess', 'Connected to {{model}} ({{ms}} ms).', {
@@ -306,17 +292,13 @@ function JevCredentialForm({ settings }: { settings: JevSettingsSnapshot }) {
               )}
             </form.Field>
             {settings.apiKeyOverridden && (
-              <Alert>
-                <AlertDescription>
-                  {t('settings.jev.keyOverridden', 'The launch environment overrides this key.')}
-                </AlertDescription>
-              </Alert>
+              <Alert
+                variant="warning"
+                showIcon
+                description={t('settings.jev.keyOverridden', 'The launch environment overrides this key.')}
+              />
             )}
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            {error && <Alert variant="danger" showIcon description={error} />}
             <div className="flex flex-wrap items-center justify-end gap-2">
               <form.Subscribe selector={(state) => state.values.apiKey}>
                 {(apiKey) => (

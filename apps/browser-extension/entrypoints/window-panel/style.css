@@ -1,0 +1,8 @@
+/**
+ * @author Codex
+ * @description Lets the existing popup components use the side panel's resizable viewport.
+ */
+body {
+  width: 100%;
+  height: 100dvh;
+}

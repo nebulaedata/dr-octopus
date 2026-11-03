@@ -6,8 +6,9 @@ import { build as bundle } from 'esbuild';
 import { executorTarget } from '../lib/platform.mjs';
 import { build as buildRenderer } from 'vite';
 import { fileURLToPath } from 'node:url';
-import { copyFile, mkdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { copyFile, mkdir, stat, readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
 import { buildNative } from './build-native.mjs';
 import {
   publishComputerConfiguration,
@@ -24,6 +25,13 @@ import { writeBuiltBrowserIdentity } from '../lib/compile/browser-identity.mjs';
 export async function buildProcesses() {
   executorTarget();
   const root = fileURLToPath(new URL('../../', import.meta.url));
+
+  // Use YAML's published universal entry in every process, including sandboxed Preload.
+  const sharedRequire = createRequire(new URL('../../../../packages/shared/package.json', import.meta.url));
+  const yamlMetadataPath = sharedRequire.resolve('yaml/package.json');
+  const yamlMetadata = JSON.parse(await readFile(yamlMetadataPath, 'utf8'));
+  const yamlEntry = join(dirname(yamlMetadataPath), yamlMetadata.exports['.'].default);
+
   const browserIdentity = loadBrowserIdentity();
   await mkdir(join(root, 'dist/assets/brand'), { recursive: true });
   await copyFile(join(root, 'assets/brand/app.ico'), join(root, 'dist/assets/brand/app.ico'));
@@ -84,6 +92,7 @@ export async function buildProcesses() {
   await Promise.all([
     bundle({
       absWorkingDir: root,
+      alias: { yaml: yamlEntry },
       entryPoints: ['src/bridge/mcp-stdio.ts'],
       outfile: 'dist/bridge/mcp-stdio.cjs',
       bundle: true,
@@ -94,6 +103,7 @@ export async function buildProcesses() {
     }),
     bundle({
       absWorkingDir: root,
+      alias: { yaml: yamlEntry },
       entryPoints: ['src/runtime/computer/computer-backend.ts'],
       outfile: 'dist/runtime/computer-backend.cjs',
       bundle: true,
@@ -104,6 +114,7 @@ export async function buildProcesses() {
     }),
     bundle({
       absWorkingDir: root,
+      alias: { yaml: yamlEntry },
       entryPoints: ['src/runtime/computer/computer-runtime.ts'],
       outfile: 'dist/runtime/computer-runtime.cjs',
       bundle: true,
@@ -114,6 +125,7 @@ export async function buildProcesses() {
     }),
     bundle({
       absWorkingDir: root,
+      alias: { yaml: yamlEntry },
       entryPoints: ['src/bridge/native-host.ts'],
       outfile: 'dist/bridge/native-host.cjs',
       bundle: true,
@@ -124,6 +136,7 @@ export async function buildProcesses() {
     }),
     bundle({
       absWorkingDir: root,
+      alias: { yaml: yamlEntry },
       entryPoints: ['src/main/index.ts'],
       outfile: 'dist/main/index.js',
       bundle: true,
@@ -135,6 +148,7 @@ export async function buildProcesses() {
     }),
     bundle({
       absWorkingDir: root,
+      alias: { yaml: yamlEntry },
       entryPoints: ['src/preload/index.ts'],
       outfile: 'dist/preload/index.cjs',
       bundle: true,
@@ -146,6 +160,7 @@ export async function buildProcesses() {
     }),
     bundle({
       absWorkingDir: root,
+      alias: { yaml: yamlEntry },
       entryPoints: ['src/runtime/index.ts'],
       outfile: 'dist/runtime/index.cjs',
       bundle: true,

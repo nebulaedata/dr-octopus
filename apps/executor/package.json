@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/main/index.js",
   "scripts": {
+    "build:installer": "node scripts/package/build-installer.mjs",
     "assemble:packaging": "node scripts/package/assemble-packaging.mjs",
     "package:acceptance": "node scripts/package/package.mjs",
     "publish:release": "node scripts/package/publish-release.mjs",
@@ -27,6 +28,7 @@
   "dependencies": {
     "@base-ui/react": "1.8.0",
     "@modelcontextprotocol/sdk": "1.30.0",
+    "@octopus/custom-ui": "workspace:*",
     "@octopus/shared": "workspace:*",
     "@octopus/ui": "workspace:*",
     "@tanstack/react-query": "5.102.8",

@@ -53,15 +53,6 @@ export class ConnectionSettings {
   }
 
   /**
-   * Publishes a policy independently of listener drafts without losing other settings.
-   */
-  async saveToolPolicies(input: ToolPolicySettings): Promise<void> {
-    const next = { ...this.value, toolPolicies: toolPolicySettingsSchema.parse(input) };
-    await this.publication.save(JSON.stringify(next, null, 2) + '\n');
-    this.value = next;
-  }
-
-  /**
    * Indicates whether identity evidence is initialized.
    */
   hasIdentity(): boolean {
@@ -96,7 +87,7 @@ export class ConnectionSettings {
     delete settings.deviceName;
     const next = recordSchema.parse({
       ...settings,
-      toolPolicies: this.value.toolPolicies,
+      toolPolicies: settings.toolPolicies ?? this.value.toolPolicies,
       preferencesSaved: this.value.preferencesSaved || !initializeIdentity,
       ...(this.value.identityInitialized || initializeIdentity ? { identityInitialized: true } : {}),
     });

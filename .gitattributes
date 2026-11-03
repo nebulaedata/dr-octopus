@@ -22,3 +22,4 @@
 
 # Pinned third-party notice hashes require the exact upstream LF bytes.
 apps/executor/vendor/notices/cfworker-json-schema-4.1.1-LICENSE text eol=lf
+apps/browser-extension/public/licenses/ai-sdk-provider-utils-5.0.70.txt text eol=lf

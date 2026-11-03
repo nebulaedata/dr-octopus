@@ -13,7 +13,7 @@ import {
   Settings2Icon,
   SettingsIcon,
 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
 import { ScrollArea } from '@octopus/ui/components/scroll-area';
@@ -205,12 +205,12 @@ function SidebarView(
             {t('layout.sidebar.newSession', 'New session')}
           </Button>
           {props.error && (
-            <Alert variant="destructive">
-              <AlertTitle className="text-xs">
-                {t('layout.sidebar.requestFailed', 'Request failed')}
-              </AlertTitle>
-              <AlertDescription className="text-[11px] break-all">{props.error}</AlertDescription>
-            </Alert>
+            <Alert
+              variant="danger"
+              showIcon
+              title={t('layout.sidebar.requestFailed', 'Request failed')}
+              description={props.error}
+            />
           )}
         </div>
         <ScrollArea className="min-h-0 flex-1 px-3.5 pb-2">

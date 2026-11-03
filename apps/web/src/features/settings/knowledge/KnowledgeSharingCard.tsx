@@ -13,7 +13,7 @@ import { Checkbox } from '@octopus/ui/components/checkbox';
 import { Switch } from '@octopus/ui/components/switch';
 import { Input } from '@octopus/ui/components/input';
 import { Field, FieldLabel } from '@octopus/ui/components/field';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { listKnowledgeCollections } from '@/api/knowledge';
 import { getKnowledgeSharing, saveKnowledgeSharing } from '@/api/knowledge-connections';
 import { useI18n } from '@/i18n/use-i18n';
@@ -32,7 +32,9 @@ export function KnowledgeSharingCard() {
   return (
     <Card className="shadow-none">
       <CardHeader>
-        <CardTitle className="text-base">{t('settings.knowledge.sharing.title', 'External knowledge MCP')}</CardTitle>
+        <CardTitle className="text-base">
+          {t('settings.knowledge.sharing.title', 'External knowledge MCP')}
+        </CardTitle>
         <CardDescription>
           {t(
             'settings.knowledge.sharing.description',
@@ -47,26 +49,28 @@ export function KnowledgeSharingCard() {
         {policy.data ? (
           <SharingForm key={policy.data.revision} policy={policy.data} onToken={setToken} />
         ) : null}
-        {policy.error ? (
-          <p role="alert" className="text-sm text-destructive">
-            {policy.error.message}
-          </p>
-        ) : null}
+        {policy.error ? <Alert variant="danger" showIcon description={policy.error.message} /> : null}
         {token ? (
-          <Alert>
-            <AlertDescription>
-              <p>
-                {t(
-                  'settings.knowledge.sharing.tokenNotice',
-                  'The new token is shown only once; save it to the connecting party\'s MCP configuration. The old token is revoked.'
-                )}
-              </p>
-              <Input
-                className="mt-3 font-mono text-xs"
-                aria-label="Newly generated knowledge access token"
-                readOnly
-                value={token}
-              />
+          <Alert
+            variant="warning"
+            showIcon
+            description={
+              <>
+                <p>
+                  {t(
+                    'settings.knowledge.sharing.tokenNotice',
+                    "The new token is shown only once; save it to the connecting party's MCP configuration. The old token is revoked."
+                  )}
+                </p>
+                <Input
+                  className="mt-3 font-mono text-xs"
+                  aria-label="Newly generated knowledge access token"
+                  readOnly
+                  value={token}
+                />
+              </>
+            }
+            action={
               <Button
                 size="sm"
                 variant="outline"
@@ -77,8 +81,8 @@ export function KnowledgeSharingCard() {
               >
                 {t('settings.knowledge.sharing.copyToken', 'Copy token')}
               </Button>
-            </AlertDescription>
-          </Alert>
+            }
+          />
         ) : null}
       </CardContent>
     </Card>
@@ -265,11 +269,7 @@ function SharingForm({
           </label>
         )}
       </form.Field>
-      {save.error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {save.error.message}
-        </p>
-      ) : null}
+      {save.error ? <Alert variant="danger" showIcon description={save.error.message} /> : null}
       <div className="flex justify-end">
         <Button disabled={save.isPending} type="submit">
           {t('settings.knowledge.sharing.save', 'Save sharing settings')}

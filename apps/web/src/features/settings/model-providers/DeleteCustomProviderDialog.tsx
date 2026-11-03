@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -82,20 +82,16 @@ export function DeleteCustomProviderDialog({
             </DialogDescription>
           </DialogHeader>
           {provider.defaultModelId && (
-            <Alert>
-              <AlertDescription>
-                {t(
-                  'settings.providers.deleteDefaultBlocked',
-                  'This provider is the current default. Choose another default model before deleting it.'
-                )}
-              </AlertDescription>
-            </Alert>
+            <Alert
+              variant="warning"
+              showIcon
+              description={t(
+                'settings.providers.deleteDefaultBlocked',
+                'This provider is the current default. Choose another default model before deleting it.'
+              )}
+            />
           )}
-          {remove.isError && (
-            <Alert variant="destructive">
-              <AlertDescription>{remove.error.message}</AlertDescription>
-            </Alert>
-          )}
+          {remove.isError && <Alert variant="danger" showIcon description={remove.error.message} />}
           <DialogFooter>
             <Button variant="outline" disabled={remove.isPending} onClick={() => setOpen(false)}>
               {t('common.cancel', 'Cancel')}

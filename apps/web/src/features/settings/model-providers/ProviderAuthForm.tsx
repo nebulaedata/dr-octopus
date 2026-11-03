@@ -6,8 +6,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
-import { LogInIcon, TriangleAlertIcon, Undo2Icon, UserRoundCheckIcon } from 'lucide-react';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Undo2Icon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
 import { Input } from '@octopus/ui/components/input';
@@ -234,40 +234,34 @@ export function ProviderAuthForm({ provider }: ProviderAuthFormProps) {
                 return (
                   <>
                     {isProviderAuthMethodActive(provider.auth, authType) ? (
-                      <Alert>
-                        <UserRoundCheckIcon />
-                        <AlertTitle>
-                          {t('settings.providers.auth.oauthActiveTitle', 'OAuth signed in')}
-                        </AlertTitle>
-                        <AlertDescription className="text-xs">
-                          {t(
-                            'settings.providers.auth.oauthActiveDescription',
-                            'Provider {{name}} is authenticated via OAuth.',
-                            {
-                              name: provider.name,
-                            }
-                          )}
-                        </AlertDescription>
-                        <AlertAction>
+                      <Alert
+                        variant="success"
+                        showIcon
+                        title={t('settings.providers.auth.oauthActiveTitle', 'OAuth signed in')}
+                        description={t(
+                          'settings.providers.auth.oauthActiveDescription',
+                          'Provider {{name}} is authenticated via OAuth.',
+                          {
+                            name: provider.name,
+                          }
+                        )}
+                        action={
                           <ProviderAuthReset
                             provider={provider}
                             disabled={sessionActive || createSession.isPending || submittingApiKey}
                           />
-                        </AlertAction>
-                      </Alert>
+                        }
+                      />
                     ) : (
-                      <Alert>
-                        <LogInIcon />
-                        <AlertTitle>
-                          {t('settings.providers.auth.oauthTitle', 'OAuth authentication')}
-                        </AlertTitle>
-                        <AlertDescription className="text-xs">
-                          {t(
-                            'settings.providers.auth.oauthDescription',
-                            'After submitting, follow the provider instructions to open the authorization page and sign in.'
-                          )}
-                        </AlertDescription>
-                      </Alert>
+                      <Alert
+                        variant="info"
+                        showIcon
+                        title={t('settings.providers.auth.oauthTitle', 'OAuth authentication')}
+                        description={t(
+                          'settings.providers.auth.oauthDescription',
+                          'After submitting, follow the provider instructions to open the authorization page and sign in.'
+                        )}
+                      />
                     )}
                   </>
                 );
@@ -277,13 +271,12 @@ export function ProviderAuthForm({ provider }: ProviderAuthFormProps) {
             }}
           </form.Subscribe>
           {submissionError && (
-            <Alert variant="destructive">
-              <TriangleAlertIcon />
-              <AlertTitle>
-                {t('settings.providers.auth.submissionFailed', 'Authentication failed')}
-              </AlertTitle>
-              <AlertDescription>{submissionError.message}</AlertDescription>
-            </Alert>
+            <Alert
+              variant="danger"
+              showIcon
+              title={t('settings.providers.auth.submissionFailed', 'Authentication failed')}
+              description={submissionError.message}
+            />
           )}
           <form.Subscribe
             selector={(state) => ({

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { EyeIcon, FileTextIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import {
   Attachment,
   AttachmentAction,
@@ -65,10 +65,12 @@ export function MessageFileAttachment({ attachment }: { attachment: MessageAttac
       );
     } else if (preview.isError) {
       return (
-        <Alert variant="destructive">
-          <AlertTitle>{t('session.messageFile.previewFailed', 'Unable to open preview')}</AlertTitle>
-          <AlertDescription>{preview.error.message}</AlertDescription>
-        </Alert>
+        <Alert
+          variant="danger"
+          showIcon
+          title={t('session.messageFile.previewFailed', 'Unable to open preview')}
+          description={preview.error.message}
+        />
       );
     } else {
       return (

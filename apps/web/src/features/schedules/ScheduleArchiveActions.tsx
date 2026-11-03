@@ -2,6 +2,7 @@
  * @author Codex
  * @description Confirms archived task recovery and irreversible deletion with visible pending/error feedback.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -116,11 +117,7 @@ export function ScheduleArchiveActions({ task }: { task: ScheduledTask }) {
                   )}
             </DialogDescription>
           </DialogHeader>
-          {mutation.error && (
-            <p role="alert" className="text-sm text-destructive">
-              {mutation.error.message}
-            </p>
-          )}
+          {mutation.error && <Alert variant="danger" showIcon description={mutation.error.message} />}
           <DialogFooter>
             <Button variant="outline" disabled={mutation.isPending} onClick={() => setAction(undefined)}>
               {t('common.cancel', 'Cancel')}

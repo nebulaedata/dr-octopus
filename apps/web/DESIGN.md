@@ -69,6 +69,7 @@
 ## 5. 组件与交互
 
 - 从 `@octopus/ui/components/*` 消费 shadcn primitives。禁止直接编辑 `packages/ui/src/components/`；缺失组件按 AGENTS.md 的 CLI 方式安装。
+- 独立提示使用 `@octopus/custom-ui/components/alert`，通过 `variant`、`title`、`description`、`details`、`action`、`showIcon`、`allowClose` 传参，组件统一布局。成功提示标题/正文使用常规文字色，图标使用 success；字段就近错误、20px 顶部连接条与时间线标记保留专用结构。
 - 新界面先查下表与相邻页面的既有入口，再考虑新建组件；确需新增的 app 级复用组件放入 `src/components/`，遵守 AGENTS.md 的边界规则。
 
 - 应用级 Dialog 与主界面并列挂载，不把整个 Workbench 作为某个 Dialog Root 的 children。关闭的父 Dialog 仍会提供上下文，导致其他弹窗被视为嵌套并抑制自身遮罩。保持官方 DialogOverlay 的背景模糊；验收时检查遮罩节点及实际 `backdrop-filter`，不能只确认弹窗可见。
@@ -94,7 +95,7 @@
 - Button 沿用已有 variant 和 size：主操作用默认强调，次要操作用 `outline` / `secondary`，工具栏和低强调入口用 `ghost`。所有执行删除或打开删除确认框的按钮都必须使用 `destructive` variant，不能用 `outline` / `ghost`；确认框中的最终删除按钮同样使用 `destructive`。普通关闭或返回不应因邻近危险操作而使用危险样式。
 - 菜单使用现有 DropdownMenu / Select 等组件；单选项展示当前值及选中状态。有官方选项列表时优先提供选择器，覆盖加载、失败重试和当前值保留。会话中的模型与思考等级继续复用合并选择器。
 - 提交及辅助操作统一放在表单底部右侧；按钮顺序、尺寸和主次样式与同类表单一致，窄屏允许换行。
-- 短表单使用 Dialog，附属管理详情可使用 Sheet。仓库尚未安装 AlertDialog：危险删除确认沿用 Dialog 加警示区的模式（`border-destructive/30 bg-destructive/5`、警示图标和明确的对象名称，参考 SkillDeleteDialog）；后续按 CLI 安装 AlertDialog 后统一替换。保留 primitive 的焦点管理、键盘和关闭行为。
+- 短表单使用 Dialog，附属管理详情可使用 Sheet。仓库尚未安装 AlertDialog：危险删除确认沿用 Dialog 加公共 `Alert variant="warning"` 的模式（显示警示图标和明确的对象名称，参考 SkillDeleteDialog）；后续按 CLI 安装 AlertDialog 后统一替换。保留 primitive 的焦点管理、键盘和关闭行为。
 - 表单字段提供可见标签、必要说明和就近错误；placeholder 不能代替标签。提交期间在相关按钮显示 pending 状态并阻止重复提交。
 - 密钥使用密码输入框：未配置显示输入提示，已配置显示 `********（已配置）` 占位符；真实密钥不回填，掩码不作为输入值或提交值。
 - 表单控件设置有意义的 `name`、`autocomplete` 和合适的 `type` / `inputmode`；不拦截粘贴；代码、命令和标识符输入使用 `spellCheck={false}`；提交失败时聚焦首个错误字段。

@@ -10,12 +10,12 @@ import { Switch } from '@octopus/ui/components/switch';
 import { toast } from '@octopus/ui/components/toast';
 import { Badge } from '@octopus/ui/components/badge';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@octopus/ui/components/collapsible';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Item, ItemGroup, ItemContent, ItemTitle, ItemActions } from '@octopus/ui/components/item';
-import { ChevronRightIcon, CircleAlert, RefreshCw } from 'lucide-react';
-import { BrowserBrandIcon } from './BrowserBrandIcon';
-import { ConnectionBadge } from './ConnectionBadge';
-import { ToolNameList } from './ToolNameList';
+import { ChevronRightIcon, RefreshCw } from 'lucide-react';
+import { BrowserBrandIcon } from '@/components/BrowserBrandIcon';
+import { ConnectionBadge } from '@/components/ConnectionBadge';
+import { ToolNameList } from '@/components/ToolNameList';
 import {
   setBrowserEnabled,
   browserDiagnostics,
@@ -234,13 +234,10 @@ export function BrowserBridgeStatus({
                       点击“{browser === 'edge' ? '加载解压缩的扩展' : '加载已解压的扩展'}
                       ”，选择刚才打开的整个插件文件夹。
                     </li>
-                    点击浏览器，打开对应的本地插件目录。
+                    <li>点击浏览器，打开对应的本地插件目录。</li>
                   </ol>
                   {folder.error ? (
-                    <Alert variant="destructive">
-                      <CircleAlert />
-                      <AlertDescription>{folder.error.message}</AlertDescription>
-                    </Alert>
+                    <Alert variant="danger" showIcon description={folder.error.message} />
                   ) : null}
                 </TabsContent>
               </Tabs>
@@ -249,7 +246,7 @@ export function BrowserBridgeStatus({
               <h3 className="font-medium">2. 连接执行器</h3>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" disabled={!ready || setup.isPending} onClick={() => setup.mutate()}>
-                  {setup.isPending ? '正在配置…' : '配置浏览器连接'}
+                  {setup.isPending ? '正在修复…' : '修复浏览器连接'}
                 </Button>
                 <Button
                   variant="ghost"
@@ -263,17 +260,12 @@ export function BrowserBridgeStatus({
                 </Button>
               </div>
               <p className="text-muted-foreground">
-                安装程序已配置连接。解压版或连接失败时点击“配置浏览器连接”，无需运行命令。
+                安装程序已配置连接。解压版或连接失败时点击“修复浏览器连接”，无需运行命令。
               </p>
               <p className="text-muted-foreground">
                 启用右上方的浏览器桥接，在插件弹窗中恢复或重连，再查看上方实例状态。
               </p>
-              {setup.error ? (
-                <Alert variant="destructive">
-                  <CircleAlert />
-                  <AlertDescription>{setup.error.message}</AlertDescription>
-                </Alert>
-              ) : null}
+              {setup.error ? <Alert variant="danger" showIcon description={setup.error.message} /> : null}
               <p role="status" className="text-muted-foreground">
                 {connected
                   ? '插件已连接，工具就绪。请在访问授权中选择浏览器能力，再配置客户端。'
@@ -320,18 +312,15 @@ export function BrowserBridgeStatus({
                       <p className="break-all">执行器数据目录：{diagnostics.data.projectRoot}</p>
                     </>
                   ) : null}
-                  {diagnostics.error ? <p role="alert">{diagnostics.error.message}</p> : null}
+                  {diagnostics.error ? (
+                    <Alert variant="danger" showIcon description={diagnostics.error.message} />
+                  ) : null}
                 </div>
               </details>
             </div>
           </CollapsibleContent>
         </Collapsible>
-        {change.error ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertDescription>{change.error.message}</AlertDescription>
-          </Alert>
-        ) : null}
+        {change.error ? <Alert variant="danger" showIcon description={change.error.message} /> : null}
       </div>
     </section>
   );

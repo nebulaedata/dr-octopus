@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@octopus/ui
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PermissionConfigSchema, PermissionToolRuleSchema } from '@octopus/shared/protocol';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -305,11 +305,7 @@ export function PermissionToolEditor({
                   </Collapsible>
                 )}
               </form.Field>
-              {save.isError ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{save.error.message}</AlertDescription>
-                </Alert>
-              ) : null}
+              {save.isError ? <Alert variant="danger" showIcon description={save.error.message} /> : null}
             </div>
           </ScrollArea>
           <DialogFooter className="m-0 shrink-0 flex-row flex-wrap justify-end px-5 py-4 sm:px-6">

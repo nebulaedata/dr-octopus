@@ -7,7 +7,7 @@ import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { toolPolicySettingsSchema, type ToolPoliciesResponse } from '../contracts/tool-policy';
+import type { ToolPoliciesResponse } from '../contracts/tool-policy';
 import { executionResourceRoot } from './resource-paths';
 import { configureBrowserHost, browserExtensionFolder } from './browser-installation';
 import { settingsInputSchema } from '../contracts/connection-settings';
@@ -74,16 +74,6 @@ export function registerDesktopIpc(
         return { ok: false, message: '此页面无法读取工具策略' };
       }
       return manager.readToolPolicies();
-    }
-  );
-  ipcMain.handle(
-    ipcChannels.saveToolPolicies,
-    async (event, input: unknown): Promise<ToolPoliciesResponse> => {
-      const parsed = toolPolicySettingsSchema.safeParse(input);
-      if (!isTrustedSender(event, windows, origin) || !parsed.success || restarting || recovery?.isBusy()) {
-        return { ok: false, message: '此页面无法修改工具策略，或请求参数无效' };
-      }
-      return manager.saveToolPolicies(parsed.data);
     }
   );
   ipcMain.handle(ipcChannels.readMaintenance, (event, input: unknown): MaintenanceResponse => {
@@ -167,10 +157,10 @@ export function registerDesktopIpc(
     ipcChannels.configureBrowserHost,
     async (event, input: unknown): Promise<DesktopActionResponse> => {
       if (!isTrustedSender(event, windows, origin) || !emptyRequestSchema.safeParse(input).success) {
-        return { ok: false, message: '此页面无法配置浏览器连接' };
+        return { ok: false, message: '此页面无法修复浏览器连接' };
       }
       if (configuringBrowser) {
-        return { ok: false, message: '正在配置浏览器连接，请稍候' };
+        return { ok: false, message: '正在修复浏览器连接，请稍候' };
       }
       configuringBrowser = true;
       try {
@@ -180,7 +170,7 @@ export function registerDesktopIpc(
         return {
           ok: false,
           message:
-            '浏览器连接配置失败。请确认安装资源完整、目录可写，且现有 Host 注册属于本产品；修复后可重试。',
+            '浏览器连接修复失败。请确认安装资源完整、目录可写，且现有 Host 注册属于本产品；修复后可重试。',
         };
       } finally {
         configuringBrowser = false;
@@ -519,7 +509,6 @@ export function registerDesktopIpc(
     unsubscribe();
     ipcMain.removeHandler(ipcChannels.restartApplication);
     ipcMain.removeHandler(ipcChannels.readToolPolicies);
-    ipcMain.removeHandler(ipcChannels.saveToolPolicies);
     ipcMain.removeHandler(ipcChannels.readMaintenance);
     ipcMain.removeHandler(ipcChannels.maintenanceAction);
     ipcMain.removeHandler(ipcChannels.readNetworkAddresses);

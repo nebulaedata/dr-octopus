@@ -4,7 +4,7 @@
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { RotateCcwIcon } from 'lucide-react';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { Spinner } from '@octopus/ui/components/spinner';
 import { updatePermissionSettings } from '@/api/permissions';
@@ -52,9 +52,7 @@ export function PermissionResetButton({
         {t('settings.permissions.restoreDefaults', 'Restore defaults')}
       </Button>
       {reset.isError ? (
-        <Alert variant="destructive" className="basis-full">
-          <AlertDescription>{reset.error.message}</AlertDescription>
-        </Alert>
+        <Alert className="basis-full" variant="danger" showIcon description={reset.error.message} />
       ) : null}
     </>
   );

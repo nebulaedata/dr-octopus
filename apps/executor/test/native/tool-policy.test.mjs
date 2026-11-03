@@ -21,7 +21,7 @@ import { policyTools, selectedPolicyTools } from '../../src/runtime/mcp/tool-pol
 import { defaultToolPolicySettings, toolPolicySettingsSchema } from '../../src/contracts/tool-policy.ts';
 import { ConnectionSettings } from '../../src/main/connection-settings.ts';
 
-test('policy defaults and independent publication survive preference saves and reopening', async () => {
+test('policy defaults and unified publication survive preference saves and reopening', async () => {
   const root = await mkdtemp(join(tmpdir(), 'octopus-policy-settings-'));
   const native = new NativeFileCommit(
     fileURLToPath(new URL('../../dist/native/file-commit.node', import.meta.url))
@@ -30,7 +30,7 @@ test('policy defaults and independent publication survive preference saves and r
     const settings = await ConnectionSettings.open(native, root);
     assert.equal(settings.readToolPolicies().selectedId, 'readonly');
     const config = { revision: 1, selectedId: 'all', custom: [] };
-    await settings.saveToolPolicies(config);
+    await settings.save({ port: 19876, networkAddress: null, toolPolicies: config });
     await settings.save({ port: 19877, networkAddress: null });
     assert.deepEqual(settings.readToolPolicies(), config);
     const reopened = await ConnectionSettings.open(native, root);
@@ -58,43 +58,71 @@ test('policy defaults and independent publication survive preference saves and r
   }
 });
 
-test('default readonly rejects cached mutations; changes affect existing sessions without cancelling admitted reads', async () => {
+test('saved policy changes affect MCP discovery and admission only after restart', async () => {
   const root = await mkdtemp(join(tmpdir(), 'octopus-policy-mcp-'));
   const workspace = join(root, 'workspace');
   await mkdir(workspace);
   const native = new NativeFileCommit(
     fileURLToPath(new URL('../../dist/native/file-commit.node', import.meta.url))
   );
-  const publication = await FilePublication.open(native, root);
-  const basic = new BasicTools(publication);
-  const store = await ControlStore.open(native, root);
-  const authority = new TaskAuthority(basic, store);
-  const gateway = new HttpGateway(authority);
-  const clients = [];
-  try {
+  const settings = await ConnectionSettings.open(native, root);
+  let basic;
+  let gateway;
+  let client;
+  let authority;
+  let store;
+  /**
+   * Recreates the Runtime owners using the persisted startup policy and a fresh MCP session.
+   */
+  async function start() {
+    basic = new BasicTools(await FilePublication.open(native, root));
+    store = await ControlStore.open(native, root);
+    const policy = settings.readToolPolicies();
+    authority = new TaskAuthority(basic, store, undefined, undefined, undefined, {
+      revision: policy.revision,
+      enabledTools: selectedPolicyTools(policy),
+    });
+    gateway = new HttpGateway(authority);
     const endpoint = await gateway.listen(0);
     const approved = await authority.approve({
       label: 'policy test',
       permissions: ['files.read', 'files.write'],
       waitBudgetMs: 120000,
     });
-    const client = new Client({ name: 'policy-test', version: '1' });
-    clients.push(client);
+    client = new Client({ name: 'policy-test', version: '1' });
     await client.connect(
       new StreamableHTTPClientTransport(new URL(endpoint), {
         requestInit: { headers: { Authorization: 'Bearer ' + approved.token } },
       })
     );
-    const names = (await client.listTools()).tools.map((tool) => tool.name);
-    assert.ok(names.includes('read'));
-    assert.ok(!names.includes('write'));
+  }
+  /**
+   * Closes only this fixture's session and Runtime resources before another startup.
+   */
+  async function stop() {
+    await client?.close();
+    await gateway?.close();
+    await basic?.close();
+  }
+  try {
+    await start();
+    assert.ok(!(await client.listTools()).tools.some((tool) => tool.name === 'write'));
+    await settings.save({
+      port: 19876,
+      networkAddress: null,
+      toolPolicies: { revision: 1, selectedId: 'all', custom: [] },
+    });
+    assert.ok(!(await client.listTools()).tools.some((tool) => tool.name === 'write'));
     const started = await client.callTool({
       name: 'task_start',
-      arguments: { capabilities: ['files.read', 'files.write'], cwd: workspace, idempotencyKey: 'task' },
+      arguments: {
+        capabilities: ['files.read', 'files.write'],
+        cwd: workspace,
+        idempotencyKey: 'before-restart',
+      },
     });
-    const taskId = started.structuredContent.data.taskId;
     const args = {
-      taskId,
+      taskId: started.structuredContent.data.taskId,
       path: 'file.txt',
       content: 'hello',
       expectedVersion: 'absent',
@@ -102,55 +130,35 @@ test('default readonly rejects cached mutations; changes affect existing session
     };
     const blocked = await client.callTool({ name: 'write', arguments: args });
     assert.equal(blocked.structuredContent.data.error.code, 'TOOL_DISABLED');
-    assert.equal(store.tasks.get(taskId).operations.length, 0);
-    authority.setToolPolicy(
-      policyTools.map((tool) => tool.name),
-      1
-    );
-    gateway.notifyToolListChanged();
+    assert.equal(store.tasks.get(args.taskId).operations.length, 0);
+    await client.callTool({ name: 'task_end', arguments: { taskId: args.taskId } });
+    await stop();
+    await start();
     assert.ok((await client.listTools()).tools.some((tool) => tool.name === 'write'));
+    const next = await client.callTool({
+      name: 'task_start',
+      arguments: {
+        capabilities: ['files.read', 'files.write'],
+        cwd: workspace,
+        idempotencyKey: 'after-restart',
+      },
+    });
+    args.taskId = next.structuredContent.data.taskId;
+    // Tightening permissions also waits for restart; current calls keep the loaded policy.
+    await settings.save({
+      port: 19876,
+      networkAddress: null,
+      toolPolicies: { ...defaultToolPolicySettings, revision: 2 },
+    });
     assert.equal((await client.callTool({ name: 'write', arguments: args })).isError, undefined);
     assert.equal(await readFile(join(workspace, 'file.txt'), 'utf8'), 'hello');
-
-    let enter;
-    let finish;
-    const entered = new Promise((resolve) => {
-      enter = resolve;
-    });
-    const release = new Promise((resolve) => {
-      finish = resolve;
-    });
-    const originalRead = basic.read.bind(basic);
-    basic.read = async (...input) => {
-      enter();
-      await release;
-      return originalRead(...input);
-    };
-    const reading = client.callTool({ name: 'read', arguments: { taskId, path: 'file.txt' } });
-    await entered;
-    authority.setToolPolicy([], 2);
-    finish();
-    assert.equal((await reading).structuredContent.data.text, 'hello');
-    assert.deepEqual((await client.listTools()).tools, []);
-    const disabled = await client.callTool({ name: 'read', arguments: { taskId, path: 'file.txt' } });
-    assert.equal(disabled.structuredContent.data.error.code, 'TOOL_DISABLED');
-    for (const [name, arguments_] of [
-      ['task_status', { taskId }],
-      ['task_end', { taskId }],
-      ['task_stop', { taskId }],
-      ['browser_list', {}],
-      ['file_transfer_status', { transferId: crypto.randomUUID(), taskId }],
-    ]) {
-      const reply = await client.callTool({ name, arguments: arguments_ });
-      assert.equal(reply.isError, true);
-    }
-    assert.throws(() => authority.setToolPolicy([], 1), /stale/);
-    authority.setToolPolicy(selectedPolicyTools(defaultToolPolicySettings), 3);
-    assert.equal((await client.callTool({ name: 'task_end', arguments: { taskId } })).isError, undefined);
+    await client.callTool({ name: 'task_end', arguments: { taskId: args.taskId } });
+    await stop();
+    await start();
+    assert.ok(!(await client.listTools()).tools.some((tool) => tool.name === 'write'));
+    assert.throws(() => authority.requireToolEnabled('write'), /disabled/);
   } finally {
-    await Promise.allSettled(clients.map((client) => client.close()));
-    await gateway.close();
-    await basic.close();
+    await stop();
     assert.ok(root.startsWith(join(tmpdir(), 'octopus-policy-mcp-')));
     await rm(root, { recursive: true, force: true });
   }

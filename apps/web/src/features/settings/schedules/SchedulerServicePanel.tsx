@@ -6,7 +6,7 @@ import { StatCard } from '@/components/StatCard';
 import { formatDateTime } from '@/utils/date';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ActivityIcon, ClockIcon, ListTodoIcon, RefreshCwIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@octopus/ui/components/card';
@@ -60,7 +60,10 @@ export function SchedulerServicePanel() {
                 'settings.scheduler.service.stoppedDescription',
                 'Task data is preserved; running tasks will be interrupted.'
               )
-            : t('settings.scheduler.service.startedDescription', 'The service runs independently in the background.'),
+            : t(
+                'settings.scheduler.service.startedDescription',
+                'The service runs independently in the background.'
+              ),
         type: 'success',
       });
     },
@@ -69,7 +72,10 @@ export function SchedulerServicePanel() {
   /**
    * Maps the transport state to a compact user-facing label and semantic badge.
    */
-  const presentation = ((): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'warning' } => {
+  const presentation = ((): {
+    label: string;
+    variant: 'default' | 'secondary' | 'destructive' | 'warning';
+  } => {
     if (current?.state === 'control-ready') {
       return current.executionReady && !current.degraded
         ? { label: t('settings.scheduler.service.stateRunning', 'Running'), variant: 'default' }
@@ -79,7 +85,10 @@ export function SchedulerServicePanel() {
       return { label: t('settings.scheduler.service.stateStopped', 'Stopped'), variant: 'secondary' };
     }
     if (current?.state === 'unavailable') {
-      return { label: t('settings.scheduler.service.stateUnreachable', 'Unreachable'), variant: 'destructive' };
+      return {
+        label: t('settings.scheduler.service.stateUnreachable', 'Unreachable'),
+        variant: 'destructive',
+      };
     }
     return { label: t('settings.scheduler.service.stateAbsent', 'Not started'), variant: 'secondary' };
   })();
@@ -91,7 +100,9 @@ export function SchedulerServicePanel() {
       <CardHeader className="relative gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-sm">{t('settings.scheduler.service.title', 'Scheduler service')}</CardTitle>
+            <CardTitle className="text-sm">
+              {t('settings.scheduler.service.title', 'Scheduler service')}
+            </CardTitle>
             <Badge variant={presentation.variant}>{presentation.label}</Badge>
           </div>
           <CardDescription className="text-xs">
@@ -113,10 +124,12 @@ export function SchedulerServicePanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         {(status.error ?? control.error) instanceof Error ? (
-          <Alert variant="destructive">
-            <AlertTitle>{t('settings.scheduler.service.operationFailed', 'Service operation failed')}</AlertTitle>
-            <AlertDescription>{(control.error ?? status.error)?.message}</AlertDescription>
-          </Alert>
+          <Alert
+            variant="danger"
+            showIcon
+            title={t('settings.scheduler.service.operationFailed', 'Service operation failed')}
+            description={(control.error ?? status.error)?.message}
+          />
         ) : null}
         <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <StatCard

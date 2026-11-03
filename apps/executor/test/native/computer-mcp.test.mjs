@@ -34,8 +34,10 @@ async function fixture(run) {
     const publication = await FilePublication.open(native, root);
     const basic = new BasicTools(publication);
     const store = await ControlStore.open(native, root);
-    const authority = new TaskAuthority(basic, store, computer);
-    authority.setToolPolicy(policyToolNameSchema.options, 0);
+    const authority = new TaskAuthority(basic, store, computer, undefined, undefined, {
+      revision: 0,
+      enabledTools: policyToolNameSchema.options,
+    });
     const gateway = new HttpGateway(authority);
     const endpoint = await gateway.listen(0);
     const clients = [];

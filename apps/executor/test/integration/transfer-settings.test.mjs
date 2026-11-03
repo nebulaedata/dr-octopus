@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { _electron as electron, expect } from '@playwright/test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { executorProduct } from '../../src/contracts/product.ts';
 import { createClientConfiguration } from './client-configuration.mjs';
 
 const appRoot = resolve(fileURLToPath(new URL('../../', import.meta.url)));
@@ -19,7 +20,10 @@ const appRoot = resolve(fileURLToPath(new URL('../../', import.meta.url)));
  * Opens only the test-owned instance and tracks actual renderer exceptions throughout the settings flow.
  */
 async function launch(root, errors) {
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
   const app = await electron.launch({
+    env,
     cwd: appRoot,
     args: [appRoot, '--executor-test', '--executor-test-data=' + root],
   });
@@ -29,7 +33,7 @@ async function launch(root, errors) {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.getByTestId('runtime-state').filter({ hasText: '已启动' }).waitFor();
     await page.getByRole('tab', { name: '设置', exact: true }).click();
-    assert.equal(await page.title(), 'Dr.Octopus Executor v0.0.1');
+    assert.equal(await page.title(), `${executorProduct.name} v${executorProduct.version}`);
     assert.ok(page.url().startsWith('app://ui/'));
     return { app, page };
   } catch (error) {

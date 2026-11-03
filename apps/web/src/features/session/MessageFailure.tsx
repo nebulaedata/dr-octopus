@@ -3,7 +3,7 @@
  * @description Renders a durable model or Provider failure inside its originating conversation turn.
  */
 
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useI18n } from '@/i18n/use-i18n';
 
 /**
@@ -15,9 +15,12 @@ import { useI18n } from '@/i18n/use-i18n';
 export function MessageFailure({ errorMessage }: { errorMessage: string }) {
   const { t } = useI18n();
   return (
-    <Alert variant="destructive" className="my-2">
-      <AlertTitle>{t('session.messageFailure.title', 'Model request failed')}</AlertTitle>
-      <AlertDescription className="break-words">{errorMessage}</AlertDescription>
-    </Alert>
+    <Alert
+      className="my-2"
+      variant="danger"
+      showIcon
+      title={t('session.messageFailure.title', 'Model request failed')}
+      description={errorMessage}
+    />
   );
 }

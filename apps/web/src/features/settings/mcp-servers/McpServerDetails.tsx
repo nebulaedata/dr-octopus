@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { ArrowLeftIcon, ServerIcon, Trash2Icon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import {
@@ -58,18 +58,21 @@ export function McpServerDetails(props: McpServerDetailsProps) {
   if (props.error !== undefined) {
     return (
       <div className="p-5">
-        <Alert variant="destructive">
-          <AlertTitle>{t('settings.mcp.operationFailed', 'MCP operation failed')}</AlertTitle>
-          <AlertDescription className="flex flex-col gap-3">
-            <span>{props.error}</span>
-            <div className="flex gap-2">
+        <Alert
+          variant="danger"
+          showIcon
+          title={t('settings.mcp.operationFailed', 'MCP operation failed')}
+          description={<span>{props.error}</span>}
+          action={
+            <>
               <Button variant="outline" onClick={props.onBack}>
                 {t('settings.mcp.backToList', 'Back to list')}
               </Button>
+
               <Button onClick={props.onRetry}>{t('common.retry', 'Retry')}</Button>
-            </div>
-          </AlertDescription>
-        </Alert>
+            </>
+          }
+        />
       </div>
     );
   }
@@ -129,16 +132,16 @@ export function McpServerDetails(props: McpServerDetailsProps) {
                 onSubmit={(_name, value) => props.onUpdate(server.serverKey, value)}
               />
             ) : (
-              <Alert>
-                <AlertTitle>{t('settings.mcp.readOnlyTitle', 'Source is read-only')}</AlertTitle>
-                <AlertDescription>
-                  {t(
-                    'settings.mcp.readOnlyDescription',
-                    'This definition comes from {{source}}; only the allowed global enable/disable override can be created.',
-                    { source: getMcpServerSourceLabel(t, server.source) }
-                  )}
-                </AlertDescription>
-              </Alert>
+              <Alert
+                variant="info"
+                showIcon
+                title={t('settings.mcp.readOnlyTitle', 'Source is read-only')}
+                description={t(
+                  'settings.mcp.readOnlyDescription',
+                  'This definition comes from {{source}}; only the allowed global enable/disable override can be created.',
+                  { source: getMcpServerSourceLabel(t, server.source) }
+                )}
+              />
             )}
             {!server.capabilities.edit && server.secretBindings.length > 0 ? (
               <section className="flex flex-col gap-3">
@@ -257,10 +260,12 @@ export function McpServerDetails(props: McpServerDetailsProps) {
           </div>
         </header>
         {props.mutationError !== undefined ? (
-          <Alert variant="destructive">
-            <AlertTitle>{t('settings.mcp.saveFailed', 'Failed to save MCP configuration')}</AlertTitle>
-            <AlertDescription>{props.mutationError}</AlertDescription>
-          </Alert>
+          <Alert
+            variant="danger"
+            showIcon
+            title={t('settings.mcp.saveFailed', 'Failed to save MCP configuration')}
+            description={props.mutationError}
+          />
         ) : null}
         {renderContent()}
       </div>

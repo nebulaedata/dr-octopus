@@ -5,8 +5,8 @@
 import { SettingContainer } from '../Layout/SettingContainer';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BracesIcon, PencilIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { PencilIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { SearchInput } from '@/components/SearchInput';
@@ -165,23 +165,22 @@ function EnvironmentScopePanel({ scope }: { scope: EnvironmentScope }) {
   }
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <Alert>
-        <BracesIcon />
-        <AlertTitle>
-          {scope === 'server'
+      <Alert
+        variant="info"
+        showIcon
+        title={
+          scope === 'server'
             ? t('settings.environment.alertServerTitle', 'Takes effect after restarting the Server')
             : t(
                 'settings.environment.alertAgentTitle',
                 'Newly started Agent processes read the new configuration'
-              )}
-        </AlertTitle>
-        <AlertDescription>
-          {t(
-            'settings.environment.priorityDescription',
-            'Priority: launch arguments → process environment / dev .env → file configuration → defaults. The table shows the values used at the next load; running processes keep their current configuration.'
-          )}
-        </AlertDescription>
-      </Alert>
+              )
+        }
+        description={t(
+          'settings.environment.priorityDescription',
+          'Priority: launch arguments → process environment / dev .env → file configuration → defaults. The table shows the values used at the next load; running processes keep their current configuration.'
+        )}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput
           resultCount={query.isSuccess ? entries.length : undefined}
@@ -215,10 +214,12 @@ function EnvironmentScopePanel({ scope }: { scope: EnvironmentScope }) {
         ) : null}
       </div>
       {query.isError ? (
-        <Alert variant="destructive">
-          <AlertTitle>{t('settings.environment.loadFailed', 'Failed to load')}</AlertTitle>
-          <AlertDescription>{environmentErrorMessage(t, query.error)}</AlertDescription>
-        </Alert>
+        <Alert
+          variant="danger"
+          showIcon
+          title={t('settings.environment.loadFailed', 'Failed to load')}
+          description={environmentErrorMessage(t, query.error)}
+        />
       ) : null}
       {renderContent()}
       {editor ? (

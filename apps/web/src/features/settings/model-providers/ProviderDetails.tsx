@@ -4,7 +4,7 @@
  */
 
 import { ServerIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@octopus/ui/components/empty';
@@ -45,20 +45,21 @@ export function ProviderDetails(props: ProviderDetailsProps) {
   if (props.error !== undefined) {
     return (
       <div className="p-5">
-        <Alert variant="destructive">
-          <AlertTitle>
-            {t('settings.providers.detailsLoadFailed', 'Failed to load provider details')}
-          </AlertTitle>
-          <AlertDescription className="flex flex-col gap-3">
-            <span>{props.error}</span>
-            <div className="flex gap-2">
+        <Alert
+          variant="danger"
+          showIcon
+          title={t('settings.providers.detailsLoadFailed', 'Failed to load provider details')}
+          description={<span>{props.error}</span>}
+          action={
+            <>
               <Button variant="outline" onClick={props.onBack}>
                 {t('settings.providers.backToList', 'Back to list')}
               </Button>
+
               <Button onClick={props.onRetry}>{t('common.retry', 'Retry')}</Button>
-            </div>
-          </AlertDescription>
-        </Alert>
+            </>
+          }
+        />
       </div>
     );
   }
@@ -150,20 +151,18 @@ export function ProviderDetails(props: ProviderDetailsProps) {
                   provider={provider}
                 />
               ) : (
-                <Alert>
-                  <AlertTitle>
-                    {t(
-                      'settings.providers.authEnvManagedTitle',
-                      'Authentication managed by the runtime environment'
-                    )}
-                  </AlertTitle>
-                  <AlertDescription>
-                    {t(
-                      'settings.providers.authEnvManagedDescription',
-                      'This provider has no authentication method editable on this page.'
-                    )}
-                  </AlertDescription>
-                </Alert>
+                <Alert
+                  variant="info"
+                  showIcon
+                  title={t(
+                    'settings.providers.authEnvManagedTitle',
+                    'Authentication managed by the runtime environment'
+                  )}
+                  description={t(
+                    'settings.providers.authEnvManagedDescription',
+                    'This provider has no authentication method editable on this page.'
+                  )}
+                />
               )}
             </section>
             <section className="flex flex-col gap-4">

@@ -2,6 +2,7 @@
  * @author Codex
  * @description Displays bounded run history and explicit cancellation of queued work.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useState } from 'react';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from '@octopus/ui/components/dialog';
 import { ScheduleDialogContent, ScheduleDialogBody } from './ScheduleDialog';
@@ -68,12 +69,12 @@ export function ScheduleRunHistoryDialog({
           </DialogDescription>
         </DialogHeader>
         <ScheduleDialogBody>
-          {error && (
-            <p role="alert" className="mt-3 text-sm text-destructive">
-              {error.message}
+          {error && <Alert variant="danger" showIcon description={error.message} />}
+          {pending && (
+            <p role="status" className="mt-3 text-sm">
+              {t('schedules.runHistory.loading', 'Loading records…')}
             </p>
           )}
-          {pending && <p role="status" className="mt-3 text-sm">{t('schedules.runHistory.loading', 'Loading records…')}</p>}
           {items?.length === 0 && (
             <p className="mt-3 text-sm text-muted-foreground">
               {t('schedules.runHistory.empty', 'No run records yet.')}

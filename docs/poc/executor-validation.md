@@ -181,7 +181,7 @@ DOMRecorder 在活动录制期间通过捕获 frame load 事件报告新加载 i
 
 真实模型只追加一次合成跨页请求：qwen3.5-flash 返回 HTTP 200，15,539 ms 收到响应头，15,548 ms 完整收到 5,258 字节，生成 7 步、3 个 Tab（2 个派生页）、2 个字符串参数和 7 个源事件引用，通过当时的 Schema 与业务校验，无自动重试。证据为 Executor 本地 workflow-provider 批次 20261029-070855-d53c2dcd，按源码摘要保留。此请求发生在本轮最后的起始 URL 采集时间投影细化之前；最终该细化已通过本地与双浏览器受控回归，未再追加付费调用。本次不是多轮随机稳定性证明，也不是实际业务网站或智能重放验收。
 
-2026-10-29，步骤/参数编辑细化：找回上一轮中断后已生成的四屏图，归档 workflow-editor-board-v1.png 与完整提示词，没有重复生成。新稿在 apps/browser-extension/DESIGN.md 登记为 pending review；现有 phase2 v3 的已批准范围不变，新编辑页面尚未接入。
+2026-10-29，步骤/参数编辑细化：找回上一轮中断后已生成的四屏图，归档 [workflow-editor-board-v1.png](../design/browser-extension-recorder/history-manifest.md#docs-design-browser-extension-recorder-workflow-editor-board-v1-png) 与完整提示词，没有重复生成。新稿在 apps/browser-extension/DESIGN.md 登记为 pending review；现有 phase2 v3 的已批准范围不变，新编辑页面尚未接入。
 
 独立底层新增 workflow-editing.ts：对显式的一组参数/步骤修改进行脱离原对象的整体校验，全部通过才返回新工作副本；参数改名同步步骤与成功条件引用，usedBy 从真实步骤绑定派生。协调改绑后可删除参数；已录制步骤不可直接删除，未被引用的推断建议可删除；重排仍受 DOM 顺序、Tab 创建/关闭和依赖规则约束；来源 ID、动作、Tab 及推断来源不可通过编辑配置改写。保存/发布仍需经过现有 Worker 权限与 Repository revision 校验，该辅助模块不新增外部命令。
 
@@ -1398,7 +1398,7 @@ Edge 取消是本次测试脚本的额度边界错误，不能归因于产品停
 
 双浏览器公开API探针扩展结果（新证据写入 choice-semantics-feasibility-v2，保留第一轮报告）：即使 includeAttributes 加上 selected/aria-selected/value，原生select的运行时选择变化仍未出现在快照相应行；原生multiple select连续调用公开selectOption两次，返回均success但最终仅选第二项。Chrome/Edge均复现。未访问私有selectorMap、未修改第三方依赖，也没有把测试页的DOM读取接口提供给智能体。
 
-修订契约记录在[统一方案](../architecture/browser-skill-unified-agent.md#录制选择意图的修订契约2026-11-03验证中未接入生产)。结论：明确的数据语义有收益；额外参数和unknown改写必须由来源规则约束，而非继续叠提示词。完整实施门禁仍取决于源端采集、持久问答和重放闭环验证，本轮不把局部原型或付费小样当完整通过，未修改生产代码。
+修订契约记录在[统一方案](../architecture/browser-skill-unified-agent.md#录制选择意图与执行约束)。结论：明确的数据语义有收益；额外参数和unknown改写必须由来源规则约束，而非继续叠提示词。完整实施门禁仍取决于源端采集、持久问答和重放闭环验证，本轮不把局部原型或付费小样当完整通过，未修改生产代码。
 
 检查：128项单测（含8项规则原型）、Chrome/Edge公开API探针2项、lint、typecheck、修改的测试文件Prettier及diff检查通过。12次请求报告总token为9743；未获取账单，不推算实际金额。无生产源码/入口变更，未重建发行产物。
 
@@ -1437,3 +1437,254 @@ Edge 取消是本次测试脚本的额度边界错误，不能归因于产品停
 第二场景的测试断言失败保留在choice-chain-recovery-live.log；报告中的LIVE_RUN_FAILED来自测试总额度封顶，页面没有提交。原型确实挡住了错误工具类型，但**相同错误业务意图可换成类型合法的click继续执行**，单测显式保留这个反例。不能把3次续接未完成扩大为模型永远不会恢复，也不能把无业务提交视为完整恢复通过。
 
 当前验证结论：工具适用性检查只能补充已有观察/身份保护，不能代替来源选择要求与实际页面目标的对应。修复不能以“预检查通过”作为业务正确性证明，也不应继续付费盲测或叠加按钮名称规则。本轮仍未将原型接入产品；完整选择语义方案未通过，用户正在修改的预算/停止条件保持原样。
+
+### apply_choice 有界选择阶段原型（2026-11-03，限定范围通过）
+
+用户重新授权付费验证，本轮自限新增20次，账本独立于已用完的前一批20次。新增测试原型test/fixtures/choice-tool-prototype.mjs、单测test/choice-tool-prototype.test.mjs及双浏览器/可选付费入口test/integration/apply-choice-poc.test.mjs。默认只跑受控测试；显式环境变量APPLY_CHOICE_LIVE_KEY指向授权外部密钥文件才允许真实请求。固定MrToken目的地、先发现确切模型、请求发送前持久预留、无自动重试；未知请求同样占额度。
+
+原型的requirementId读取创建时复制并校验的group/option/role/checked，模型不能传入替代选项、状态或元素索引。按group+option+role唯一匹配；零匹配返回unavailable，多匹配返回ambiguous，不可用/未知返回unknown；已有正确状态不重复点击。执行后必须再次观察；失败或结果丢失进入outcome_unknown并禁止再次执行，不以工具返回success代替业务状态。普通click/fill在整个选择阶段始终拒绝；这验证的是有界阶段的统一准入，并没有验证通用重放中的任意动作分类。
+
+**关键适配范围：**原型的控件语义由固定合成页面的DOM oracle提供；实际操作调用未修改的公开PageController.clickElement，元素索引来自同次公开快照。适配器有固定页面的DOM身份、组、角色、状态重检，但不是已接入生产的观察契约。现有PageController公开BrowserState只提供文本状态，不能把本次fixture oracle伪称为它的结构化能力；也不能把文本解析器当可信元素映射。未修改共享协议、录制器、Worker或正式智能体工具。仅覆盖原生radio/checkbox，没有宣称通用自定义组件或原生多选下拉已解决。
+
+受控验证：Chrome/Edge各覆盖11种情境，包括正常选择、取消勾选、缺失、同组重名、禁用、观察后名称变化、观察后跨组移动、页面取消点击、动作回执丢失、SDK错误工具绕过后提问、同轮提问与操作。已满足时重复调用不多点；另一组同名控件保持不变；未知动作不自动重复；原始工具不能绕过；SDK onLanguageModelCallEnd看到同批问题后，操作即使排列在问题之前也不执行，问题优先状态持续到本轮结束。原型不提供真实持久问答恢复，已有服务持久化测试与此原型分别报告。
+
+| 真实模型场景 | 请求数 | 结果 |
+| --- | --- | --- |
+| 要求的选项存在 | 2 | apply_choice → finish_run，真实页面仅点击目标一次 |
+| 要求的选项缺失 | 2 | apply_choice返回unavailable → ask_user_question，页面零点击 |
+| 同组同名两个候选 | 2 | apply_choice返回ambiguous → ask_user_question，页面零点击 |
+| 要求取消复选框 | 2 | apply_choice → finish_run，真实页面取消勾选，未重复切换 |
+
+本批实际8次HTTP200，共7132 tokens，剩余12次未使用。模型qwen3.6-flash-open，四个情境每个仅一次，不作统计成功率承诺。模型只收到合成workflow.choices，由测试提供正确要求，不代表源端录制/自动整理已修复。此处finish_run仅结束选择阶段，不代表订单、支付或完整任务成功。付费请求发生在追加同轮问答防护前；这些真实响应均为每轮单工具，没有发生问答混批；混批防护是随后双浏览器受控验证，未虚称为真实模型覆盖。
+
+证据在扩展build/validation-evidence/apply-choice-poc-20261103：paid-20.json保留8次请求和4项实际结果，chrome-controlled.json/edge-controlled.json保留受控情境。日志apply-choice-controlled-first.log、apply-choice-controlled-final.log和apply-choice-live.log；4项单测另验证未知/冲突要求拒绝、模型不能改写参数、外部对象修改不能重定向已创建要求、动作后观察失败阻止重复操作。
+
+结论：在可信语义绑定与有界选择阶段前提下，“提示词+requirementId工具+统一准入”这部分PoC通过。生产接入仍缺少可维护的控件语义/索引对应、从录制到workflow.json的来源要求、以及选择阶段与导航/输入/提交的权限交接；不能将本次限定通过提升为完整整理/重放验收。下一步应解决适配契约及集成，而非再次用同一合成情境花费模型额度证明已覆盖的行为。
+
+本轮检查：扩展单测136/136、双浏览器受控测试2/2、真实模型四情境所在测试1/1、lint、typecheck、三个新增测试文件格式检查通过。仅增加测试原型和PoC记录，没有生产构建入口变化，未重建发行产物。
+
+### 录制选择与 apply_choice 正式接入（2026-11-03）
+
+用户确认进入开发并逐层验证。本节是正式源代码实现，区别于此前仅测试原型的记录。契约见[录制选择意图与执行约束](../architecture/browser-skill-unified-agent.md#录制选择意图与执行约束)，用户说明见扩展INSTALLATION.md的“录制选择与重放确认”。未修改packages/agent、共享shadcn组件或上游PageController代码，也未改动用户正在调整的Agent停止条件。
+
+实现内容：
+
+- DOMRecorder保存inputType与control元数据，原生选择input/change归为select，归一化版本3投影为choice，不分配文本参数。点击标签解析到真实关联控件；Tab/滚动不改写选择结果。名称读取排除嵌入字段、option列表与敏感子树，保留真实说明而不按日期/金额关键词猜测。跨组同名和取消勾选保持独立；同一路由不同操作阶段的冲突选择拒绝静默合并。
+- 校验器按录制和已确认决定生成workflow.choices；模型省略引用或choices字段也不会删除要求，保存用规范化候选并再校验数量、字节和站点范围。inputs必须指向实际fill来源，原生number/email/date还检查参数类型。未知选择须显式澄清，错误或虚构来源不能通过。
+- choiceDecision通过现有问答CAS、幂等和持久化链路。Worker生成明确作用域的确认文字，记录presentedQuestion，只有approve=yes应用。普通“忽略日期”或解释回答不删除选择。整理决定写入新技能；重放决定只修改本次executionChoices，原技能快照、内容摘要和磁盘文件不变，改变要求会清除对应旧应用回执。
+- 本地apply_choice通过原BrowserRouter/Content所有者路由，绑定最近观察的tab/document/controller/snapshot及技能要求。按DOM语义唯一定位，再用同一个PageController的公开interactiveBlacklist在同步beforeUpdate建立单目标索引。原生隐藏checkbox/radio可使用真实关联的可见label，随后检查实际input状态；没有生产使用PoC的文本索引授权解析器或fixture DOM oracle。普通索引排除选择目标；当前页面未满足要求时阻止普通点击。作用域失效拒绝操作，派发后不确定沿用outcome_unknown，不重复点击。
+- 原生单选下拉读取实际selectedOptions，唯一定位显示标签后调用公开selectOption并核对；重复文本、无法唯一定位、需要改变多选下拉以及不能直接取消的radio明确拒绝。模型完成声明仍为unverified业务结果，不承诺网页事务原子性。
+- 缺少控件类型/选择事实的旧录制不自动修复；整理及对应旧技能重放给出重新录制提示。没有删除旧数据或覆盖手改文件。原有保存失败保留绑定、文件回执与手动编辑读取机制继续使用。
+
+正式链路覆盖：真实DOM录制 → RecordingRepository入库 → 正式read_recording → 问答与reload恢复 → submit_skill自动补齐选择 → 技能重读 → 正式apply_choice → 真实Router/Adapter/PageController操作 → 页面提交计数与状态 → finish_run。Chrome/Edge均通过。Skill候选正文由受控模型给出，但选择要求来自真正录制并由正式校验器补齐，已不再由测试手工伪造选择语义。扩展API transport仍为隔离peer，不能冒充真实商店安装验收。
+
+针对边界的回归包括：日期解释不影响选择、改写/遗漏选择及虚构参数拒绝、显式选择确认重开后保留、冲突/重复答案、用户拒绝后继续阻止提交、明确批准仅本次跳过后可以继续且原技能不变、重新整理失败不换绑定、动作后必须观察、普通点击不能跳过要求、同组重名、另一组同名控件不受影响、无ID的原生控件、隐藏input的label激活、复选框取消与重复应用不切回、原生下拉label和文本不同、来源缺口和包限额。
+
+| 验证 | 结果与范围 |
+| --- | --- |
+| shared构建与协议测试 | 13/13通过，包含false状态、错误URL不抛异常、角色状态不符、重复要求ID |
+| 扩展单测 | 最终147/147通过（choice-production-unit.log）；包含正式选择来源和两种模式的确认规则 |
+| 双浏览器选择/录制/服务链路 | 早期10/10通过；最后新增临时决定与隐藏控件的聚焦4/4通过（choice-final-scoped-decisions.log、choice-hidden-controls.log） |
+| 时间线、问答与核心链路 | 首轮综合20项中18通过、2项时间线失败；新增历史展示直接读取缺失账本造成空白，已改为可选访问。保留choice-ui-integration-delivery.log；修复后聚焦10/10及后续12/12通过（choice-ui-fix-and-chain.log、choice-final-integration.log）。没有宣称原综合首轮全绿 |
+| 模型设置、技能列表/文件UI、原生window-panel | 上述综合运行中Chrome/Edge对应项通过；没有改动其业务入口 |
+| Executor技能文件 | 5/5通过，包括新choices写入/读回、手改workflow.json改变快照、同操作ID重试不覆盖手改内容（choice-executor-json-roundtrip.log） |
+| 静态检查 | shared和扩展lint/typecheck、Executor类型检查与所改文件测试lint通过；没有将其当作原生安装验收 |
+| 构建产物 | shared、Chrome/Edge及配套Executor构建通过；扩展两目标各生成46份生产依赖许可。不发布、不更改用户Profile。Executor保留既有大chunk提示，未以本次功能改动扩大到拆包优化 |
+
+本批真实模型预算：承接前一节20次上限中的剩余12次，本实现阶段使用10次（累计18/20），全部HTTP200，共64639 tokens；剩余2次未使用，无自动重试。账本仍为build/validation-evidence/apply-choice-poc-20261103/paid-20.json，场景前缀integrated-；此前8次原型请求保留。
+
+- 正常重放9次：使用正式createBuiltinAgent、Worker服务与Controller，选择只在JSON中，Markdown未写选项名；实际apply_choice成功，唯一一次页面提交选择正确，finish_run完成。证据integrated-chrome-replay-available.json，日志choice-implementation-live.log。
+- 缺失恢复1次：先用4个受控SDK步骤读取技能/标签页/观察并取得正式apply_choice的unavailable结果，再让真实模型续接；模型请求ask_user_question，页面0次提交。不能把这1次描述成从头到尾全部真实模型。证据integrated-chrome-replay-unavailable-choice.json，日志choice-implementation-live-unavailable.log。
+- 隐藏label、临时用户决定与最后的输入类型/展示保护补充由受控测试覆盖，未再次付费复测；真实模型整理质量本阶段未重新全量评测，不能声称所有录制均成功。
+
+当前交付边界：支持已测的明确原生选择与受控确认闭环。复杂自定义控件、原生多选修改、跨阶段冲突选择仍会询问或拒绝；保守点击保护可能需要用户协助完成前置展开。旧缺信息录制需重录；已生成错误技能不会自动被重写。实际用户业务页、物理手动体验与商店/独立安装仍需人工验收，不能以合成通过作无限范围承诺。
+
+收尾补充：最终源码再次通过双浏览器录制、原生选择适配和完整会话链路6/6（choice-final-recording-replay.log），含敏感关联标签不采集、普通label点击不误判跨阶段选择；post-build类型检查与lint通过。界面历史可在账本暂缺时正常显示。Executor本次完整构建日志为choice-executor-build.log；原失败日志与修复后日志分别保留。
+
+### 整理会话可选清理技能（2026-11-03）
+
+用户确认采用单个默认未勾选的「同时删除本次生成的技能」。当前工作树实现包括会话 revision/epoch 检查、所属 generation 的本地导出意图、按生成 ID 清理对应 binding/cache、独立 Native `skills.delete` 协议及固定文件句柄删除。删除默认行为与录制保留规则不变；历史会话不误删当前新技能，未结束重放引用时拒绝清理。
+
+验证环境为 Windows、独立临时文件目录和隔离 Chrome/Edge 页面，不使用用户录制或真实业务页面、不调用付费模型。工作树包含用户已有未提交改动，本记录不代表独立 commit 或已安装产品验收。源码/产物以本次 shared、Chrome/Edge、Executor 构建为准。
+
+| 检查 | 命令 / 范围 | 结果 |
+| --- | --- | --- |
+| 构建 | shared build → browser-extension build；executor build | 通过；插件两目标各 46 份依赖许可；保留现有大 chunk 告警 |
+| 静态检查 | 三个包的 lint、typecheck | 通过；首次插件 lint 的 4 个测试花括号错误已修正，原失败输出保留 |
+| 单元与协议 | shared test；browser-extension test | 14/14、147/147；删除请求拒绝任意路径与调用方 installationId |
+| 本地文件 | Executor `test/browser-skill-files.test.mjs` | 8/8；手改定义删除、重复删除、安装/技能隔离、额外条目与 junction 拒绝、暂存清理 |
+| Native 回归 | `test/native/file-publication.test.mjs`、`test/native/browser-bridge.test.mjs` | 14/14 |
+| 双浏览器集成 | `session-deletion`、`skill-service`、`skill-session-storage` 三个 integration 测试 | 6/6；默认未选、取消重置、失败保留勾选与会话、重放无勾选项、旧代删除保留新绑定、离线浏览器清理、本地失败重试、过期 revision 与在用技能拒绝 |
+
+日志及失败态弹窗截图归本地验证批次 `skill-deletion/20261103-implementation`；Chrome 截图已检查文字换行、选项说明和右对齐取消/确认按钮。没有把截图标为新视觉稿。当前未做日常已安装扩展到真实 Executor 的人工删除验收；文件服务和 Worker 分别通过真实 Native / IndexedDB 测试，服务测试的文件往返为受控 peer，不冒充完整 Native Messaging 实机链路。
+
+删除跨文件与 IndexedDB 不承诺原子回滚；本地失败可能已删除部分固定文件，浏览器副本与会话保留以便重试。额外用户文件和链接须手工处理，不做递归删除；部署此功能需重启新版 Executor 并重载新版扩展。
+
+### 重放页面恢复规则验证（2026-11-03，正式修复未实施）
+
+触发诊断为同一重放会话先收到 browser_navigate / SKILL_OBSERVATION_REQUIRED、再收到 browser_snapshot / FORBIDDEN_PAGE，最后 SKILL_NO_PROGRESS。诊断缺少具体权限拒绝分支，因此不能认定用户会话实际发生了哪一种窗口、站点或浏览器权限问题；本次验证只证明可复现的通用机制，不伪装为已取得该会话完整原始数据。
+
+本轮仅修改测试和本记录，未改变运行时准入、Router、提示词或已安装扩展。没有新架构目录、没有用户网站关键词或优惠券特判。验证批次为本地 `replay-recovery/20261103-validation`。
+
+**受控验证**：`pnpm --filter @octopus/browser-extension exec node --test test/navigation-recovery-feasibility.test.mjs test/browser-router.test.mjs test/skill-replay-feasibility.test.mjs` 共 23/23。真实生产 Session / Router 配合隔离 Browser API peer，导航放行仅由测试原型模拟；真实 SDK 使用 MockLanguageModelV4，不算真实浏览器端到端。
+
+- 复现现有观察门禁阻止导航；原型仅豁免不依赖元素索引的导航，导航后观察标记仍为 true，点击/输入/选择仍须新观察。
+- 允许站点内导航能够经过现有 Router；跨目标站点和从越界标签页导航仍被拒绝，不因豁免观察而扩大权限。
+- 站点、窗口、scheme、隐私模式、浏览器权限五种原因全部在页面消息发出前拒绝；恢复条件后必须重新观察。
+- 问答优先、未知效果、模型协议恢复阶段均不能被导航豁免绕过。
+- 权限缺失阶段采用 SDK activeTools 限制，并由 Host 再次校验工具；即使受控模型请求隐藏动作，也没有页面副作用。外部提问结束当前 SDK 调用，不继续轮询拒绝页面。
+
+首次新增 Router 测试错误地携带 Native connectionId 到本地请求，两个测试被严格 Schema 拒绝；修正测试 peer 后 17/17 通过。原输出 baseline-prototype.log 保留，修正后 baseline-prototype-fixed.log 保留；未放宽生产 Schema。后续 SDK 恢复工具验证 6/6，合并验证23/23，相关测试 eslint 通过。
+
+**付费验证**：用户允许使用付费模型，本轮自行设置最多9次请求，实际9次（3场景×3次），qwen3.6-flash-open，maxRetries=0；外部密钥文件、合成业务、正式 createBuiltinAgent 和 SDK、多步生命周期的测试 Runtime、合成工具结果。没有真实网页动作、没有持久问答、没有正式权限恢复状态接入，因此只验证模型工具选择，不代表完整重放。
+
+| 场景 | 实际工具序列 | 结论 |
+| --- | --- | --- |
+| 允许站点内导航 | navigate → snapshot → finish_run | 通过此合成恢复路径 |
+| 当前页越界 | open_tab（允许站点）→ snapshot（新 tab）→ finish_run | 通过此合成恢复路径 |
+| 浏览器权限撤销 | tabs → open_tab（被测试执行门禁拒绝）→ read_skill，预算内未收束 | **未通过**；单靠错误提示和下一步建议不足以约束模型 |
+
+初版 live harness 的 safe 字段仅表示 generate Promise 正常返回；SDK 会把 execute 异常转换为工具错误，所以不能据此判定场景通过。保留原 paid-recovery.json / paid.log，并增加 paid-assessment.json 按工具轨迹及终态重评为2/3。已修正测试脚本为捕获被拒绝的工具、要求终态且无拒绝，未再次计费重跑。
+
+**修订后的候选修复**：按具体拒绝原因给出恢复能力。允许范围内可导航但仍限每轮一个副作用，禁止自动重试未知导航；越界/窗口不匹配只选择合法目标或打开允许起始页；权限缺失只提供 ask_user_question 与 finish_run(incomplete)，Worker 同步强制限制。用户声称已恢复不是权限凭据，答案持久化后仍须重查实际权限、重新取得观察。诊断保存有限拒绝原因、tabId 与脱敏 origin，禁止完整含参数 URL；重复失败保留根因，不靠增加轮数或放宽授权消除错误。
+
+该修订目前只通过受控门禁验证，尚未付费复测，也未验证 Host 重建、持久问答恢复、真实 Chrome/Edge 页面与正式 Native/UI 链路。原简化方案不标记整体通过，正式开发前须把这些恢复状态的测试契约补齐；不能把此轮2/3付费结果写成全部通过。
+
+### 重放页面访问恢复正式接入（2026-11-03）
+
+用户随后同意边开发边验证。本段为上述验证阶段之后的实现结果，保留原9次付费验证及失败结论，不将其改写为全部通过。
+
+正式改动限于扩展重放：`page-access.ts` 提供有限原因及 origin-only 诊断，Router 保留旧传输错误码和原有权限边界；Session 放行无旧元素引用的导航，SDK 与 Worker 共用访问恢复工具集合，权限缺失只允许询问用户/报告未完成。访问状态保存在 IndexedDB，会话回答不清除它；Host 每轮准备重新检查浏览器权限，实际恢复后仍须新观察。错误卡片及复制诊断读取权威工具账本中的有限拒绝信息。录制、技能生成结构与 Executor 本轮未修改。
+
+| 检查 | 结果与范围 |
+| --- | --- |
+| shared build → 扩展双目标 build | 通过；Chrome/Edge 各保留46份依赖许可；原有大 chunk 告警仍在 |
+| 扩展 test / lint / typecheck | 155/155；lint/typecheck通过 |
+| Router 与 Session 重点回归 | 包含导航后观察、越界拒绝、五种访问原因、权限工具白名单、未知副作用/问答保护；正式 Session 回归替代原测试专用导航豁免 |
+| Chrome/Edge 正式服务 | 2/2；正式 ToolLoopAgent、Worker、IndexedDB 和 Host 重建配合 Browser API peer。确认模型请求中仅含 ask_user_question/finish_run；故意返回隐藏 open_tab 被 Worker 拒绝。回答“已恢复”但真实权限 false 时继续受限，权限 true 后新快照及完成通过 |
+| 持久存储与问卷 | Chrome/Edge各通过，共4/4；新 Repository 能读到拒绝状态，现有事务、问答与表单行为回归通过 |
+| 时间线界面 | 首次Chrome通过、Edge因构建尚在清理 `.output/edge-mv3/assets` 而ENOENT，属测试启动顺序错误；构建完成后同一测试2/2通过，首次失败日志保留 |
+| 真实模型权限恢复复测 | 新设最多3次，本次实际1次；正式 createBuiltinAgent 接收合成 Runtime 的持久拒绝投影，qwen3.6-flash-open直接 ask_user_question，无页面动作请求。连同前阶段共10次付费请求，无自动重试 |
+
+正式服务新增用例首次沿用了前一预算测试的2轮限制，在提问前耗尽；将该独立恢复用例设置为20轮后通过，未改变生产默认预算。首次 implementation-service.log、修正后 implementation-service-fixed.log、最终 final-integration.log（7/8，含Edge产物竞态）、final-ui-after-build.log（2/2）、final-unit.log、final-build.log、final-types.log、final-implementation-lint.log 均归原本地 replay-recovery 批次；新增付费记录为 paid-permission-implementation.json/log。单独复测未重写原 paid-recovery.json 与 paid-assessment.json。
+
+交付边界：已验证正式代码的受控服务/持久问答/SDK恢复链路与真实模型工具选择；浏览器API peer不等于已安装扩展的真实权限弹窗验收，合成模型工具结果不等于真实业务页面成功。原用户会话只提供错误摘要，未补造其具体 FORBIDDEN_PAGE 原因。重载新扩展后重新运行可得到具体拒绝原因；旧技能的站点遗漏若实际存在仍需据新诊断修正，不自动放宽allowedOrigins。
+
+### 真实中断会话取证与拒绝结果序列化修复（2026-11-03）
+
+用户再次报告 browser_snapshot / SKILL_INTERRUPTED_READ。通过只读复制日常 Chrome 的扩展 IndexedDB，在独立临时 Profile 中读取指定会话，未运行用户技能、未操作业务页面、未改写原始数据库。复制前后检查源文件元数据一致，临时 Profile 随检查结束清理；报告仅包含生命周期、工具类型和有限错误码，不包含页面文本、密钥或完整业务URL。复用源码检查工具为 `test/inspect-session-lifecycle.mjs`；原始投影记录归本地 `session-interruption/20261103-investigation`。
+
+**实际记录**：read_skill、browser_tabs、browser_open_tab 已完成；第4次模型调用为 browser_snapshot。消息索引8首先保存 `Error: SKILL_STORAGE`，索引9随后追加 `SKILL_INTERRUPTED_READ`；会话层 error 实际为 `SKILL_OUTCOME_UNKNOWN`，epoch已变化。最初复制的单个工具诊断没有携带该会话层错误。不能将其解释成用户关闭面板或 PageController 返回读取中断。
+
+**发现并复现的缺陷**：新增 PageAccessError 构造时显式传入 optional 字段 undefined，Zod optional允许其存在，但下游 skillToolResult 的 z.json 不接受 undefined。scheme/private 拒绝缺少 origin，打开标签页时的拒绝可缺少 tabId，均会触发这一问题。拒绝结果写入事务失败后工具留在 dispatched；SDK收到被统一转换的 SKILL_STORAGE 并准备下一轮时，未决工具保护触发 SKILL_OUTCOME_UNKNOWN；中断逻辑又写入 SKILL_INTERRUPTED_READ。原始底层拒绝信息已因写入失败丢失，无法从旧记录断定究竟是哪一个拒绝分支；但正式服务注入旧对象形状，在 Chrome/Edge 完整复现相同错误链。
+
+修复为构造诊断时省略不存在的字段，而非保留 undefined；复制诊断增加单独的 sessionError，避免只见派生工具错误。没有放宽权限、跳过严格 JSON 校验或增加模型预算。新用例覆盖五种缺字段/含凭据URL形状的严格JSON往返；正式服务分别测试旧对象复现中断和新对象正常保存拒绝、finish_run(incomplete)收束，验证没有遗留 dispatched。
+
+- Chrome/Edge 正式服务复现与修复验证2/2；扩展全量单元156/156；shared及扩展双目标构建通过，各46份依赖许可；lint/typecheck通过。
+- 只读取证工具首次lint因finally内throw失败，改为校验目标后清理且不覆盖原异常，复测通过；原失败记录保留。
+- 本轮未调用付费模型。证据包括 session-lifecycle.json、reproduction-and-fix.log、unit.log、build.log、lint.log、lint-fixed.log、types.log，均位于上述本地批次。
+- 前一轮验证漏掉了 optional字段缺失的错误路径，局部成功不能代表所有真实页面恢复。此次修复证明序列化与错误收束缺陷已关闭，不承诺用户实际页面没有其他访问拒绝；旧记录丢失的原因不补造。
+
+### 无参数工具说明与复制状态恢复（2026-11-03）
+
+读取技能绑定当前会话，查看标签页使用当前任务允许范围，两者工具输入本来就是空对象。本次仅将对应空参数卡片替换为范围说明，其他参数与返回值保留原展示。诊断复制成功显示1.5秒后恢复按钮文案，复制开始、诊断切换与卸载时清理定时器，旧异步回调不能覆盖新状态。
+
+shared及扩展Chrome/Edge构建、扩展lint/typecheck通过。真实隔离双浏览器界面测试2/2，覆盖两类空参数说明、剪贴板失败后重试、成功状态自动恢复及第二次真实调用剪贴板桩。证据归本地 `session-copy/20261103-fix` 的build.log、browser-test.log、types.log、lint.log。本轮无付费模型调用，未改变工具权限或执行协议。
+
+### 打开就绪与动态frame观察修复（2026-11-03）
+
+用户确认继续同时验证打开标签页的就绪等待与frame限制。本轮未访问用户Gmail、未发送邮件、未调用付费模型，不把隔离场景通过描述为Gmail业务验收完成。
+
+**修复前复现**：新增 `test/integration/dynamic-frame-replay.test.mjs` 使用真实PageControllerAdapter/固定上游Controller和独立Chrome、Edge页面。先观察主页面，再插入同源frame，使旧引用正确返回TARGET_CHANGED；加入跨域和同源嵌套frame后再次观察，原collectScopes抛FORBIDDEN_PAGE，两个浏览器均失败。首次输出before.log保留，不改写为通过。
+
+**正式修改**：
+
+- browser_open_tab与browser_navigate共用就绪等待：循环检查tab.status及接收器握手，完成后再次核对URL和加载状态，返回就绪URL/title。等待文档切换时允许重新进行无副作用身份检查；已创建/导航后失败不重新派发，保留OUTCOME_UNKNOWN。等待不能证明后续SPA不再变化，原引用检查继续生效。
+- collectScopes沿用上游对不可读取iframe的不透明处理，不再仅因其存在拒绝整页观察；可访问同源嵌套文档在8层、128根、100,000元素限制内记录身份。跨域内部内容未读取；文字快照说明未读取的子页面。旧文档替换后引用继续拒绝。
+- 含不可读取frame时拒绝截图，以免无法遮蔽其内部敏感内容。没有通过忽略文档身份、开放跨域或修改上游库来消除错误。
+
+**验证结果**：
+
+| 范围 | 结果 |
+| --- | --- |
+| Router定向测试 | 17/17；未完成加载不返回成功、就绪后才握手、返回最终URL；加载中关闭/越界跳转不重复打开 |
+| 真实Controller合成表单 | Chrome/Edge 2/2；旧scope拒绝后新观察成功，真实按钮/字段操作完成一次本地表单提交；嵌套同源按钮实际点击一次，替换其文档后旧引用拒绝；跨域内部文本未泄露，截图被拒绝 |
+| 隔离侧载正式扩展 | Chrome/Edge 2/2；实际window-panel、生产SDK/Worker/Router/Content/PageController配合受控模型，页面含延迟400ms外部脚本、跨域frame和嵌套同源frame。模型收到的打开回执title已是脚本加载后的值，随后真实观察、按钮操作和结果链路通过；不涉及真实邮箱 |
+| 构建与静态检查 | shared及扩展Chrome/Edge构建通过，各46份许可；扩展lint/typecheck通过 |
+| 扩展全量单元 | 158/158 |
+
+证据归本地 `frame-readiness/20261103-fix`：before.log为原失败；after.log为初次修复后2/2；browser-integration.log为增加嵌套身份及真实扩展加载验证后的4/4；router.log、unit.log、build.log、lint.log、types.log记录检查。受控模型不等于真实模型在复杂页面上的稳定选择；真实Gmail任务的完整发送流程仍未验收。
+
+### 适配层过度限制审查与精简（2026-11-03）
+
+用户同意精简重复iframe判断，并要求独立审查其他限制。详细分类见[浏览器页面适配层限制审查](browser-page-adapter-review.md)。本次删除独立8层iframe门禁、标题一致性条件；普通无选择约束的动作改用已观察根身份集合检查，允许无关新增/重排根，保留文档替换/移除拒绝；无选择需求的beforeUpdate不再重复遍历根。collectScopes更名collectAccessibleRoots，仅承担隐私、录制选择与文档身份需要的遍历；总遍历预算仍在。
+
+固定上游源码实际使用selectorMap中的元素ref，没有替扩展承担任务、窗口或文档身份，因此没有删除这些职责。选择约束/截图仍要求完整根覆盖；普通点击前置选择限制、load complete等待、全局根移除使主页面重新观察、60秒快照期限及部分前置错误归类列为候选，没有宣称都已解决。
+
+验证：真实Controller在Chrome/Edge针对标题变化、新增根、9层同源嵌套、嵌套文档替换、跨域隐私及一次合成提交的测试2/2；选择约束回归2/2；构建后的真实隔离侧载扩展Chrome/Edge回归2/2；全量单元158/158，shared与扩展双目标构建、扩展lint/typecheck通过。无付费调用、未操作真实邮箱。
+
+证据归本地 `adapter-review/20261103-refine`，包含adapter-tests.log、installed-panel.log、unit.log、build.log、lint.log、types.log。上一阶段“新增同源根使旧主页面动作拒绝”的断言本轮有意修订为不阻断；文档替换仍拒绝，原历史记录保留。此结果是适配层回归，不等同于真实Gmail发送验收。
+
+### 打开主文档就绪与已知回执修正（2026-11-03）
+
+用户的新重放在第3次模型调用browser_open_tab进入OUTCOME_UNKNOWN。只读复制指定会话确认前两步为read_skill和browser_tabs，未进入观察或点击；工具结果仅保留error，缺失已创建tabId及等待失败原因。因此不能从旧记录还原具体是超时、跳转或接收器问题。审查确定旧代码在tabs.create成功后仍要求status=complete，且把所有后续就绪失败包装成OUTCOME_UNKNOWN，丢掉已确认的创建回执。
+
+**前后对照**：同一window-panel集成夹具加入14秒的无关图片资源，保留400ms主文档脚本、嵌套/跨域frame、真实生产SDK/Worker/Router/Content/PageController。在构建新代码前运行旧侧载产物，Chrome/Edge均从预期completed变为outcome_unknown，首次installed-before.log保留。新构建同一夹具2/2通过，并断言第一个观察请求发出时慢资源尚未结束，证明不是加大固定等待。
+
+修改内容：
+
+- 就绪依据改为已提交的合法主文档URL、无待提交不同URL、受信document-end接收器握手及文档身份复核。不再等待全页资源load complete；就绪探测不补注入，未有静态接收器时有界等待。
+- 浏览器已确认create/update后，就绪失败返回已知tabId、applied回执与有限readiness原因，包含必要的安全access投影；不伪称目标业务完成，也不自动重新创建/导航。权限原因仍写入持久访问恢复状态，SDK/Worker工具限制继续生效。
+- 模型指令明确使用回执tabId继续观察或询问，不把not_ready当成重新打开的理由。没有浏览器确认回执的真正未知结果仍保留保护。
+
+验证：Router 19/19，含loading时接收器已就绪、重定向、关闭及缺接收器超时不补注入/不重复打开；全量单元160/160；新侧载Chrome/Edge实际扩展链路2/2；正式服务已知打开但权限未就绪→持久问题链路2/2，账本保持completed和tabId；shared/扩展双目标构建、lint/typecheck通过。首次focused lint因包装错误缺cause失败，补齐后通过，保留原日志。
+
+证据归本地 `open-readiness/20261103-investigation`：session-lifecycle.json、installed-before.log（0/2）、installed-after.log（2/2）、router-test.log、service-receipt-test.log、unit.log、build.log、lint-focused.log、lint.log、types.log。本轮无付费模型调用、未访问用户Gmail、未发送邮件。现有未知会话不自动补造tabId或改写状态；该真实旧记录的具体等待原因缺失，仍不宣称Gmail完整发送已经验收。
+
+### 页面等待配置与连续超时（2026-11-03）
+
+用户确认默认每次15秒，连续3次超时才报错，并在window-panel可配置。新增等待策略契约、执行设置字段和设置页分组，仍使用现有TanStack Form/shadcn控件及唯一「保存配置」。秒数范围1–60，次数1–5；创建会话时固定策略，现有任务不因全局设置保存而重置。
+
+同一个打开/导航请求在Router内部连续等待，每次超时进入下一窗口，不重复派发打开/导航、不增加模型调用，任一次就绪即返回。全部窗口超时后仍保存已知tab回执，将会话明确标为failed/PAGE_READY_TIMEOUT；权限拒绝和页面关闭等已知错误不按网络慢进行三次等待。SDK步时限为模型60秒余量+完整等待预算+5秒，看门狗另留30秒（不短于原90秒），避免较长等待被旧60/90秒边界提前终止。该设置只用于内置重放，Native Bridge保留原独立策略。
+
+验证材料归本地 `page-wait-settings/20261103-implementation`：
+
+- 单元163/163，包含默认15/3、无效范围拒绝、SDK预算公式、连续三次超时回执计数、第二窗口就绪不再等待第三次、整个过程只创建一个tab。缩短为1秒窗口的确定性用例用于验证轮次；没有用付费模型等待45秒。
+- 设置页Chrome/Edge2/2：默认显示、修改20秒/4次、唯一保存、持久化/刷新、跨窗口冲突保护；后补0秒/6次不可保存的边界用例复测。浅深色设置页截图检查完成，沿用原设置样式。
+- 正式SDK/Worker/IndexedDB服务Chrome/Edge2/2：最终PAGE_READY_TIMEOUT使会话失败、保留已知tab回执、不进入outcome_unknown、不额外发起模型请求；会话保存15/3策略。
+- 构建后的真实隔离侧载Chrome/Edge2/2，shared和扩展双目标构建通过，扩展lint/typecheck通过。长达最大5分钟的真实网络等待未另做硬件计时验收，预算协调由统一公式和生命周期回归覆盖。
+- 首次单元测试有2项旧断言只期待organize/replay两个字段，与新增默认字段不符；更新断言并增加实际配置持久化检查后163/163。原unit-first.log和unit-fixed.log分开保留。
+
+主要日志为build.log、unit-first.log、unit-fixed.log、integration-first.log、settings-boundaries.log、installed-panel.log、types.log、lint.log。本轮无付费调用，未访问真实邮箱或发送邮件，不将此功能测试提升为Gmail发送业务验收。
+
+### 重放等待重试单行文案（2026-11-03）
+
+用户调用impeccable并选定单行提示：首次「等待页面就绪… 1/3」，后续「页面尚未就绪，重试中… 2/3」。分母来自实际任务配置；保留工具标题及可折叠参数，仅当前dispatched工具在running状态显示中性Marker状态行。状态使用role=status/polite，尊重减少动态效果；完成/停止/失败时不保留运行中的提示，不追加虚构模型消息。
+
+Router在真实等待窗口开始时发送观察回调，Worker按会话epoch、运行状态、工具调用ID和dispatched状态将waitProgress保存到账本，随后发布界面刷新。回调不发起模型请求，不改变等待策略；迟到回调不能修改已结束任务。显示元数据的保存/发布失败不把已确认的页面操作转成未知效果。前端没有自设计时器来推算次数。
+
+验证证据归本地 `retry-copy/20261103-implementation`：
+
+- 原有Router等待回归增加真实1→2与1→2→3回调断言；全量单元163/163。
+- Chrome/Edge正式服务回归2/2：每阶段元数据持久化且任务仍running，超时后迟到进度不改revision，原有模型调用数不增加。
+- Chrome/Edge组件回归2/2：1/3、2/3、配置5次时3/5，终态隐藏、浅深色、360×460及200%缩放；截图检查完成。界面首次放大检查失败，查明旧测试仅加载popup固定360px样式，漏了实际window-panel的100%自适应样式；保留integration.log和zoom-inspection.log，按实际产物补齐样式后ui-correct-styles.log通过。没有通过放宽溢出断言掩盖问题。
+- 构建后真实隔离侧载Chrome/Edge回归2/2（final-ui-panel.log含组件与侧载共4/4）；shared/扩展双目标构建、扩展lint/typecheck通过。impeccable机械检测design-detect.json为空发现列表；没有把检测结果当作视觉验收替代。
+- 合成组件截图保存于既有skill-timeline证据位置（wait-retry-dark/light/zoom），用于验证状态行，不作为整页新视觉稿或真实业务任务截图。原视觉世界、等待预算及权限边界未改。
+
+本轮没有付费模型调用，没有操作真实邮箱；以上验证范围是重试进度的真实性、生命周期及呈现，不是Gmail业务发送验收。
+
+### 展开工具卡片高度与局部滚动（2026-11-03）
+
+用户指定展开会话卡片使用最大高度及ScrollArea。JsonContent复用共享ScrollArea，最大内容视口为min(20rem,40dvh)，短数据不固定高度；无参数工具说明保持原自然高度。只改工具参数/返回JSON的展示，未修改共享UI源码、工具数据、问答或执行策略。会话主视口仍唯一；本次按用户指示增加卡片内部的局部滚动，不再用全局“只有一个scroll-area-viewport”的测试断言否决该行为。
+
+Chrome/Edge真实浏览器组件验证2/2：360×460深色、420×900浅色长JSON高度受限，无横向溢出；滚轮先滚卡片且外层位置不动，卡片底部滚轮可衔接外层，聚焦视口后PageDown有效；短JSON高度低于100px且没有内容溢出。截图经过检查，均为合成数据，不保存用户原始Gmail截图。独立只读布局评估建议320px/40dvh上限及保留原生滚动衔接，已落实。
+
+shared/扩展Chrome+Edge构建、扩展lint/typecheck通过；impeccable布局检测返回空发现列表。本轮只做相关界面回归，没有新增模型调用。日志归本地 `payload-scroll/20261103-implementation`，运行截图沿用skill-timeline的bounded-payload-460/900文件，既有其他状态截图保持其原来源，不作为新的批准视觉稿。
+
+### 录制标签夹带预填正文修复（2026-11-03）
+
+独立审查发现普通字段label.textContent会夹带嵌套textarea初始文本，用户澄清影响范围后按P2确认修复。本次只修这条标签采集缺陷，不包含同次审查的Popup恢复和文档级scroll问题。dom-recorder的关联标签及按钮文字统一调用control-semantics中的readLabelText，保留原有aria-label/placeholder优先级与最终文本脱敏；缺少有效标签使用原通用名称。不改历史录制、不发起真实模型调用。
+
+新增Chrome/Edge真实受信录制事件用例覆盖：预填textarea点击和编辑、普通关联标签中的敏感/可编辑子节点、按钮敏感子树、公开价格说明、显式名称/占位优先级及过滤为空的回退。检查源端facts和recordingToolPage模型证据均不含合成PRIVATE标记。修复前两条新用例均失败，修复后含既有选择/输入语义回归共4/4；不是仅检查中间字符串函数，也不声称运行真实模型或验证完整业务重放。
+
+shared及扩展双目标构建、扩展lint/typecheck通过，全量单元163/163。原始before.log、after.log、unit.log、build.log、types.log、lint.log保留在本地 `recording-labels/20261103-fix`。此修复针对预填文本节点及明确敏感子树，不泛化为普通input实时value或所有密码内容曾被采集。

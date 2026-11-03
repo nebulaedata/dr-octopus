@@ -2,6 +2,7 @@
  * @author Codex
  * @description Displays an image in a reusable Dialog with zoom and rotation controls.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -301,22 +302,28 @@ function ImagePreviewContent({
       >
         {loadState === 'loading' && <Spinner className="absolute size-5 text-muted-foreground" />}
         {loadState === 'error' && (
-          <div role="alert" className="flex flex-col items-center gap-3 px-4 text-center">
-            <p className="text-sm text-destructive">
-              {t('components.imagePreview.loadFailed', 'Unable to load image.')}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setLoadState('loading');
-                setAttempt((current) => current + 1);
-              }}
-            >
-              <RefreshCwIcon data-icon="inline-start" />
-              {t('common.retry', 'Retry')}
-            </Button>
-          </div>
+          <Alert
+            variant="danger"
+            showIcon
+            description={
+              <p className="text-sm text-destructive">
+                {t('components.imagePreview.loadFailed', 'Unable to load image.')}
+              </p>
+            }
+            action={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setLoadState('loading');
+                  setAttempt((current) => current + 1);
+                }}
+              >
+                <RefreshCwIcon data-icon="inline-start" />
+                {t('common.retry', 'Retry')}
+              </Button>
+            }
+          />
         )}
         {pannable && loadState === 'loaded' && zoom > 1 && (
           <span className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-background/85 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">

@@ -8,7 +8,7 @@ import { useSafeState } from 'ahooks';
 import { useForm } from '@tanstack/react-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { serverSettingKeys } from '@octopus/shared/protocol';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { FieldGroup } from '@octopus/ui/components/field';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@octopus/ui/components/card';
@@ -29,6 +29,7 @@ import {
 } from '@/features/settings/utils/server-fields';
 import type { ServerSettingsDto, UpdateEnvironmentBody } from '@octopus/shared/protocol';
 import type { ServerDraft } from '@/features/settings/utils/server-fields';
+import type { AlertVariant } from '@octopus/custom-ui/components/alert';
 
 /**
  * Captures the editing revision so background reads cannot silently authorize stale drafts.
@@ -45,7 +46,7 @@ export function ServerSettingsEditor({
   const [snapshot, setSnapshot] = useSafeState(initial);
   const [pending, setPending] = useSafeState(false);
   const [restarting, setRestarting] = useSafeState(false);
-  const [message, setMessage] = useSafeState('');
+  const [message, setMessage] = useSafeState<{ variant: AlertVariant; text: string }>();
   const [confirmation, setConfirmation] = useSafeState<UpdateEnvironmentBody>();
   const lock = useRef(false);
   const base = serverDraft(snapshot);
@@ -58,7 +59,7 @@ export function ServerSettingsEditor({
     }
     lock.current = true;
     setPending(true);
-    setMessage('');
+    setMessage(undefined);
     try {
       const response = await saveServerSettings(input, confirmed);
       setSnapshot(response.settings);
@@ -66,27 +67,30 @@ export function ServerSettingsEditor({
       client.setQueryData(['server-settings'], response.settings);
       await client.invalidateQueries({ queryKey: ['environment-settings'] });
       setConfirmation(undefined);
-      setMessage(
-        response.warnings.length
+      setMessage({
+        variant: response.warnings.length ? 'warning' : 'success',
+        text: response.warnings.length
           ? t(
               'settings.server.savedWithOverrideWarning',
               'Settings saved, but some values are still overridden by the launch configuration.'
             )
-          : t('settings.server.savedNoRestart', 'Settings saved. Saving does not restart the service.')
-      );
+          : t('settings.server.savedNoRestart', 'Settings saved. Saving does not restart the service.'),
+      });
     } catch (cause) {
       setConfirmation(undefined);
       if (cause instanceof ApiRequestError && cause.code === 'SERVER_EXPOSURE_CONFIRMATION_REQUIRED') {
         setConfirmation(input);
       } else if (cause instanceof ApiRequestError && cause.statusCode) {
-        setMessage(
-          cause.code === 'ENV_CONFLICT'
-            ? t(
-                'settings.server.conflictMessage',
-                'The configuration was modified in another window. Your draft is preserved; review the latest configuration before deciding whether to discard and edit again.'
-              )
-            : cause.message
-        );
+        setMessage({
+          variant: cause.code === 'ENV_CONFLICT' ? 'warning' : 'danger',
+          text:
+            cause.code === 'ENV_CONFLICT'
+              ? t(
+                  'settings.server.conflictMessage',
+                  'The configuration was modified in another window. Your draft is preserved; review the latest configuration before deciding whether to discard and edit again.'
+                )
+              : cause.message,
+        });
       } else {
         try {
           const current = await getServerSettings();
@@ -94,8 +98,9 @@ export function ServerSettingsEditor({
             const stored = current.fields[key as keyof ServerDraft].stored;
             return value === null ? !stored.configured : stored.configured && stored.value === value;
           });
-          setMessage(
-            matches
+          setMessage({
+            variant: matches ? 'success' : 'warning',
+            text: matches
               ? t(
                   'settings.server.responseLostMatched',
                   'The stored values already match the submission; the response was lost, so nothing was resubmitted.'
@@ -103,15 +108,16 @@ export function ServerSettingsEditor({
               : t(
                   'settings.server.responseLostUnknown',
                   'Submission result unknown; your draft is preserved. Refresh to verify.'
-                )
-          );
+                ),
+          });
         } catch {
-          setMessage(
-            t(
+          setMessage({
+            variant: 'warning',
+            text: t(
               'settings.server.responseLostConnection',
               'Submission result unknown; your draft is preserved. Check the service connection.'
-            )
-          );
+            ),
+          });
         }
       }
     } finally {
@@ -168,19 +174,17 @@ export function ServerSettingsEditor({
             {([host, cors]) => <ServerAccessNotice snapshot={snapshot} host={host} cors={cors} />}
           </form.Subscribe>
           {snapshot.prediction === 'host_managed' ? (
-            <Alert>
-              <AlertDescription>
-                {t(
-                  'settings.server.hostManagedAlert',
-                  'This service is managed by an embedding host and the next load values cannot be predicted. Contact the host application configuration after saving.'
-                )}
-              </AlertDescription>
-            </Alert>
+            <Alert
+              variant="warning"
+              showIcon
+              description={t(
+                'settings.server.hostManagedAlert',
+                'This service is managed by an embedding host and the next load values cannot be predicted. Contact the host application configuration after saving.'
+              )}
+            />
           ) : null}
           {latest.diagnostics.map((text) => (
-            <Alert key={text} variant="destructive">
-              <AlertDescription>{text}</AlertDescription>
-            </Alert>
+            <Alert key={text} variant="danger" showIcon description={text} />
           ))}
           {[
             {
@@ -282,11 +286,7 @@ export function ServerSettingsEditor({
               </CardContent>
             </Card>
           ))}
-          {message ? (
-            <Alert>
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          ) : null}
+          {message ? <Alert variant={message.variant} showIcon description={message.text} /> : null}
         </SettingContainer>
       </div>
       <footer className="shrink-0 border-t bg-background px-4 py-4 md:px-8">
@@ -306,14 +306,18 @@ export function ServerSettingsEditor({
                     });
                     setSnapshot(current);
                     form.reset(serverDraft(current));
-                    setMessage(t('settings.server.reloaded', 'Latest configuration loaded.'));
+                    setMessage({
+                      variant: 'success',
+                      text: t('settings.server.reloaded', 'Latest configuration loaded.'),
+                    });
                   } catch {
-                    setMessage(
-                      t(
+                    setMessage({
+                      variant: 'danger',
+                      text: t(
                         'settings.server.refreshFailed',
                         'Unable to refresh the configuration; your draft is preserved.'
-                      )
-                    );
+                      ),
+                    });
                   }
                 }}
               >

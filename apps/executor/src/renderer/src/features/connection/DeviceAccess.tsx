@@ -8,7 +8,7 @@ import { Button } from '@octopus/ui/components/button';
 import { toast } from '@octopus/ui/components/toast';
 import { Input } from '@octopus/ui/components/input';
 import { Checkbox } from '@octopus/ui/components/checkbox';
-import { ConnectionBadge } from './ConnectionBadge';
+import { ConnectionBadge } from '@/components/ConnectionBadge';
 import {
   Field,
   FieldGroup,
@@ -42,8 +42,8 @@ import {
   DropdownMenuItem,
 } from '@octopus/ui/components/dropdown-menu';
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@octopus/ui/components/empty';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
-import { PlusIcon, MoreHorizontalIcon, ChevronRightIcon, CircleAlertIcon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
+import { PlusIcon, MoreHorizontalIcon, ChevronRightIcon } from 'lucide-react';
 import { runtimeStatusQuery } from '@/queries/runtime-queries';
 import { accessQuery } from '@/queries/access-queries';
 import { approveAccess, revokeAccess } from '@/api/executor';
@@ -251,12 +251,7 @@ export function DeviceAccess({ ready }: { ready: boolean }) {
                   </CollapsibleContent>
                 </Collapsible>
               </FieldGroup>
-              {approve.error ? (
-                <Alert variant="destructive">
-                  <CircleAlertIcon />
-                  <AlertDescription>{approve.error.message}</AlertDescription>
-                </Alert>
-              ) : null}
+              {approve.error ? <Alert variant="danger" showIcon description={approve.error.message} /> : null}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" disabled={busy} onClick={() => setCreating(false)}>
                   取消
@@ -363,12 +358,7 @@ export function DeviceAccess({ ready }: { ready: boolean }) {
           </EmptyHeader>
         </Empty>
       )}
-      {error ? (
-        <Alert variant="destructive">
-          <CircleAlertIcon />
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      ) : null}
+      {error ? <Alert variant="danger" showIcon description={error.message} /> : null}
       <Dialog
         open={!!revoking}
         onOpenChange={(open) => {
@@ -382,12 +372,7 @@ export function DeviceAccess({ ready }: { ready: boolean }) {
             <DialogTitle>撤销访问授权</DialogTitle>
             <DialogDescription>撤销“{revoking?.label}”后，该客户端将无法继续使用本机工具。</DialogDescription>
           </DialogHeader>
-          {revoke.error ? (
-            <Alert variant="destructive">
-              <CircleAlertIcon />
-              <AlertDescription>{revoke.error.message}</AlertDescription>
-            </Alert>
-          ) : null}
+          {revoke.error ? <Alert variant="danger" showIcon description={revoke.error.message} /> : null}
           <div className="flex justify-end gap-2">
             <Button variant="outline" disabled={revoke.isPending} onClick={() => setRevoking(null)}>
               取消

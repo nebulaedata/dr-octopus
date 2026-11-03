@@ -3,8 +3,8 @@
  * @description Renders the authoritative effective Pi Skill catalog and its loading diagnostics.
  */
 
-import { LaptopMinimalIcon, SearchIcon, TriangleAlertIcon, WandSparklesIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { LaptopMinimalIcon, SearchIcon, WandSparklesIcon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import {
@@ -68,22 +68,25 @@ export function EffectiveSkillSection({ query, skills, searching }: EffectiveSki
       </div>
 
       {query.data !== undefined && query.data.diagnostics.length > 0 && (
-        <Alert variant="destructive">
-          <TriangleAlertIcon />
-          <AlertTitle>{t('skills.effectiveSection.diagnosticsTitle', 'Some skills failed to load')}</AlertTitle>
-          <AlertDescription className="text-xs">
+        <Alert
+          variant="warning"
+          showIcon
+          title={t('skills.effectiveSection.diagnosticsTitle', 'Some skills failed to load')}
+          description={
             <ul className="list-disc space-y-1 pl-4">
               {query.data.diagnostics.map((diagnostic, index) => (
                 <li key={`${diagnostic.type}-${diagnostic.skillName ?? index}-${index}`}>
                   {diagnostic.skillName === undefined
                     ? ''
-                    : t('skills.effectiveSection.diagnosticPrefix', '{{name}}: ', { name: diagnostic.skillName })}
+                    : t('skills.effectiveSection.diagnosticPrefix', '{{name}}: ', {
+                        name: diagnostic.skillName,
+                      })}
                   {diagnostic.message}
                 </li>
               ))}
             </ul>
-          </AlertDescription>
-        </Alert>
+          }
+        />
       )}
 
       {query.isPending && (

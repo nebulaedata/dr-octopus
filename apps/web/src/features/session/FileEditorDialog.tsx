@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -72,10 +72,12 @@ export function FileEditorDialog({ workspaceId, path, onClose }: FileEditorDialo
       );
     } else if (file.isError) {
       return (
-        <Alert variant="destructive">
-          <AlertTitle>{t('session.fileEditor.openFailed', 'Unable to open file')}</AlertTitle>
-          <AlertDescription>{file.error.message}</AlertDescription>
-        </Alert>
+        <Alert
+          variant="danger"
+          showIcon
+          title={t('session.fileEditor.openFailed', 'Unable to open file')}
+          description={file.error.message}
+        />
       );
     } else {
       return (
@@ -174,10 +176,13 @@ function FileEditor({ workspaceId, path, initialContent, onClose }: FileEditorPr
         )}
       </div>
       {saveFile.isError ? (
-        <Alert variant="destructive" className="mx-4 w-auto">
-          <AlertTitle>{t('session.fileEditor.saveFailed', 'Unable to save file')}</AlertTitle>
-          <AlertDescription>{saveFile.error.message}</AlertDescription>
-        </Alert>
+        <Alert
+          className="mx-4 w-auto"
+          variant="danger"
+          showIcon
+          title={t('session.fileEditor.saveFailed', 'Unable to save file')}
+          description={saveFile.error.message}
+        />
       ) : null}
       <DialogFooter className="mx-0 mb-0">
         <Button variant="outline" onClick={onClose} disabled={saveFile.isPending}>

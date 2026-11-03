@@ -2,6 +2,7 @@
  * @author Codex
  * @description Resolves an authorization deep link without depending on the visible task catalog.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@octopus/ui/components/button';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from '@octopus/ui/components/dialog';
@@ -55,13 +56,15 @@ export function ScheduleAuthorizationRequest({
         </DialogHeader>
         {task.isError ? (
           <>
-            <p role="alert" className="text-sm text-destructive">
-              {t(
+            <Alert
+              variant="danger"
+              showIcon
+              description={t(
                 'schedules.authorizationRequest.openFailed',
                 'Unable to open the task; it may have been deleted or is currently unavailable: {{message}}',
                 { message: task.error.message }
               )}
-            </p>
+            />
             <Button variant="outline" onClick={() => void task.refetch()}>
               {t('common.retry', 'Retry')}
             </Button>

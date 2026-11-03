@@ -4,7 +4,7 @@
  */
 import { useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Card, CardContent } from '@octopus/ui/components/card';
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
 import { Slider } from '@octopus/ui/components/slider';
@@ -114,11 +114,7 @@ export function PermissionAuditCard({
             </div>
           </Field>
         </FieldGroup>
-        {save.isError && (
-          <Alert variant="destructive">
-            <AlertDescription>{save.error.message}</AlertDescription>
-          </Alert>
-        )}
+        {save.isError && <Alert variant="danger" showIcon description={save.error.message} />}
       </CardContent>
     </Card>
   );

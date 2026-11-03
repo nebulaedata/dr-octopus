@@ -2,6 +2,7 @@
  * @author Codex
  * @description Loads and displays a scoped read-only run transcript.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { useQuery } from '@tanstack/react-query';
 import { getScheduledTranscript } from '@/api/scheduled-tasks';
@@ -29,14 +30,13 @@ export function ScheduleTranscript({
   return (
     <div id={id} className="flex min-w-0 flex-col gap-3 rounded-lg border p-3">
       <p className="text-xs text-muted-foreground">
-        {t('schedules.transcript.readonlyNote', 'Read-only record. Viewing details does not re-run the task.')}
+        {t(
+          'schedules.transcript.readonlyNote',
+          'Read-only record. Viewing details does not re-run the task.'
+        )}
       </p>
       {query.isPending && <p role="status">{t('schedules.transcript.loading', 'Loading…')}</p>}
-      {query.error && (
-        <p role="alert" className="text-destructive">
-          {query.error.message}
-        </p>
-      )}
+      {query.error && <Alert variant="danger" showIcon description={query.error.message} />}
       {query.data?.entries.length === 0 && (
         <p>{t('schedules.transcript.empty', 'This run has not produced any records yet.')}</p>
       )}

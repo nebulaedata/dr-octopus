@@ -9,18 +9,18 @@ import {
   createRouter,
   Outlet,
 } from '@tanstack/react-router';
-import { ConnectionOverview } from '@/features/connection';
+import { ExecutorLayout } from '@/features/layout';
 
 const rootRoute = createRootRoute({ component: Outlet });
-const connectionRoute = createRoute({
+const executorRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: ConnectionOverview,
+  component: ExecutorLayout,
 });
 
 export const router = createRouter({
   history: createHashHistory(),
-  routeTree: rootRoute.addChildren([connectionRoute]),
+  routeTree: rootRoute.addChildren([executorRoute]),
 });
 
 declare module '@tanstack/react-router' {

@@ -3,7 +3,7 @@
  * @description Explains access changes without redirecting remote browsers to their own loopback address.
  */
 import { useMount, useSafeState } from 'ahooks';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useI18n } from '@/i18n/use-i18n';
 import type { ServerSettingsDto } from '@octopus/shared/protocol';
 
@@ -37,25 +37,29 @@ export function ServerAccessNotice({
     return null;
   }
   return (
-    <Alert>
-      <AlertDescription>
-        {closesRemote ? (
-          <span>
-            {t(
-              'settings.server.access.remoteClosesHint',
-              'After a restart, remote pages will disconnect. Use a local address on the service host to access it.'
-            )}
-          </span>
-        ) : null}
-        {removesOrigin ? (
-          <span>
-            {t(
-              'settings.server.access.originRemovedHint',
-              'After a restart, the current extra origin will no longer have access; use a same-origin entry on the service or adjust the launch configuration.'
-            )}
-          </span>
-        ) : null}
-      </AlertDescription>
-    </Alert>
+    <Alert
+      variant="warning"
+      showIcon
+      description={
+        <>
+          {closesRemote ? (
+            <span>
+              {t(
+                'settings.server.access.remoteClosesHint',
+                'After a restart, remote pages will disconnect. Use a local address on the service host to access it.'
+              )}
+            </span>
+          ) : null}
+          {removesOrigin ? (
+            <span>
+              {t(
+                'settings.server.access.originRemovedHint',
+                'After a restart, the current extra origin will no longer have access; use a same-origin entry on the service or adjust the launch configuration.'
+              )}
+            </span>
+          ) : null}
+        </>
+      }
+    />
   );
 }

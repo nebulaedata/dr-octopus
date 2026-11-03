@@ -2,6 +2,7 @@
  * @author Codex
  * @description Presents persistent task authority for explicit user review and revocation.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -169,17 +170,17 @@ export function ScheduleAuthorization({
               </p>
             )}
             {(preview.error || mutation.error) && (
-              <p role="alert" className="text-sm text-destructive">
-                {(mutation.error ?? preview.error)?.message}
-              </p>
+              <Alert variant="danger" showIcon description={(mutation.error ?? preview.error)?.message} />
             )}
             {reviewRevision !== task.revision && (
-              <p role="alert" className="text-yellow-500 text-sm">
-                {t(
+              <Alert
+                variant="warning"
+                showIcon
+                description={t(
                   'schedules.authorization.revisionChanged',
                   'The task has changed. Close and review it again before confirming authorization.'
                 )}
-              </p>
+              />
             )}
             {preview.data && (
               <>

@@ -13,6 +13,12 @@ import { bridgeFrameLimit, bridgeHelloSchema, bridgeVersion } from '@octopus/sha
 import type { BrowserBridgeSnapshot } from '@octopus/shared/protocol/browser-bridge';
 import type { BridgeBootstrap } from './bridge-store';
 import type { BridgeStore } from './bridge-store';
+import {
+  browserSkillRequestSchema,
+  browserSkillResponseSchema,
+  type BrowserSkillResponse,
+} from '@octopus/shared/protocol/browser-skills';
+import type { BrowserSkillFiles } from './browser-skill-files';
 
 type Connection = BrowserBridgeSnapshot['connections'][number] & { polling: boolean };
 export class BrowserBridge {
@@ -36,7 +42,11 @@ export class BrowserBridge {
   /**
    * Creates one connection authority with finite leases independent of Renderer lifetime.
    */
-  constructor(private readonly store: BridgeStore) {
+  constructor(
+    private readonly store: BridgeStore,
+    private readonly skillFiles?: BrowserSkillFiles,
+    private readonly openSkillDirectory?: (installationId: string, skillId: string) => Promise<void>
+  ) {
     this.timer = setInterval(() => {
       for (const connection of this.connections.values()) {
         if (connection.state === 'connected' && Date.now() - Date.parse(connection.lastSeen) > 25000) {
@@ -232,6 +242,53 @@ export class BrowserBridge {
           return;
         }
         const body = await this.readBody(request);
+        const skill = browserSkillRequestSchema.safeParse(body);
+        if (skill.success) {
+          const command = skill.data;
+          const id = z.uuid().parse(request.headers['x-octopus-connection']);
+          const active = [...this.connections.values()].find(
+            (item) => item.connectionId === id && item.state === 'connected'
+          );
+          if (!active || command.connectionId !== id || this.bootstrap !== admitted) {
+            this.send(response, 410, { error: 'SESSION_EXPIRED' });
+            return;
+          }
+          const reply: BrowserSkillResponse = {
+            type: 'skills.result',
+            connectionId: id,
+            requestId: command.requestId,
+          };
+          try {
+            if (!this.skillFiles) {throw new Error('SKILL_OFFLINE');}
+            if (command.type === 'skills.create')
+              {reply.value = await this.skillFiles.create(
+                active.installationId,
+                command.operationId,
+                command.candidate
+              );}
+            else if (command.type === 'skills.read')
+              {reply.value = await this.skillFiles.read(active.installationId, command.skillId);}
+            else if (command.type === 'skills.receipt')
+              {reply.value = await this.skillFiles.receipt(active.installationId, command.operationId);}
+            else if (command.type === 'skills.delete')
+              {reply.value = await this.skillFiles.remove(active.installationId, command.skillId);}
+            else {
+              if (!this.openSkillDirectory) {throw new Error('SKILL_OFFLINE');}
+              await this.skillFiles.directoryPath(active.installationId, command.skillId);
+              await this.openSkillDirectory(active.installationId, command.skillId);
+              reply.value = { opened: true };
+            }
+          } catch (error) {
+            const parsed = browserSkillResponseSchema.safeParse({
+              ...reply,
+              error: error instanceof Error ? error.message : '',
+            });
+            reply.error = parsed.success ? parsed.data.error : 'SKILL_STORAGE';
+          }
+          active.lastSeen = new Date().toISOString();
+          this.send(response, 200, browserSkillResponseSchema.parse(reply));
+          return;
+        }
         const result = browserResultSchema.safeParse(body);
         if (result.success) {
           const id = z.uuid().parse(request.headers['x-octopus-connection']);

@@ -2,6 +2,7 @@
  * @author Codex
  * @description Presents cumulative Pi usage inside the Session Properties Panel.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@octopus/ui/components/button';
 import { getSessionStats } from '@/api/session-stats';
@@ -55,15 +56,21 @@ export function SessionStatsSection({ session }: { session: SessionDto }) {
         </p>
       )}
       {stats.isError && (
-        <div role="alert" className="flex flex-col gap-2 text-sm">
-          <p>
-            {t('session.stats.loadFailedPrefix', 'Failed to load statistics: ')}
-            {stats.error.message}
-          </p>
-          <Button variant="outline" size="sm" onClick={() => void stats.refetch()}>
-            {t('common.retry', 'Retry')}
-          </Button>
-        </div>
+        <Alert
+          variant="danger"
+          showIcon
+          description={
+            <p>
+              {t('session.stats.loadFailedPrefix', 'Failed to load statistics: ')}
+              {stats.error.message}
+            </p>
+          }
+          action={
+            <Button variant="outline" size="sm" onClick={() => void stats.refetch()}>
+              {t('common.retry', 'Retry')}
+            </Button>
+          }
+        />
       )}
       {data !== undefined && (
         <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2.5 gap-y-3.5 text-xs tabular-nums">

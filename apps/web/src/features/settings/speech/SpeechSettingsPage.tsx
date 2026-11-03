@@ -2,6 +2,7 @@
  * @author Codex
  * @description Configures independent speech providers and explicitly selects the service used by Composer.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useForm } from '@tanstack/react-form';
 import { useRef, useState } from 'react';
 import { Button } from '@octopus/ui/components/button';
@@ -39,12 +40,16 @@ export function SpeechSettingsPage(props: SpeechSettingsPageProps) {
     <SettingContainer>
       {settings.isPending && <Skeleton className="h-64 w-full" />}
       {settings.error && (
-        <div role="alert" className="flex flex-col gap-3 text-sm text-destructive">
-          {t('speech.loadFailed', 'Could not load speech settings.')}
-          <Button variant="outline" onClick={() => void settings.refetch()}>
-            {t('speech.reload', 'Reload settings')}
-          </Button>
-        </div>
+        <Alert
+          variant="danger"
+          showIcon
+          description={t('speech.loadFailed', 'Could not load speech settings.')}
+          action={
+            <Button variant="outline" onClick={() => void settings.refetch()}>
+              {t('speech.reload', 'Reload settings')}
+            </Button>
+          }
+        />
       )}
       {settings.data && (
         <SpeechSettingsEditor
@@ -159,12 +164,16 @@ function SpeechSettingsEditor({
           ))}
         </Tabs>
         {mutation.error && (
-          <div role="alert" className="flex flex-col items-start gap-2 text-sm text-destructive">
-            {mutation.error.message}
-            <Button variant="outline" onClick={() => void onReload()}>
-              {t('speech.reload', 'Reload settings')}
-            </Button>
-          </div>
+          <Alert
+            variant="danger"
+            showIcon
+            description={mutation.error.message}
+            action={
+              <Button variant="outline" onClick={() => void onReload()}>
+                {t('speech.reload', 'Reload settings')}
+              </Button>
+            }
+          />
         )}
       </CardContent>
     </Card>

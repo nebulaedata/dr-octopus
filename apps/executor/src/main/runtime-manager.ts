@@ -12,7 +12,6 @@ import {
   defaultToolPolicySettings,
   toolPolicySettingsSchema,
   type ToolPoliciesResponse,
-  type ToolPolicySettings,
 } from '../contracts/tool-policy';
 import { policyTools, selectedPolicyTools } from '../runtime/mcp/tool-policy';
 import { randomUUID } from 'node:crypto';
@@ -20,7 +19,9 @@ import { join } from 'node:path';
 import { defaultTransferSettings, type TransferSettings } from '../contracts/transfer-settings';
 import { hostReplySchema, hostRequestSchema } from '../contracts/access';
 import type { z } from 'zod';
-import { utilityProcess } from 'electron';
+import { utilityProcess, shell } from 'electron';
+import { skillDirectoryRequestSchema } from '../contracts/browser-skill-directory';
+import { BrowserSkillFiles } from '../runtime/browser/browser-skill-files';
 import { runtimeMessageSchema } from '../contracts/runtime';
 import type { RuntimeSnapshot } from '../contracts/runtime';
 import type { UtilityProcess } from 'electron';
@@ -137,10 +138,12 @@ export class RuntimeManager {
    */
   async readSettings(): Promise<SettingsResponse> {
     try {
-      const saved = (await this.loadSettings()).read();
+      const settings = await this.loadSettings();
+      const saved = settings.read();
       return {
         ok: true,
         data: {
+          toolPolicies: settings.readToolPolicies(),
           device: { ...(this.activeDevice ?? this.identity!.read()) },
           deviceName: this.identity!.read().deviceName,
           port: saved.port,
@@ -149,11 +152,14 @@ export class RuntimeManager {
           themeSource: saved.themeSource,
           transfer: saved.transfer,
           pendingRestart:
-            saved.saved &&
-            (JSON.stringify(saved.transfer) !== JSON.stringify(this.activeTransfer) ||
-              saved.port !== this.port ||
-              saved.networkAddress !== this.networkAddress ||
-              (!!this.activeDevice && this.identity!.read().deviceName !== this.activeDevice.deviceName)),
+            (saved.saved &&
+              (JSON.stringify(saved.transfer) !== JSON.stringify(this.activeTransfer) ||
+                saved.port !== this.port ||
+                saved.networkAddress !== this.networkAddress ||
+                (!!this.activeDevice &&
+                  this.identity!.read().deviceName !== this.activeDevice.deviceName))) ||
+            JSON.stringify(selectedPolicyTools(settings.readToolPolicies()).sort()) !==
+              JSON.stringify(selectedPolicyTools(this.activeToolPolicies).sort()),
         },
       };
     } catch {
@@ -162,7 +168,7 @@ export class RuntimeManager {
   }
 
   /**
-   * Reads policy settings and distinguishes persisted choices from confirmed Runtime application.
+   * Reads saved policy settings and the policy loaded at Runtime startup.
    */
   async readToolPolicies(): Promise<ToolPoliciesResponse> {
     try {
@@ -172,52 +178,11 @@ export class RuntimeManager {
         data: {
           settings,
           tools: structuredClone(policyTools),
-          applied: this.snapshot.state === 'ready' && this.activeToolPolicies.revision === settings.revision,
+          activeSettings: structuredClone(this.activeToolPolicies),
         },
       };
     } catch {
       return { ok: false, message: '无法读取工具策略，请检查设置保留记录' };
-    }
-  }
-
-  /**
-   * Serializes policy publication with settings and refuses stale drafts or lifecycle transitions.
-   * Publication precedes Runtime acknowledgement; uncertain application stays visible on subsequent reads.
-   */
-  async saveToolPolicies(input: ToolPolicySettings): Promise<ToolPoliciesResponse> {
-    if (this.savingSettings || ['starting', 'stopping'].includes(this.snapshot.state)) {
-      return { ok: false, message: '执行器正在处理设置或切换服务，请稍后重试' };
-    }
-    this.savingSettings = true;
-    try {
-      const settings = await this.loadSettings();
-      const parsed = toolPolicySettingsSchema.parse(input);
-      if (parsed.revision !== settings.readToolPolicies().revision) {
-        return { ok: false, message: '策略已发生变化，请重新打开后编辑' };
-      }
-      const next = { ...parsed, revision: parsed.revision + 1 };
-      await settings.saveToolPolicies(next);
-      if (this.snapshot.state === 'ready') {
-        const child = this.child;
-        const reply = await this.request({
-          type: 'tool-policy-set',
-          revision: next.revision,
-          enabledTools: selectedPolicyTools(next),
-        });
-        if (
-          !reply.response.ok ||
-          reply.response.data.toolPolicyRevision !== next.revision ||
-          this.child !== child
-        ) {
-          throw new Error('Policy application not confirmed.');
-        }
-        this.activeToolPolicies = next;
-      }
-      return this.readToolPolicies();
-    } catch {
-      return { ok: false, message: '策略保存或应用未获确认，请刷新检查；已保存的策略将在下次启动时加载' };
-    } finally {
-      this.savingSettings = false;
     }
   }
 
@@ -229,7 +194,7 @@ export class RuntimeManager {
   }
 
   /**
-   * Persists UI preferences and next-start listeners without changing active tasks.
+   * Persists preferences and revision-checked next-start policies in one publication without changing active tasks.
    */
   async saveSettings(input: SettingsInput): Promise<SettingsResponse> {
     if (this.savingSettings) {
@@ -238,7 +203,18 @@ export class RuntimeManager {
     this.savingSettings = true;
     try {
       const settings = await this.loadSettings();
-      await settings.save(input);
+      let next = input;
+      if (input.toolPolicies) {
+        if (['starting', 'stopping'].includes(this.snapshot.state)) {
+          return { ok: false, code: 'UNAVAILABLE', message: '执行器正在切换服务，请稍后保存设置' };
+        }
+        const policies = toolPolicySettingsSchema.parse(input.toolPolicies);
+        if (policies.revision !== settings.readToolPolicies().revision) {
+          return { ok: false, code: 'INVALID_REQUEST', message: '策略已发生变化，请撤销草稿并重新编辑' };
+        }
+        next = { ...input, toolPolicies: { ...policies, revision: policies.revision + 1 } };
+      }
+      await settings.save(next);
       if (input.deviceName !== undefined) {
         await this.identity!.rename(input.deviceName);
       }
@@ -426,6 +402,24 @@ export class RuntimeManager {
         console.error('[executor] Runtime reported a diagnostic.');
       });
       child.on('message', (message: unknown) => {
+        const open = skillDirectoryRequestSchema.safeParse(message);
+        if (open.success) {
+          if (this.child !== child || this.snapshot.state !== 'ready') {return;}
+          const command = open.data;
+          const files = new BrowserSkillFiles(new NativeFileCommit(this.nativePath), this.projectRoot);
+          void files
+            .directoryPath(command.installationId, command.skillId)
+            .then(async (path) => {
+              if (this.child !== child || this.snapshot.state !== 'ready') {return false;}
+              return (await shell.openPath(path)) === '';
+            })
+            .catch(() => false)
+            .then((opened) => {
+              if (this.child === child)
+                {child.postMessage({ type: 'skill-directory.result', requestId: command.requestId, opened });}
+            });
+          return;
+        }
         const activity = computerUseMessageSchema.safeParse(message);
         if (activity.success) {
           if (

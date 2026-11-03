@@ -2,17 +2,12 @@
  * @author Codex
  * @description Groups collection reIndexing, revision-aware metadata editing and explicit visibility revocation.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { v4 as uuidv4 } from 'uuid';
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  EllipsisVerticalIcon,
-  PencilIcon,
-  RefreshCcwDotIcon,
-  Trash2Icon,
-  TriangleAlertIcon,
-} from 'lucide-react';
+import { EllipsisVerticalIcon, PencilIcon, RefreshCcwDotIcon, Trash2Icon } from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
 import {
   DropdownMenu,
@@ -214,17 +209,20 @@ export function KnowledgeCollectionActions({
             </form>
           ) : (
             <>
-              <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm">
-                <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
-                <p className="text-muted-foreground">
-                  <span className="font-medium text-foreground">{collection.name}</span>
-                  {'. '}
-                  {t(
-                    'knowledge.collectionActions.deleteWarning',
-                    'This deletes the collection and all of its documents; existing references will stop working.'
-                  )}
-                </p>
-              </div>
+              <Alert
+                variant="warning"
+                showIcon
+                description={
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">{collection.name}</span>
+                    {'. '}
+                    {t(
+                      'knowledge.collectionActions.deleteWarning',
+                      'This deletes the collection and all of its documents; existing references will stop working.'
+                    )}
+                  </p>
+                }
+              />
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(undefined)}>
                   {t('common.cancel', 'Cancel')}

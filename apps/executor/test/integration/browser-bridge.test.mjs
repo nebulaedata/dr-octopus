@@ -4,6 +4,7 @@
  */
 import { downloadCreatedConfiguration } from './client-configuration.mjs';
 import { createBrowserHostFixture } from './browser-host.mjs';
+import { verifyRecordingAdmission, verifyAutomationAdmission } from './browser-recording.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserIdentity } from '../../build/browser-identity.ts';
@@ -75,6 +76,15 @@ test(
       );
       await settings.save({ port, networkAddress });
     }
+    const policySettings = await ConnectionSettings.open(
+      new NativeFileCommit(join(appRoot, 'dist/native/file-commit.node')),
+      join(data, 'project')
+    );
+    await policySettings.save({
+      port: 19876,
+      networkAddress: null,
+      toolPolicies: { revision: 1, selectedId: 'all', custom: [] },
+    });
     const { resource, register, extensionDirectory } = await createBrowserHostFixture({
       root,
       appRoot,
@@ -99,13 +109,29 @@ test(
     try {
       await register('install');
       registered = true;
+      const env = { ...process.env };
+      delete env.ELECTRON_RUN_AS_NODE;
       app = await electron.launch({
         cwd: appRoot,
+        env,
         args: [appRoot, '--executor-test', '--executor-test-data=' + data],
       });
       let page = await app.firstWindow();
       page.setDefaultTimeout(20000);
-      await page.getByRole('heading', { name: 'MCP 服务已启动', exact: true }).waitFor();
+      try {
+        await page.waitForFunction(async () => (await window.executor.readStatus()).data?.state === 'ready');
+      } catch (error) {
+        console.error('Isolated Executor startup screen:', await page.locator('body').innerText());
+        console.error(
+          'Isolated Executor startup status:',
+          await page.evaluate(() => window.executor.readStatus())
+        );
+        throw error;
+      }
+      assert.equal(
+        (await page.evaluate(() => window.executor.readToolPolicies())).data.activeSettings.selectedId,
+        'all'
+      );
       await page.getByRole('tab', { name: '连接', exact: true }).click();
       await page.getByRole('switch', { name: '浏览器桥接', exact: true }).click();
       await expect(page.getByRole('switch', { name: '浏览器桥接', exact: true })).toBeChecked();
@@ -310,6 +336,15 @@ test(
         };
       };
       const snapshot = async () => call('browser_snapshot', { ...common, tabId: created.tabId });
+      await verifyRecordingAdmission({
+        context: contexts[0],
+        worker: workers[0],
+        client,
+        taskId: task.taskId,
+        connectionId,
+        tabId: created.tabId,
+        fixture,
+      });
       const rawObserved = await client.callTool({
         name: 'browser_snapshot',
         arguments: { ...common, tabId: created.tabId },
@@ -326,6 +361,7 @@ test(
       console.info('Captured MCP screenshot:', imagePath);
       assert.equal(observed.text.includes('private-secret-password'), false);
       assert.equal(observed.text.includes('private-sensitive-content'), false);
+      await verifyAutomationAdmission({ context: contexts[0], worker: workers[0], tabId: created.tabId });
       await call('browser_click', {
         ...common,
         tabId: created.tabId,
@@ -549,6 +585,15 @@ test(
         }
         assert.ok(edgePage);
         await edgePage.waitForLoadState('load');
+        await verifyRecordingAdmission({
+          context: contexts[1],
+          worker: workers[1],
+          client,
+          taskId: edgeTask.taskId,
+          connectionId: edgeConnection.connectionId,
+          tabId: edgeTab.tabId,
+          fixture: edgePage,
+        });
         /**
          * Obtains a fresh production snapshot from the explicitly selected Edge connection.
          */
@@ -564,10 +609,12 @@ test(
           assert.equal(raw.isError, undefined);
           return raw.structuredContent.data;
         };
+        const edgeObserved = await edgeSnapshot();
+        await verifyAutomationAdmission({ context: contexts[1], worker: workers[1], tabId: edgeTab.tabId });
         await call('browser_click', {
           ...edgeCommon,
           tabId: edgeTab.tabId,
-          target: target(await edgeSnapshot(), 'Fixture click'),
+          target: target(edgeObserved, 'Fixture click'),
           idempotencyKey: 'edge-click',
         });
         assert.equal(await edgePage.evaluate(() => globalThis.clicks), 1);
@@ -608,13 +655,16 @@ test(
           idempotencyKey: 'edge-navigate',
         });
         await edgePage.waitForURL(siteUrl + '/edge-next');
+        await expect(edgePage.locator('#page-agent-runtime_simulator-mask')).toHaveCount(0);
+        const edgeClosed = edgePage.waitForEvent('close');
         await call('browser_close_tab', {
           ...edgeCommon,
           tabId: edgeTab.tabId,
           idempotencyKey: 'edge-close',
         });
+        await edgeClosed;
         await call('task_end', edgeCommon);
-        await expect(edgePage.locator('#page-agent-runtime_simulator-mask')).toHaveCount(0);
+        assert.equal(edgePage.isClosed(), true);
       }
       await workers[0].evaluate(() => chrome.storage.local.set({ paused: true }));
       await waitStatus(workers[0], 'paused');

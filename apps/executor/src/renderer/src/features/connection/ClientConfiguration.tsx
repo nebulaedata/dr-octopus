@@ -7,8 +7,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from '@octopus/ui/components/button';
 import { toast } from '@octopus/ui/components/toast';
 import { ToggleGroup, ToggleGroupItem } from '@octopus/ui/components/toggle-group';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
-import { CopyIcon, DownloadIcon, CircleAlertIcon, CheckIcon } from 'lucide-react';
+import { Alert } from '@octopus/custom-ui/components/alert';
+import { CopyIcon, DownloadIcon, CheckIcon } from 'lucide-react';
 import { clientConfigurationQuery } from '@/queries/access-queries';
 import { copyAgentGuide, copyClientConfiguration, downloadClientConfiguration } from '@/api/executor';
 import type { ClientConfigurationInput } from '../../../../contracts/client-configuration';
@@ -165,12 +165,7 @@ export function ClientConfiguration({
           {download.isPending ? '下载中…' : '下载配置文件'}
         </Button>
       </div>
-      {error ? (
-        <Alert variant="destructive">
-          <CircleAlertIcon />
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      ) : null}
+      {error ? <Alert variant="danger" showIcon description={error.message} /> : null}
     </section>
   );
 }

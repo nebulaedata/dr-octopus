@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from '@octopus/ui/components/dialog';
 import { Button } from '@octopus/ui/components/button';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Skeleton } from '@octopus/ui/components/skeleton';
 import { toast } from '@octopus/ui/components/toast';
 import { forgetMemory } from '@/api/memory';
@@ -70,9 +70,7 @@ export function MemoryDetail({ reference, onClose }: { reference: MemoryRef; onC
         </DialogHeader>
         {result.isPending && <Skeleton className="h-40 w-full" />}
         {(result.error || mutation.error) && (
-          <Alert variant="destructive">
-            <AlertDescription>{result.error?.message ?? mutation.error?.message}</AlertDescription>
-          </Alert>
+          <Alert variant="danger" showIcon description={result.error?.message ?? mutation.error?.message} />
         )}
         {result.data && !confirming && (
           <div className="flex max-h-[55vh] flex-col gap-4 overflow-auto">

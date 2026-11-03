@@ -106,4 +106,5 @@
 
 | [ADR-0088](./0088-browser-recording-skill-agent.md) | Superseded by ADR-0089 | 保留本地 Skill 与受限整理决定；双引擎、重放无提问由 ADR-0089 替代 |
 | [ADR-0089](./0089-browser-skill-unified-agent.md) | Accepted | 整理/重放统一 ToolLoopAgent，复用 PageController；Questionnaire + MessageScroller，无自由聊天 |
-| [ADR-0090](./0090-browser-host-lifecycle.md) | Proposed | 固定 Host 注册入口、版本事务发布、开发隔离、分层诊断与自动修复闭环 |
+| [ADR-0090](./0090-browser-host-lifecycle.md) | Accepted（待实施） | 固定 Host 注册入口、版本事务发布、开发隔离、分层诊断与自动修复闭环 |
+| [ADR-0092](./0092-browser-recorder-reliability.md) | Proposed | 自研录制器按文档扩展同源 iframe；复用 ACK 与收尾，PageController 不变 |

@@ -2,6 +2,7 @@
  * @author Codex
  * @description Verify and manage Dr.Octopus remote mounts from saved global MCP connection names.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GlobeIcon, RefreshCwIcon, UnplugIcon } from 'lucide-react';
@@ -111,11 +112,7 @@ export function KnowledgeMountsCard() {
               : t('settings.knowledge.mounts.verify', 'Verify and mount')}
           </Button>
         </form>
-        {error ? (
-          <p role="alert" className="text-sm text-destructive">
-            {error.message}
-          </p>
-        ) : null}
+        {error ? <Alert variant="danger" showIcon description={error.message} /> : null}
         {mounts.data?.map((mount) => (
           <div key={mount.id} className="flex items-center gap-3 rounded-lg border p-3">
             <GlobeIcon className="size-4 text-muted-foreground" />

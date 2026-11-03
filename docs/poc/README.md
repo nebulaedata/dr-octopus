@@ -20,6 +20,7 @@
 ## 独立评估与验证记录
 
 - [Executor 验证状态与已知限制](executor-validation.md)
+- [浏览器页面适配层限制审查](browser-page-adapter-review.md)
 - [Scheduler 实施与验证记录](scheduler-verification.md)
 - [定时任务通知闭环端到端验证](scheduler-e2e-2026-09-06.md)
 - [浏览器整理 Agent 框架成本收益评估](browser-skill-agent-framework-evaluation.md)
@@ -29,16 +30,18 @@
 
 ## 专题测试计划与验收
 
+- [自研录制器：单层同源 iframe 验收计划](browser-recorder-reliability-validation.md) · [架构](../architecture/browser-recorder-reliability.md)（Proposed，仅计划，未执行）
+
 - [Session 首页预热：验证与实验记录](session-home-prewarming-validation.md) · [架构](../architecture/session-home-prewarming.md)
 - [Dr.Octopus 企业级附件—智能体架构](attachment-agent-system-validation.md) · [架构](../architecture/attachment-agent-system.md)
 - [Attachment Capability Lib 设计](attachment-capability-lib-validation.md) · [架构](../architecture/attachment-capability-lib.md)
 - [受管后台任务实施契约（阶段 B）](background-tasks-implementation-validation.md) · [架构](../architecture/background-tasks-implementation.md)
 - [受管后台进程设计](background-tasks-validation.md) · [架构](../architecture/background-tasks.md)
-- [Browser Extension Tab 录制与智能重放 — 项目融合设计](browser-extension-recorder-validation.md) · [架构](../architecture/browser-extension-recorder.md)
-- [录制 → 有限整理智能体 → 本地 Skill → 智能重放：闭环方案](browser-recording-skill-agent-validation.md) · [架构](../architecture/browser-recording-skill-agent.md)
+- [历史：Browser Extension Tab 录制与智能重放 — 项目融合设计](browser-extension-recorder-validation.md) · [架构](../architecture/browser-extension-recorder.md)
+- [历史：录制 → 有限整理智能体 → 本地 Skill → 智能重放：闭环方案](browser-recording-skill-agent-validation.md) · [架构](../architecture/browser-recording-skill-agent.md)
 - [浏览器优先的 Skill 离线闭环](browser-skill-offline-validation.md) · [架构](../architecture/browser-skill-offline.md)
 - [浏览器 Skill：统一 ToolLoopAgent 设计开发方案](browser-skill-unified-agent-validation.md) · [架构](../architecture/browser-skill-unified-agent.md)
-- [浏览器工作流：引导式整理开发设计](browser-workflow-guided-organization-validation.md) · [架构](../architecture/browser-workflow-guided-organization.md)
+- [历史：浏览器工作流：引导式整理开发设计](browser-workflow-guided-organization-validation.md) · [架构](../architecture/browser-workflow-guided-organization.md)
 - [CLI 跨平台环境检测设计](cli-environment-check-validation.md) · [架构](../architecture/cli-environment-check.md)
 - [Docker 成品镜像发布与安装](docker-distribution-validation.md) · [架构](../architecture/docker-distribution.md)
 - [统一文档解析与 ZIP 附件](document-processing-validation.md) · [架构](../architecture/document-processing.md)
@@ -81,3 +84,4 @@
 - [Web 全局快捷键体系与设置页设计](web-keyboard-shortcuts-validation.md) · [架构](../architecture/web-keyboard-shortcuts.md)
 - [Tool Renderer Development](web-tool-renderers-validation.md) · [架构](../architecture/web-tool-renderers.md)
 - [Workspace 附件永久物化缓存设计](workspace-attachment-temp-cache-validation.md) · [架构](../architecture/workspace-attachment-temp-cache.md)
+- [Browser Host 生命周期验证计划](browser-host-lifecycle-validation.md) · [决策](../adr/0090-browser-host-lifecycle.md)

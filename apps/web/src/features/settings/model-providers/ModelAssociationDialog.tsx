@@ -24,7 +24,7 @@ import {
 } from '@octopus/ui/components/combobox';
 import { Field, FieldLabel, FieldDescription } from '@octopus/ui/components/field';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@octopus/ui/components/tooltip';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useModelAssociations, useUpdateModelAssociation } from '@/queries/model-association-queries';
 import { useI18n } from '@/i18n/use-i18n';
 import type { ModelSettingsDto, ModelAssociation } from '@octopus/shared/protocol';
@@ -179,9 +179,7 @@ function AssociationForm({
         )}
       </form.Field>
       {(query.error || mutation.error) && (
-        <Alert variant="destructive">
-          <AlertDescription>{(query.error ?? mutation.error)?.message}</AlertDescription>
-        </Alert>
+        <Alert variant="danger" showIcon description={(query.error ?? mutation.error)?.message} />
       )}
       {query.error && (
         <Button type="button" variant="outline" onClick={() => void query.refetch()}>

@@ -2,11 +2,12 @@
  * @author Codex
  * @description Document row menu: revision-fenced rename, source replacement and confirmed deletion behind one compact dropdown.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { v4 as uuidv4 } from 'uuid';
 import { useRef, useState } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { EllipsisVerticalIcon, PencilIcon, ReplaceIcon, Trash2Icon, TriangleAlertIcon } from 'lucide-react';
+import { EllipsisVerticalIcon, PencilIcon, ReplaceIcon, Trash2Icon } from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
 import { toast } from '@octopus/ui/components/toast';
 import { Input } from '@octopus/ui/components/input';
@@ -204,17 +205,20 @@ export function KnowledgeDocumentActions({
             </form>
           ) : (
             <>
-              <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-sm">
-                <TriangleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
-                <p className="text-muted-foreground">
-                  <span className="font-medium text-foreground">{document.title}</span>
-                  {'. '}
-                  {t(
-                    'knowledge.documentActions.deleteWarning',
-                    'This document will no longer be retrievable, and existing references will also stop working.'
-                  )}
-                </p>
-              </div>
+              <Alert
+                variant="warning"
+                showIcon
+                description={
+                  <p className="text-muted-foreground">
+                    <span className="font-medium text-foreground">{document.title}</span>
+                    {'. '}
+                    {t(
+                      'knowledge.documentActions.deleteWarning',
+                      'This document will no longer be retrievable, and existing references will also stop working.'
+                    )}
+                  </p>
+                }
+              />
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialog(undefined)}>
                   {t('common.cancel', 'Cancel')}

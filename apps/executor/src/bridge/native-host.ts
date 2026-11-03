@@ -16,6 +16,7 @@ import { readBootstrap } from '../runtime/browser/bridge-store';
 import type { BridgeBootstrap } from '../runtime/browser/bridge-store';
 import { readFrames, writeFrame } from './native-framing';
 import { isBrowserOriginAllowed } from '../../build/browser-identity';
+import { browserSkillResponseSchema } from '@octopus/shared/protocol/browser-skills';
 
 /**
  * Loads only this package's fixed data locator, then validates private bootstrap and actual process login identity.
@@ -156,7 +157,10 @@ async function main(): Promise<void> {
         if (message.connectionId !== connectionId || ++messages > 8) {
           throw new Error('Stale or excessive heartbeat');
         }
-        if (message.type === 'result') {
+        if (message.type.startsWith('skills.')) {
+          const reply = browserSkillResponseSchema.parse(await request('POST', message));
+          await send(reply);
+        } else if (message.type === 'result') {
           await request('POST', message);
         } else {
           await send(message);

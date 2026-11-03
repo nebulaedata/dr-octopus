@@ -1,6 +1,6 @@
 # Executor 项目规范
 
-根 AGENTS.md、[代码开发规范](../../docs/code-development-standards.md) 始终适用；涉及 Electron 进程、IPC、窗口或发行时遵守 [Electron 开发规范](../../docs/electron-development-standards.md)。
+根 AGENTS.md、[代码开发规范](../../docs/guides/code-development-standards.md) 始终适用；涉及 Electron 进程、IPC、窗口或发行时遵守 [Electron 开发规范](../../docs/guides/electron-development-standards.md)。
 
 ## 职责与阅读入口
 
@@ -16,7 +16,7 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 | [Browser](../../docs/architecture/executor-browser.md)          | Bridge、页面身份、工具、反馈与恢复       |
 | [Computer](../../docs/architecture/executor-computer.md)        | 后端、捕获/输入、彩屏与独立电脑矩阵      |
 | [交付](../../docs/architecture/executor-delivery.md)            | 固定资源、打包、离线验收与门禁           |
-| [验证](../../docs/architecture/executor-validation.md)          | 实际通过、原始失败与未验证项             |
+| [验证](../../docs/poc/executor-validation.md)          | 实际通过、原始失败与未验证项             |
 | [签名发布 SOP](RELEASE.md)                                      | 证书、签名范围、清单顺序、发行验证与分发 |
 
 用户操作见 [INSTALLATION.md](INSTALLATION.md)。用户已确认边界优先于旧候选与示例，冲突应修正文档，不能因此扩大产品范围。
@@ -67,6 +67,7 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 - Browser 身份只在构建期从插件 browser-identity.json 唯一解析，两个商店 ID 在所有模式下必填；客户端不读取根 .env 或身份环境变量，将同一精确来源集合编入 launcher、Host、Runtime 与注册脚本；运行时不读取 .env 或接受身份覆盖。生成模块随构建缓存恢复，不手工改生成文件。
 - 客户端校验核对当前身份策略 fingerprint、协议版本和已完成构建的消费者摘要，不读取插件输出；策略不含插件 profile 或产品版本。打包另核对所附插件各渠道身份、协议、产物模式和 manifest 版本；不要求两端完整身份指纹相同。未知身份、不兼容协议或产物记录失配即失败。正式签名若改变消费者字节，在受控签名步骤之后重新生成身份摘要，再生成最终 runtime-manifest。
 - package:acceptance 只打包已有输出，不自动 build 或准备缺失资源；每次生成 release/<version>-unsigned-<UUID>/ 下的新 EXE、ZIP、清单和验收工具。保留既有产物，不把源码/文档更新当作旧包已更新。
+- 根 build:executor 调用本应用 build:installer，一键编排缺失资源装配、shared/插件/客户端构建及 package:acceptance；任一步失败即停止。仅该交付编排入口可按需调用 assemble 命令，应用级 build/dev/start 保持不下载资源，已有资源不自动覆盖或修复。
 - 产品版本以 package.json 为唯一来源，src/contracts/product.ts 静态引用并在构建时内联；构建/打包不升版。仓库统一发版入口在提交与 Tag 前更新该版本，恢复发布保持版本不变；应用 ID/数据目录/Host 不随展示名改变。
 - 固定私有 Node/Python、搜索、原生组件、品牌和许可随包；普通 build/start 不下载资源，Node 只用 assemble:node。Shell 按 [ADR-0084](../../docs/adr/0084-executor-system-shell.md) 使用固定系统 Windows PowerShell 5.1，不内置 PortableGit、不通过 PATH 选择解释器。业务子命令可使用经过筛选的本机 PATH；Linux/macOS 仅显式 if-else、注释与未实现错误，不宣称已支持。
 - Node 清单从验证归档生成并编译摘要，Computer 清单只供构建/打包；最终 runtime-manifest 在 PE/Fuse 修改后生成，不在运行时重建信任锚。
@@ -98,5 +99,5 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 - 新增或调整本地验证输出时，统一使用上述批次目录；同一任务的跨应用联调材料跟随 Executor 批次保存。不在仓库根、docs、src、test 或 build 根部散放生成材料，也不为单次任务新增顶层报告目录或 Git 忽略规则。现有脚本的固定输出在修改其输出逻辑时归拢；目录约定不代表已有自动检查。
 - 每批使用独立目录，重跑不覆盖先前输出；同批中的首次失败、诊断和修复后复验分别命名保存。截图输出环境变量指向本批目录；需要保留的临时测试证据在清理临时目录前复制到本批目录。按实际输出创建子目录，不预建空模板。
 - build 内的本地材料沿用仓库 Git 忽略规则，不提交或反向依赖为测试输入。需要长期使用的输入应整理为确定性夹具后放入 test；验证脚本和正式验收探针同样归 test，不靠归档内的临时脚本复现。
-- 验收状态摘要写入 [验证记录](../../docs/architecture/executor-validation.md)，注明日期、范围、命令、源码或产物身份、结果及未验证项；评审截图使用 PR 附件。文档不链接被忽略的本地文件，不复制原始日志，不另建平行的阶段报告。
+- 验收状态摘要写入 [验证记录](../../docs/poc/executor-validation.md)，注明日期、范围、命令、源码或产物身份、结果及未验证项；评审截图使用 PR 附件。文档不链接被忽略的本地文件，不复制原始日志，不另建平行的阶段报告。
 - 活跃任务和待排查失败的原始输出保留至结论记录完成，不以成功重跑覆盖失败。任务结束且摘要已记录后，本地批次可清理，不要求永久留存；清理应限于明确归属的批次目录，不连带删除 build 中的构建资源、缓存或其他任务材料。发布和 CI 材料按对应发布要求与附件保留策略处理。

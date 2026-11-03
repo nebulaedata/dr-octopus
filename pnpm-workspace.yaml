@@ -20,6 +20,10 @@ ignoredOptionalDependencies:
 # 临时允许安装刚发布的此版本；满足 pnpm 最小发布时间限制后可删除此配置。
 minimumReleaseAgeExclude:
   - lucide-react@1.48.0
+  - '@ai-sdk/gateway@4.0.128'
+  - '@ai-sdk/openai-compatible@3.0.80'
+  - '@ai-sdk/provider-utils@5.0.70'
+  - ai@7.0.155
 patchedDependencies:
   '@earendil-works/pi-coding-agent@0.85.1': patches/@earendil-works__pi-coding-agent@0.85.1.patch
   '@page-agent/page-controller@1.12.4': patches/@page-agent__page-controller@1.12.4.patch

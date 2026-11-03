@@ -104,8 +104,10 @@ test(
     const publication = await FilePublication.open(native, root);
     const tools = new BasicTools(publication);
     const store = await ControlStore.open(native, root);
-    const authority = new TaskAuthority(tools, store);
-    authority.setToolPolicy(policyToolNameSchema.options, 0);
+    const authority = new TaskAuthority(tools, store, undefined, undefined, undefined, {
+      revision: 0,
+      enabledTools: policyToolNameSchema.options,
+    });
     const gateway = new HttpGateway(authority);
     try {
       const local = await gateway.listen(0, address);

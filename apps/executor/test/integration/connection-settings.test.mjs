@@ -18,7 +18,10 @@ const appRoot = resolve(fileURLToPath(new URL('../../', import.meta.url)));
  * Launches the built application against only the owned temporary data root.
  */
 async function launch(root, state = '已启动') {
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
   const app = await electron.launch({
+    env,
     cwd: appRoot,
     args: [appRoot, '--executor-test', '--executor-test-data=' + root],
   });
@@ -27,7 +30,7 @@ async function launch(root, state = '已启动') {
     page.setDefaultTimeout(15000);
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].show());
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.getByTestId('runtime-state').filter({ hasText: state }).waitFor();
+    await expect(page.getByTestId('runtime-state')).toHaveText(state);
     return { app, page };
   } catch (error) {
     await app.close().catch(() => {});

@@ -13,10 +13,19 @@ test('Chrome and Edge MV3 outputs contain only finite Browser permissions and is
     const build = JSON.parse(await readFile(new URL('browser-identity.json', directory), 'utf8'));
     const { identity } = build;
     assert.equal(build.extensionVersion, manifest.version);
-    assert.equal(build.protocolVersion, 3);
+    assert.equal(build.protocolVersion, 4);
     assert.equal(manifest.manifest_version, 3);
-    assert.deepEqual(manifest.permissions.sort(), ['alarms', 'nativeMessaging', 'scripting', 'storage']);
+    assert.deepEqual(manifest.permissions.sort(), [
+      'alarms',
+      'nativeMessaging',
+      'scripting',
+      'sidePanel',
+      'storage',
+      'webNavigation',
+    ]);
     assert.equal(manifest.externally_connectable, undefined);
+    assert.equal(manifest.side_panel.default_path, 'window-panel.html');
+    await access(new URL('window-panel.html', directory));
     assert.equal(manifest.action.default_popup, 'popup.html');
     assert.equal(manifest.action.default_title, 'Dr.Octopus 浏览器连接');
     await access(new URL(manifest.action.default_popup, directory));
@@ -49,6 +58,7 @@ test('Chrome and Edge MV3 outputs contain only finite Browser permissions and is
       await readFile(new URL('licenses/dependencies/inventory.json', directory), 'utf8')
     );
     for (const name of [
+      'yaml',
       'react',
       'react-dom',
       'lucide-react',

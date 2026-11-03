@@ -6,7 +6,7 @@
 import { SettingContainer } from '../Layout/SettingContainer';
 import { useEffect } from 'react';
 import { useForm } from '@tanstack/react-form';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@octopus/ui/components/card';
@@ -87,10 +87,12 @@ export function DefaultModelPage() {
   if (queryError instanceof Error) {
     return (
       <SettingContainer classNames={{ content: 'max-w-none' }}>
-        <Alert variant="destructive">
-          <AlertTitle>{t('settings.defaultModel.loadFailed', 'Failed to load the default model')}</AlertTitle>
-          <AlertDescription>{queryError.message}</AlertDescription>
-        </Alert>
+        <Alert
+          variant="danger"
+          showIcon
+          title={t('settings.defaultModel.loadFailed', 'Failed to load the default model')}
+          description={queryError.message}
+        />
       </SettingContainer>
     );
   }
@@ -213,10 +215,12 @@ export function DefaultModelPage() {
                 )}
               </form.Field>
               {update.error instanceof Error ? (
-                <Alert variant="destructive">
-                  <AlertTitle>{t('settings.defaultModel.saveFailed', 'Save failed')}</AlertTitle>
-                  <AlertDescription>{update.error.message}</AlertDescription>
-                </Alert>
+                <Alert
+                  variant="danger"
+                  showIcon
+                  title={t('settings.defaultModel.saveFailed', 'Save failed')}
+                  description={update.error.message}
+                />
               ) : null}
               <form.Subscribe
                 selector={(state) => ({

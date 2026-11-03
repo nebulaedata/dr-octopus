@@ -1,6 +1,7 @@
 # browser-recording-skill-agent：概念验证与验收
 
-架构设计：[原设计](../architecture/browser-recording-skill-agent.md)。
+> 历史计划与验证语境；原日期、结果和未执行项保留，不作为当前 Skill Agent 的完整验收要求。当前契约见[统一方案](../architecture/browser-skill-unified-agent.md)，当前进度见[验证矩阵](executor-validation.md)。
+历史来源索引：[原设计](../architecture/browser-recording-skill-agent.md)。
 
 2026-11-03 从架构正文迁入；以下保留原测试计划、结果、日期与限制。测试计划或验收要求不代表已执行通过。
 

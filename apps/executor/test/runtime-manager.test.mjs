@@ -275,7 +275,7 @@ test('computer feedback accepts only current Runtime identity and increasing rev
   assert.equal(manager.readStatus().computerUse.state, 'unknown');
 });
 
-test('policy publication refuses stale drafts and never confirms an unacknowledged Runtime revision', async () => {
+test('policy saves share restart state, preserve active tools and refuse stale or concurrent writes', async () => {
   const built = await build({
     entryPoints: [fileURLToPath(new URL('../src/main/runtime-manager.ts', import.meta.url))],
     bundle: true,
@@ -293,42 +293,103 @@ test('policy publication refuses stale drafts and never confirms an unacknowledg
   new Function('require', 'module', 'exports', built.outputFiles[0].text)(load, module, module.exports);
   const manager = new module.exports.RuntimeManager('unused', 'unused', 'unused');
   let saved = { revision: 0, selectedId: 'readonly', custom: [] };
-  manager.loadSettings = async () => ({
+  const device = { deviceId: '00000000-0000-4000-8000-000000000001', deviceName: 'test' };
+  manager.identity = { read: () => device };
+  let finishSave;
+  let delaySave = false;
+  const publications = [];
+  const preferences = { saved: false, port: 19876, networkAddress: null, transfer: manager.activeTransfer };
+  const settings = {
+    read: () => preferences,
     readToolPolicies: () => structuredClone(saved),
-    saveToolPolicies: async (next) => {
-      saved = structuredClone(next);
+    save: async (next) => {
+      publications.push(structuredClone(next));
+      if (delaySave) {
+        await new Promise((resolve) => {
+          finishSave = resolve;
+        });
+      }
+      if (next.toolPolicies) {
+        saved = structuredClone(next.toolPolicies);
+      }
     },
-  });
-  manager.snapshot.state = 'ready';
-  manager.child = {};
-  manager.request = async () => {
-    throw new Error('lost acknowledgement');
   };
+  manager.loadSettings = async () => settings;
+  manager.snapshot.state = 'ready';
+  let requests = 0;
+  manager.request = async () => {
+    requests++;
+    throw new Error('Unexpected live policy publication');
+  };
+  /**
+   * Submits policy changes through the same settings publication as other preferences.
+   */
+  function savePolicy(toolPolicies) {
+    return manager.saveSettings({ port: 19876, networkAddress: null, toolPolicies });
+  }
   const input = { ...saved, selectedId: 'all' };
-  assert.equal((await manager.saveToolPolicies(input)).ok, false);
-  assert.equal(saved.selectedId, 'all');
+  assert.equal((await savePolicy(input)).ok, true);
   assert.equal(saved.revision, 1);
-  assert.equal((await manager.readToolPolicies()).data.applied, false);
-  assert.equal((await manager.saveToolPolicies(input)).ok, false);
+  assert.equal(publications.length, 1);
+  assert.equal(publications[0].port, 19876);
+  assert.equal(publications[0].toolPolicies.selectedId, 'all');
+  assert.equal(publications[0].toolPolicies.revision, 1);
+  const staleCombined = await manager.saveSettings({
+    port: 19877,
+    networkAddress: null,
+    toolPolicies: input,
+  });
+  assert.equal(staleCombined.ok, false);
+  assert.equal(publications.length, 1);
+  assert.equal((await manager.readToolPolicies()).data.activeSettings.selectedId, 'readonly');
+  assert.equal((await manager.readSettings()).data.pendingRestart, true);
+  assert.equal(requests, 0);
+  assert.equal((await savePolicy(input)).ok, false);
   assert.equal(saved.revision, 1);
 
-  let confirm;
-  manager.request = (request) =>
-    new Promise((resolve) => {
-      assert.equal(request.type, 'tool-policy-set');
-      assert.ok(request.enabledTools.includes('write'));
-      confirm = () => resolve({ response: { ok: true, data: { toolPolicyRevision: request.revision } } });
-    });
-  const publishing = manager.saveToolPolicies(saved);
-  while (!confirm) {
+  // Restoring the running tool set clears the same pending flag without a restart.
+  await savePolicy({ ...saved, selectedId: 'readonly' });
+  assert.equal((await manager.readSettings()).data.pendingRestart, false);
+  const custom = { id: '00000000-0000-4000-8000-000000000002', name: 'unused', enabledTools: [] };
+  await savePolicy({ ...saved, custom: [custom] });
+  assert.equal((await manager.readSettings()).data.pendingRestart, false);
+
+  const readonlyTools = (await manager.readToolPolicies()).data.tools
+    .filter((tool) => tool.readOnly)
+    .map((tool) => tool.name);
+  await savePolicy({
+    ...saved,
+    selectedId: custom.id,
+    custom: [{ ...custom, enabledTools: readonlyTools.reverse() }],
+  });
+  assert.equal((await manager.readSettings()).data.pendingRestart, false);
+  await savePolicy({ ...saved, custom: [{ ...saved.custom[0], name: 'renamed' }] });
+  assert.equal((await manager.readSettings()).data.pendingRestart, false);
+  preferences.saved = true;
+  preferences.port = manager.port + 1;
+  assert.equal((await manager.readSettings()).data.pendingRestart, true);
+  preferences.saved = false;
+  assert.equal((await manager.readSettings()).data.pendingRestart, false);
+
+  delaySave = true;
+  const publishing = savePolicy({ ...saved, selectedId: 'all' });
+  while (!finishSave) {
     await new Promise((resolve) => setImmediate(resolve));
   }
   assert.equal(manager.isSavingSettings(), true);
-  assert.equal((await manager.saveToolPolicies(saved)).ok, false);
+  assert.equal((await savePolicy(saved)).ok, false);
+  assert.equal((await manager.saveSettings({ port: 19877, networkAddress: null })).ok, false);
   await assert.rejects(manager.start(), /publication/);
-  confirm();
-  assert.equal((await publishing).data.applied, true);
+  finishSave();
+  assert.equal((await publishing).ok, true);
   assert.equal(manager.isSavingSettings(), false);
-  manager.snapshot.state = 'starting';
-  assert.equal((await manager.saveToolPolicies(saved)).ok, false);
+  assert.equal((await manager.readSettings()).data.pendingRestart, true);
+
+  // The existing startup path loads saved policies along with the other settings.
+  manager.snapshot.state = 'stopped';
+  manager.launch = async () => {};
+  await manager.start();
+  assert.equal((await manager.readToolPolicies()).data.activeSettings.selectedId, 'all');
+  assert.equal((await manager.readSettings()).data.pendingRestart, false);
+  assert.equal((await savePolicy(saved)).ok, false);
 });

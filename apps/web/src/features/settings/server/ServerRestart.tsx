@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useRef } from 'react';
 import { useCountDown, useSafeState } from 'ahooks';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import {
   Dialog,
@@ -22,6 +22,7 @@ import { ApiRequestError } from '@/utils/request';
 import { ServerServiceCard } from './ServerServiceCard';
 import { RestartAccessHint } from './RestartAccessHint';
 import type { ServerSettingsDto, RestartOperationDto } from '@octopus/shared/protocol';
+import type { AlertVariant } from '@octopus/custom-ui/components/alert';
 
 const terminal = ['succeeded', 'restored', 'failed', 'cancelled'];
 /**
@@ -85,6 +86,16 @@ export function ServerRestart({
     },
   });
   const operation = result.data ?? accepted;
+  let alertVariant: AlertVariant = 'info';
+  if (operation?.state === 'failed') {
+    alertVariant = 'danger';
+  } else if (result.isError || (operation && !terminal.includes(operation.state) && expired)) {
+    alertVariant = 'warning';
+  } else if (operation?.state === 'succeeded') {
+    alertVariant = 'success';
+  } else if (operation?.state === 'restored' || operation?.state === 'cancelled') {
+    alertVariant = 'warning';
+  }
   /**
    * Sends once per deliberate confirmation; ambiguous responses remain unknown.
    */
@@ -132,46 +143,50 @@ export function ServerRestart({
         <p className="text-xs text-muted-foreground">{snapshot.capabilities.reason}</p>
       ) : null}
       {operation ? (
-        <Alert>
-          <AlertDescription>
-            <span>{labels[operation.state]}</span>
-            <RestartAccessHint operation={operation} />
-            {operation.state === 'restored' ? (
-              <span>
-                {t('settings.server.restart.actualAddress', 'Actual listen address: {{address}}', {
-                  address: operation.actualAddress,
-                })}
-              </span>
-            ) : null}
-            {result.isError || (!terminal.includes(operation.state) && expired) ? (
-              <>
+        <Alert
+          variant={alertVariant}
+          showIcon
+          description={
+            <>
+              <span>{labels[operation.state]}</span>
+              <RestartAccessHint operation={operation} />
+              {operation.state === 'restored' ? (
                 <span>
-                  {t(
-                    'settings.server.restart.connectionHint',
-                    'Waiting for the service to reconnect. You can check the saved result without submitting another restart.'
-                  )}
+                  {t('settings.server.restart.actualAddress', 'Actual listen address: {{address}}', {
+                    address: operation.actualAddress,
+                  })}
                 </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setStartedAt(Date.now());
-                    void result.refetch();
-                  }}
-                >
-                  {t('settings.server.restart.checkResult', 'Check result')}
-                </Button>
-              </>
-            ) : null}
-          </AlertDescription>
-        </Alert>
+              ) : null}
+              {result.isError || (!terminal.includes(operation.state) && expired) ? (
+                <>
+                  <span>
+                    {t(
+                      'settings.server.restart.connectionHint',
+                      'Waiting for the service to reconnect. You can check the saved result without submitting another restart.'
+                    )}
+                  </span>
+                </>
+              ) : null}
+            </>
+          }
+          action={
+            result.isError || (!terminal.includes(operation.state) && expired) ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setStartedAt(Date.now());
+                  void result.refetch();
+                }}
+              >
+                {t('settings.server.restart.checkResult', 'Check result')}
+              </Button>
+            ) : null
+          }
+        />
       ) : null}
-      {error ? (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
+      {error ? <Alert variant="danger" showIcon description={error} /> : null}
       <Dialog
         open={confirm}
         onOpenChange={(open) => {

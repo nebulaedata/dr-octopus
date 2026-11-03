@@ -99,7 +99,7 @@ export const toolPoliciesResponseSchema = z.discriminatedUnion('ok', [
     data: z.strictObject({
       settings: toolPolicySettingsSchema,
       tools: z.array(policyToolSchema).max(100),
-      applied: z.boolean(),
+      activeSettings: toolPolicySettingsSchema,
     }),
   }),
   z.strictObject({ ok: z.literal(false), message: z.string().max(200) }),

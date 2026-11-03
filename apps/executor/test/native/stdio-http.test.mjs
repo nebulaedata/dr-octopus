@@ -53,8 +53,14 @@ async function fixture(run) {
   );
   await search.verify();
   const tools = new BasicTools(publication, shell, search);
-  const authority = new TaskAuthority(tools, await ControlStore.open(native, root));
-  authority.setToolPolicy(policyToolNameSchema.options, 0);
+  const authority = new TaskAuthority(
+    tools,
+    await ControlStore.open(native, root),
+    undefined,
+    undefined,
+    undefined,
+    { revision: 0, enabledTools: policyToolNameSchema.options }
+  );
   const gateway = new HttpGateway(authority);
   const endpoint = await gateway.listen(0);
   const grant = await authority.approve({

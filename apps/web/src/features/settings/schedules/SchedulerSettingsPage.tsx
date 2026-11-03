@@ -6,7 +6,7 @@ import { SettingContainer } from '../Layout/SettingContainer';
 import { useEffect } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@octopus/ui/components/card';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
@@ -135,7 +135,10 @@ export function SchedulerSettingsPage() {
                     const number = Number(value);
                     return Number.isSafeInteger(number) && number >= 1 && number <= 32
                       ? undefined
-                      : t('settings.scheduler.concurrencyInvalid', 'Concurrency must be an integer between 1 and 32.');
+                      : t(
+                          'settings.scheduler.concurrencyInvalid',
+                          'Concurrency must be an integer between 1 and 32.'
+                        );
                   },
                 }}
               >
@@ -166,10 +169,12 @@ export function SchedulerSettingsPage() {
               </form.Field>
             </FieldGroup>
             {(settings.error ?? update.error) instanceof Error ? (
-              <Alert variant="destructive">
-                <AlertTitle>{t('settings.scheduler.saveFailed', 'Failed to save settings')}</AlertTitle>
-                <AlertDescription>{(update.error ?? settings.error)?.message}</AlertDescription>
-              </Alert>
+              <Alert
+                variant="danger"
+                showIcon
+                title={t('settings.scheduler.saveFailed', 'Failed to save settings')}
+                description={(update.error ?? settings.error)?.message}
+              />
             ) : null}
             <div className="flex justify-end">
               <Button type="submit" disabled={settings.isPending || update.isPending || !settings.data}>

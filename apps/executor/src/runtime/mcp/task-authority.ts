@@ -2,11 +2,7 @@
  * @author Codex
  * @description Owns current grants, one global task admission and durable task/operation summaries for MCP and Host.
  */
-import {
-  enabledToolsSchema,
-  defaultToolPolicySettings,
-  type PolicyToolName,
-} from '../../contracts/tool-policy';
+import { runtimeToolPolicySchema, defaultToolPolicySettings } from '../../contracts/tool-policy';
 import { selectedPolicyTools } from './tool-policy';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { homedir } from 'node:os';
@@ -38,19 +34,8 @@ function digest(value: unknown): string {
 }
 
 export class TaskAuthority {
-  private enabledTools = new Set<string>(selectedPolicyTools(defaultToolPolicySettings));
-  toolPolicyRevision = 0;
-
-  /**
-   * Replaces admission switches synchronously; already admitted operations keep their original lifecycle.
-   */
-  setToolPolicy(enabledTools: PolicyToolName[], revision: number): void {
-    if (revision < this.toolPolicyRevision) {
-      throw new BasicToolError('STALE_POLICY', 'The tool policy revision is stale.');
-    }
-    this.enabledTools = new Set(enabledToolsSchema.parse(enabledTools));
-    this.toolPolicyRevision = revision;
-  }
+  private readonly enabledTools: ReadonlySet<string>;
+  readonly toolPolicyRevision: number;
 
   /**
    * Projects the current global tool switch independently of client grants and backend health.
@@ -183,8 +168,12 @@ export class TaskAuthority {
     private readonly store: ControlStore,
     private readonly computer?: ComputerTools,
     private readonly browser?: BrowserTools,
-    private readonly device?: DeviceIdentity
+    private readonly device?: DeviceIdentity,
+    policy = { revision: 0, enabledTools: selectedPolicyTools(defaultToolPolicySettings) }
   ) {
+    const parsed = runtimeToolPolicySchema.parse(policy);
+    this.enabledTools = new Set(parsed.enabledTools);
+    this.toolPolicyRevision = parsed.revision;
     // Recovered tasks have durable summaries but no live BasicTools registration in this Runtime.
     this.recoveredTasks = new Set(store.tasks.keys());
     for (const grant of store.grants.values()) {

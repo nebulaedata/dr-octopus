@@ -2,6 +2,7 @@
  * @author Codex
  * @description Edits explicit schedule intent using TanStack Form and shared domain validation.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { formatDateTime } from '@/utils/date';
 import { useState } from 'react';
 import { useForm } from '@tanstack/react-form';
@@ -341,11 +342,7 @@ export function ScheduleForm({
             )}
           </form.Field>
         </FieldGroup>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
+        {error && <Alert variant="danger" showIcon description={error} />}
       </ScheduleDialogBody>
       <DialogFooter className="shrink-0">
         <Button type="button" variant="outline" onClick={onClose}>

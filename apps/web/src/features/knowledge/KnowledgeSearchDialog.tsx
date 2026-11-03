@@ -16,7 +16,7 @@ import {
 } from '@octopus/ui/components/command';
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@octopus/ui/components/dialog';
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@octopus/ui/components/empty';
-import { Alert, AlertTitle, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Kbd } from '@octopus/ui/components/kbd';
 import { Separator } from '@octopus/ui/components/separator';
 import { Spinner } from '@octopus/ui/components/spinner';
@@ -154,23 +154,26 @@ export function KnowledgeSearchDialog({
         <Separator />
         <CommandList className="min-h-0 max-h-[52dvh] flex-1 scroll-py-2" aria-busy={isSearching}>
           {data && (data.coverage !== 'complete' || data.warnings.length > 0) ? (
-            <Alert variant={unavailable ? 'destructive' : 'default'} className="mx-4 mt-4 w-auto">
-              <AlertTitle>
-                {unavailable
+            <Alert
+              className="mx-4 mt-4 w-auto"
+              variant={unavailable ? 'danger' : 'warning'}
+              showIcon
+              title={
+                unavailable
                   ? t('knowledge.searchDialog.unavailable', 'Search sources temporarily unavailable')
                   : t(
                       'knowledge.searchDialog.partialUnavailable',
                       'Some search capabilities temporarily unavailable'
-                    )}
-              </AlertTitle>
-              <AlertDescription>
-                {data.warnings.join(t('knowledge.common.listSeparator', '; ')) ||
-                  t(
-                    'knowledge.searchDialog.alertFallback',
-                    'Check the model service and source connection, then retry.'
-                  )}
-              </AlertDescription>
-            </Alert>
+                    )
+              }
+              description={
+                data.warnings.join(t('knowledge.common.listSeparator', '; ')) ||
+                t(
+                  'knowledge.searchDialog.alertFallback',
+                  'Check the model service and source connection, then retry.'
+                )
+              }
+            />
           ) : null}
           {hasResults ? (
             <CommandGroup

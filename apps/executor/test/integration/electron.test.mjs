@@ -184,7 +184,6 @@ test(
             'restartApplication',
             'revokeAccess',
             'saveSettings',
-            'saveToolPolicies',
             'setBrowserEnabled',
           ],
         }

@@ -26,7 +26,7 @@ Before changing `src/features/session/ToolRenderers/` or the `ToolProjection` pi
 
 - `src/components/` contains domain-agnostic UI driven exclusively by props. It may own transient presentation state but must not depend on business concepts, queries, stores, route parameters, workspace/session types, or anything importing from `src/features/`.
 - `src/features/<feature>/` owns product capabilities and business data. It may use queries, Zustand stores, route state, navigation, generic components, and `packages/ui`.
-- Feature roots and page-domain directories use kebab-case (`settings/default-model`); component grouping directories use PascalCase (`session/MemoryAssistant`, `settings/Layout`). Reserved responsibility directories such as `hooks/` and `utils/` stay lowercase. Classify by ownership, not merely by whether a component is rendered by a route. See the naming table in the [Code Development Standards](../../docs/code-development-standards.md#41-组件入口与目录约束).
+- Feature roots and page-domain directories use kebab-case (`settings/default-model`); component grouping directories use PascalCase (`session/MemoryAssistant`, `settings/Layout`). Reserved responsibility directories such as `hooks/` and `utils/` stay lowercase. Classify by ownership, not merely by whether a component is rendered by a route. See the naming table in the [Code Development Standards](../../docs/guides/code-development-standards.md#41-组件入口与目录约束).
 - Feature layout chrome belongs under `src/features/<feature>/Layout/`. When a generic component starts requiring business data, move it into the relevant feature instead of expanding prop drilling.
 
 ## Shared Infrastructure and Utilities

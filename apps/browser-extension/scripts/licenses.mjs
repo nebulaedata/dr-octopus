@@ -8,6 +8,7 @@ import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const cli = process.env.npm_execpath;
@@ -34,15 +35,26 @@ async function record(directory, license) {
   const files = (await readdir(directory, { withFileTypes: true })).filter(
     (entry) => entry.isFile() && /^(?:licen[cs]e|copying|notice|ofl)(?:$|[.-])/i.test(entry.name)
   );
-  if (!files.length) {
-    throw new Error(`Missing dependency notice: ${key}`);
-  }
   const contents = await Promise.all(
     files.map(async (file) => ({
       name: file.name,
       bytes: await readFile(join(directory, file.name)),
     }))
   );
+  // This pinned upstream npm files list omits LICENSE; preserve the repository tag's original notice.
+  if (!contents.length && key === '@ai-sdk/provider-utils@5.0.70' && pkg.license === 'Apache-2.0') {
+    const bytes = await readFile(join(root, 'public/licenses/ai-sdk-provider-utils-5.0.70.txt'));
+    if (
+      createHash('sha256').update(bytes).digest('hex') !==
+      'b4f9adb7c568904834d0dd6cc98d16c390d21ca32fc17ae7a267715269bd5529'
+    ) {
+      throw new Error('Pinned AI SDK notice digest mismatch');
+    }
+    contents.push({ name: 'LICENSE', bytes });
+  }
+  if (!contents.length) {
+    throw new Error(`Missing dependency notice: ${key}`);
+  }
   recorded.add(key);
   notices.push({ name: pkg.name, version: pkg.version, license: license ?? pkg.license, contents });
 }
@@ -90,6 +102,8 @@ async function collect(name, from, runtime = true) {
     }
   }
 }
+const shared = fileURLToPath(new URL('../../../packages/shared/package.json', import.meta.url));
+await collect('yaml', shared);
 const ui = fileURLToPath(new URL('../../../packages/ui/package.json', import.meta.url));
 for (const name of ['@base-ui/react', 'class-variance-authority', 'clsx', 'tailwind-merge']) {
   await collect(name, ui);

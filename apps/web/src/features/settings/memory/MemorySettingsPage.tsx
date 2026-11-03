@@ -4,7 +4,7 @@
  */
 import { v4 as uuidv4 } from 'uuid';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@octopus/ui/components/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
@@ -135,9 +135,11 @@ export function MemorySettingsPage() {
         </CardContent>
       </Card>
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error.message}
+        <Alert
+          variant="danger"
+          showIcon
+          description={error.message}
+          action={
             <Button
               variant="outline"
               size="sm"
@@ -146,8 +148,8 @@ export function MemorySettingsPage() {
             >
               {t('memory.settings.refresh', 'Refresh settings')}
             </Button>
-          </AlertDescription>
-        </Alert>
+          }
+        />
       )}
       <MemoryScreeningCard />
     </SettingContainer>

@@ -2,6 +2,7 @@
  * @author Codex
  * @description Provides a global, paginated inbox linking durable results to their Sessions.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { formatDateTime } from '@/utils/date';
 import { Fragment, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -102,11 +103,7 @@ export function NotificationCenter() {
                   {t('layout.notifications.loading', 'Loading notifications…')}
                 </p>
               )}
-              {inbox.error && (
-                <p role="alert" className="px-3 py-8 text-sm text-destructive">
-                  {inbox.error.message}
-                </p>
-              )}
+              {inbox.error && <Alert variant="danger" showIcon description={inbox.error.message} />}
               {inbox.data?.items.length === 0 && (
                 <Empty className="py-16">
                   <EmptyHeader>
@@ -175,11 +172,7 @@ export function NotificationCenter() {
               </ItemGroup>
             </div>
           </ScrollArea>
-          {markAllRead.error && (
-            <p role="alert" className="px-5 py-2 text-sm text-destructive">
-              {markAllRead.error.message}
-            </p>
-          )}
+          {markAllRead.error && <Alert variant="danger" showIcon description={markAllRead.error.message} />}
           <DialogFooter className="m-0 shrink-0 flex-row flex-wrap items-center justify-between border-0 px-5 py-3 sm:justify-between sm:px-6">
             <Button
               variant="ghost"

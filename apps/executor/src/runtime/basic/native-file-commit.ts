@@ -57,6 +57,18 @@ type NativeBackend = {
    */
   createRecovery: (path: string) => Promise<unknown>;
   /**
+   * Creates a private directory in the Host-selected browser skill namespace.
+   */
+  createSkillDirectory: (path: string) => Promise<unknown>;
+  /**
+   * Moves a complete private staging directory into an absent sibling target without replacement.
+   */
+  publishSkillDirectory: (source: string, target: string) => Promise<unknown>;
+  /**
+   * Deletes only fixed definition files in a pinned skill directory, refusing links and extra entries.
+   */
+  deleteSkillDirectory: (path: string) => Promise<unknown>;
+  /**
    * Publishes using identities rechecked at the native boundary; started failures may have effects.
    */
   commit: (
@@ -79,6 +91,9 @@ const backendSchema = z.object({
   list: z.custom<NativeBackend['list']>((value) => typeof value === 'function'),
   inspect: z.custom<NativeBackend['inspect']>((value) => typeof value === 'function'),
   createRecovery: z.custom<NativeBackend['createRecovery']>((value) => typeof value === 'function'),
+  createSkillDirectory: z.custom<NativeBackend['createSkillDirectory']>((value) => typeof value === 'function'),
+  publishSkillDirectory: z.custom<NativeBackend['publishSkillDirectory']>((value) => typeof value === 'function'),
+  deleteSkillDirectory: z.custom<NativeBackend['deleteSkillDirectory']>((value) => typeof value === 'function'),
   commit: z.custom<NativeBackend['commit']>((value) => typeof value === 'function'),
 });
 
@@ -209,6 +224,27 @@ export class NativeFileCommit {
    */
   async createRecovery(path: string): Promise<NativeFileResult> {
     return this.parse(await this.backend.createRecovery(path));
+  }
+
+  /**
+   * Creates only fixed skill-library directories while the native boundary pins their ancestors.
+   */
+  async createSkillDirectory(path: string): Promise<NativeFileResult> {
+    return this.parse(await this.backend.createSkillDirectory(path));
+  }
+
+  /**
+   * Publishes one complete skill without replacing an existing directory or following reparses.
+   */
+  async publishSkillDirectory(source: string, target: string): Promise<NativeFileResult> {
+    return this.parse(await this.backend.publishSkillDirectory(source, target));
+  }
+
+  /**
+   * Deletes product-owned skill files through pinned handles; failed operations may be partial and are retryable.
+   */
+  async deleteSkillDirectory(path: string): Promise<NativeFileResult> {
+    return this.parse(await this.backend.deleteSkillDirectory(path));
   }
 
   /**

@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { EraserIcon, PencilIcon, RotateCcwIcon, SearchIcon } from 'lucide-react';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@octopus/ui/components/card';
@@ -66,25 +66,30 @@ export function ShortcutsSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Alert role="note">
-            <AlertDescription>
-              <p>
-                {t(
-                  'settings.shortcuts.externalConflictHint',
-                  'Shortcut not responding? Your browser, extensions, or operating system may use the same keys. Try a different combination.'
-                )}
-              </p>
-              <p>
-                {t(
-                  'settings.shortcuts.chromeShortcutsHint',
-                  'In Chrome, paste this address into the address bar to check extension shortcuts:'
-                )}{' '}
-                <code className="break-all" translate="no">
-                  {CHROME_SHORTCUTS_URL}
-                </code>
-              </p>
-            </AlertDescription>
-          </Alert>
+          <Alert
+            role="note"
+            variant="info"
+            showIcon
+            description={
+              <>
+                <p>
+                  {t(
+                    'settings.shortcuts.externalConflictHint',
+                    'Shortcut not responding? Your browser, extensions, or operating system may use the same keys. Try a different combination.'
+                  )}
+                </p>
+                <p>
+                  {t(
+                    'settings.shortcuts.chromeShortcutsHint',
+                    'In Chrome, paste this address into the address bar to check extension shortcuts:'
+                  )}{' '}
+                  <code className="break-all" translate="no">
+                    {CHROME_SHORTCUTS_URL}
+                  </code>
+                </p>
+              </>
+            }
+          />
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />

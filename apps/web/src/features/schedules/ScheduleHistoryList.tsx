@@ -2,6 +2,7 @@
  * @author Codex
  * @description Displays paginated execution history and read-only details for the current page filters.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { formatDateTime } from '@/utils/date';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -37,11 +38,7 @@ export function ScheduleHistoryList({
   });
   return (
     <section aria-label="Workspace run history" className="flex flex-col gap-4">
-      {history.error && (
-        <p role="alert" className="text-sm text-destructive">
-          {history.error.message}
-        </p>
-      )}
+      {history.error && <Alert variant="danger" showIcon description={history.error.message} />}
       {history.isPending && <p role="status">{t('schedules.history.loading', 'Loading history…')}</p>}
       {history.data?.items.length === 0 && (
         <p className="text-sm text-muted-foreground">

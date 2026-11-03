@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
 import { RefreshCwIcon } from 'lucide-react';
 import { useForm } from '@tanstack/react-form';
 import { ConfigureCustomProviderBodySchema } from '@octopus/shared/protocol';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Button } from '@octopus/ui/components/button';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@octopus/ui/components/field';
 import { Input } from '@octopus/ui/components/input';
@@ -132,15 +132,19 @@ export function CustomProviderForm({
           {t('settings.providers.local.title', 'Model service configuration')}
         </h3>
         {local && (
-          <Alert>
-            <AlertDescription>
-              {runtimeHelp[configuration.runtime]}{' '}
-              {t(
-                'settings.providers.local.helpSuffix',
-                'The local address refers to the machine running Dr.Octopus Server.'
-              )}
-            </AlertDescription>
-          </Alert>
+          <Alert
+            variant="info"
+            showIcon
+            description={
+              <>
+                {runtimeHelp[configuration.runtime]}{' '}
+                {t(
+                  'settings.providers.local.helpSuffix',
+                  'The local address refers to the machine running Dr.Octopus Server.'
+                )}
+              </>
+            }
+          />
         )}
         <form
           className="flex flex-col gap-4"
@@ -256,15 +260,9 @@ export function CustomProviderForm({
             </form.Field>
           </FieldGroup>
           {configure.data && configure.data.models.length === 0 && (
-            <Alert>
-              <AlertDescription>{emptyModelsMessage}</AlertDescription>
-            </Alert>
+            <Alert variant="warning" showIcon description={emptyModelsMessage} />
           )}
-          {configure.error && (
-            <Alert variant="destructive">
-              <AlertDescription>{configure.error.message}</AlertDescription>
-            </Alert>
-          )}
+          {configure.error && <Alert variant="danger" showIcon description={configure.error.message} />}
         </form>
       </section>
       <section className="flex flex-col gap-3">

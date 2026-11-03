@@ -2,6 +2,7 @@
  * @author Codex
  * @description Displays a globally paginated flat task catalog with workspace metadata.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { formatDateTime } from '@/utils/date';
 import { ScheduleAuthorization } from './ScheduleAuthorization';
 import { ScheduleArchiveActions } from './ScheduleArchiveActions';
@@ -101,11 +102,7 @@ export function ScheduleTaskList({
 
   return (
     <section aria-label="Task list" className="flex flex-col gap-3">
-      {tasks.error && (
-        <p role="alert" className="py-3 text-sm text-destructive">
-          {tasks.error.message}
-        </p>
-      )}
+      {tasks.error && <Alert variant="danger" showIcon description={tasks.error.message} />}
       {tasks.isPending && (
         <p role="status" className="py-3 text-sm text-muted-foreground">
           {t('schedules.taskList.loading', 'Loading tasks…')}

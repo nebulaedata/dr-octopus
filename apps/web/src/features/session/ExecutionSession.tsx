@@ -8,10 +8,10 @@ import { ScheduleRunStatusBadge } from '@/features/schedules';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { ClockIcon, HistoryIcon, AlertCircleIcon } from 'lucide-react';
+import { ClockIcon, HistoryIcon } from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
 import { ListPagination } from '@/components/ListPagination';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@octopus/ui/components/card';
 import { Skeleton } from '@octopus/ui/components/skeleton';
 import { Separator } from '@octopus/ui/components/separator';
@@ -21,6 +21,7 @@ import { SessionReadReceipt } from './SessionReadReceipt';
 import { ExecutionTimeline } from './ExecutionTimeline';
 import type { SessionDto } from '@octopus/shared/protocol';
 import type { Translate } from '@/i18n/use-i18n';
+import type { AlertVariant } from '@octopus/custom-ui/components/alert';
 
 /**
  * Localizes the execution run status machine with a generic result fallback.
@@ -60,6 +61,14 @@ function ExecutionSessionContent({ session }: { session: SessionDto }) {
   });
   const run = query.data?.run;
   const status = run?.status ?? session.execution?.status ?? '';
+  let alertVariant: AlertVariant = 'info';
+  if (status === 'succeeded') {
+    alertVariant = 'success';
+  } else if (status === 'failed' || status === 'timed_out') {
+    alertVariant = 'danger';
+  } else if (status === 'needs_attention' || status === 'interrupted') {
+    alertVariant = 'warning';
+  }
   const failed = ['failed', 'needs_attention', 'timed_out', 'interrupted'].includes(status);
   return (
     <section aria-label="Task execution result" className="h-full min-h-0 overflow-y-auto">
@@ -94,38 +103,40 @@ function ExecutionSessionContent({ session }: { session: SessionDto }) {
           </div>
         )}
         {query.error && (
-          <Alert variant="destructive">
-            <AlertCircleIcon />
-            <AlertTitle>
-              {t('session.execution.loadFailedTitle', 'Failed to load execution record')}
-            </AlertTitle>
-            <AlertDescription>
-              <p>{query.error.message}</p>
+          <Alert
+            variant="danger"
+            showIcon
+            title={t('session.execution.loadFailedTitle', 'Failed to load execution record')}
+            description={<p>{query.error.message}</p>}
+            action={
               <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
                 {t('common.retry', 'Retry')}
               </Button>
-            </AlertDescription>
-          </Alert>
+            }
+          />
         )}
         {query.data && run && (
           <>
             {(run.summary || run.errorCode) && (
-              <Alert variant={failed ? 'destructive' : 'default'}>
-                <AlertCircleIcon />
-                <AlertTitle>
-                  {failed
+              <Alert
+                variant={alertVariant}
+                showIcon
+                title={
+                  failed
                     ? t('session.execution.attentionTitle', 'This run needs attention')
-                    : t('session.execution.summaryTitle', 'Run summary')}
-                </AlertTitle>
-                <AlertDescription className="mt-2">
-                  {run.summary && (
-                    <MarkdownRenderer className="min-w-0 max-w-full overflow-hidden text-sm! wrap-anywhere [&_h1]:text-xl! [&_h2]:text-lg! [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto">
-                      {run.summary}
-                    </MarkdownRenderer>
-                  )}
-                  {run.errorCode && <p className="break-all font-mono text-xs">{run.errorCode}</p>}
-                </AlertDescription>
-              </Alert>
+                    : t('session.execution.summaryTitle', 'Run summary')
+                }
+                description={
+                  <>
+                    {run.summary && (
+                      <MarkdownRenderer className="min-w-0 max-w-full overflow-hidden text-sm! wrap-anywhere [&_h1]:text-xl! [&_h2]:text-lg! [&_pre]:overflow-x-auto [&_table]:block [&_table]:overflow-x-auto">
+                        {run.summary}
+                      </MarkdownRenderer>
+                    )}
+                    {run.errorCode && <p className="break-all font-mono text-xs">{run.errorCode}</p>}
+                  </>
+                }
+              />
             )}
             <Card size="sm">
               <CardHeader>

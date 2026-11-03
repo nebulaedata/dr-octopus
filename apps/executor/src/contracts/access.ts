@@ -3,7 +3,6 @@
  * @description Defines device-scoped capability grants; renderer requests cannot supply filesystem scopes or receive credentials.
  */
 import { z } from 'zod';
-import { enabledToolsSchema } from './tool-policy';
 import { computerRuntimeStatusSchema } from './computer-use';
 import { deviceIdentitySchema } from './device-identity';
 import { browserBridgeSnapshotSchema } from '@octopus/shared/protocol/browser-bridge';
@@ -72,12 +71,6 @@ export type AccessSnapshot = z.infer<typeof accessSnapshotSchema>;
 export type AccessResponse = z.infer<typeof accessResponseSchema>;
 
 export const hostRequestSchema = z.discriminatedUnion('type', [
-  z.strictObject({
-    type: z.literal('tool-policy-set'),
-    requestId: z.uuid(),
-    revision: z.number().int().nonnegative(),
-    enabledTools: enabledToolsSchema,
-  }),
   z.strictObject({ type: z.literal('browser-enable'), requestId: z.uuid(), enabled: z.boolean() }),
   z.strictObject({ type: z.literal('access-list'), requestId: z.uuid() }),
   z.strictObject({

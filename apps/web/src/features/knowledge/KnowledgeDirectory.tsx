@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { CloudIcon, LibraryBigIcon, PlusIcon, TriangleAlertIcon } from 'lucide-react';
+import { CloudIcon, LibraryBigIcon, PlusIcon } from 'lucide-react';
 import { Button } from '@octopus/ui/components/button';
 import { ListPagination } from '@/components/ListPagination';
 import {
@@ -16,7 +16,7 @@ import {
   EmptyDescription,
   EmptyContent,
 } from '@octopus/ui/components/empty';
-import { Alert, AlertAction, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Skeleton } from '@octopus/ui/components/skeleton';
 import { KnowledgeQueryErrorToast } from './KnowledgeQueryErrorToast';
@@ -167,18 +167,17 @@ export function KnowledgeDirectory({
       );
     } else if (collections.isError && items === undefined) {
       return (
-        <Alert variant="destructive">
-          <TriangleAlertIcon />
-          <AlertTitle>
-            {t('knowledge.directory.loadFailed', 'Failed to load knowledge collections')}
-          </AlertTitle>
-          <AlertDescription>{collections.error.message}</AlertDescription>
-          <AlertAction>
+        <Alert
+          variant="danger"
+          showIcon
+          title={t('knowledge.directory.loadFailed', 'Failed to load knowledge collections')}
+          description={collections.error.message}
+          action={
             <Button variant="outline" size="sm" onClick={() => void collections.refetch()}>
               {t('common.retry', 'Retry')}
             </Button>
-          </AlertAction>
-        </Alert>
+          }
+        />
       );
     } else if (items !== undefined && items.length > 0) {
       return (

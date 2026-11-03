@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CodeIcon, PencilIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { Badge } from '@octopus/ui/components/badge';
 import { Button } from '@octopus/ui/components/button';
 import { SearchInput } from '@/components/SearchInput';
@@ -44,14 +44,16 @@ export function PermissionsPage() {
       return <Spinner />;
     } else if (workspaces.isError) {
       return (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {t('settings.permissions.workspacesFailed', 'Failed to load workspaces.')}
+        <Alert
+          variant="danger"
+          showIcon
+          description={t('settings.permissions.workspacesFailed', 'Failed to load workspaces.')}
+          action={
             <Button variant="link" onClick={() => void workspaces.refetch()}>
               {t('common.retry', 'Retry')}
             </Button>
-          </AlertDescription>
-        </Alert>
+          }
+        />
       );
     } else if (workspaceId) {
       return <PermissionScopePanel key={workspaceId} workspaceId={workspaceId} />;
@@ -191,10 +193,12 @@ function PermissionScopePanel({ workspaceId }: { workspaceId?: string }) {
         ) : null}
       </div>
       {query.isError ? (
-        <Alert variant="destructive">
-          <AlertTitle>{t('settings.permissions.loadFailed', 'Failed to load')}</AlertTitle>
-          <AlertDescription>{query.error.message}</AlertDescription>
-        </Alert>
+        <Alert
+          variant="danger"
+          showIcon
+          title={t('settings.permissions.loadFailed', 'Failed to load')}
+          description={query.error.message}
+        />
       ) : null}
       {query.isPending ? (
         <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
@@ -203,19 +207,20 @@ function PermissionScopePanel({ workspaceId }: { workspaceId?: string }) {
         </div>
       ) : null}
       {snapshot?.diagnostics.map((item) => (
-        <Alert variant="destructive" key={item.path}>
-          <AlertTitle>{t('settings.permissions.invalidTitle', 'Invalid configuration')}</AlertTitle>
-          <AlertDescription>
-            {t(
-              'settings.permissions.invalidDescription',
-              '{{message}}. Fix via JSON configuration: {{path}}',
-              {
-                message: item.message,
-                path: item.path,
-              }
-            )}
-          </AlertDescription>
-        </Alert>
+        <Alert
+          key={item.path}
+          variant="danger"
+          showIcon
+          title={t('settings.permissions.invalidTitle', 'Invalid configuration')}
+          description={t(
+            'settings.permissions.invalidDescription',
+            '{{message}}. Fix via JSON configuration: {{path}}',
+            {
+              message: item.message,
+              path: item.path,
+            }
+          )}
+        />
       ))}
       {config && snapshot ? (
         <>

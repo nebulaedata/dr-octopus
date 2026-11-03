@@ -2,6 +2,7 @@
  * @author Codex
  * @description Configures independent imagegen providers and explicitly selects the service used by image tool.
  */
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { useForm } from '@tanstack/react-form';
 import { useRef, useState } from 'react';
 import { Button } from '@octopus/ui/components/button';
@@ -43,12 +44,16 @@ export function ImagegenSettingsPage(props: ImagegenSettingsPageProps) {
     <SettingContainer>
       {settings.isPending && <Skeleton className="h-64 w-full" />}
       {settings.error && (
-        <div role="alert" className="flex flex-col gap-3 text-sm text-destructive">
-          {t('imagegen.loadFailed', 'Could not load image settings.')}
-          <Button variant="outline" onClick={() => void settings.refetch()}>
-            {t('imagegen.reload', 'Reload settings')}
-          </Button>
-        </div>
+        <Alert
+          variant="danger"
+          showIcon
+          description={t('imagegen.loadFailed', 'Could not load image settings.')}
+          action={
+            <Button variant="outline" onClick={() => void settings.refetch()}>
+              {t('imagegen.reload', 'Reload settings')}
+            </Button>
+          }
+        />
       )}
       {settings.data && (
         <ImagegenSettingsEditor
@@ -165,12 +170,16 @@ function ImagegenSettingsEditor({
           ))}
         </Tabs>
         {mutation.error && (
-          <div role="alert" className="flex flex-col items-start gap-2 text-sm text-destructive">
-            {mutation.error.message}
-            <Button variant="outline" onClick={() => void onReload()}>
-              {t('imagegen.reload', 'Reload settings')}
-            </Button>
-          </div>
+          <Alert
+            variant="danger"
+            showIcon
+            description={mutation.error.message}
+            action={
+              <Button variant="outline" onClick={() => void onReload()}>
+                {t('imagegen.reload', 'Reload settings')}
+              </Button>
+            }
+          />
         )}
       </CardContent>
     </Card>

@@ -10,7 +10,7 @@ import { Input } from '@octopus/ui/components/input';
 import { Button } from '@octopus/ui/components/button';
 import { Switch } from '@octopus/ui/components/switch';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@octopus/ui/components/select';
-import { Alert, AlertDescription } from '@octopus/ui/components/alert';
+import { Alert } from '@octopus/custom-ui/components/alert';
 import { probeKnowledgeModel, saveKnowledgeModel } from '@/api/knowledge';
 import { useI18n } from '@/i18n/use-i18n';
 import { UnplugIcon } from 'lucide-react';
@@ -284,9 +284,12 @@ export function KnowledgeModelCard({
             </form.Field>
           ) : null}
           {mutation.error || probe.error ? (
-            <Alert variant="destructive" className="sm:col-span-2">
-              <AlertDescription>{(mutation.error ?? probe.error)?.message}</AlertDescription>
-            </Alert>
+            <Alert
+              className="sm:col-span-2"
+              variant="danger"
+              showIcon
+              description={(mutation.error ?? probe.error)?.message}
+            />
           ) : null}
           {probe.data ? (
             <p role="status" className="text-xs text-success sm:col-span-2">
