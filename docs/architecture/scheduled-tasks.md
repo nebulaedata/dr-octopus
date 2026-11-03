@@ -1,7 +1,7 @@
 # Scheduler：Agent 侧独立单例服务
 
 > 日期：2026-09-05
-> 状态：正式基线；实施证据与剩余发布矩阵见 [验证记录](./scheduler-verification.md)。
+> 状态：正式基线；实施证据与剩余发布矩阵见 [验证记录](../poc/scheduler-verification.md)。
 > 决策：[ADR-0038](../adr/0038-agent-owned-singleton-scheduler-daemon.md)
 >
 > 2026-09-06 实施补充：[任务持久授权与无人值守闭环](./scheduled-task-authorization.md)、[ADR-0039](../adr/0039-scheduled-task-durable-authorization.md)。任务级持久授权、撤销与错误诊断已落地；本文旧有默认 ask 行为是变更前基线，无人值守执行以补充文档的实施记录为准。
@@ -118,7 +118,7 @@ Windows 必须验证从实际 RPC、终端和桌面宿主启动后的行为。Jo
 
 参考：[Node detached](https://nodejs.org/api/child_process.html#optionsdetached)、[Windows Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)。这些是机制依据，不能代替目标平台验收。
 
-当前 Windows 实现先尝试直接 breakaway，再通过本机 WMI 进行一次性启动；子进程在业务入口前验证用户身份与无 Job 归属。代理不常驻、不安装额外服务，失败保持拒绝启动。已通过当前宿主的严格存活测试，跨平台与完整交付状态见 [实施验证记录](./scheduler-verification.md)。
+当前 Windows 实现先尝试直接 breakaway，再通过本机 WMI 进行一次性启动；子进程在业务入口前验证用户身份与无 Job 归属。代理不常驻、不安装额外服务，失败保持拒绝启动。已通过当前宿主的严格存活测试，跨平台与完整交付状态见 [实施验证记录](../poc/scheduler-verification.md)。
 
 ### 5.2 独立管理入口
 
@@ -326,18 +326,7 @@ daemon 入口随 Agent 构建产物提供，不是独立发布的 Pi package。�
 
 ## 11. 验收门槛
 
-| 范围           | 交付                                                                     | 必须通过                                                                              |
-| -------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| 平台生命周期   | 独立入口、OS SingletonLease、发现、stop 抑制                             | Windows 多进程与 Runtime 回收测试通过；Unix 实现纳入构建并完成发布矩阵实机验证        |
-| Agent 控制面   | 专有 SQLite/Drizzle schema 与迁移、planner、Service、Client、独立 CLI    | 空库、重开、事务回滚、CRUD/replay、凭证隔离与 stop 抑制测试通过                       |
-| Agent 执行     | 独立 Run Session、Runner、配置快照、权限中止及 result_deliveries         | claim 限额、dispatch evidence、cancel、timeout、交互中止、恢复与终态事务测试通过      |
-| 内置接入与投递 | extensionFactories、tools/commands、SchedulerResultDelivery、Pi 写入适配 | 内置加载、Runner 防递归、离线补拉、忙时延迟、evidence 去重和 Session 范围排他锁已实现 |
-| Host 接入      | Server Client adapter、Web 管理与消息投影                                | Server 仅映射 Workspace/Session 并调用 SDK                                            |
-| 发布矩阵       | 构建产物、升级/停止说明、独立命令帮助                                    | Windows 与仓库 checks 已覆盖；Linux/macOS、安装包升级和长时间休眠恢复需发布环境验证   |
-
-专项测试覆盖控制面 replay、并发启动、stop/start/restart、daemon 恢复、Runner 屏障和回显事务。发布前仍需在 Linux/macOS 与安装包环境验证 native SQLite/lock、升级替换和长时间休眠恢复。
-
-回显专项验收：Run 完成事务失败不得出现孤立消息；来源 Runtime 被回收后补投；同时触发 start/settled/timer 只进行一轮；append 后 ack 前崩溃不重复展示；排队未持久化不能 ack；来源忙碌不触发额外模型调用；Session 替换后旧实例不写入；来源删除/临时不可达分开处理；fork/clone/切换分支不误投；投递失败不重跑任务；关闭协调器后无遗留 timer；Web/TUI 自定义消息和详情入口一致。核心策略通过窄 ports 单测，持久化/生命周期用真实 Pi RPC 集成验证。
+本节已迁至 [概念验证与验收记录](../poc/scheduled-tasks-validation.md#11-验收门槛)。
 
 ## 12. 运维回退边界
 

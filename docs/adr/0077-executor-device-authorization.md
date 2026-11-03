@@ -24,4 +24,4 @@ files.write 包含 files.read，Shell 单独授权；Browser 与 Computer 仍分
 
 HTTP/stdio 私有配置需重新导出。旧控制日志拒绝读取并保留原件；使用独立新测试数据目录启动新版源码。既有验收包不会自动更新。
 
-当前授权与任务契约见 [Executor](../architecture/executor.md#设备授权与凭据)，回归与原始证据见 [验证矩阵](../architecture/executor-validation.md)。
+当前授权与任务契约见 [Executor](../architecture/executor.md#设备授权与凭据)，回归与原始证据见 [验证矩阵](../poc/executor-validation.md)。

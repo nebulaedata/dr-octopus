@@ -4,7 +4,7 @@
 
 本次按已确认的状态域模板整理 `apps/web/src/stores/`。执行前工作区包含此前 feature 重构，基线使用当时的完整工作区，不以 Git HEAD 替代。Server、Agent、共享协议和 UI primitives 未改动。
 
-长期规则见 [代码开发规范 §4.3](../code-development-standards.md#43-store-目录与状态所有权)。模板允许按需省略类型与工具文件，并保留有明确职责的状态转换、生命周期与持久化实现。
+长期规则见 [代码开发规范 §4.3](../guides/code-development-standards.md#43-store-目录与状态所有权)。模板允许按需省略类型与工具文件，并保留有明确职责的状态转换、生命周期与持久化实现。
 
 ## 各状态域结果
 

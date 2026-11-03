@@ -1,6 +1,6 @@
 # Scheduler 实施与验证记录
 
-日期：2026-09-05。配套设计：[Scheduler 架构设计](./scheduled-tasks.md)。
+日期：2026-09-05。配套设计：[Scheduler 架构设计](../architecture/scheduled-tasks.md)。
 
 ## 当前结论
 

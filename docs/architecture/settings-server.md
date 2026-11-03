@@ -1,7 +1,7 @@
 # Server 设置模块设计
 
 > 状态：已实施，2026-09-18。Windows 自动化检查与 Chrome 界面验证已执行；Linux/macOS、真实远程和反向代理部署仍待发布验收。具体契约见 [Server 设置实施契约](./settings-server-contracts.md)。
-> 页面：`/settings/server`。决策：[ADR-0053](../adr/0053-server-settings-gui.md)。历史问题及处理：[审查记录](./settings-server-review.md)。
+> 页面：`/settings/server`。决策：[ADR-0053](../adr/0053-server-settings-gui.md)。历史问题及处理：[审查记录](../poc/settings-server-review.md)。
 
 ## 1. 产品范围
 
@@ -131,10 +131,4 @@ release 前端随 Node 服务发布，默认同源，无需跨域探测。HTTP�
 
 ## 7. 开发顺序与验收
 
-1. shared Zod 协议、字段目录、两处配置入口复用、危险确认和安全投影。
-2. 宿主协调器、冻结环境应用/恢复、关闭状态及真实 Gateway/独立入口生命周期测试。
-3. 页面、保存/重启弹窗、断连恢复及各访问方式验收。
-
-必须覆盖配置并发、启动覆盖、恢复继承、自定义 host 无损保留、日志全部边界、容量双重限制；重启重复提交、迟到请求、生成竞态、停止优先、关闭失败、启动失败恢复、配置外部修改和结果未知；本机/远程/反向代理/Vite 访问。
-
-已添加确定性的故障注入、真实 HTTP 交接、CLI Gateway 与浏览器交互测试。Windows 上执行受影响包的 test/lint/typecheck；浏览器采用隔离响应验证页面流程，覆盖独立路由、设置模态、明暗与 320/390px 窄屏，并与 Memory/环境页对照。其他平台和真实远程/反向代理/Vite 改端口部署仍需专项验收。Agent core 未修改，如后续需修改仍须遵守单独确认规则。
+本节已迁至 [概念验证与验收记录](../poc/settings-server-validation.md#7-开发顺序与验收)。

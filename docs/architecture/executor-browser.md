@@ -1,6 +1,14 @@
 # Executor Browser 与扩展
 
-Browser 由唯一 Runtime、固定 Native Host、自有 MV3 扩展和 PageController 组成。任务、授权见 [Executor](executor.md)，安装操作见 [扩展安装说明](../../apps/browser-extension/INSTALLATION.md)，实际覆盖见 [验证矩阵](executor-validation.md)。
+Browser 由唯一 Runtime、固定 Native Host、自有 MV3 扩展和 PageController 组成。任务、授权见 [Executor](executor.md)，安装操作见 [扩展安装说明](../../apps/browser-extension/INSTALLATION.md)，实际覆盖见 [验证矩阵](../poc/executor-validation.md)。
+
+## 录制与本地重放的融合边界（设计已接受，待实施）
+
+同一 `apps/browser-extension` 计划新增录制、浮条、事件保存与查看，保留本文描述的 Native Bridge。录制由扩展自身管理，事件不通过 Native Host，Executor 离线或连接暂停不阻止录制。完整设计见 [Tab 录制与智能重放](browser-extension-recorder.md)，取舍见 [ADR-0086](../adr/0086-browser-extension-recording-and-local-replay.md)，验收见 [验证矩阵](../poc/executor-validation.md#浏览器录制与本地重放第一阶段验证中)。本节是目标边界，后文现有版本与证据不代表新增能力已实现。
+
+Skill 整理和重放共用扩展 ToolLoopAgent 与持久会话，模型留在扩展；有限页面操作仍复用 PageController。Native v4 增加独立 Skill 文件域，由已认证安装身份隔离读写及打开目录，不复用 Runtime Bearer 给模型，不修改共享 Agent 核心。详细闭环见[统一方案](browser-skill-unified-agent.md)。
+
+两类执行来源在扩展 SW 统一检查目标页与焦点/窗口冲突，复用当前页面控制能力。Bridge 操作与录制/本地重放冲突时返回现有 `BROWSER_BUSY`，不抢占、排队或自动重试；已有动作允许收尾，结果未知不宣称已撤回。Bridge reset 只释放匹配 connection/task 的资源，不能终止扩展录制或清理本地 run。详细准入与未知结果处理仅由融合设计第 2.2 节维护，不增加 Executor 通用强停或任务许可协议。
 
 ## 正式连接链
 
@@ -10,7 +18,7 @@ MCP → TaskAuthority → BrowserBridge → 专用回环 /browser-bridge → 原
 
 固定 Host 为 com.octopus.executor.browser；扩展公开身份仅由 apps/browser-extension/browser-identity.json 维护，构建期不接受身份环境变量覆盖，将同一精确来源列表编入原生启动器、Native Host、Runtime 和注册脚本。固定公钥稳定官方侧载身份，不证明商店发行或密码学来源。sideload/store 只决定插件是否携带 manifest.key；客户端始终使用完整的侧载及两个商店身份；所有模式都要求两个商店 ID 有效。只有插件模式从环境配置读取，客户端不读取 .env。身份策略不含插件 profile 或产品版本；客户端自身构建与插件产物记录分别校验，打包按插件实际渠道身份和协议判定兼容。兼容升级无需另一端同步升版或重建，升级重连产生新 connectionId，旧请求不重放。运行时不读取 .env，实际 origin 原样传递并逐层校验；配置步骤见[发布 SOP](../../apps/browser-extension/RELEASE.md#33-配置身份并重新构建)。Host 仍校验私有配置 ACL、实际登录会话与固定私有资源；扩展不持有 Runtime Bearer。
 
-Native Messaging 使用四字节小端长度和 UTF-8 JSON。共享协议版本为 3，包含握手、心跳、携带 taskId 的有限请求、任务反馈释放通知和关联结果；不兼容版本不执行命令。每个新握手生成新 connectionId，旧连接、轮询或回复不能更新新连接状态。
+Native Messaging 使用四字节小端长度和 UTF-8 JSON。共享协议版本为 4，包含握手、心跳、携带 taskId 的有限请求、任务反馈释放通知和关联结果；不兼容版本不执行命令。每个新握手生成新 connectionId，旧连接、轮询或回复不能更新新连接状态。
 
 每个安装实例独立；最多 16 个安装实例。单包络 256 KiB，桥接入口最多 24 个请求和 1 MiB 输入缓冲，每连接一个十秒长轮询，25 秒无活动标记断开。工具关联最多 16 个待回复请求，Worker 最多 8 个执行请求，工具请求/导航预算分别 15/10 秒。关闭释放定时器、监听和轮询，不自动重放。
 
@@ -84,8 +92,4 @@ popup.html 只显示当前 Worker 握手、连接与工具就绪，并提供暂�
 
 ## 持续验证入口
 
-协议和路由使用扩展 test/*.test.mjs；真实反馈、连接、冻结/丢弃和原生 popup 使用 Executor test/integration 的对应用例；扩展 test:popup 单独检查实际 action 目标与生产弹窗文档。
-
-浏览器夹具使用唯一测试 Host、扩展副本和隔离 Profile；不替换正式注册，不改日常配置。仅在测试副本注入故障，不向产品加入故障、脚本、强停或额外控制接口。自动 action/CDP 交互与人工点击工具栏、商店分发、企业策略及跨环境稳定性分别验收。
-
-Native Host 的 host-location.json 仅接受 projectRoot，读取其 browser 子目录。安装脚本参数为 ProjectRoot，与 Main/Runtime 的业务根一致；不再从 Electron userData 读取桥接凭据。
+本节已迁至 [概念验证与验收记录](../poc/executor-browser-validation.md#持续验证入口)。

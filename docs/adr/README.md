@@ -101,3 +101,9 @@
 | [ADR-0083](./0083-executor-project-storage.md) | Accepted | Executor 业务持久目录统一命名、系统临时材料与完整路径保护，无旧布局兼容 |
 | [ADR-0084](./0084-executor-system-shell.md) | Implemented（Windows） | Windows 系统 PowerShell 替换 PortableGit；Linux/macOS 系统 Bash 仅 if-else 注释占位，保留任务与 Job 收束 |
 | [ADR-0085](./0085-executor-tool-policies.md) | Implemented | Executor 默认只读、逐工具自定义策略、受信热应用与 MCP 发现/调用双重过滤 |
+| [ADR-0086](./0086-browser-extension-recording-and-local-replay.md) | Accepted | 同一浏览器扩展独立录制与共同页面准入；第一阶段验证中，本地编译/重放未实施 |
+| [ADR-0087](./0087-browser-workflow-fact-assembly.md) | Accepted | 录制事实归一化、程序固定动作来源及顺序、模型提供语义注解与独立质量验收 |
+
+| [ADR-0088](./0088-browser-recording-skill-agent.md) | Superseded by ADR-0089 | 保留本地 Skill 与受限整理决定；双引擎、重放无提问由 ADR-0089 替代 |
+| [ADR-0089](./0089-browser-skill-unified-agent.md) | Accepted | 整理/重放统一 ToolLoopAgent，复用 PageController；Questionnaire + MessageScroller，无自由聊天 |
+| [ADR-0090](./0090-browser-host-lifecycle.md) | Proposed | 固定 Host 注册入口、版本事务发布、开发隔离、分层诊断与自动修复闭环 |

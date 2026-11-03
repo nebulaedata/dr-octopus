@@ -2045,78 +2045,7 @@ Web
 
 # 68. 测试策略
 
-## Definitions
-
-主要通过 TypeScript 编译保证。
-
-## Services
-
-重点 Unit Test：
-
-```text
-OnboardingService
-LocalModelService
-NativeModelService
-ModelConfigService
-OnboardingRuntimeCoordinator
-```
-
-使用 Mock：
-
-```text
-Repository
-Runtime
-Provider
-```
-
-## Validators
-
-测试：
-
-```text
-Ready / Not Ready
-Invalid Base URL
-Missing Model
-Missing Auth
-Offline Runtime
-```
-
-## Lib
-
-Contract Test：
-
-```text
-FileOnboardingRepository
-PiModelConfigRepository
-PiSettingsRepository
-PiModelRuntime
-OllamaProvider
-VllmProvider
-LMStudioProvider
-PiAuthProvider
-```
-
-## Extension
-
-测试：
-
-```text
-session_start
-/setup
-ctx.ui RPC-compatible flow
-```
-
-## SDK
-
-测试：
-
-```text
-Public API
-Service Facade
-Dependency Composition
-```
-
----
+本节已迁至 [概念验证与验收记录](../poc/octopus-onboarding-validation.md#68-测试策略)。
 
 # 69. 第一阶段开发顺序
 

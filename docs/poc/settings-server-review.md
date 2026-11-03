@@ -1,6 +1,6 @@
 # Server 设置设计审查与范围收敛
 
-> 更新：2026-09-15。以当前[主设计](./settings-server.md)、[实施契约](./settings-server-contracts.md)和 [ADR-0053](../adr/0053-server-settings-gui.md)为准。本文记录已处理的设计问题，不表示实现测试通过。
+> 更新：2026-09-15。以当前[主设计](../architecture/settings-server.md)、[实施契约](../architecture/settings-server-contracts.md)和 [ADR-0053](../adr/0053-server-settings-gui.md)为准。本文记录已处理的设计问题，不表示实现测试通过。
 
 ## 当前范围
 

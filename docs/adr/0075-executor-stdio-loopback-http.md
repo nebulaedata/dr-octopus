@@ -38,4 +38,4 @@ flowchart LR
 
 [MCP 2025-11-25 传输规范](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)规定 stdio 换行 JSON-RPC 和协议专用 stdout，HTTP 会话终止与取消仍按该协议处理。适配器不扩大现有 MCP 功能面。
 
-当前接入契约见 [Executor](../architecture/executor.md#mcp-接入与等待)，已完成的实际 Web HTTP/stdio、长调用和 Browser 专项及原始失败见 [验证矩阵](../architecture/executor-validation.md)。Computer 独立电脑、跨电脑与正式离线发行仍待验收，不提升 G4/G5/G6。
+当前接入契约见 [Executor](../architecture/executor.md#mcp-接入与等待)，已完成的实际 Web HTTP/stdio、长调用和 Browser 专项及原始失败见 [验证矩阵](../poc/executor-validation.md)。Computer 独立电脑、跨电脑与正式离线发行仍待验收，不提升 G4/G5/G6。

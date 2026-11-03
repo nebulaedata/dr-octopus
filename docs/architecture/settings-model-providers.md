@@ -407,44 +407,7 @@ interface ModelSettingsDto {
 
 ## 14. 验证矩阵
 
-### 14.1 Provider composition
-
-- pure built-in；
-- built-in + models.json overlay；
-- pure models.json；
-- Extension Provider；
-- Extension Provider + models.json overlay；
-- composition error fallback。
-
-### 14.2 Authentication
-
-- generic API Key login；
-- Provider-specific multi-prompt API Key login；
-- OAuth auth URL；
-- device code；
-- manual code；
-- prompt cancellation；
-- logout；
-- ambient-only Provider；
-- `CredentialSynchronizationError` partial commit。
-
-### 14.3 Configuration
-
-- endpoint overlay and reset；
-- custom Provider create/update/delete；
-- unknown fields preserved；
-- malformed models.json rejected without overwrite；
-- concurrent mutation conflict；
-- local Provider preset validation。
-
-### 14.4 Catalog
-
-- static catalog；
-- dynamic cached catalog；
-- successful network refresh；
-- timeout/abort；
-- refresh failure retains previous models；
-- credential-dependent model filtering。
+本节已迁至 [概念验证与验收记录](../poc/settings-model-providers-validation.md#14-验证矩阵)。
 
 ## 15. 设计门禁状态
 
@@ -533,4 +496,4 @@ Mr.Token 获取模型后自动精确匹配 Pi 原厂模型。界面以带内置�
 
 ### 验证
 
-覆盖所有接受的 Completions 模板与原厂 Pi 请求体一致、自动与手动来源、逐模型协议继承、恢复自动匹配、当前目录重建、重复刷新、别名保持实际请求 ID、本地未知模型以及旧能力编辑接口失效。生图配置和请求使用隔离目录与模拟上游，不调用真实收费接口。
+本节已迁至 [概念验证与验收记录](../poc/settings-model-providers-validation.md#验证)。

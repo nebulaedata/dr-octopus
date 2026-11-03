@@ -5,7 +5,7 @@
 Accepted and implemented — 2026-09-05。
 
 用户已确认的架构约束：Agent 侧服务、不依赖 Server、跨 Runtime 共享单例、Runtime 回收不停止服务、保留 `extensionFactories` 内置加载、独立命令管理服务生命周期。
-每次运行使用独立 Run Session，完成摘要投递到来源 Session；回显策略由 Agent 内部协调器统一管理，持久化采用独立 SQLite 与 Drizzle 技术栈。实现与验证证据见[配套记录](../architecture/scheduler-verification.md)。
+每次运行使用独立 Run Session，完成摘要投递到来源 Session；回显策略由 Agent 内部协调器统一管理，持久化采用独立 SQLite 与 Drizzle 技术栈。实现与验证证据见[配套记录](../poc/scheduler-verification.md)。
 
 ## Context
 
@@ -68,6 +68,6 @@ Server 的一个 Session 对应一个可回收 RPC Runtime。所有 Runtime 的 
 ## References
 
 - [Scheduler 架构设计](../architecture/scheduled-tasks.md)
-- [Scheduler 实施与验证记录](../architecture/scheduler-verification.md)
+- [Scheduler 实施与验证记录](../poc/scheduler-verification.md)
 - [Node child process](https://nodejs.org/api/child_process.html#optionsdetached)
 - [Windows Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)

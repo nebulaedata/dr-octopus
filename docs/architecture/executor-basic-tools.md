@@ -1,6 +1,6 @@
 # Executor Basic 工具
 
-本文定义已实现七工具的当前边界。架构、授权与任务见 [Executor](executor.md)，运行资源与发布要求见 [交付](executor-delivery.md)，验证范围见 [验证矩阵](executor-validation.md)。
+本文定义已实现七工具的当前边界。架构、授权与任务见 [Executor](executor.md)，运行资源与发布要求见 [交付](executor-delivery.md)，验证范围见 [验证矩阵](../poc/executor-validation.md)。
 
 系统 Shell 的决定与实施边界见 [ADR-0084](../adr/0084-executor-system-shell.md)。Windows 七工具为 read、write、edit、powershell、grep、find、ls；Linux/macOS 仅显式分支和注释占位，仍报未实现。实现状态与实际验收分开记录。
 

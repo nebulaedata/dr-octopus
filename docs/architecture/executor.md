@@ -14,7 +14,7 @@
 | [Browser](executor-browser.md)                                  | Native Host、扩展、页面身份、工具、恢复与反馈  |
 | [Computer](executor-computer.md)                                | 本机后端、观察与输入防护、彩屏、独立电脑矩阵   |
 | [交付与离线验收](executor-delivery.md)                          | 固定资源、构建打包、验收工具、升级与发布门禁   |
-| [验证状态与证据](executor-validation.md)                        | 当前覆盖、未完成项、历史失败与原始材料         |
+| [验证状态与证据](../poc/executor-validation.md)                        | 当前覆盖、未完成项、历史失败与原始材料         |
 | [Executor 发布 SOP](../../apps/executor/RELEASE.md)             | Windows 证书、签名接入、发行与回退             |
 | [插件发布 SOP](../../apps/browser-extension/RELEASE.md)         | 商店账号、扩展身份、ZIP、审核与更新            |
 
@@ -60,6 +60,8 @@ flowchart LR
 | src/maintenance、src/installation | 产品维护能力与平台安装实现                                |
 | apps/browser-extension            | 独立构建的 Worker、页面适配和连接弹窗                     |
 | packages/shared/src/protocol      | 两个应用共享的纯 Browser 协议                             |
+
+Renderer 的 `src/renderer/src/features/` 按页面语义组织：`status/`（运行状态、客户端会话、工具概览与启动恢复）、`connection/`（客户端授权、配置与浏览器桥接）、`settings/`（应用设置、设备身份与工具权限策略）。`layout/ExecutorLayout.tsx` 仅组合三个页面并维持跨页查询、复制反馈、导航和全局提示；标题栏、滚动容器及待重启提示同属 `layout/`。跨页面复用的浏览器图标、状态徽章与工具名称列表放在 Renderer 的 `components/`。外部消费者通过各 feature 的 `index.ts` 导入组件。
 
 扩展不反向导入 Executor 实现；PageController 不进入 Main/Runtime。Host 专属能力留在 Host，不为目录统一创建共享 Runtime 包。Agent Core 与共享 shadcn 源组件的保护规则继续适用。
 
@@ -127,7 +129,7 @@ task_start、task_status、task_stop、task_end 是产品工具，不等同于 M
 
 网络地址只接受 RFC1918 或 100.64.0.0/10，不接受 wildcard、DNS、公网或 IPv6。保存后完整退出再启动；任一监听失败都清理本次监听并报告失败，不自动换端口、换地址或静默退回回环。
 
-文件传输按 [ADR-0079](../adr/0079-executor-file-transfer.md)：Agent 直接调用 MCP 准备上传/下载、查询和取消，使用已有本地 HTTP 工具在同端口 `/transfers/:transferId/content` PUT/GET 完整文件流。仅就绪传输返回绑定任务和方向的临时凭证，字节通道不使用长期设备 Bearer。无需独立客户端；不支持本地文件发送/接收的 Agent 不应调用。默认单文件 2 GiB，目标存在即拒绝，任务 30 分钟期限不变；下载完成仅表示 Executor 完成发送，Agent 本地落盘由其工具确认。实际验证见[验证记录](executor-validation.md)。
+文件传输按 [ADR-0079](../adr/0079-executor-file-transfer.md)：Agent 直接调用 MCP 准备上传/下载、查询和取消，使用已有本地 HTTP 工具在同端口 `/transfers/:transferId/content` PUT/GET 完整文件流。仅就绪传输返回绑定任务和方向的临时凭证，字节通道不使用长期设备 Bearer。无需独立客户端；不支持本地文件发送/接收的 Agent 不应调用。默认单文件 2 GiB，目标存在即拒绝，任务 30 分钟期限不变；下载完成仅表示 Executor 完成发送，Agent 本地落盘由其工具确认。实际验证见[验证记录](../poc/executor-validation.md)。
 
 每个入口精确校验 Host、Origin、协议版本、角色、凭据和会话。网络入口不路由 /browser-bridge，Browser 凭据不认证 MCP；会话绑定身份和入口，不能跨入口复用。HTTP 不宣称可验证对端 Windows 登录令牌，也不隔离已控制当前账号的程序。明文 HTTP 只用于已选择的可信网络，不自动配置防火墙、转发或 TLS。
 
@@ -139,9 +141,9 @@ stdio 的 stdout 只承载协议。单帧 24 MiB、待写 48 MiB，最多 8 个�
 
 界面为状态、连接、设置三页。状态页显示真实 Runtime 健康、已接入客户端和可用能力；连接页管理授权、客户端配置和默认收起的安装说明；设置页保存主题、监听与关闭行为。客户端接入面板集中展示接入说明、客户端名称和管理授权入口，不展示协议会话计数；健康探测不代替工具验收。
 
-工具权限策略由 Executor Host 的 settings.json 持久化，默认只读，系统另提供全部策略与具名自定义策略。Main 通过有限、受信 IPC 校验配置和修订号，先原子保存，再向同一 Runtime 发布工具集合；只有同一子进程确认该修订号才显示已生效。设置页使用独立策略选择器与草稿弹窗，不混入监听设置的保存/重启流程。详见 [ADR-0085](../adr/0085-executor-tool-policies.md)。
+工具权限策略由 Executor Host 的 settings.json 持久化，默认只读，系统另提供全部策略与具名自定义策略。Main 通过有限、受信 IPC 校验配置和修订号，复用设置写入锁与原子发布机制保存；Runtime 仅在启动时加载策略，运行期间工具集合固定。设置页保留策略选择器与草稿弹窗，工具集合变更纳入统一 pendingRestart 提示和完整重启入口。选择、编辑、复制和删除只更新设置页草稿，与其他设置共用 diff 检测、撤销和显式保存，通过同一设置 IPC 一次发布；生效提示统一映射为“保存后立即生效”或“保存并重启后生效”，工具策略属于后者。重启前仍使用原策略；修改名称或未选中策略不要求重启。详见 [ADR-0085](../adr/0085-executor-tool-policies.md)。
 
-MCP 工具发现取策略、客户端授权和后端可用性的交集，执行入口再次检查策略，防止缓存清单绕过禁用。变更后通知现有会话重新发现；正在执行的调用不被策略取消。内部任务清理、本机紧急停止和已发放临时传输地址沿用原有生命周期。状态页 toolCatalog 表示支持的注册清单，不等于当前策略向客户端开放的工具。
+MCP 工具发现取策略、客户端授权和后端可用性的交集，执行入口再次检查策略，防止缓存清单绕过禁用。保存不改变现有会话的工具权限，完整重启后客户端重新连接并发现新集合；重启使用现有任务停止流程。内部任务清理、本机紧急停止和已发放临时传输地址沿用原有生命周期。状态页 toolCatalog 表示支持的注册清单，不等于当前策略向客户端开放的工具；启用状态使用与 Runtime 修订号匹配的启动策略快照。
 
 状态页通过受信 Host 的 access-list 读取 toolCatalog，名称从 MCP 注册 Schema 生成，计数取返回数组长度，不在 Renderer 写死。按基础、文件传输、任务管理、浏览器、桌面分组展示；“已注册”不表示逐工具执行探测或客户端已获授权。文件传输只展示 Executor 实际注册的四个文件传输工具，并注明需要 Agent 已有的本地 HTTP 文件传输能力。连接名称列最多 160px，名称和权限溢出都用 title 保留全文。
 

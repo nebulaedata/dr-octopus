@@ -127,6 +127,6 @@ runtime_status 增加安全的 shell 摘要：kind、version、available；工�
 
 ## 参考与状态
 
-- [Basic 当前实现](../architecture/executor-basic-tools.md)、[当前交付](../architecture/executor-delivery.md)及[验证记录](../architecture/executor-validation.md)。源码与旧包分别记录；旧 release 及原始失败保留，新包完成后记录独立身份，不覆盖旧产物。
+- [Basic 当前实现](../architecture/executor-basic-tools.md)、[当前交付](../architecture/executor-delivery.md)及[验证记录](../poc/executor-validation.md)。源码与旧包分别记录；旧 release 及原始失败保留，新包完成后记录独立身份，不覆盖旧产物。
 - Microsoft Learn：about_PowerShell_exe（Windows PowerShell 5.1）、about_Character_Encoding、about_Execution_Policies；重点核对 -File/-EncodedCommand、退出码、UTF-8 BOM 和 Process/组策略优先级。
 - Pi v0.85.1 的 shell.ts、powershell.ts 作为参考，实际 Executor 授权与生命周期由自有实现负责。

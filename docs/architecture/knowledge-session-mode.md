@@ -61,4 +61,4 @@ OCR、Embedding、Reranker 仍只在 Settings → 知识库配置，使用后台
 
 ## 7. 验证重点
 
-验证同一 Session 身份和历史、普通模式工具不激活、Plan 双向互斥、idle/队列限制、来源修改和模式切换保留当前会话模型、退出恢复工具、刷新和 branch 恢复忽略历史模型覆盖、选定范围强制校验、远程引用、附件入库、普通会话与 Scheduler 回归。浏览器检查桌面/窄屏、键盘、错误状态、来源选择与引用展开。
+本节已迁至 [概念验证与验收记录](../poc/knowledge-session-mode-validation.md#7-验证重点)。

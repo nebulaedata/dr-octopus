@@ -112,12 +112,7 @@
 
 ## 6. 验收标准
 
-| 阶段    | 关键验收标准                                                                                                            |
-| ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Phase 1 | `pnpm dev:agent` 可启动 TUI；`pnpm --filter @octopus/server dev` 可创建 workspace 并通过 RPC 与 Agent 通信。            |
-| Phase 2 | Web Host 可在同一 Workspace 打开两个 Session runtime；切换页面不终止后台任务，并完成 prompt → 流式输出 → 工具调用闭环。 |
-| Phase 3 | Server 可恢复单个崩溃 Session；Session Lease、容量限制和 idle 回收测试覆盖核心生命周期。                                |
-| Phase 4 | Desktop Host 与 Web Host 在 UI 与行为上保持一致，可离线运行。                                                           |
+本节已迁至 [概念验证与验收记录](../poc/technology-risks-roadmap-validation.md#6-验收标准)。
 
 ## 7. 需要后续决策的问题
 

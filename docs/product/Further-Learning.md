@@ -1030,21 +1030,21 @@ Server 只签发这些只读能力。即使子 Agent 判断“修改配置会更
 
 ## 项目文档
 
-- [系统架构概览](./architecture/overview.md)
-- [组件模型](./architecture/component-model.md)
-- [外部 Pi Package 安装与配置生命周期](./architecture/pi-package-lifecycle.md)
-- [数据流](./architecture/data-flow.md)
-- [Web Host 到 Pi RPC Process](./architecture/host2rpc.md)
-- [Session Composer](./architecture/session-composer.md)
-- [Workspace 架构](./architecture/octopus-workspace.md)
-- [技术风险与路线图](./architecture/technology-risks-roadmap.md)
-- [ADR-0001：Pi RPC Host](./adr/0001-pi-rpc-host-architecture.md)
-- [ADR-0004：Workspace Extension Control Plane](./adr/0004-workspace-pi-extension-control-plane.md)
-- [ADR-0005：Host-owned Session Runtime Processes](./adr/0005-host-owned-session-runtime-processes.md)
-- [ADR-0007：HTTP Control + WebSocket Realtime](./adr/0007-web-control-and-realtime-protocol.md)
-- [ADR-0012：Server Runtime Library Boundary](./adr/0012-server-runtime-library-boundary.md)
-- [ADR-0016：Stable Session Runtime Slots](./adr/0016-stable-session-runtime-slots.md)
-- [内置 Extension 开发指南](../packages/agent/src/extensions/README.md)
+- [系统架构概览](../architecture/overview.md)
+- [组件模型](../architecture/component-model.md)
+- [外部 Pi Package 安装与配置生命周期](../architecture/pi-package-lifecycle.md)
+- [数据流](../architecture/data-flow.md)
+- [Web Host 到 Pi RPC Process](../architecture/host2rpc.md)
+- [Session Composer](../architecture/session-composer.md)
+- [Workspace 架构](../architecture/octopus-workspace.md)
+- [技术风险与路线图](../architecture/technology-risks-roadmap.md)
+- [ADR-0001：Pi RPC Host](../adr/0001-pi-rpc-host-architecture.md)
+- [ADR-0004：Workspace Extension Control Plane](../adr/0004-workspace-pi-extension-control-plane.md)
+- [ADR-0005：Host-owned Session Runtime Processes](../adr/0005-host-owned-session-runtime-processes.md)
+- [ADR-0007：HTTP Control + WebSocket Realtime](../adr/0007-web-control-and-realtime-protocol.md)
+- [ADR-0012：Server Runtime Library Boundary](../adr/0012-server-runtime-library-boundary.md)
+- [ADR-0016：Stable Session Runtime Slots](../adr/0016-stable-session-runtime-slots.md)
+- [内置 Extension 开发指南](../../packages/agent/src/extensions/README.md)
 
 ## 源码入口
 

@@ -23,4 +23,4 @@ Accepted（2026-10-01，范围修正）。用户确认“只控制本机，智�
 
 私有后端与唯一 Runtime owner 已装配，生产 Computer 验收门禁保持关闭，不授予能力或公布可执行入口。受管 initialize/总体预算为 30/45 秒，内部 HTTP 为 10/15 秒；启动前资源完整性预检已按用户决定删除，构建/打包核验和 Job、防护、授权保留。
 
-当前工具、输入/观察和独立电脑矩阵见 [Computer](../architecture/executor-computer.md)，实测与未验证项见 [验证矩阵](../architecture/executor-validation.md)。本机有限成功不替代锁屏/UAC、多 DPI、原生部分输入或正式发行验收。
+当前工具、输入/观察和独立电脑矩阵见 [Computer](../architecture/executor-computer.md)，实测与未验证项见 [验证矩阵](../poc/executor-validation.md)。本机有限成功不替代锁屏/UAC、多 DPI、原生部分输入或正式发行验收。

@@ -2,7 +2,7 @@
 
 ## 状态
 
-Accepted（2026-10-01）。用户确认执行器归属 apps/executor，apps/desktop 仅留作未来 Web 智能体客户端。Basic/Browser 已实施，Computer 生产与最终发行仍待验收，当前状态由 [验证矩阵](../architecture/executor-validation.md) 维护。
+Accepted（2026-10-01）。用户确认执行器归属 apps/executor，apps/desktop 仅留作未来 Web 智能体客户端。Basic/Browser 已实施，Computer 生产与最终发行仍待验收，当前状态由 [验证矩阵](../poc/executor-validation.md) 维护。
 
 ## 背景
 

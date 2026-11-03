@@ -59,7 +59,7 @@ pnpm --filter @octopus/executor assemble:computer
 pnpm --filter @octopus/executor assemble:packaging
 ```
 
-装配命令才允许取得固定归档并验证摘要；不要为重跑命令而删除未知资源。普通 build/dev/start 不在线补齐。Node 只使用 assemble:node，不保留旧兼容别名。下载缓存、dist、build、release、扩展 .output/.wxt 都是生成材料，不进入源码。
+装配命令才允许取得固定归档并验证摘要；不要为重跑命令而删除未知资源。应用级 build/dev/start 不在线补齐。根 `pnpm build:executor` 是一键交付编排入口，可调用上述 assemble 命令准备缺失资源。Node 只使用 assemble:node，不保留旧兼容别名。下载缓存、dist、build、release、扩展 .output/.wxt 都是生成材料，不进入源码。
 
 ### 工程脚本与平台边界
 
@@ -73,7 +73,9 @@ ZIP 解压与清单读取统一使用 scripts/lib/resources/archives.mjs，校�
 
 ### 日常重新构建与打包
 
-资源和工具已准备好后，重新构建两应用并生成当前验收包：
+安装依赖、MSVC/Windows SDK 并配置浏览器身份后，根目录执行 `pnpm build:executor` 即可准备缺失资源、构建两应用并生成当前验收包。入口为 Executor 的 `build:installer`（scripts/package/build-installer.mjs），严格串行调用已有装配、Turbo 构建和验收打包命令，任一步失败即停止。固定头文件优先使用 EXECUTOR_NODE_HEADERS 或默认 node-gyp 缓存，再复用 build/node-headers-cache；均缺失时装配到后者。已有资源目录不自动重装，继续由下游校验拒绝损坏或不匹配资源；缺失资源首次准备需要联网。`--output-root <directory>` 透传给打包命令，可指定产物根目录。
+
+需要手动分步时，资源和工具准备好后依次执行：
 
 先按[身份构建流程](../../apps/browser-extension/RELEASE.md#33-配置身份并重新构建)选择根 .env/CI 的 sideload 或 store 配置；三个官方身份仅从 browser-identity.json 读取，所有模式都要求完整配置。客户端稳定身份策略与插件产物模式分开：变更允许身份须重建客户端；仅改变插件 profile 或兼容版本只重建插件。首次联合构建按下面顺序，后续兼容更新可复用另一端已完成且验证通过的输出。客户端自身校验不依赖插件输出；打包另核对双目标渠道身份、协议、manifest 版本与 key，以及客户端消费者摘要，拒绝未知身份、不兼容协议和记录失配。
 
@@ -109,18 +111,7 @@ Executor 验收包已内置两份扩展，用户加载、连接、暂停/恢复�
 
 ## 源码环境的真实跨机文件验收
 
-本节只针对带仓库依赖和已完成 Executor 构建的开发电脑，不是 acceptance-kit 的离线命令。被测远端只需运行 Executor，不安装探针或 Agent 桥接程序。普通 MCP SDK 负责元数据，本机已有系统 curl 负责完整文件流。
-
-在远端手动准备文件写入授权（含读取）、内网/VPN HTTP 配置和一个已存在的独立目录。将配置通过可信方式保存到开发电脑的 Git 忽略目录，不能把 Bearer、配置正文或文件正文粘贴到报告。探针只接受一个明确的私有网络目标，拒绝本机网络接口，并核对预期地址和设备名称；任务仅申请 files.write。
-
-从仓库根目录执行，替换示例目标与配置文件路径。输出目录必须为新的原生私有目录，以 octopus-executor- 开头；每次生成 UUID，失败输出不覆盖：
-
-```powershell
-$taskAcceptanceOutput = 'apps/executor/build/transfer-verification/octopus-executor-cross-machine-' + [guid]::NewGuid().ToString('N')
-node apps/executor/test/packaging/cross-machine-transfer.mjs --config 'apps/executor/build/transfer-verification/remote-transfer.private.json' --remote-directory 'D:\下载\Executor-跨机验收-20261016' --output-directory $taskAcceptanceOutput --expected-host 192.168.0.11 --expected-device-name LAPTOP-LH
-```
-
-探针验证零字节、约 8 MiB 和 64 MiB 二进制往返及本机落盘摘要，覆盖中文/空格路径、临时凭据边界、原键查询和真实在途上传取消。私有 curl 配置在子进程收束后删除，报告不含凭据；任务与 MCP 会话收束独立记录。输出文件及远端已发布测试文件保留供复核，后续清理由使用者确认，不自动删除其他文件、撤销既有授权或重放未知发布。该范围不代替跨机 2 GiB、其他操作系统、满盘/掉电或发行门禁。
+本节已迁至 [概念验证与验收记录](../poc/executor-delivery-validation.md#源码环境的真实跨机文件验收)。
 
 ## 验收包与清单
 
@@ -194,24 +185,7 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$kit/ve
 
 ## 人工验收顺序
 
-| 项目         | 通过条件与证据                                                                        |
-| ------------ | ------------------------------------------------------------------------------------- |
-| 断网首启     | 无系统 Node/Python/Git 依赖、无下载，唯一 Runtime 启动；记录真实健康状态              |
-| 普通权限安装 | 无提权，正确快捷方式、资源、Chrome/Edge Host；安装失败可能留下文件，应保留错误        |
-| 浏览器加载   | 实际人工加载对应完整扩展，启用桥接、选择实例、验证工具就绪与网站权限                  |
-| 客户端       | 使用已确定的 Dr.Octopus Web 或另行明确的客户端，授权专用能力并运行 Basic/Browser 专项 |
-| 生命周期     | 窗口隐藏/重建不影响连接，完整退出确认拥有的 Runtime/Job/Host 收敛                     |
-| 主题与 DPI   | 应用、安装/卸载、任务栏、托盘图标及菜单在真实明暗主题/多 DPI 下可辨识                 |
-| 升级/恢复    | 运行中拒绝升级，停止后覆盖安装；旧数据保留、损坏拒绝、恢复字节核对                    |
-| 卸载         | 只删仍属本安装的 Host 注册，数据与恢复记录保留；明确撤销后凭据不可用                  |
-
-每项记录 passed/failed/not-tested，不以代码存在或报告存在判断通过。Computer 专项按验收工具内 COMPUTER-ACCEPTANCE.md 执行，仓库来源为 executor-computer.md。
-
-```powershell
-powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$kit/record-acceptance.ps1" -ArtifactDirectory . -Scenario computer -Outcome not-tested -Observation '独立电脑尚未到位；未执行锁屏、UAC、混合 DPI 专项' -ReportPath ./computer-not-tested.json
-```
-
-记录工具只处理显式观察和证据名称/大小/摘要，不采集桌面、不开放能力、不改变门禁。报告不包含私有配置、令牌或用户材料。
+本节已迁至 [概念验证与验收记录](../poc/executor-delivery-validation.md#人工验收顺序)。
 
 ## 手动升级与数据恢复
 

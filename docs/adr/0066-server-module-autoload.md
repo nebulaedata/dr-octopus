@@ -39,4 +39,4 @@ flowchart TD
 
 以重构前测试为基线，补充自动加载、作用域隔离、启动失败释放、模块边界和路由/SQL/schema 对照。静态契约对照仅补充运行时回归，不能替代事务、权限、并发与生命周期测试。
 
-参见 [重构记录](../refactoring/server-modules.md) 和 [开发规范](../code-development-standards.md)。
+参见 [重构记录](../refactoring/server-modules.md) 和 [开发规范](../guides/code-development-standards.md)。

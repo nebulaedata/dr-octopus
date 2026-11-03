@@ -21,6 +21,6 @@ Native Host/stdio 保持原有地址契约和唯一服务所有权。双监听�
 
 私有设置历史中的地址缺省表示未启用网络；既有端口记录不改写、不删除。新记录总是明确保存地址或 null。启用/禁用需要完整退出和重新打开；禁用不撤销已创建凭据，销毁凭据须明确撤销客户端授权。
 
-测试包括真实本机私有网卡上的 SDK 工具调用、无/错误凭据、错误 Host/Origin、错误角色、会话跨入口/身份、撤销、端口碰撞、重启和退出。跨电脑/VPN、防火墙、实际智能体客户端及干净离线发行另验收；不提升 G4/G5/G6。当前接入见 [Executor](../architecture/executor.md#mcp-接入与等待)，准确验证范围见 [验证矩阵](../architecture/executor-validation.md)。
+测试包括真实本机私有网卡上的 SDK 工具调用、无/错误凭据、错误 Host/Origin、错误角色、会话跨入口/身份、撤销、端口碰撞、重启和退出。跨电脑/VPN、防火墙、实际智能体客户端及干净离线发行另验收；不提升 G4/G5/G6。当前接入见 [Executor](../architecture/executor.md#mcp-接入与等待)，准确验证范围见 [验证矩阵](../poc/executor-validation.md)。
 
 > 2026-10-15 补充：ADR-0079 在同一授权和任务权威下增加认证文件字节路由 `/transfers/:transferId/content`。本文原“仅 /mcp”路由范围由该文件传输决策扩展，Browser Bridge 仍仅回环。

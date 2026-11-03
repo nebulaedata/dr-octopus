@@ -1,6 +1,6 @@
 # 知识库实施与验收记录
 
-2026-09-10，Codex。用户已授权实施。配套设计：[领域框架](knowledge-base.md)、[问答 Session](knowledge-session-mode.md)、[MCP 与 Web](knowledge-mcp-and-web.md)。本文记录当前代码与验证边界。
+2026-09-10，Codex。用户已授权实施。配套设计：[领域框架](../architecture/knowledge-base.md)、[问答 Session](../architecture/knowledge-session-mode.md)、[MCP 与 Web](../architecture/knowledge-mcp-and-web.md)。本文记录当前代码与验证边界。
 
 ## 已交付
 

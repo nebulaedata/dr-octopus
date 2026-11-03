@@ -35,4 +35,4 @@ Failures retain operation, protocol, model and bounded sanitized diagnostics. Cr
 
 ## Verification
 
-Tests cover independent keys and activation, revision conflicts, key redaction/removal, unsupported document rejection, strict provider selection, OpenAI generation and multipart edits, Qwen text and reference payloads, key-free downloads, cancellation, bounded diagnostics, fresh configuration reads, file boundaries and durable receipts.
+本节已迁至 [概念验证与验收记录](../poc/imagegen-validation.md#verification)。

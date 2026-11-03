@@ -1,6 +1,6 @@
 # Web lib、utils 与 hooks 职责整理
 
-本轮保留 `apps/web/src/lib/` 作为基础设施目录，不新增应用级 core。长期规则见 [代码开发规范 §4.5](../code-development-standards.md#45-web-libutils-与-hooks-的边界)。既有 `queries/core/` 保持不变。
+本轮保留 `apps/web/src/lib/` 作为基础设施目录，不新增应用级 core。长期规则见 [代码开发规范 §4.5](../guides/code-development-standards.md#45-web-libutils-与-hooks-的边界)。既有 `queries/core/` 保持不变。
 
 ## 最终归属
 

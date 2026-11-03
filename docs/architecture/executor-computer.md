@@ -2,7 +2,7 @@
 
 当前源码通过 Utility Runtime 托管固定 Windows-MCP 0.8.8；截图、UIA 与输入调用真实上游工具。旧 product.server / desktop.py、自定义 ExecutorDesktopMeta/ExecutorCapture/ExecutorInput 和旧八工具契约已移除，不提供兼容入口或旧引擎回退。
 
-设计与完整边界以 [Computer 实施规范](dr-octopus-windows-computer-use-mcp-architecture.md)为准。实际验证、失败与未验证项见 [验证记录](executor-validation.md)；源码接入不等于独立电脑或发行验收完成。
+设计与完整边界以 [Computer 实施规范](dr-octopus-windows-computer-use-mcp-architecture.md)为准。实际验证、失败与未验证项见 [验证记录](../poc/executor-validation.md)；源码接入不等于独立电脑或发行验收完成。
 
 ## 入口与职责
 

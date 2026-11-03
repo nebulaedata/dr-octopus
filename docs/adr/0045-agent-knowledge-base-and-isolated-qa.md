@@ -28,4 +28,4 @@ Accepted，2026-09-10。用户确认取消此前的隔离 QA Session，采用本
 
 ## References
 
-[领域框架](../architecture/knowledge-base.md)、[Session 模式](../architecture/knowledge-session-mode.md)、[MCP/Web](../architecture/knowledge-mcp-and-web.md)、[实施记录](../architecture/knowledge-implementation.md)。
+[领域框架](../architecture/knowledge-base.md)、[Session 模式](../architecture/knowledge-session-mode.md)、[MCP/Web](../architecture/knowledge-mcp-and-web.md)、[实施记录](../poc/knowledge-implementation.md)。

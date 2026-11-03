@@ -210,7 +210,7 @@ flowchart LR
 
 原始失败保留：首次构建因运行中的开发版占用原生模块而 EBUSY，用户授权关闭该实例后重新构建；首轮聚焦回归发现初始化传入多余 saved 字段及动态键断言错误；首轮 GUI 集成 7 项启动超时，定位为随机测试端口 0 被身份标记初始化错误持久化。另有截图测试刷新后未重新选择设置页而定位超时，修正了测试导航。修正后按原范围和原期限复验，没有降低断言或扩大权限。
 
-已通过完整 Executor 测试 202 项；最终监听标记修正及连接键调整后的相关聚焦回归 21 项均通过，浅深色及最小允许窗口截图已人工查看。最终构建、类型检查、变更范围 lint 与集成结果统一记录在 [验证状态](../architecture/executor-validation.md)。包级 lint 初次检查发现 `test/integration/browser-feedback.test.mjs:240` 缺少条件语句花括号；2026-10-14 用户要求修复后补齐花括号，包级 lint 与该文件格式检查均通过。
+已通过完整 Executor 测试 202 项；最终监听标记修正及连接键调整后的相关聚焦回归 21 项均通过，浅深色及最小允许窗口截图已人工查看。最终构建、类型检查、变更范围 lint 与集成结果统一记录在 [验证状态](../poc/executor-validation.md)。包级 lint 初次检查发现 `test/integration/browser-feedback.test.mjs:240` 缺少条件语句花括号；2026-10-14 用户要求修复后补齐花括号，包级 lint 与该文件格式检查均通过。
 
 GUI 使用仓库 Playwright Electron 流程：当前没有列出的 Browser 插件技能（Browser plugin not available），应用也是原生 Electron 窗口。浅色、深色与窄窗口截图写入未跟踪的 `apps/executor/build/device-identity-*.png`，只使用临时产品数据。
 

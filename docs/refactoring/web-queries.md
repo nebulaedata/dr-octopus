@@ -2,7 +2,7 @@
 
 ## 边界变化
 
-本次基于同一工作区中上一轮已通过构建的版本整理 queries，保留此前 feature 与 store 重构。长期规则见 [代码开发规范 §4.4](../code-development-standards.md#44-query-目录与缓存协调)。Server、Agent、共享协议和 UI primitives 未改动。
+本次基于同一工作区中上一轮已通过构建的版本整理 queries，保留此前 feature 与 store 重构。长期规则见 [代码开发规范 §4.4](../guides/code-development-standards.md#44-query-目录与缓存协调)。Server、Agent、共享协议和 UI primitives 未改动。
 
 | 原位置 | 最终位置与职责 |
 | --- | --- |
