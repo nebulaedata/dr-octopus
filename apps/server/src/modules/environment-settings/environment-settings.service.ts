@@ -32,7 +32,8 @@ export class EnvironmentSettingsService {
     serverDirectory: string,
     agentDirectory: string,
     environment?: NodeJS.ProcessEnv,
-    configuration?: ServerConfiguration
+    configuration?: ServerConfiguration,
+    private readonly onAgentCommitted?: () => void
   ) {
     this.serverConfiguration =
       configuration ?? new ServerConfiguration(serverDirectory, undefined, environment);
@@ -65,12 +66,14 @@ export class EnvironmentSettingsService {
     confirmed = false
   ): Promise<EnvironmentSettingsDto> {
     try {
-      return this.project(
-        scope,
+      const snapshot =
         scope === 'server'
           ? await this.serverConfiguration.update(input, confirmed)
-          : await this.stores[scope].update(input.revision, input.changes)
-      );
+          : await this.stores[scope].update(input.revision, input.changes);
+      if (scope === 'agent' && snapshot.revision !== input.revision) {
+        this.onAgentCommitted?.();
+      }
+      return this.project(scope, snapshot);
     } catch (error) {
       throw this.mapError(error);
     }

@@ -44,7 +44,7 @@ export function SessionConfigAlert({ session }: { session: SessionDto }) {
     } else if (control?.restart.status === 'failed') {
       return t('session.configAlert.titleFailed', 'Session restart failed');
     } else {
-      return t('session.configAlert.titleChanged', 'Model service configuration changed');
+      return t('session.configAlert.titleChanged', 'Agent configuration changed');
     }
   }
   return (

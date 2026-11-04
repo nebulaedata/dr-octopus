@@ -7,18 +7,21 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import test from 'node:test';
 import WebSocket from 'ws';
+import { ConfigurationChanges } from '../dist/infrastructure/runtime-config/index.js';
 import { createServer } from '../dist/app.js';
 
 test('Session channel accepts a local WebSocket upgrade', async () => {
+  const configurationChanges = new ConfigurationChanges();
   let runtimeCloseCount = 0;
   const runtime = {
+    usesConfigurationChanges: (value) => value === configurationChanges,
     onControlChanged: () => () => undefined,
     onEvent: () => () => undefined,
     close: async () => {
       runtimeCloseCount += 1;
     },
   };
-  const server = createServer({ databasePath: ':memory:', runtime });
+  const server = createServer({ databasePath: ':memory:', runtime, configurationChanges });
   let socket;
   try {
     await server.listen({ host: '127.0.0.1', port: 0 });
@@ -39,9 +42,12 @@ test('Session channel accepts a local WebSocket upgrade', async () => {
 });
 
 test('Session channel rejects a disallowed Origin before upgrading', async () => {
+  const configurationChanges = new ConfigurationChanges();
   const server = createServer({
+    configurationChanges,
     databasePath: ':memory:',
     runtime: {
+      usesConfigurationChanges: (value) => value === configurationChanges,
       onEvent: () => () => undefined,
       onControlChanged: () => () => undefined,
       close: async () => undefined,
@@ -69,9 +75,12 @@ test('Session channel rejects a disallowed Origin before upgrading', async () =>
 });
 
 test('HTTP and WebSocket reject a matching but untrusted Host and Origin', { timeout: 10_000 }, async () => {
+  const configurationChanges = new ConfigurationChanges();
   const server = createServer({
+    configurationChanges,
     databasePath: ':memory:',
     runtime: {
+      usesConfigurationChanges: (value) => value === configurationChanges,
       onEvent: () => () => undefined,
       onControlChanged: () => () => undefined,
       close: async () => undefined,

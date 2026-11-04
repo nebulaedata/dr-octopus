@@ -2,6 +2,7 @@
  * @author Codex
  * @description Verifies unpublished home drafts, first-message promotion, shared runtime identity, and bounded cleanup.
  */
+import { createTestCoordinator } from './fixtures/configuration-runtime.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -15,7 +16,6 @@ import { SessionsRepository } from '../dist/modules/sessions/sessions.repository
 import { createSessionsService } from '../dist/modules/sessions/index.js';
 import { SessionDraftsService } from '../dist/modules/sessions/sessions.service.js';
 import { registerSessionDraftsController } from '../dist/modules/sessions/sessions.controller.js';
-import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/index.js';
 
 /**
  * Creates deterministic unpublished metadata with the same repository contract as production.
@@ -133,7 +133,7 @@ test('HTTP prepare and first prompt reuse one real RPC child and never publish a
   const previousMockId = process.env.MOCK_SESSION_ID;
   process.env.MOCK_SESSION_ID = piId;
   let activations = 0;
-  const runtime = new SessionRuntimeCoordinator({
+  const runtime = createTestCoordinator({
     processOptions: {
       entryPath: fileURLToPath(new URL('./fixtures/mock-rpc-entry.mjs', import.meta.url)),
       agentDir: root,

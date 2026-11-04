@@ -56,6 +56,10 @@ export class PiMcpConfigError extends Error {
 
 export interface CreatePiMcpStoreOptions {
   agentDir: string;
+  /**
+   * Records a changed document immediately after its atomic commit, before response projection.
+   */
+  onCommitted?(): void;
   controlPlaneCwd?: string;
   adapterApi?: PiMcpAdapterConfigApi;
   adapterVersion?: string;

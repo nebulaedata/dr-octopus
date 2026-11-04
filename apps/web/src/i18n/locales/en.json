@@ -890,7 +890,7 @@
       "descriptionRestarting": "Reloading the configuration; one moment please.",
       "queued": "Update queued until the task finishes",
       "restartButton": "Restart session",
-      "titleChanged": "Model service configuration changed",
+      "titleChanged": "Agent configuration changed",
       "titleFailed": "Session restart failed",
       "titleRestarting": "Restarting session",
       "whenIdle": "Apply after task finishes"

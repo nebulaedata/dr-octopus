@@ -16,8 +16,10 @@ import { isAllowedOrigin } from './utils/http-origin.js';
 import { controlError } from './infrastructure/lifecycle/control.js';
 import { loadServerConfig } from './infrastructure/config/config.js';
 import { databasePlugin } from './plugins/database.plugin.js';
+import { configurationChangesPlugin } from './plugins/configuration-changes.plugin.js';
 import { sessionRuntimePlugin } from './plugins/session-runtime.plugin.js';
 import { registerWebAssets } from './plugins/web-assets.plugin.js';
+import type { ConfigurationChanges } from './infrastructure/runtime-config/index.js';
 import type { FastifyInstance } from 'fastify';
 import type { ServerControl } from './infrastructure/lifecycle/control.js';
 import type { ServerConfig } from './infrastructure/config/utils.js';
@@ -27,6 +29,7 @@ import type { ServerPaths } from './infrastructure/config/server-paths.js';
 export interface CreateServerOptions {
   control?: ServerControl;
   runtime?: SessionRuntimeCoordinator;
+  configurationChanges?: ConfigurationChanges;
   databasePath?: string;
   config?: ServerConfig;
 }
@@ -55,6 +58,9 @@ function resolveEffectiveStoragePaths(
  * Creates the composition root while domain and transport behavior remain behind focused modules.
  */
 export function createServer(options: CreateServerOptions = {}): FastifyInstance {
+  if (options.runtime && !options.configurationChanges) {
+    throw new Error('An injected runtime requires its configurationChanges instance.');
+  }
   const config = options.config ?? loadServerConfig();
   const control = options.control ?? {
     instanceId: randomUUID(),
@@ -128,6 +134,7 @@ export function createServer(options: CreateServerOptions = {}): FastifyInstance
   });
 
   // Plugins
+  server.register(configurationChangesPlugin, { instance: options.configurationChanges });
   server.register(sessionRuntimePlugin, {
     runtime: options.runtime,
     limits: {

@@ -2,6 +2,7 @@
  * @author Codex
  * @description Verifies entrypoint discovery, route isolation, shared connections, and failed-startup cleanup.
  */
+import { ConfigurationChanges } from '../dist/infrastructure/runtime-config/index.js';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -146,7 +147,13 @@ test(
     const app = createServer({
       config,
       databasePath: ':memory:',
-      runtime: { onEvent: () => () => {}, onControlChanged: () => () => {}, close: async () => {} },
+      configurationChanges: new ConfigurationChanges(),
+      runtime: {
+        usesConfigurationChanges: () => true,
+        onEvent: () => () => {},
+        onControlChanged: () => () => {},
+        close: async () => {},
+      },
     });
     t.after(async () => {
       await app.close();

@@ -876,7 +876,7 @@
       "descriptionRestarting": "正在重新加载配置，请稍候。",
       "queued": "将在当前任务结束后更新",
       "restartButton": "重启会话",
-      "titleChanged": "模型服务配置已变更",
+      "titleChanged": "智能体配置已变更",
       "titleFailed": "会话重启失败",
       "titleRestarting": "正在重启会话",
       "whenIdle": "任务结束后应用"

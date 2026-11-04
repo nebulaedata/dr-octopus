@@ -8,13 +8,19 @@ import { mkdtemp, writeFile, rm, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ModelConfigMonitor } from '../dist/modules/model-settings/model-settings.service.js';
-import { RuntimeConfigChanges } from '../dist/infrastructure/runtime-config/runtime-config-changes.js';
+import { ConfigurationChanges } from '../dist/infrastructure/runtime-config/index.js';
 
 test('model/auth changes stale instances, default changes only notify, and fingerprints survive Host restart', async () => {
   const agentDir = await mkdtemp(join(tmpdir(), 'octopus-config-monitor-'));
-  const changes = new RuntimeConfigChanges();
+  const changes = new ConfigurationChanges();
   let notices = 0;
-  const options = { agentDir, changes, refresh: async () => {}, notify: () => notices++, onError() {} };
+  const options = {
+    agentDir,
+    onCommitted: changes.publisher('model-providers'),
+    refresh: async () => {},
+    notify: () => notices++,
+    onError() {},
+  };
   const monitor = new ModelConfigMonitor(options);
   try {
     const first = await monitor.refresh();
@@ -31,8 +37,11 @@ test('model/auth changes stale instances, default changes only notify, and finge
     );
     const models = await monitor.refresh();
     assert.equal(changes.current(), 1);
-    assert.deepEqual(changes.since(0), ['/settings/model-providers']);
-    const restarted = new ModelConfigMonitor({ ...options, changes: new RuntimeConfigChanges() });
+    assert.deepEqual(changes.since(0), ['model-providers']);
+    const restarted = new ModelConfigMonitor({
+      ...options,
+      onCommitted: new ConfigurationChanges().publisher('model-providers'),
+    });
     assert.equal(await restarted.refresh(), models);
     await restarted.close();
     await writeFile(join(agentDir, 'auth.json'), 'invalid');
@@ -53,12 +62,12 @@ test('model/auth changes stale instances, default changes only notify, and finge
 
 test('native atomic replacements publish configuration changes without periodic reads', async () => {
   const agentDir = await mkdtemp(join(tmpdir(), 'octopus-watch-'));
-  const changes = new RuntimeConfigChanges();
+  const changes = new ConfigurationChanges();
   let reads = 0;
   const committed = Promise.withResolvers();
   const monitor = new ModelConfigMonitor({
     agentDir,
-    changes,
+    onCommitted: changes.publisher('model-providers'),
     refresh: async () => {
       reads++;
     },
@@ -103,7 +112,7 @@ test('format-only rewrites and unrelated settings during SDK refresh do not inva
   );
   const monitor = new ModelConfigMonitor({
     agentDir,
-    changes: new RuntimeConfigChanges(),
+    onCommitted: new ConfigurationChanges().publisher('model-providers'),
     notify() {},
     onError() {},
     refresh: async () => {

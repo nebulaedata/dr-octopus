@@ -3,15 +3,22 @@
  * @description Exposes revision-checked Jev configuration and a synthetic connectivity probe.
  */
 import { evaluateJevChoice, listJevModels, JevSettingsStore } from '@octopus/agent';
-import type { JevCredentialUpdate, JevSettingsUpdate } from '@octopus/shared/protocol';
+import { createAgentEnvironmentStore } from '@octopus/agent/environment';
+import type { JevCredentialUpdate, JevSettingsSnapshot, JevSettingsUpdate } from '@octopus/shared/protocol';
 
 export class JevSettingsService {
   private readonly store;
+  private readonly environment;
   /**
    * Use the same trusted Agent directory as runtime processes.
    */
-  constructor(agentDir: string, environment?: NodeJS.ProcessEnv) {
+  constructor(
+    agentDir: string,
+    environment?: NodeJS.ProcessEnv,
+    private readonly onCredentialCommitted?: () => void
+  ) {
     this.store = new JevSettingsStore(agentDir, environment);
+    this.environment = createAgentEnvironmentStore(agentDir, environment);
   }
   /**
    * Read only the redacted configuration.
@@ -28,8 +35,29 @@ export class JevSettingsService {
   /**
    * Save the credential in the existing Agent environment without duplicating secret storage.
    */
-  updateCredential(input: JevCredentialUpdate) {
-    return this.store.updateCredential(input);
+  async updateCredential(input: JevCredentialUpdate) {
+    const previous = this.environment.load().revision;
+    let snapshot: JevSettingsSnapshot;
+    try {
+      snapshot = await this.store.updateCredential(input);
+    } catch (error) {
+      // The SDK saves the environment before reading the separate Jev document for its response.
+      // A failed response projection must not hide a committed credential change.
+      let current = previous;
+      try {
+        current = this.environment.load().revision;
+      } catch {
+        /* Preserve the original SDK error when storage cannot confirm a new revision. */
+      }
+      if (current !== previous) {
+        this.onCredentialCommitted?.();
+      }
+      throw error;
+    }
+    if (snapshot.environmentRevision !== input.revision) {
+      this.onCredentialCommitted?.();
+    }
+    return snapshot;
   }
   /**
    * Discover selectable models using the effective Agent environment credential.

@@ -14,8 +14,9 @@ const providerAuthModule: FastifyPluginCallback = (server, _options, done) => {
   const service = new ProviderAuthService(
     server.settingsService,
     server.piSettingsStore,
-    createModelConfigChanges({ record: () => server.modelConfigMonitor.invalidate() }, () =>
-      server.modelConfigMonitor.invalidate()
+    createModelConfigChanges(
+      () => server.modelConfigMonitor.invalidate(),
+      () => server.modelConfigMonitor.invalidate()
     ),
     () => server.dataEvents.publish({ resource: 'provider-auth' })
   );

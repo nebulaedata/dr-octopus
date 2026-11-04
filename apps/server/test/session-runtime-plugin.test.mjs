@@ -6,12 +6,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import Fastify from 'fastify';
+import { configurationChangesPlugin } from '../dist/plugins/configuration-changes.plugin.js';
 import { sessionRuntimePlugin } from '../dist/plugins/session-runtime.plugin.js';
 
 test('Session Runtime plugin publishes one Coordinator to descendant routes and owns shutdown', async () => {
   const server = Fastify();
+  server.register(configurationChangesPlugin);
   let closeCount = 0;
   const runtime = {
+    usesConfigurationChanges: () => true,
     close: async () => {
       closeCount += 1;
     },
@@ -33,7 +36,8 @@ test('Session Runtime plugin publishes one Coordinator to descendant routes and 
 
 test('Session Runtime plugin rejects duplicate registration in one Fastify scope', async () => {
   const server = Fastify();
-  const runtime = { close: async () => undefined };
+  server.register(configurationChangesPlugin);
+  const runtime = { usesConfigurationChanges: () => true, close: async () => undefined };
   server.register(sessionRuntimePlugin, { runtime });
   server.register(sessionRuntimePlugin, { runtime });
 

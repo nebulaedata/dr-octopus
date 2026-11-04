@@ -2,6 +2,7 @@
  * @author Codex
  * @description 验证 Host Session runtime 的 Lease、身份、容量和精确路由不变量
  */
+import { createTestCoordinator } from './fixtures/configuration-runtime.mjs';
 
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -9,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { RuntimeCommands, SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/index.js';
+import { RuntimeCommands } from '../dist/infrastructure/runtime/index.js';
 import { SessionRuntimeSlot } from '../dist/infrastructure/runtime/runtime-slot.js';
 
 const fixturePath = fileURLToPath(new URL('./fixtures/mock-rpc-entry.mjs', import.meta.url));
@@ -77,7 +78,7 @@ test('new Web Session bootstraps a durable Pi Session before runtime activation'
   const fixture = await createSessionFixture('session-new');
   process.env.MOCK_SESSION_ID = fixture.expectedAgentSessionId;
   let cleanupCalled = false;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-new',
     sessionBootstrap: {
@@ -112,7 +113,7 @@ test('new Web Session bootstraps a durable Pi Session before runtime activation'
 test('concurrent activation of one Session returns one immutable runtime', async () => {
   const fixture = await createSessionFixture();
   process.env.MOCK_SESSION_ID = 'session-a';
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-a',
   });
@@ -141,7 +142,7 @@ test('concurrent Session operations share one stable runtime epoch', async () =>
   const fixture = await createSessionFixture('session-concurrent-operations');
   process.env.MOCK_SESSION_ID = fixture.expectedAgentSessionId;
   let nextRuntime = 0;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => `runtime-${String(++nextRuntime)}`,
   });
@@ -168,7 +169,7 @@ test('concurrent Session operations share one stable runtime epoch', async () =>
 test('permission mode uses the active Pi RPC generation and resets after recovery', async () => {
   const fixture = await createSessionFixture('session-permission-generation');
   process.env.MOCK_SESSION_ID = fixture.expectedAgentSessionId;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-permission-generation',
   });
@@ -201,7 +202,7 @@ test('permission mode uses the active Pi RPC generation and resets after recover
 test('operation fencing epoch is published in the immutable runtime binding', async () => {
   const fixture = await createSessionFixture('session-epoch-binding');
   process.env.MOCK_SESSION_ID = fixture.expectedAgentSessionId;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-epoch-binding',
   });
@@ -244,7 +245,7 @@ test('aborted activation releases caller demand while shared startup completes',
   const fixture = await createSessionFixture('session-aborted-activation');
   process.env.MOCK_SESSION_ID = fixture.expectedAgentSessionId;
   process.env.MOCK_RESPONSE_DELAY_MS = '100';
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-aborted-activation',
   });
@@ -272,7 +273,7 @@ test('aborted activation releases caller demand while shared startup completes',
 });
 
 test('Coordinator readiness closes its request admission gate before shutdown completes', async () => {
-  const coordinator = new SessionRuntimeCoordinator();
+  const coordinator = createTestCoordinator();
   assert.equal(coordinator.isAcceptingRequests(), true);
   await coordinator.close();
   assert.equal(coordinator.isAcceptingRequests(), false);
@@ -281,7 +282,7 @@ test('Coordinator readiness closes its request admission gate before shutdown co
 test('operation deadline releases its lease without cancelling shared runtime ownership', async () => {
   const fixture = await createSessionFixture('session-operation-deadline');
   process.env.MOCK_SESSION_ID = fixture.expectedAgentSessionId;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-operation-deadline',
   });
@@ -303,7 +304,7 @@ test('operation deadline releases its lease without cancelling shared runtime ow
 test('coordinator close gracefully drains accepted operations before process retirement', async () => {
   const fixture = await createSessionFixture('session-graceful-drain');
   process.env.MOCK_SESSION_ID = fixture.expectedAgentSessionId;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-graceful-drain',
     shutdownDrainTimeoutMs: 1_000,
@@ -341,7 +342,7 @@ test('two Sessions in one Workspace own independent runtimes', async () => {
     'utf8'
   );
   let nextRuntime = 0;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => `runtime-${String(++nextRuntime)}`,
   });
@@ -368,7 +369,7 @@ test('cwd mismatch fails before spawning and replacement commands are rejected',
   const fixture = await createSessionFixture();
   const otherCwd = join(fixture.root, 'other');
   await mkdir(otherCwd);
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath },
     createRuntimeId: () => 'runtime-a',
   });
@@ -404,7 +405,7 @@ test('per-Workspace capacity evicts only that Workspace oldest safe idle runtime
   const workspaceB = await createSessionFixture('session-b');
   workspaceB.workspace.id = 'workspace-b';
   let nextRuntime = 0;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     limits: { maxActiveRuntimes: 10, maxActiveRuntimesPerWorkspace: 1, idleTtlMs: 0 },
     createRuntimeId: () => `runtime-${String(++nextRuntime)}`,
@@ -444,7 +445,7 @@ test('hard capacity reclaims a safe settled runtime before its idle TTL expires'
     'utf8'
   );
   let nextRuntime = 0;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     limits: {
       maxActiveRuntimes: 1,
@@ -498,7 +499,7 @@ test('operation lease prevents capacity reclaim until the complete callback rele
     operationAcquired = resolveAcquired;
   });
   let retainedTarget;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     limits: { maxActiveRuntimes: 1, maxActiveRuntimesPerWorkspace: 1, idleTtlMs: 0 },
     createRuntimeId: () => `runtime-${String(++nextRuntime)}`,
@@ -590,7 +591,7 @@ test('concurrent stop is single-flight and activation waits for retirement', asy
   const fixture = await createSessionFixture('session-a');
   process.env.MOCK_SESSION_ID = 'session-a';
   let nextRuntime = 0;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => `runtime-${String(++nextRuntime)}`,
   });
@@ -614,7 +615,7 @@ test('coordinator shutdown waits for an accepted activation before retiring it',
   const fixture = await createSessionFixture('session-a');
   process.env.MOCK_SESSION_ID = 'session-a';
   process.env.MOCK_RESPONSE_DELAY_MS = '100';
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-1',
   });
@@ -643,7 +644,7 @@ test('running runtime is never evicted to satisfy capacity', async () => {
     'utf8'
   );
   let nextRuntime = 0;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     limits: { maxActiveRuntimes: 1, maxActiveRuntimesPerWorkspace: 1, idleTtlMs: 0 },
     createRuntimeId: () => `runtime-${String(++nextRuntime)}`,
@@ -676,7 +677,7 @@ test('running runtime is never evicted to satisfy capacity', async () => {
 test('failed compaction returns the runtime to idle after its terminal event', async () => {
   const fixture = await createSessionFixture('session-compact');
   process.env.MOCK_SESSION_ID = fixture.expectedAgentSessionId;
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-compact',
   });
@@ -708,7 +709,7 @@ test('failed compaction returns the runtime to idle after its terminal event', a
 test('crashed runtime recovers with the same immutable Session binding', async () => {
   const fixture = await createSessionFixture('session-a');
   process.env.MOCK_SESSION_ID = 'session-a';
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-a',
   });
@@ -736,7 +737,7 @@ test('crashed runtime recovers with the same immutable Session binding', async (
 test('extension UI response must match a pending request on the exact runtime', async () => {
   const fixture = await createSessionFixture('session-a');
   process.env.MOCK_SESSION_ID = 'session-a';
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: { entryPath: fixturePath, requestTimeoutMs: 2_000 },
     createRuntimeId: () => 'runtime-a',
   });

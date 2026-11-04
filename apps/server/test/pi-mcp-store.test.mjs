@@ -138,3 +138,62 @@ test('Pi MCP store rejects stale revisions before writing', async () => {
     await rm(agentDir, { recursive: true, force: true });
   }
 });
+
+test('MCP commits notify once, skip unchanged writes and survive post-commit projection failure', async (t) => {
+  const agentDir = await mkdtemp(join(tmpdir(), 'octopus-mcp-commit-'));
+  t.after(() => rm(agentDir, { recursive: true, force: true }));
+  const adapter = createAdapter();
+  const load = adapter.loadMcpConfig;
+  let loads = 0;
+  let failAt = Infinity;
+  adapter.loadMcpConfig = (...args) => {
+    if (++loads === failAt) {
+      throw new Error('projection failed after commit');
+    }
+    return load(...args);
+  };
+  let commits = 0;
+  const store = createPiMcpStore({ agentDir, adapterApi: adapter, onCommitted: () => commits++ });
+  const initial = await store.list();
+  const created = await store.create({
+    name: 'local',
+    revision: initial.revision,
+    connection: { type: 'stdio', command: 'node', args: [] },
+    enabled: true,
+    lifecycle: 'lazy',
+    protocolVersion: 'legacy',
+    exposeResources: true,
+    directTools: false,
+    toolPrefix: 'server',
+    includeTools: [],
+    excludeTools: [],
+    auth: { type: 'none', bearerTokenStored: false },
+  });
+  assert.equal(commits, 1);
+  const unchanged = await store.setActivation(created.server.serverKey, {
+    revision: created.revision,
+    enabled: true,
+  });
+  assert.equal(commits, 1);
+  assert.equal(unchanged.revision, created.revision);
+  await assert.rejects(store.remove(created.server.serverKey, initial.revision), {
+    code: 'MCP_CONFIG_REVISION_CONFLICT',
+  });
+  assert.equal(commits, 1);
+  failAt = loads + 2;
+  await assert.rejects(
+    store.setActivation(created.server.serverKey, {
+      revision: unchanged.revision,
+      enabled: false,
+    }),
+    /projection failed after commit/
+  );
+  assert.equal(commits, 2);
+  assert.equal(
+    JSON.parse(await readFile(join(agentDir, 'mcp.json'), 'utf8')).mcpServers.local.disabled,
+    true
+  );
+  const current = await store.list();
+  await store.remove(created.server.serverKey, current.revision);
+  assert.equal(commits, 3);
+});

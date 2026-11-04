@@ -2,42 +2,36 @@
  * @author Codex
  * @description Exercises committed model notifications and real subprocess restart fencing without network providers.
  */
+import { createTestCoordinator, configurationFor } from './fixtures/configuration-runtime.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { RuntimeConfigChanges } from '../dist/infrastructure/runtime-config/runtime-config-changes.js';
+import { ConfigurationChanges } from '../dist/infrastructure/runtime-config/index.js';
 import { createModelConfigChanges } from '../dist/modules/model-settings/model-settings.service.js';
-import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/coordinator.js';
 import { SessionLifecycleControl } from '../dist/infrastructure/runtime/session-lifecycle-control.js';
 import { saveCustomProvider } from '../dist/infrastructure/pi-settings/custom-provider-repository.js';
 import { SessionRuntimeDirectory } from '../dist/infrastructure/runtime/runtime-directory.js';
 import { SessionRuntimeRetirement } from '../dist/infrastructure/runtime/retirement.js';
 
-test('only enabled model commits change the baseline; failed observers cannot interrupt commits', () => {
-  const changes = new RuntimeConfigChanges();
-  const model = createModelConfigChanges(changes);
+test('model commits change the baseline; failed observers cannot interrupt commits', () => {
+  const changes = new ConfigurationChanges();
+  const model = createModelConfigChanges(changes.publisher('model-providers'));
   let notices = 0;
   changes.subscribe(() => {
     throw new Error('observer failed');
   });
   const unsubscribe = changes.subscribe(() => notices++);
-  for (const route of ['/settings/environment', '/settings/permissions', '/settings/default-model']) {
-    changes.record(route);
-  }
   assert.equal(changes.current(), 0);
   model.recordCommitted();
-  assert.deepEqual(changes.since(0), ['/settings/model-providers']);
+  assert.deepEqual(changes.since(0), ['model-providers']);
   assert.deepEqual(changes.since(1), []);
   assert.equal(notices, 1);
   unsubscribe();
   model.recordCommitted();
   assert.equal(notices, 1);
-  const disabled = new RuntimeConfigChanges(new Set());
-  createModelConfigChanges(disabled).recordCommitted();
-  assert.equal(disabled.current(), 0);
 });
 
 test('model repository distinguishes draft, unchanged configuration and a new endpoint', async () => {
@@ -57,6 +51,23 @@ test('model repository distinguishes draft, unchanged configuration and a new en
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('Workspace configuration changes only mark matching runtimes stale and retain global changes', () => {
+  const changes = new ConfigurationChanges();
+  changes.publisher('skills')({ kind: 'workspace', workspaceId: 'workspace-a' });
+  assert.deepEqual(changes.since(0, 'workspace-a'), ['skills']);
+  assert.deepEqual(changes.since(0, 'workspace-b'), []);
+  assert.deepEqual(changes.since(0), []);
+  changes.publisher('mcp-servers')();
+  changes.publisher('agent-environment')();
+  assert.deepEqual(changes.since(0, 'workspace-a'), ['mcp-servers', 'agent-environment', 'skills']);
+  assert.deepEqual(changes.since(0, 'workspace-b'), ['mcp-servers', 'agent-environment']);
+  const fresh = changes.current();
+  changes.publisher('skills')({ kind: 'global' });
+  assert.deepEqual(changes.since(fresh, 'workspace-a'), ['skills']);
+  assert.deepEqual(changes.since(fresh, 'workspace-b'), ['skills']);
+  assert.deepEqual(changes.since(changes.current(), 'workspace-a'), []);
 });
 
 test('timeout keeps lifecycle ownership until late work cleans up, then permits a retry', async () => {
@@ -142,7 +153,7 @@ test('restart preserves durable Session identity, merges duplicates and fences s
       updatedAt: new Date(0).toISOString(),
     },
   };
-  const coordinator = new SessionRuntimeCoordinator({
+  const coordinator = createTestCoordinator({
     processOptions: {
       entryPath: fileURLToPath(new URL('./fixtures/mock-rpc-entry.mjs', import.meta.url)),
       childEnvironment: { MOCK_SESSION_ID: 'pi-session', MOCK_MODEL_CONFIG: modelPath },
@@ -157,7 +168,7 @@ test('restart preserves durable Session identity, merges duplicates and fences s
       operation.execute({ type: 'get_state' })
     );
     assert.equal(staleState.data.model.baseUrl, model.baseUrl);
-    coordinator.configChanges.record('/settings/model-providers');
+    configurationFor(coordinator).publisher('model-providers')();
     assert.equal(coordinator.getControl(input.sessionId).restartRequired, true);
     const request = {
       expectedRuntime: { runtimeId: first.runtimeId, epoch: first.epoch },

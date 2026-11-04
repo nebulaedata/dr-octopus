@@ -138,7 +138,10 @@ manager.start = async (...args) =>
     if (trace) trace.child = { entry: entry ? JSON.parse(entry[1]) : null, piTimings, spans };
     return child;
   });
+const { ConfigurationChanges } = await import('../src/infrastructure/runtime-config/index.ts');
+const configurationChanges = new ConfigurationChanges();
 const runtime = new SessionRuntimeCoordinator({
+  configurationChanges,
   manager,
   piSessions,
   sessionBootstrap: {
@@ -203,6 +206,7 @@ try {
 } finally {
   await service.closeDrafts();
   await runtime.close();
+  configurationChanges.close();
   database.sqlite.close();
   for (const restore of restorations.reverse()) restore();
   if (dirname(root) !== resolve(tmpdir()) || !root.startsWith(join(tmpdir(), 'octopus-session-profile-'))) {

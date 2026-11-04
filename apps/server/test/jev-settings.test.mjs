@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { MemoryService } from '../dist/modules/memory/memory.service.js';
 import { registerMemoryController } from '../dist/modules/memory/memory.controller.js';
 import { JevSettingsService } from '../dist/modules/jev-settings/jev-settings.service.js';
+import { ConfigurationChanges } from '../dist/infrastructure/runtime-config/index.js';
 import {
   registerJevController,
   registerJevErrors,
@@ -130,6 +131,7 @@ test('every Jev error has exactly one bilingual generic message', () => {
 test('Jev autoload entry publishes only the API routes and does not create settings on startup', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'jev-plugin-'));
   const app = Fastify();
+  app.decorate('configurationChanges', new ConfigurationChanges());
   t.after(async () => {
     await app.close();
     await rm(root, { recursive: true, force: true });

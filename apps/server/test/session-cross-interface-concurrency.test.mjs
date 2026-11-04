@@ -2,6 +2,7 @@
  * @author Codex
  * @description Verifies HTTP and WebSocket Session interfaces share Slot fencing under concurrency and capacity pressure.
  */
+import { createTestCoordinator } from './fixtures/configuration-runtime.mjs';
 
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
@@ -13,7 +14,6 @@ import test from 'node:test';
 import websocket from '@fastify/websocket';
 import Fastify from 'fastify';
 import WebSocket from 'ws';
-import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/index.js';
 import { createDatabase } from '../dist/db/client.js';
 import { createAttachmentsService } from '../dist/modules/attachments/index.js';
 import { ChannelService } from '../dist/modules/channel/channel.service.js';
@@ -61,7 +61,7 @@ async function createFixture() {
     });
   }
   process.env.MOCK_SESSION_ID = 'session-a';
-  const runtime = new SessionRuntimeCoordinator({
+  const runtime = createTestCoordinator({
     processOptions: { entryPath: rpcFixturePath, requestTimeoutMs: 2_000 },
     limits: { maxActiveRuntimes: 1, maxActiveRuntimesPerWorkspace: 1, idleTtlMs: 0 },
   });

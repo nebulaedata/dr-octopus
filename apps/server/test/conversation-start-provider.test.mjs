@@ -2,6 +2,7 @@
  * @author Codex
  * @description Verifies first-message admission through a real Pi child and a controlled local OpenAI-compatible Provider.
  */
+import { createTestCoordinator, configurationFor } from './fixtures/configuration-runtime.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createServer } from 'node:http';
@@ -14,7 +15,6 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import Fastify from 'fastify';
 import { createDatabase } from '../dist/db/client.js';
-import { SessionRuntimeCoordinator } from '../dist/infrastructure/runtime/coordinator.js';
 import { createSessionsService } from '../dist/modules/sessions/index.js';
 import { ChannelService } from '../dist/modules/channel/channel.service.js';
 import { ConversationStartService } from '../dist/modules/conversation-start/conversation-start.service.js';
@@ -96,7 +96,7 @@ for (const knowledge of [undefined, { collectionIds: ['selected-source'] }]) {
       const database = createDatabase(':memory:');
       const server = Fastify();
       server.decorate('database', database);
-      const runtime = new SessionRuntimeCoordinator({
+      const runtime = createTestCoordinator({
         processOptions: {
           agentDir: root,
           entryPath: fileURLToPath(
@@ -215,7 +215,7 @@ for (const knowledge of [undefined, { collectionIds: ['selected-source'] }]) {
         );
         updated.providers['onboarding-fixture'].baseUrl = baseUrl.replace('/v1', '/v2');
         await writeFile(join(root, 'models.json'), JSON.stringify(updated));
-        runtime.configChanges.record('/settings/model-providers');
+        configurationFor(runtime).publisher('model-providers')();
         assert.equal(sessions.getSession(status.sessionId).runtimeControl.restartRequired, true);
         await assert.rejects(
           sessions.execute(status.sessionId, { type: 'prompt', message: 'Again' }, before),
@@ -250,7 +250,7 @@ for (const knowledge of [undefined, { collectionIds: ['selected-source'] }]) {
           attempt++
         )
           await delay(50);
-        runtime.configChanges.record('/settings/model-providers');
+        configurationFor(runtime).publisher('model-providers')();
         const queued = await sessions.restart(status.sessionId, {
           expectedRuntime: { runtimeId: restarted.runtime.runtimeId, epoch: restarted.runtime.epoch },
           allowInterrupt: false,

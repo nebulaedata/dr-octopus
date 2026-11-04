@@ -17,6 +17,7 @@ const plugin: FastifyPluginCallback<BusinessModulesOptions> = (server, options, 
     new SkillsService({
       workspaceService: server.workspacesService,
       skillsRoot: join(options.config.agentDir, 'skills'),
+      onCommitted: server.configurationChanges.publisher('skills'),
     })
   );
   done();
@@ -27,4 +28,5 @@ export default fp(plugin, {
   fastify: '5.x',
   encapsulate: true,
   dependencies: ['workspaces'],
+  decorators: { fastify: ['configurationChanges'] },
 });

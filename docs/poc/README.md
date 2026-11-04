@@ -19,6 +19,7 @@
 
 ## 独立评估与验证记录
 
+- [Agent 配置更新通知检查](agent-configuration-notification-review.md)
 - [Executor 验证状态与已知限制](executor-validation.md)
 - [浏览器页面适配层限制审查](browser-page-adapter-review.md)
 - [Scheduler 实施与验证记录](scheduler-verification.md)
@@ -30,6 +31,7 @@
 
 ## 专题测试计划与验收
 
+- [独立配置变更服务验收计划](configuration-change-service-validation-plan.md) · [设计](../architecture/configuration-change-service.md)（已实施，验证记录见正文）
 - [自研录制器：单层同源 iframe 验收计划](browser-recorder-reliability-validation.md) · [架构](../architecture/browser-recorder-reliability.md)（Proposed，仅计划，未执行）
 
 - [Session 首页预热：验证与实验记录](session-home-prewarming-validation.md) · [架构](../architecture/session-home-prewarming.md)

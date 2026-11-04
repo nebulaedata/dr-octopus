@@ -13,8 +13,20 @@ import type { BusinessModulesOptions } from '../../plugins/business-modules.plug
  */
 const jevSettingsModule: FastifyPluginCallback<BusinessModulesOptions> = (server, options, done) => {
   registerJevErrors();
-  registerJevController(server, new JevSettingsService(options.config.agentDir));
+  registerJevController(
+    server,
+    new JevSettingsService(
+      options.config.agentDir,
+      undefined,
+      server.configurationChanges.publisher('agent-environment')
+    )
+  );
   done();
 };
 export const autoPrefix = '/api';
-export default fp(jevSettingsModule, { name: 'jev-settings', fastify: '5.x', encapsulate: true });
+export default fp(jevSettingsModule, {
+  name: 'jev-settings',
+  fastify: '5.x',
+  encapsulate: true,
+  decorators: { fastify: ['configurationChanges'] },
+});

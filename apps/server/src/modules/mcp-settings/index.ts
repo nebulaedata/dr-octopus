@@ -18,9 +18,19 @@ const plugin: FastifyPluginCallback<BusinessModulesOptions> = (server, options, 
   registerMcpSettingsErrorMessages();
   registerMcpSettingsController(
     server,
-    new McpSettingsService(createPiMcpStore({ agentDir: options.config.agentDir }))
+    new McpSettingsService(
+      createPiMcpStore({
+        agentDir: options.config.agentDir,
+        onCommitted: server.configurationChanges.publisher('mcp-servers'),
+      })
+    )
   );
   done();
 };
 export const autoPrefix = '/api';
-export default fp(plugin, { name: 'mcp-settings', fastify: '5.x', encapsulate: true, dependencies: [] });
+export default fp(plugin, {
+  name: 'mcp-settings',
+  fastify: '5.x',
+  encapsulate: true,
+  decorators: { fastify: ['configurationChanges'] },
+});

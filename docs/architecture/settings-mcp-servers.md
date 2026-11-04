@@ -4,6 +4,8 @@
 > 目标版本：`pi-mcp-adapter@2.34.0`
 > 最后更新：2026-09-29
 
+2026-11-04 补充：Settings 提交 MCP 配置变化后，已有受管会话显示变更提醒，由用户主动重启应用；不自动重启或进程内热更新。契约见[通知范围扩展](./session-config-restart.md#10-通知范围扩展2026-11-04)，验证见[检查记录](../poc/agent-configuration-notification-review.md)。
+
 ## 1. 目标与范围
 
 Settings 增加可用的“MCP 服务器”页面，以 `pi-mcp-adapter@2.34.0` 作为 MCP 配置语义权威，并保持 Pi MCP 文件仍是唯一事实源。

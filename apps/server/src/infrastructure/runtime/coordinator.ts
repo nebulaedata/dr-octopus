@@ -18,7 +18,7 @@ import { SessionRuntimeDirectory } from './runtime-directory.js';
 import { SessionRuntimeError } from './errors.js';
 import { DeferredRestarts } from './deferred-restarts.js';
 import { restartSessionRuntime } from './restart.js';
-import { RuntimeConfigChanges } from '../runtime-config/runtime-config-changes.js';
+import { configurationRoutes } from '../runtime-config/index.js';
 import { DEFAULT_SESSION_RUNTIME_LIMITS } from './types.js';
 import { canonicalizeWorkspace } from './utils.js';
 import {
@@ -28,6 +28,7 @@ import {
   assertWorkspaceCwd,
   requireRpcState,
 } from './validator.js';
+import type { ConfigurationChanges } from '../runtime-config/index.js';
 import type { WorkspaceDescriptor, WorkspaceSessionBootstrap } from '@octopus/agent';
 import type { RestartSessionBody, SessionRuntimeControlDto } from '@octopus/shared/protocol';
 import type { AgentRpcProcessOptions } from '@octopus/agent/rpc';
@@ -47,7 +48,7 @@ export interface SessionRuntimeCoordinatorOptions {
    * Fences new Session work when its Host has accepted a restart or stop.
    */
   assertOpen?(this: void): void;
-  configChanges?: RuntimeConfigChanges;
+  configurationChanges: Pick<ConfigurationChanges, 'current' | 'since' | 'subscribe'>;
   restartTimeoutMs?: number;
   manager?: AgentProcessManager;
   limits?: Partial<SessionRuntimeLimits>;
@@ -72,7 +73,7 @@ export interface SessionRuntimeReservation {
  * Owns Host policy while delegating all per-Session ownership to one stable Runtime Slot.
  */
 export class SessionRuntimeCoordinator {
-  public readonly configChanges: RuntimeConfigChanges;
+  readonly #configurationChanges: Pick<ConfigurationChanges, 'current' | 'since' | 'subscribe'>;
   readonly #controlListeners = new Set<(sessionId?: string) => void>();
   readonly #restartTimeoutMs: number;
   readonly #unsubscribeConfig: () => void;
@@ -98,11 +99,11 @@ export class SessionRuntimeCoordinator {
   /**
    * Creates Host runtime orchestration with injectable process and deterministic test dependencies.
    */
-  public constructor(options: SessionRuntimeCoordinatorOptions = {}) {
+  public constructor(options: SessionRuntimeCoordinatorOptions) {
     this.#hostAssertOpen = options.assertOpen;
-    this.configChanges = options.configChanges ?? new RuntimeConfigChanges();
+    this.#configurationChanges = options.configurationChanges;
     this.#restartTimeoutMs = options.restartTimeoutMs ?? 60_000;
-    this.#unsubscribeConfig = this.configChanges.subscribe(() => this.#publishControl());
+    this.#unsubscribeConfig = this.#configurationChanges.subscribe(() => this.#publishControl());
     this.#manager = options.manager ?? new AgentProcessManager();
     this.#piSessions = options.piSessions ?? new PiSessionRepository();
     this.#sessionBootstrap = options.sessionBootstrap ?? createWorkspaceSessionBootstrap();
@@ -308,6 +309,15 @@ export class SessionRuntimeCoordinator {
   }
 
   /**
+   * Verifies that an injected runtime reads the Server's sole configuration authority.
+   */
+  public usesConfigurationChanges(
+    changes: Pick<ConfigurationChanges, 'current' | 'since' | 'subscribe'>
+  ): boolean {
+    return this.#configurationChanges === changes;
+  }
+
+  /**
    * Checks the same task, interaction and lease gates used by safe runtime reclamation.
    */
   public canRestartSafely(sessionId: string): boolean {
@@ -323,7 +333,11 @@ export class SessionRuntimeCoordinator {
       return { restartRequired: false, changedConfigRoutes: [], restart: { status: 'idle' } };
     }
     const runtime = slot.getRuntime();
-    const changedConfigRoutes = runtime ? this.configChanges.since(runtime.configRevision) : [];
+    const changedConfigRoutes = runtime
+      ? configurationRoutes(
+          this.#configurationChanges.since(runtime.configRevision, runtime.getBinding().workspaceId)
+        )
+      : [];
     const restart = slot.lifecycle.snapshot();
     if (slot.getState() === 'draining' && restart.error) {
       restart.error.retryable = false;
@@ -442,7 +456,6 @@ export class SessionRuntimeCoordinator {
     this.#deferred.close();
     this.#unsubscribeConfig();
     this.#controlListeners.clear();
-    this.configChanges.close();
     await this.#retirement.close();
   }
 
@@ -477,7 +490,7 @@ export class SessionRuntimeCoordinator {
       await this.#admission.ensureCapacity(workspace.id);
       this.#hostAssertOpen?.();
       assertLive();
-      const configRevision = this.configChanges.current();
+      const configRevision = this.#configurationChanges.current();
       const runtimeId = this.#createRuntimeId();
       try {
         const process = await this.#manager.start(runtimeId, {
@@ -524,7 +537,7 @@ export class SessionRuntimeCoordinator {
       await this.#admission.ensureCapacity(workspace.id);
       this.#hostAssertOpen?.();
       const runtimeId = this.#createRuntimeId();
-      const configRevision = this.configChanges.current();
+      const configRevision = this.#configurationChanges.current();
       return activateBootstrappedSession({
         workspace,
         runtimeId,

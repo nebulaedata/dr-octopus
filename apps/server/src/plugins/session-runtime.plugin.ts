@@ -35,10 +35,15 @@ const registerSessionRuntime: FastifyPluginCallback<SessionRuntimePluginOptions>
   const runtime =
     options.runtime ??
     new SessionRuntimeCoordinator({
+      configurationChanges: app.configurationChanges,
       assertOpen: options.assertOpen,
       limits: options.limits,
       processOptions: options.agentDir === undefined ? undefined : { agentDir: options.agentDir },
     });
+  if (!runtime.usesConfigurationChanges(app.configurationChanges)) {
+    done(new Error('Session Runtime configuration authority does not match the Server.'));
+    return;
+  }
   app.decorate('sessionRuntime', runtime);
   app.addHook('onClose', () => runtime.close());
   done();
@@ -49,5 +54,7 @@ const registerSessionRuntime: FastifyPluginCallback<SessionRuntimePluginOptions>
  */
 export const sessionRuntimePlugin = fp(registerSessionRuntime, {
   name: 'session-runtime',
+  dependencies: ['configuration-changes'],
+  decorators: { fastify: ['configurationChanges'] },
   fastify: '5.x',
 });

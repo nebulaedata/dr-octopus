@@ -5,6 +5,7 @@
 
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { getMcpDiscoverySummary, getServerProvenance, loadMcpConfig } from 'pi-mcp-adapter/config';
 import { McpConnectivityProbe } from './connectivity-probe.js';
 import { PiMcpDocumentRepository } from './document-repository.js';
@@ -137,6 +138,9 @@ export class DefaultPiMcpStore {
       if (!server.capabilities.toggle) {
         this.#readonly();
       }
+      if (server.enabled === input.enabled) {
+        return server.name;
+      }
       const current = snapshot.config.mcpServers[server.name];
       snapshot.config.mcpServers[server.name] = {
         ...(current ?? {}),
@@ -172,8 +176,12 @@ export class DefaultPiMcpStore {
       if (snapshot.revision !== revision) {
         throw new PiMcpConfigError('MCP_CONFIG_REVISION_CONFLICT', 'The MCP configuration changed.', 409);
       }
+      const previous = structuredClone(snapshot.config);
       const name = change(snapshot);
-      await this.#repository.write(snapshot.config);
+      if (!isDeepStrictEqual(previous, snapshot.config)) {
+        await this.#repository.write(snapshot.config);
+        this.options.onCommitted?.();
+      }
       const updated = await this.#snapshot();
       return {
         outcome: 'applied',

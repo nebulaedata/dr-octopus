@@ -29,6 +29,10 @@ import type { WorkspaceService } from '@octopus/agent';
 export type SkillScope = { kind: 'global' } | { kind: 'workspace'; workspaceId: string };
 
 export interface SkillsServiceOptions {
+  /**
+   * Reports successful writes before re-reading response data, retaining the owning scope.
+   */
+  onCommitted?(this: void, scope: SkillScope): void;
   /** Overrides the Global Skills root; defaults to the Pi agent directory shared with the runtime. */
   skillsRoot?: string;
   /** Resolves Workspace identities to their working directories for Workspace-scope Skills. */
@@ -60,6 +64,7 @@ export interface UploadSkillInput {
 export class SkillsService {
   readonly #globalRoot: string;
   readonly #workspaceService?: Pick<WorkspaceService, 'resolve'>;
+  readonly #onCommitted?: SkillsServiceOptions['onCommitted'];
 
   /**
    * @param options Supplies the Global Skills root and the Workspace directory resolver.
@@ -67,6 +72,7 @@ export class SkillsService {
   public constructor(options: SkillsServiceOptions = {}) {
     this.#globalRoot = options.skillsRoot ?? join(getAgentDir(), 'skills');
     this.#workspaceService = options.workspaceService;
+    this.#onCommitted = options.onCommitted;
   }
 
   /**
@@ -144,6 +150,7 @@ export class SkillsService {
         cause: error,
       });
     }
+    this.#onCommitted?.(scope);
     return this.get(scope, name);
   }
 
@@ -167,6 +174,9 @@ export class SkillsService {
       disableModelInvocation: input.disableModelInvocation === true,
       body: input.body,
     });
+    if (merged === raw) {
+      return this.get(scope, skill.name);
+    }
     try {
       await writeFile(skill.filePath, merged, 'utf8');
     } catch (error) {
@@ -175,6 +185,7 @@ export class SkillsService {
         cause: error,
       });
     }
+    this.#onCommitted?.(scope);
     return this.get(scope, skill.name);
   }
 
@@ -211,6 +222,7 @@ export class SkillsService {
         cause: error,
       });
     }
+    this.#onCommitted?.(scope);
   }
 
   /**
@@ -263,6 +275,7 @@ export class SkillsService {
         cause: error,
       });
     }
+    this.#onCommitted?.(scope);
     return this.get(scope, prepared.name);
   }
 

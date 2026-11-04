@@ -8,7 +8,6 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ApplicationError } from '../../infrastructure/errors/application-error.js';
 import { listModelAssociationCandidates } from '../../infrastructure/pi-settings/model-adaptation.js';
-import { MODEL_CONFIG_ROUTE } from '../../infrastructure/runtime-config/config-routes.js';
 import type {
   ConfigureCustomProviderBody,
   CreateCustomProviderBody,
@@ -27,7 +26,6 @@ import type {
   PiSettingsProvider,
   ServerPiSettingsStore,
 } from '../../infrastructure/pi-settings/index.js';
-import type { RuntimeConfigChanges } from '../../infrastructure/runtime-config/runtime-config-changes.js';
 
 /**
  * Creates a stable route key without exposing Provider IDs as route identities.
@@ -455,7 +453,10 @@ export class ModelConfigMonitor {
   constructor(
     private readonly options: {
       agentDir: string;
-      changes: RuntimeConfigChanges;
+      /**
+       * Reports a confirmed model or credential change.
+       */
+      onCommitted(): void;
       /**
        * Refreshes local SDK snapshots.
        */
@@ -519,7 +520,7 @@ export class ModelConfigMonitor {
         throw new Error('Configuration changed while its catalog was refreshing.');
       }
       if (this.#models !== undefined && modelVersion !== this.#models) {
-        this.options.changes.record(MODEL_CONFIG_ROUTE);
+        this.options.onCommitted();
       }
       this.#models = modelVersion;
       this.#version = version;
@@ -588,8 +589,8 @@ export interface ModelConfigChanges {
  * Creates a stateless model adapter over the shared Host revision recorder.
  */
 export function createModelConfigChanges(
-  changes: Pick<RuntimeConfigChanges, 'record'>,
+  onCommitted: () => void,
   onDefault: () => void = () => undefined
 ): ModelConfigChanges {
-  return { recordCommitted: () => changes.record(MODEL_CONFIG_ROUTE), recordDefaultCommitted: onDefault };
+  return { recordCommitted: onCommitted, recordDefaultCommitted: onDefault };
 }

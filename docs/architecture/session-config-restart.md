@@ -2,6 +2,10 @@
 
 ## 1. 状态与目标
 
+2026-11-04：[独立配置变更服务](configuration-change-service.md)已接管通知资源所有权和类别发布入口；本文的用户手动重启行为保持有效。
+
+2026-11-04：通知扩展至 MCP、Agent 环境（含 Jev 凭据）和技能，工作区技能按 Workspace 隔离。当前契约见第 10 节；下文首期仅模型服务的限制由第 10 节相应替代。证据见[配置更新通知检查](../poc/agent-configuration-notification-review.md)。
+
 已实现（2026-09-15），自动化验证通过；浏览器人工验收受工具认证故障影响尚未完成。实现与验证范围见第 9 节，决策见 [ADR-0052](../adr/0052-explicit-config-change-session-restart.md)。
 
 代码接入缺口、精确 HTTP/DTO 契约、停止预算和 Conversation 重新订阅见[实施契约及审查记录](./session-config-restart-contracts.md)。开发时两份文档配套使用；该文档对凭据提交及生命周期失败的细化约束优先。
@@ -188,3 +192,15 @@ Session item 菜单始终为普通可交互会话提供主动重启入口，与�
 ## 9. 实现与验证记录（2026-09-15）
 
 本节已迁至 [概念验证与验收记录](../poc/session-config-restart-validation.md#9-实现与验证记录2026-09-15)。
+
+## 10. 通知范围扩展（2026-11-04）
+
+保留 Pi RPC 子进程、业务 SSE、HTTP 权威状态和用户主动重启流程。配置变化只提示，不自动重启或中断任务；原有用户主动选择的 whenIdle 行为保留。
+
+集中配置身份增加 `/settings/mcp-servers`、`/settings/environment/agent` 和 `/skills`。模块装配层将不携带配置值的提交回调接入 RuntimeConfigChanges；实际写入的 Store/Service 在提交后报告，不从 HTTP 成功状态推断提交。MCP 在原子写入后、投影前通知；普通技能保存和环境无变化不提醒，技能上传替换按提交处理。
+
+RuntimeConfigChanges 保留单调递增启动基线，额外按 workspaceId 保存各路由最后变更版本。全局变化影响所有旧实例；工作区技能只影响所属 Workspace。Coordinator 合并全局和匹配工作区版本，前端协议无需新字段。该内存索引不持久化、不保存事件历史。
+
+Jev 凭据按 Agent 环境类别提醒；普通 Jev 模型、权限按调用重读、生图与语音不要求重启。Server 保持独立的服务重启提示。扩展管理没有实际编辑入口，不提前接入通知。
+
+检查矩阵、外部文件修改边界和验证限制见[检查记录](../poc/agent-configuration-notification-review.md)。

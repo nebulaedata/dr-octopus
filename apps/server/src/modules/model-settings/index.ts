@@ -23,7 +23,7 @@ const modelSettingsModule: FastifyPluginCallback<BusinessModulesOptions> = (serv
   const store = createPiSettingsStore({ agentDir: options.config.agentDir });
   const monitor = new ModelConfigMonitor({
     agentDir: options.config.agentDir,
-    changes: server.sessionRuntime.configChanges,
+    onCommitted: server.configurationChanges.publisher('model-providers'),
     refresh: async () => {
       await store.refreshCatalog?.();
     },
@@ -32,7 +32,10 @@ const modelSettingsModule: FastifyPluginCallback<BusinessModulesOptions> = (serv
   });
   const service = new SettingsService(
     store,
-    createModelConfigChanges({ record: () => monitor.invalidate() }, () => monitor.invalidate())
+    createModelConfigChanges(
+      () => monitor.invalidate(),
+      () => monitor.invalidate()
+    )
   );
   server.decorate('piSettingsStore', store);
   server.decorate('settingsService', service);
@@ -53,7 +56,7 @@ export default fp(modelSettingsModule, {
   name: 'model-settings',
   fastify: '5.x',
   dependencies: ['data-events'],
-  decorators: { fastify: ['sessionRuntime'] },
+  decorators: { fastify: ['configurationChanges'] },
 });
 
 export type { ModelConfigChanges } from './model-settings.service.js';

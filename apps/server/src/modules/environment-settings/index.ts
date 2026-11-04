@@ -18,7 +18,8 @@ const plugin: FastifyPluginCallback<BusinessModulesOptions> = (server, options, 
       options.config.paths.dataDir,
       options.config.agentDir,
       undefined,
-      server.serverConfiguration
+      server.serverConfiguration,
+      server.configurationChanges.publisher('agent-environment')
     )
   );
   done();
@@ -29,4 +30,5 @@ export default fp(plugin, {
   fastify: '5.x',
   encapsulate: true,
   dependencies: ['server-settings'],
+  decorators: { fastify: ['configurationChanges'] },
 });

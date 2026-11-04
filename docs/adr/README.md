@@ -108,3 +108,4 @@
 | [ADR-0089](./0089-browser-skill-unified-agent.md) | Accepted | 整理/重放统一 ToolLoopAgent，复用 PageController；Questionnaire + MessageScroller，无自由聊天 |
 | [ADR-0090](./0090-browser-host-lifecycle.md) | Accepted（实现已接入，发行验收待完成） | 固定 Host 注册入口、版本事务发布、开发隔离、分层诊断与自动修复闭环 |
 | [ADR-0092](./0092-browser-recorder-reliability.md) | Proposed | 自研录制器按文档扩展同源 iframe；复用 ACK 与收尾，PageController 不变 |
+| [ADR-0093](./0093-independent-configuration-change-service.md) | Accepted | 独立配置变更资源、显式提交回调、统一版本与作用域；保持手动重启 |
