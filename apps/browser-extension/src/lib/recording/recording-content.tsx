@@ -51,8 +51,7 @@ export class RecordingContent {
       }
       if (result?.ok) {
         this.held = false;
-        this.configure(result.value.session);
-        this.batch = result.value.lastBatch;
+        this.configure(result.value.session, result.value.lastBatch);
       } else if (!result?.ok && this.session) {
         this.held = true;
         this.recorder?.stop();
@@ -106,7 +105,7 @@ export class RecordingContent {
   /**
    * Updates projection and capture listeners without reinitializing the document producer on every ACK.
    */
-  private configure(session: RecordingSession | null): void {
+  private configure(session: RecordingSession | null, lastBatch?: number): void {
     if (this.disposed) {
       return;
     }
@@ -122,14 +121,35 @@ export class RecordingContent {
     }
     const changed = this.session?.id !== session.id;
     const epochChanged = this.session?.epoch !== session.epoch;
+    if (epochChanged && session.status === 'recording' && lastBatch === undefined) {
+      // Only hello binds this document to its committed cursor; state broadcasts cover all tabs.
+      this.held = true;
+      this.recorder?.stop();
+      void this.hello();
+      return;
+    }
     if (changed) {
       this.cleanup();
       this.batch = 0;
       this.error = '';
     }
     if (epochChanged) {
+      if (!changed) {
+        this.generation++;
+      }
+      this.pending = undefined;
+      if (this.timer) {
+        clearTimeout(this.timer);
+        this.timer = undefined;
+      }
       this.held = false;
       this.events = [];
+      this.batch = lastBatch ?? this.batch;
+      if (session.status === 'recording') {
+        this.error = '';
+      }
+    } else if (lastBatch !== undefined && !this.pending && this.events.length === 0) {
+      this.batch = Math.max(this.batch, lastBatch);
     }
     this.session = session;
     if (!this.host) {

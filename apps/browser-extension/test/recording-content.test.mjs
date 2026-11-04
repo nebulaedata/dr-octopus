@@ -49,6 +49,8 @@ function session(id) {
  */
 function fixture() {
   let current = session('first');
+  let lastBatch = 0;
+  let deferHello = false;
   const held = [];
   const roots = [];
   const timers = new Map();
@@ -68,7 +70,10 @@ function fixture() {
     runtime: {
       sendMessage: (message) => {
         if (message.type === 'recorder.hello') {
-          return Promise.resolve({ ok: true, value: { session: structuredClone(current), lastBatch: 0 } });
+          if (deferHello) {
+            return new Promise((resolve, reject) => held.push({ message, resolve, reject }));
+          }
+          return Promise.resolve({ ok: true, value: { session: structuredClone(current), lastBatch } });
         }
         return new Promise((resolve, reject) => held.push({ message, resolve, reject }));
       },
@@ -127,6 +132,21 @@ function fixture() {
     held,
     roots,
     timers,
+    /**
+     * Holds the next authority reads to test the pre-capture handshake boundary.
+     */
+    deferHello() {
+      deferHello = true;
+    },
+    /**
+     * Delivers a Worker broadcast while hello supplies this document's committed cursor.
+     */
+    async broadcast(value, cursor = lastBatch) {
+      current = value;
+      lastBatch = cursor;
+      await content.receive({ type: 'recorder.state', session: structuredClone(value) });
+      await Promise.resolve();
+    },
     /**
      * Switches authoritative session through the real hello handler.
      */
@@ -237,5 +257,66 @@ test('old batch completion cannot consume replacement-session events', async () 
   await oldDrain;
   assert.equal(f.content.events.length, 1);
   assert.equal(f.content.events[0].id, 'new-event');
+  f.content.dispose();
+});
+
+test('Popup resume clears recoverable capture errors only after authoritative cursor sync', async () => {
+  for (const error of ['delivery', 'overflow']) {
+    const f = fixture();
+    await f.content.hello();
+    f.content.error = error;
+    f.content.held = true;
+    await f.broadcast({ ...session('first'), status: 'paused', epoch: 2, updatedAt: 2 });
+    assert.equal(f.content.error, error);
+    await f.broadcast({ ...session('first'), epoch: 3, updatedAt: 3 }, 1);
+    assert.equal(f.content.error, '');
+    assert.equal(f.content.held, false);
+    assert.equal(f.content.batch, 1);
+    assert.ok(f.content.recorder.abort, 'DOM capture listeners restarted');
+    f.content.dispose();
+  }
+});
+
+test('resume after a lost committed ACK uses the next batch and fences old completion', async () => {
+  const f = fixture();
+  await f.content.hello();
+  f.content.enqueue({ id: 'old', at: 1, action: 'click', label: 'old', url: '' });
+  const oldDrain = f.content.receive({ type: 'recorder.flush', sessionId: 'first' });
+  const oldBatch = f.held.shift();
+  // Worker committed batch 1, but its reply has not reached Content before pause seals the epoch.
+  await f.broadcast({ ...session('first'), epoch: 2, updatedAt: 2, status: 'paused' }, 1);
+  await f.broadcast({ ...session('first'), epoch: 3, updatedAt: 3 }, 1);
+  f.content.enqueue({ id: 'new', at: 3, action: 'click', label: 'new', url: '' });
+  const newDrain = f.content.receive({ type: 'recorder.flush', sessionId: 'first' });
+  const newBatch = f.held.shift();
+  assert.equal(newBatch.message.batch, 2);
+  assert.equal(newBatch.message.epoch, 3);
+  assert.equal(newBatch.message.events[0].id, 'new');
+  oldBatch.resolve({ ok: true, value: { batch: 1, session: session('first') } });
+  await oldDrain;
+  assert.equal(f.content.events[0].id, 'new');
+  assert.ok(f.content.pending, 'old completion cannot clear the new send');
+  newBatch.resolve({ ok: true, value: { batch: 2, session: { ...session('first'), epoch: 3 } } });
+  assert.deepEqual(await newDrain, { flushed: true });
+  assert.equal(f.content.events.length, 0);
+  f.content.dispose();
+});
+
+test('resume keeps capture stopped until the document cursor handshake completes', async () => {
+  const f = fixture();
+  await f.content.hello();
+  await f.broadcast({ ...session('first'), epoch: 2, updatedAt: 2, status: 'paused' });
+  f.deferHello();
+  const resumed = { ...session('first'), epoch: 3, updatedAt: 3 };
+  await f.broadcast(resumed, 7);
+  assert.equal(f.content.held, true);
+  assert.equal(f.content.recorder.abort, undefined);
+  const hello = f.held.shift();
+  assert.equal(hello.message.type, 'recorder.hello');
+  hello.resolve({ ok: true, value: { session: resumed, lastBatch: 7 } });
+  await Promise.resolve();
+  assert.equal(f.content.batch, 7);
+  assert.equal(f.content.held, false);
+  assert.ok(f.content.recorder.abort);
   f.content.dispose();
 });
