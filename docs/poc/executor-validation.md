@@ -1696,3 +1696,9 @@ shared及扩展双目标构建、扩展lint/typecheck通过，全量单元163/16
 验证：shared 构建、扩展 Chrome/Edge 双目标构建与许可收集、扩展 lint/typecheck 均通过；包级测试 166/166、Chrome/Edge 弹窗集成 2/2 通过。新增 Worker 测试覆盖成功握手、心跳不改时间、断开和 Worker 重启后仍保留记录；弹窗测试覆盖深色 360×600、历史异常默认隐藏与展开、固定页脚和可滚动到达的操作按钮。截图与设计稿对照记录位于本地 `apps/browser-extension/build/validation-evidence/connection-status/20261104-option1-3/`；连接成功态由测试受控 Worker 回包模拟，不代表日常 Profile、正式 Host 或商店安装验收。
 
 2026-11-04，用户确认当前连接页实现符合要求，连接页界面验收成功。此结论限于本次页面与交互，不提升浏览器 Host 或正式发布门禁。
+
+### v0.0.18 Windows Executor 发布门禁失败及重启测试夹具修复（2026-11-04）
+
+GitHub Actions [Windows Executor 发行运行 41815523786](https://github.com/nebulaedata/dr-octopus/actions/runs/41815523786) 在 `v0.0.18`（源码 `c8fdcd8`）的验收任务中失败，发行附件任务因此跳过。原始日志显示 Executor 测试 313 项中通过 311 项、失败 2 项，均位于 `test/application-restart.test.mjs`：开发模式测试仍期待普通临时 `userData`，但 Main 已使用开发 Profile；开发监管测试的 `applicationApi` 模拟缺少现行启动路径调用的 `hostBundleSchema.parse`。原失败属于测试夹具与开发启动契约不一致，不作为 Executor 发行验收通过的证据。该运行的日志和任务状态保留在 GitHub Actions。
+
+在后续 main 源码上，重启测试使用隔离临时开发 Profile、补齐应用 API 模拟，并等待首个子进程产生以消除固定 20 次事件循环轮询的时序竞态。验证命令：`pnpm --filter @octopus/executor exec node --import tsx --test --test-concurrency=1 test/application-restart.test.mjs`（4/4），`pnpm --filter @octopus/executor test`（313/313）、`pnpm --filter @octopus/executor lint`、`pnpm --filter @octopus/executor typecheck` 均通过。这些本地结果基于修复后的 main 工作树，不追认旧标签的失败，也不代表新标签的 Windows CI 或最终发行附件已验收；后续发布仍须观察对应新标签的工作流结果。

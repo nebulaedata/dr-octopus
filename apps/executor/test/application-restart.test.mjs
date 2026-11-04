@@ -10,7 +10,7 @@ import { readFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { setImmediate as nextTurn } from 'node:timers/promises';
+import { setImmediate as nextTurn, setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import { build } from 'esbuild';
 import { developmentRestartExitCode, ipcChannels } from '../src/contracts/runtime.ts';
@@ -20,10 +20,12 @@ import { developmentRestartExitCode, ipcChannels } from '../src/contracts/runtim
  */
 async function fixture(run, dev = false) {
   const data = await mkdtemp(join(tmpdir(), 'octopus-restart-'));
+  const devData = join(data, 'electron');
   const entry = fileURLToPath(new URL('../src/main/index.ts', import.meta.url));
   const root = fileURLToPath(new URL('../', import.meta.url));
   const events = [];
   const handlers = new Map();
+  let userData = data;
   const app = Object.assign(new EventEmitter(), {
     isPackaged: false,
     setName() {},
@@ -40,10 +42,11 @@ async function fixture(run, dev = false) {
      */
     setPath(name, path) {
       assert.equal(name, 'userData');
-      assert.equal(path, data);
+      assert.equal(path, dev ? devData : data);
+      userData = path;
     },
     getAppPath: () => root,
-    getPath: () => data,
+    getPath: () => userData,
     requestSingleInstanceLock: () => true,
     whenReady: () => new Promise(() => {}),
     quit() {
@@ -87,6 +90,20 @@ async function fixture(run, dev = false) {
         ...(dev ? ['--executor-dev'] : []),
       ]),
     },
+    plugins: [
+      {
+        name: 'isolated-development-profile',
+        setup(bundle) {
+          bundle.onResolve({ filter: /browser-development\.mjs$/ }, () => ({
+            path: 'browser-development',
+            namespace: 'restart-fixture',
+          }));
+          bundle.onLoad({ filter: /.*/, namespace: 'restart-fixture' }, () => ({
+            contents: `export function browserDevelopment() { return { userData: ${JSON.stringify(devData)}, rendererPort: 41000, runtimePort: 31000 }; }`,
+          }));
+        },
+      },
+    ],
   });
   const require = createRequire(import.meta.url);
   const module = { exports: {} };
@@ -179,6 +196,7 @@ test('restart IPC refuses foreign frames, arbitrary arguments, unsaved settings 
 test('development supervisor retains Vite during restart and never respawns after a stop signal', async () => {
   for (const stopping of [false, true]) {
     const children = [];
+    const firstChild = Promise.withResolvers();
     let closed = 0;
     const processState = Object.assign(new EventEmitter(), { platform: 'win32', arch: 'x64' });
     globalThis.executorRestartFixture = {
@@ -196,6 +214,7 @@ test('development supervisor retains Vite during restart and never respawns afte
         const child = new EventEmitter();
         child.kill = () => child.emit('exit', developmentRestartExitCode);
         children.push(child);
+        firstChild.resolve();
         return child;
       },
     };
@@ -230,7 +249,7 @@ test('development supervisor retains Vite during restart and never respawns afte
               contents: 'export async function buildProcesses() {}',
             }));
             build.onLoad({ filter: /application-api\.mjs$/ }, () => ({
-              contents: `export const applicationApi = {developmentRestartExitCode: ${developmentRestartExitCode}};`,
+              contents: `export const applicationApi = {developmentRestartExitCode: ${developmentRestartExitCode}, hostBundleSchema: {parse: (value) => value}};`,
             }));
           },
         },
@@ -241,9 +260,13 @@ test('development supervisor retains Vite during restart and never respawns afte
         Buffer.from(bundled.outputFiles[0].text + '\n//' + randomUUID()).toString('base64')
     );
     try {
-      for (let attempt = 0; !children.length && attempt < 20; attempt++) {
-        await nextTurn();
-      }
+      await Promise.race([
+        firstChild.promise,
+        running,
+        delay(5000, undefined, { ref: false }).then(() => {
+          throw new Error('Development supervisor did not start Electron.');
+        }),
+      ]);
       assert.equal(children.length, 1);
       if (stopping) {
         processState.emit('SIGTERM');
