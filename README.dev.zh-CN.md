@@ -24,7 +24,7 @@ pnpm build:executor
 
 Windows 的 MCP 命令工具为 powershell，使用系统 Windows PowerShell 5.1，不再装配或携带 PortableGit。Node/Python 和搜索工具仍随包。Linux/macOS 仅显式分支与注释占位，尚未支持；契约和清理范围见 [ADR-0084](docs/adr/0084-executor-system-shell.md)。
 
-根 `pnpm build`、`pnpm test` 排除 Executor，使用 `pnpm build:executor` / `pnpm test:executor` 或聚焦命令。`pnpm dev:executor` 用于开发，Main/Preload/Runtime 改动后重启，Renderer 支持 HMR。构建与检查按[日常重新构建与打包](docs/architecture/executor-delivery.md#日常重新构建与打包)执行，并遵守 [Executor 项目规则](apps/executor/AGENTS.md)。
+根 `pnpm build` 排除 Executor 与浏览器扩展；交付构建分别使用 `pnpm build:executor`、`pnpm build:browser-extension`。根 `pnpm test` 仅排除 Executor；其测试使用 `pnpm test:executor` 或聚焦命令。`pnpm dev:executor` 用于开发，Main/Preload/Runtime 改动后重启，Renderer 支持 HMR。构建与检查按[日常重新构建与打包](docs/architecture/executor-delivery.md#日常重新构建与打包)执行，并遵守 [Executor 项目规则](apps/executor/AGENTS.md)。
 
 两个开发命令复用同工作区的隔离实例，使用专用 Host、数据目录与工作区专用 Runtime 端口，不修改正式注册。再次执行 `pnpm dev:executor` 时，优先复用已识别的同工作区开发服务器；如果其他程序占用原生模块，会显示开发启动提示：选择“继续使用已有执行器”可打开当前实例（不会编译新代码）；如需重建，从系统托盘完整退出执行器并停止使用该构建目录的适配器，再点击“重新检查并构建”。“取消”保留当前实例并结束本次启动。关闭窗口可能仅隐藏到托盘，不能代替完整退出。
 

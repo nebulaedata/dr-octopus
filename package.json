@@ -28,7 +28,7 @@
     "cron"
   ],
   "scripts": {
-    "build": "turbo run build --filter=!@octopus/executor",
+    "build": "turbo run build --filter=!@octopus/executor --filter=!@octopus/browser-extension",
     "build:executor": "pnpm --filter @octopus/executor build:installer",
     "build:browser-extension": "turbo run build --filter=@octopus/browser-extension",
     "release": "release-it --only-version",

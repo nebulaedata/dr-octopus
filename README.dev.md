@@ -24,7 +24,7 @@ For compilation only, use `pnpm --filter @octopus/executor build`. To package ex
 
 The Windows MCP command tool is powershell, using system Windows PowerShell 5.1; PortableGit is no longer assembled or bundled. Private Node/Python and search tools remain bundled. Linux/macOS have explicit branches and TODO comments only and remain unsupported. See [ADR-0084](docs/adr/0084-executor-system-shell.md) for the contract and cleanup scope.
 
-Root `pnpm build` and `pnpm test` exclude Executor. Use `pnpm build:executor` / `pnpm test:executor` or focused package commands. `pnpm dev:executor` starts development: restart after Main/Preload/Runtime changes; Renderer supports HMR. Follow the [build and verification sequence](docs/architecture/executor-delivery.md#日常重新构建与打包) and the [Executor project rules](apps/executor/AGENTS.md).
+Root `pnpm build` excludes Executor and the browser extension; use `pnpm build:executor` or `pnpm build:browser-extension` for those delivery builds. Root `pnpm test` excludes Executor; use `pnpm test:executor` or focused package commands for its tests. `pnpm dev:executor` starts development: restart after Main/Preload/Runtime changes; Renderer supports HMR. Follow the [build and verification sequence](docs/architecture/executor-delivery.md#日常重新构建与打包) and the [Executor project rules](apps/executor/AGENTS.md).
 
 ### Browser-extension live debugging
 
