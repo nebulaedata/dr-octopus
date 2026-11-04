@@ -25,4 +25,4 @@
 
 - 开发：[代码规范](./guides/code-development-standards.md) · [Electron 规范](./guides/electron-development-standards.md) · [构建指南](../README.dev.zh-CN.md)
 - 架构：[系统概览](./architecture/overview.md) · [Executor 与浏览器扩展](./architecture/executor.md)
-- 宣传：[产品素材库](./product/product-materials.zh-CN.md) · [技术分享材料](./product/Further-Learning.md)
+- 产品：[发布产物总览（中文）](./product/release-artifacts.zh-CN.md) · [Release artifacts (English)](./product/release-artifacts.md) · [产品素材库](./product/product-materials.zh-CN.md) · [技术分享材料](./product/Further-Learning.md)

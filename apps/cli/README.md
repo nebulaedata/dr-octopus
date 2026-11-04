@@ -25,9 +25,14 @@ Executor 的 package.json 是其产品版本唯一来源，product.ts、进程�
 
 先运行 `npm login`，并通过进程环境或仓库根目录可选的 `.env.publish` 设置 `GITHUB_TOKEN`；Token 需要目标仓库的 Contents 读写权限。进程环境变量优先，CI 可直接注入 Secrets，无需创建 `.env.publish`。该文件已被 `.gitignore` 忽略，不会自动读取开发用的 `.env`。npm 凭据继续由 npm 配置管理，例如 actions/setup-node 配合 NODE_AUTH_TOKEN；发布脚本不会自动写入认证配置。`--dry-run` 仍需 npm 认证，`--help` 和参数错误不要求发布凭据。
 
-```dotenv
-GITHUB_TOKEN=your_github_token
+在仓库根目录复制模板，填入令牌后运行发布命令：
+
+```powershell
+Copy-Item .env.publish.example .env.publish
+pnpm release:publish
 ```
+
+模板见根目录 [.env.publish.example](../../.env.publish.example)。只在本地 `.env.publish` 中填写真实令牌，不要提交该文件。
 
 GitHub 发布配置独立放在 [.release-it.github.json](../../.release-it.github.json)，不会修改版本、提交或 tag，并自动生成 Release notes、识别预发布版本。
 

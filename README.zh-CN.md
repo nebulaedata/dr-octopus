@@ -31,6 +31,8 @@
 
 ## 安装
 
+各渠道的产物、自动发布时机和获取位置见[发布产物总览](docs/product/release-artifacts.zh-CN.md)。
+
 需要 Node.js 22.19.0 或更高版本。
 
 ```sh

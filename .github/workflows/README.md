@@ -89,11 +89,13 @@ GitHub 仓库 → Settings → Secrets and variables → Actions → New reposit
 | 工作流中的 `${{ github.token }}`                  | 不需要，GitHub 自动提供                      | 查询 Release、上传 Docker 安装 ZIP    |
 | 工作流步骤中的 `GH_TOKEN`                         | 不需要，YAML 已从 `${{ github.token }}` 注入 | 供发布辅助脚本和 `gh` 命令使用        |
 
-本地 `.env.publish` 示例（仅为占位符）：
+本地发布可从仓库根目录的 [`.env.publish.example`](../../.env.publish.example) 复制配置：
 
-```dotenv
-GITHUB_TOKEN=YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
+```powershell
+Copy-Item .env.publish.example .env.publish
 ```
+
+只在被 Git 忽略的 `.env.publish` 中填写真实令牌，不要提交该文件。
 
 可以在 GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens** 创建本地发布令牌：选择对应资源所有者，将仓库范围限定为 `nebulaedata/dr-octopus`，授予 **Contents: Read and write**。如果组织要求审批，需完成审批后再使用。该令牌负责 Release API；本地 `git push` 仍使用你已经配置的 Git HTTPS 或 SSH 凭据。参阅 [GitHub Release API 权限](https://docs.github.com/en/rest/releases/releases#create-a-release)。
 

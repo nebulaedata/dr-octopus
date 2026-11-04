@@ -173,6 +173,8 @@ Each new version installs its corresponding runtime dependencies on demand when 
 
 ## Release delivery
 
+For a table of every release artifact, its destination, and prerequisites, see the [release artifacts overview](docs/product/release-artifacts.md).
+
 Release downloads are delivered in stages:
 
 1. The unified publication script selects the repository and Executor version increments, commits both versions and creates their shared repository tag. It then publishes the npm package and creates the matching GitHub Release. Retrying an incomplete publication keeps both versions unchanged.
