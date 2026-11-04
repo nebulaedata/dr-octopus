@@ -207,8 +207,8 @@ test('comma-separated input confirms and displays each deduplicated destination'
   const state = session(['harbor.example.com', true, 'team', 'latest,0.0.19,latest', true]);
   const result = await interactiveSync(syncOptions([]), state.dependencies);
   assert.deepEqual(result.targets, [
-    'harbor.example.com/team/dr-octopus:latest',
     'harbor.example.com/team/dr-octopus:0.0.19',
+    'harbor.example.com/team/dr-octopus:latest',
   ]);
   const confirmation = state.messages.find((message) => message.includes('源：'));
   assert.ok(result.targets.every((target) => confirmation.includes(target)));

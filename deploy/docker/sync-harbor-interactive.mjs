@@ -98,7 +98,7 @@ export async function interactiveSync(options, { ui, login = loginHarbor, sync, 
     await login(selected.registry);
     prompts.log.success('Harbor 登录成功');
     await field('project', 'Harbor 项目名称（需已创建，并有推送权限）');
-    await field('tag', 'Docker Hub 标签（多个用英文逗号分隔，例如 latest,0.0.19）');
+    await field('tag', `Docker Hub 标签（多个用英文逗号分隔，例如 ${selected.tag}）`);
     const args = ['--registry', selected.registry, '--project', selected.project, '--tag', selected.tag];
     const result = await sync(args, {
       signal: controller.signal,

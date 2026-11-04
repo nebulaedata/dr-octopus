@@ -186,8 +186,13 @@ jobs:
           IMAGE_REFERENCE: ${{ steps.release.outputs.reference }}
           LATEST_REFERENCE: ${{ steps.latest.outputs.reference }}
         run: |
-          docker tag "$IMAGE_REFERENCE" "$LATEST_REFERENCE"
-          docker push "$LATEST_REFERENCE"
+          set -euo pipefail
+          digest=$(docker buildx imagetools inspect "$IMAGE_REFERENCE" --format '{{.Manifest.Digest}}')
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
+          repository="${IMAGE_REFERENCE%:*}"
+          docker buildx imagetools create --prefer-index=false --tag "$LATEST_REFERENCE" "$repository@$digest"
+          actual=$(docker buildx imagetools inspect "$LATEST_REFERENCE" --format '{{.Manifest.Digest}}')
+          test "$actual" = "$digest"
 
       - name: Report Docker installation readiness
         env:

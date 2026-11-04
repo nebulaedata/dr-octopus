@@ -165,6 +165,45 @@ export async function syncHarbor(
     if (!/^sha256:[a-f0-9]{64}$/.test(digest)) throw new Error('Source returned an invalid image digest.');
     plans.push({ source: `${image}@${digest}`, target: `${repository}:${tag}`, digest });
   }
+  const latest = plans.find((plan) => plan.target === `${repository}:latest`);
+  const versions = plans.filter((plan) => plan !== latest);
+  if (latest && versions.length) {
+    // Match image config identity, which also pins the ordered uncompressed layer hashes.
+    const configs = new Map();
+    /**
+     * Reads a pinned single-platform manifest to compare image identity across registry formats.
+     */
+    async function configDigest(plan) {
+      if (!configs.has(plan.digest)) {
+        const manifest = JSON.parse(
+          await request([...inspect, plan.source, '--raw'], '正在核对 latest 与版本镜像内容')
+        );
+        if (!/^sha256:[a-f0-9]{64}$/.test(manifest.config?.digest ?? ''))
+          throw new Error('Expected a single-platform image config digest; no Harbor tags were written.');
+        configs.set(plan.digest, manifest.config.digest);
+      }
+      return configs.get(plan.digest);
+    }
+    let canonical;
+    for (const version of versions) {
+      if (
+        version.digest === latest.digest ||
+        (await configDigest(version)) === (await configDigest(latest))
+      ) {
+        canonical = version;
+        break;
+      }
+    }
+    if (!canonical)
+      throw new Error(
+        'Selected versions do not match Docker Hub latest; sync an old version without latest. No Harbor tags were written.'
+      );
+    latest.digest = canonical.digest;
+    // Retag inside Harbor only after the version copy has passed digest verification.
+    latest.source = `${repository}@${canonical.digest}`;
+    plans.splice(plans.indexOf(latest), 1);
+    plans.push(latest);
+  }
   const targets = plans.map((plan) => plan.target);
   const result = { ...plans[0], targets, plans, copied: false };
   log(plans.map((plan) => `Source: ${plan.source}\nDestination: ${plan.target}`).join('\n'));

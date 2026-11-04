@@ -28,7 +28,7 @@
 | `smoke.mjs`                  | 检查版本、启动、Web 和数据持久化                                            |
 | `release.mjs`                | 核对 Release、检查标签、准备安装文件、判断是否允许更新 `latest`；不执行推送 |
 
-`docker/*` 由 Docker 官方维护，运行在 GitHub Actions 平台上。流程采用 Docker 的[推送前测试方案](https://docs.docker.com/build/ci/github-actions/test-before-push/)：两次调用构建组件使用相同的基础镜像摘要、版本参数和构建器；第二次复用缓存并推送。匿名拉取后再次核对镜像 ID，通过后才上传安装包。工作流最后用可直接阅读的 `docker tag` / `docker push` 命令更新 `latest`，并且只有版本判断允许时才执行。
+`docker/*` 由 Docker 官方维护，运行在 GitHub Actions 平台上。流程采用 Docker 的[推送前测试方案](https://docs.docker.com/build/ci/github-actions/test-before-push/)：两次调用构建组件使用相同的基础镜像摘要、版本参数和构建器；第二次复用缓存并推送。匿名拉取后再次核对镜像 ID，通过后才上传安装包。工作流最后在版本判断允许时，读取已验证版本标签的远端摘要，通过 `docker buildx imagetools create --prefer-index=false` 给同一清单添加 `latest`，再核对两个标签的远端摘要完全一致，避免本地拉取再推送造成清单格式或压缩差异。
 
 ## 1. 准备 Docker Hub 账号和公开仓库
 

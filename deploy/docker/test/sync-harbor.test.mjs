@@ -219,9 +219,10 @@ test('comma-separated tags are trimmed and deduplicated', () => {
     assert.throws(() => syncOptions(['--tag', tag]), /comma-separated/);
 });
 
-test('multiple tags resolve before confirmation and preserve their own source digests', async () => {
+test('version is copied first and latest is retagged inside Harbor to the identical digest', async () => {
   const other = `sha256:${'b'.repeat(64)}`;
-  const state = commands([digest, other, '', digest, '', other]);
+  const manifest = JSON.stringify({ config: { digest } });
+  const state = commands([other, digest, manifest, manifest, '', digest, '', digest]);
   let confirmed;
   const result = await syncHarbor(['--project', 'team', '--tag', 'latest, 0.0.19,latest'], {
     ...state.options,
@@ -231,16 +232,35 @@ test('multiple tags resolve before confirmation and preserve their own source di
     },
   });
   assert.equal(result.copied, true);
-  assert.deepEqual(result.targets, [`${target}:latest`, `${target}:0.0.19`]);
+  assert.deepEqual(result.targets, [`${target}:0.0.19`, `${target}:latest`]);
   assert.equal(confirmed.plans.length, 2);
-  assert.deepEqual(
-    state.calls.slice(0, 2).map((command) => command[3]),
-    [`${source}:latest`, `${source}:0.0.19`]
-  );
   const writes = state.calls.filter((command) => command[2] === 'create');
   assert.deepEqual(
     writes.map((command) => command.at(-1)),
-    [`${source}@${digest}`, `${source}@${other}`]
+    [`${source}@${digest}`, `${target}@${digest}`]
+  );
+  assert.ok(result.plans.every((plan) => plan.digest === digest));
+});
+
+test('mismatching latest never promotes an old version or writes Harbor tags', async () => {
+  const other = `sha256:${'b'.repeat(64)}`;
+  const state = commands([
+    digest,
+    other,
+    JSON.stringify({ config: { digest } }),
+    JSON.stringify({ config: { digest: other } }),
+  ]);
+  await assert.rejects(syncHarbor(['--tag', '0.0.14,latest'], state.options), /do not match/);
+  assert.ok(state.calls.every((command) => command[2] === 'inspect'));
+});
+
+test('multiple explicit versions retain independent source digests', async () => {
+  const other = `sha256:${'b'.repeat(64)}`;
+  const state = commands([digest, other, '', digest, '', other]);
+  const result = await syncHarbor(['--tag', '0.0.18,0.0.19'], state.options);
+  assert.deepEqual(
+    result.plans.map((plan) => plan.digest),
+    [digest, other]
   );
 });
 
