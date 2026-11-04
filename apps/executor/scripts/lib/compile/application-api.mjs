@@ -14,6 +14,7 @@ const root = fileURLToPath(new URL('../../../', import.meta.url));
 async function compileApplicationApi() {
   const output = join(root, 'build/tooling/application-api.mjs');
   const exports = [
+    "export { hostBundlePaths, hostBundleSchema } from './src/contracts/browser-host-bundle.ts';",
     "export { developmentRestartExitCode } from './src/contracts/runtime.ts';",
     "export { NativeFileCommit } from './src/runtime/basic/native-file-commit.ts';",
     "export { NodeResources, nodeInventorySchema } from './src/runtime/basic/node-resources.ts';",

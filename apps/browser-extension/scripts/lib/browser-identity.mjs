@@ -3,7 +3,8 @@
  * @description Resolves public browser identities once at build time without exporting unrelated environment values or changing process state.
  */
 import { createHash, createPublicKey } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'dotenv';
 import { z } from 'zod';
@@ -118,6 +119,7 @@ const extensionBuildSchema = z.strictObject({
   profile: z.enum(['sideload', 'store']),
   protocolVersion: z.number().int().min(1).max(1000),
   extensionVersion: bridgeHelloSchema.shape.extensionVersion,
+  extensionBuildId: z.string().regex(/^[a-f0-9]{64}$/),
 });
 /**
  * Validates extension delivery metadata independently of the client's policy and product version.
@@ -138,6 +140,9 @@ export function resolveBrowserExtensionBuild(configuration, profile, extensionVe
     profile,
     protocolVersion: bridgeVersion,
     extensionVersion,
+    extensionBuildId: createHash('sha256')
+      .update(JSON.stringify({ configuration, profile, extensionVersion }))
+      .digest('hex'),
   });
 }
 /**
@@ -165,5 +170,36 @@ export function loadBrowserExtensionBuild({
     profile,
     protocolVersion: bridgeVersion,
     extensionVersion: version,
+    extensionBuildId: extensionSourceDigest(),
   });
+}
+
+/**
+ * Identifies source and dependency inputs for one full build; connection/protocol edits require restarting dev orchestration.
+ */
+export function extensionSourceDigest() {
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const hash = createHash('sha256');
+  /**
+   * Visits deterministic source paths without traversing generated output or dependency trees.
+   */
+  function visit(directory) {
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name, 'en')
+    )) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(path);
+      } else if (entry.isFile() && /\.(tsx?|json|html|css)$/.test(entry.name)) {
+        hash.update(path.slice(root.length)).update(readFileSync(path));
+      }
+    }
+  }
+  visit(join(root, 'src'));
+  visit(join(root, 'entrypoints'));
+  for (const path of ['package.json', 'wxt.config.ts', '../../pnpm-lock.yaml']) {
+    hash.update(readFileSync(join(root, path)));
+  }
+  hash.update(String(bridgeVersion));
+  return hash.digest('hex');
 }

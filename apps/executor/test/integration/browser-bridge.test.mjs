@@ -215,7 +215,7 @@ test(
       assert.deepEqual(before.map((item) => item.browser).sort(), ['chrome', 'edge']);
       const diagnostics = await page.evaluate(() => window.executor.browserDiagnostics());
       assert.equal(diagnostics.ok, true);
-      assert.equal(diagnostics.data.resourcesAvailable, true);
+      assert.equal(diagnostics.data.maintenance.checks.find((item) => item.id === 'source').status, 'pass');
       assert.equal(diagnostics.data.projectRoot, join(data, 'project'));
       const workspace = join(root, 'workspace');
       await mkdir(workspace);

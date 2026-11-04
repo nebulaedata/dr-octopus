@@ -78,7 +78,7 @@ export async function prepareDevelopmentBuild({ build, choose, reuse }) {
  */
 export async function reuseDevelopmentApp(electron, root) {
   await access(join(root, 'dist/main/index.js'));
-  const code = await run(electron, [root]);
+  const code = await run(electron, [root, '--executor-dev']);
   if (code !== 0) {
     throw new Error('已有执行器未能正常打开，请检查运行实例。');
   }

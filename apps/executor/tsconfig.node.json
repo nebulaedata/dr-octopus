@@ -24,6 +24,7 @@
     "src/contracts",
     "scripts",
     "vite.config.ts",
-    "src/maintenance"
+    "src/maintenance",
+    "src/installation"
   ]
 }

@@ -2,6 +2,10 @@
  * @author Codex
  * @description Emits separate Main, sandbox Preload and Utility Runtime artifacts before the Renderer.
  */
+import { createHash } from 'node:crypto';
+import { applicationApi } from '../lib/compile/application-api.mjs';
+import { browserHostName, bridgeVersion } from '@octopus/shared/protocol/browser-bridge';
+import { writeFile } from 'node:fs/promises';
 import { build as bundle } from 'esbuild';
 import { executorTarget } from '../lib/platform.mjs';
 import { build as buildRenderer } from 'vite';
@@ -22,7 +26,7 @@ import { writeBuiltBrowserIdentity } from '../lib/compile/browser-identity.mjs';
 /**
  * Builds executable JavaScript with an explicit loading format per process.
  */
-export async function buildProcesses() {
+export async function buildProcesses(options = {}) {
   executorTarget();
   const root = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -89,7 +93,21 @@ export async function buildProcesses() {
   }
   const nodeHash = await buildNodeInventory(root);
   await emitValidationSchemas(join(root, 'dist/validation-schemas.json'));
+  await copyFile(
+    join(root, 'src/installation/windows/browser-registry.ps1'),
+    join(root, 'dist/setup/browser-registry.ps1')
+  );
   await Promise.all([
+    bundle({
+      absWorkingDir: root,
+      entryPoints: ['src/installation/windows/browser-host-command.ts'],
+      outfile: 'dist/setup/browser-host.cjs',
+      bundle: true,
+      platform: 'node',
+      format: 'cjs',
+      target: 'node24',
+      sourcemap: false,
+    }),
     bundle({
       absWorkingDir: root,
       alias: { yaml: yamlEntry },
@@ -172,6 +190,26 @@ export async function buildProcesses() {
     }),
   ]);
   await writeBuiltBrowserIdentity(browserIdentity);
+  const require = createRequire(import.meta.url);
+  const license = await readFile(join(dirname(require.resolve('zod/package.json')), 'LICENSE'), 'utf8');
+  await writeFile(
+    join(root, 'dist/bridge/LICENSES.txt'),
+    'Browser Host JavaScript dependencies: Zod\n\n' + license
+  );
+  const files = {};
+  for (const path of applicationApi.hostBundlePaths) {
+    files[path] = createHash('sha256')
+      .update(await readFile(join(root, 'dist', path)))
+      .digest('hex');
+  }
+  const inventory = applicationApi.hostBundleSchema.parse({
+    version: applicationApi.executorProduct.version,
+    protocolVersion: bridgeVersion,
+    hostName: options.hostName ?? browserHostName,
+    origins: browserIdentity.allowedOrigins,
+    files,
+  });
+  await writeFile(join(root, 'dist/host-bundle.json'), JSON.stringify(inventory));
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await buildProcesses();

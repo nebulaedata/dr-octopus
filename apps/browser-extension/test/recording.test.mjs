@@ -470,6 +470,47 @@ test('atomic batch ACK is idempotent and binds document, epoch and source URL', 
   assert.equal((await f.send({ ...batch, batch: 3 }, f.page())).ok, false);
 });
 
+test('batch preserves each capture route after same-document navigation and redacts URLs', async () => {
+  const f = fixture();
+  const session = await f.start();
+  f.tabs.get(1).url = 'https://orders.example.com/detail';
+  const batch = {
+    type: 'recorder.batch',
+    sessionId: session.id,
+    epoch: 1,
+    batch: 1,
+    events: [
+      { ...f.fact(), url: 'https://orders.example.com/list?token=SECRET#private' },
+      { ...f.fact(), url: 'https://orders.example.com/detail/123456?token=SECRET' },
+    ],
+  };
+  assert.equal((await f.send(batch, f.page())).ok, true);
+  assert.equal((await f.send(batch, f.page())).ok, true);
+  assert.deepEqual(
+    f.events.map((event) => event.url),
+    ['https://orders.example.com/list', 'https://orders.example.com/detail/:value']
+  );
+});
+
+test('invalid or foreign fact URLs reject the entire batch without advancing its ACK', async () => {
+  for (const url of ['', '/relative', 'not-a-url', 'chrome://settings', 'https://foreign.test/list']) {
+    const f = fixture();
+    const session = await f.start();
+    const batch = {
+      type: 'recorder.batch',
+      sessionId: session.id,
+      epoch: 1,
+      batch: 1,
+      events: [f.fact(), { ...f.fact(), url }],
+    };
+    assert.equal((await f.send(batch, f.page())).error, 'RECORDING_FORBIDDEN');
+    assert.equal(f.events.length, 0);
+    assert.equal(f.sessions.get(session.id).pages[0].lastBatch, 0);
+    assert.equal((await f.send({ ...batch, events: [f.fact()] }, f.page())).ok, true);
+    assert.equal(f.events.length, 1);
+  }
+});
+
 test('failed persistence never ACKs or increments committed producer progress', async () => {
   const f = fixture();
   const session = await f.start();

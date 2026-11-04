@@ -2,7 +2,10 @@
  * @author Codex
  * @description Owns the executor window, tray, trusted UI protocol and independent Runtime shutdown.
  */
+import { browserDevelopment } from '../../../../scripts/browser-development.mjs';
 import { app, BrowserWindow, Menu, nativeTheme, net, protocol, session, Tray } from 'electron';
+import { readFile } from 'node:fs/promises';
+import { hostBundleSchema } from '../contracts/browser-host-bundle';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isAbsolute, relative, resolve } from 'node:path';
@@ -41,8 +44,9 @@ if (testMode) {
   app.setPath('userData', testData);
 }
 const devMode = !app.isPackaged && process.argv.includes('--executor-dev');
-const uiUrl = devMode ? 'http://127.0.0.1:5178/' : 'app://ui/index.html';
-const uiOrigin = devMode ? 'http://127.0.0.1:5178' : 'app://ui';
+const development = devMode ? browserDevelopment(resolve(app.getAppPath(), '../..')) : null;
+const uiOrigin = development ? `http://127.0.0.1:${development.rendererPort}` : 'app://ui';
+const uiUrl = development ? `${uiOrigin}/` : 'app://ui/index.html';
 const windows = new Set<BrowserWindow>();
 const executionRoot = executionResourceRoot(app.isPackaged, process.resourcesPath, app.getAppPath());
 const iconPath = resolve(executionRoot, 'assets/brand/app.ico');
@@ -51,7 +55,8 @@ if (!testMode) {
   if (selectedData && !isAbsolute(selectedData)) {
     throw new Error('The explicit user data directory must be absolute.');
   }
-  const runtimeData = selectedData || resolve(app.getPath('appData'), 'Octopus Executor');
+  const runtimeData =
+    development?.userData || selectedData || resolve(app.getPath('appData'), 'Octopus Executor');
   mkdirSync(runtimeData, { recursive: true });
   app.setPath('userData', runtimeData);
 }
@@ -62,8 +67,9 @@ const runtime = new RuntimeManager(
   resolve(executionRoot, 'runtime/index.cjs'),
   app.getPath('userData'),
   resolve(executionRoot, 'native/file-commit.node'),
-  testMode ? 0 : 19876,
-  executorProjectRoot(homedir(), app.getPath('userData'), testMode || !!selectedData)
+  development?.runtimePort ?? (testMode ? 0 : 19876),
+  executorProjectRoot(homedir(), app.getPath('userData'), testMode || devMode || !!selectedData),
+  development?.runtimePort
 );
 let tray: Tray | null = null;
 let indicator: ComputerUseIndicator | null = null;
@@ -357,7 +363,7 @@ if (!app.requestSingleInstanceLock()) {
       });
       session.defaultSession.setPermissionCheckHandler(() => false);
       const overlayUrl = devMode
-        ? 'http://127.0.0.1:5178/computer-use-overlay.html'
+        ? `${uiOrigin}/computer-use-overlay.html`
         : 'app://ui/computer-use-overlay.html';
       indicator = new ComputerUseIndicator(overlayUrl);
       try {
@@ -376,6 +382,12 @@ if (!app.requestSingleInstanceLock()) {
         runtime,
         new NativeFileCommit(resolve(executionRoot, 'native/file-commit.node'))
       );
+      const hostBundle = hostBundleSchema.parse(
+        JSON.parse(await readFile(resolve(executionRoot, 'host-bundle.json'), 'utf8'))
+      );
+      if (hostBundle.hostName !== (development?.hostName ?? 'com.octopus.executor.browser')) {
+        throw new Error('Browser Host build channel differs; rebuild this launch mode.');
+      }
       unregisterIpc = registerDesktopIpc(runtime, windows, uiOrigin, !testMode, requestRestart, recovery);
       const settings = await runtime.readSettings();
       nativeTheme.themeSource = settings.ok ? settings.data.themeSource : 'system';

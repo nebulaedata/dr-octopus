@@ -16,7 +16,7 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 | [Browser](../../docs/architecture/executor-browser.md)          | Bridge、页面身份、工具、反馈与恢复       |
 | [Computer](../../docs/architecture/executor-computer.md)        | 后端、捕获/输入、彩屏与独立电脑矩阵      |
 | [交付](../../docs/architecture/executor-delivery.md)            | 固定资源、打包、离线验收与门禁           |
-| [验证](../../docs/poc/executor-validation.md)          | 实际通过、原始失败与未验证项             |
+| [验证](../../docs/poc/executor-validation.md)                   | 实际通过、原始失败与未验证项             |
 | [签名发布 SOP](RELEASE.md)                                      | 证书、签名范围、清单顺序、发行验证与分发 |
 
 用户操作见 [INSTALLATION.md](INSTALLATION.md)。用户已确认边界优先于旧候选与示例，冲突应修正文档，不能因此扩大产品范围。
@@ -43,7 +43,7 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 
 ## 当前产品不变量
 
-- 业务持久化统一使用 `~/.dr-octopus/executor`：settings.json、device、connections、tasks、browser、file-operations、shell、transfers、settings-recovery。AppData 仅由 Electron 管理缓存；可丢弃搜索材料位于 os.tmpdir() 的实例私有目录。同卷发布暂存跟随目标卷。独立实例/测试使用 userData/project，不导入旧路径。Basic 文件与搜索工具按完整路径排除业务根和临时根；PowerShell 仍按当前用户权限运行。传输限额只约束执行体磁盘，重启生效。见 [ADR-0083](../../docs/adr/0083-executor-project-storage.md)。
+- 业务持久化统一使用 `~/.dr-octopus/executor`：settings.json、device、connections、tasks、browser、browser-host、file-operations、shell、transfers、settings-recovery。AppData 仅由 Electron 管理缓存；可丢弃搜索材料位于 os.tmpdir() 的实例私有目录。同卷发布暂存跟随目标卷。独立实例/测试使用 userData/project，不导入旧路径。开发 userData 使用 `~/.dr-octopus/executor-dev/<workspace-key>/electron`，Profile 使用同 key 下的 browser/<browser>；不放入构建缓存。Basic 文件与搜索工具按完整路径排除业务根和临时根；PowerShell 仍按当前用户权限运行。传输限额只约束执行体磁盘，重启生效。见 [ADR-0083](../../docs/adr/0083-executor-project-storage.md)。
 
 - 授权绑定设备客户端与能力，不选择工作区。cwd 是执行上下文，Browser/Computer 不依赖文件目录；操作系统、路径、任务所有者、能力与撤销仍校验。
 - 创建授权与复制/可选下载分离，Main 加密持有凭据，Renderer 只见占位符和安全摘要，不取得 Bearer、命令或通用 IPC。
@@ -56,7 +56,7 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 - Computer 彩屏覆盖任务/思考间隙，未知持续提示；多屏透明渐变、连续流动、reduced-motion，不恢复逐调用闪退/实色边条。上游负责实际输入控制权与可见提示；Executor 彩带允许截图入镜。
 - Computer 活动期间，本机无修饰键的实体 Esc 与托盘停止入口取消当前桌面任务并关闭固定后端；忽略注入键、重复按下和旧活动/Runtime 回调。确认后台退出并收束在途调用后才清除彩屏，未知效果记录不改写。明确结束旧任务且无其他能力阻断后，可通过新 task_start 创建后端世代；不自动恢复控制。
 - 界面为状态、连接、设置三页，原生 Window Controls Overlay 与默认控件尺寸；关闭默认系统托盘，可选任务栏或完整退出，保存偏好保留。不恢复底部按钮或废弃最小化 IPC。
-- Host 自动维护只迁移当前完整身份集合匹配的本产品注册，不兼容旧身份集合，未知/丢失 manifest 拒绝，旧卸载只删仍属自己的注册；授权、桥接启用、扩展更新独立。
+- Host 维护使用 ADR-0090 的固定入口、完整版本包与事务日志。安装版/解压版启动自动修复已知自有配置；未知注册、同版不同构建或降级须基于最新诊断明确确认。维护不启用桥接、不改变授权，旧所有者不能自动抢回注册或卸载新所有者。开发通道使用工作区专用 Host、数据与 Profile。
 - 远端智能体使用已确认的可信内网/VPN 显式 HTTP 与独立 Bearer，默认回环，保存网络设置后完整重启；不自动改防火墙，不公开桥接路由。
 
 ## 构建与交付规则
@@ -67,7 +67,7 @@ apps/executor 是 Windows 本地工具执行器，不运行模型、Pi 会话/CL
 - Browser 身份只在构建期从插件 browser-identity.json 唯一解析，两个商店 ID 在所有模式下必填；客户端不读取根 .env 或身份环境变量，将同一精确来源集合编入 launcher、Host、Runtime 与注册脚本；运行时不读取 .env 或接受身份覆盖。生成模块随构建缓存恢复，不手工改生成文件。
 - 客户端校验核对当前身份策略 fingerprint、协议版本和已完成构建的消费者摘要，不读取插件输出；策略不含插件 profile 或产品版本。打包另核对所附插件各渠道身份、协议、产物模式和 manifest 版本；不要求两端完整身份指纹相同。未知身份、不兼容协议或产物记录失配即失败。正式签名若改变消费者字节，在受控签名步骤之后重新生成身份摘要，再生成最终 runtime-manifest。
 - package:acceptance 只打包已有输出，不自动 build 或准备缺失资源；每次生成 release/<version>-unsigned-<UUID>/ 下的新 EXE、ZIP、清单和验收工具。保留既有产物，不把源码/文档更新当作旧包已更新。
-- 根 build:executor 调用本应用 build:installer，一键编排缺失资源装配、shared/插件/客户端构建及 package:acceptance；任一步失败即停止。仅该交付编排入口可按需调用 assemble 命令，应用级 build/dev/start 保持不下载资源，已有资源不自动覆盖或修复。
+- 根 build:executor 调用本应用 build:installer，一键编排缺失资源装配、shared/插件/客户端构建及 package:acceptance；随包本地插件强制使用侧载身份，商店包独立构建分发；任一步失败即停止。仅该交付编排入口可按需调用 assemble 命令，应用级 build/dev/start 保持不下载资源，已有资源不自动覆盖或修复。
 - 产品版本以 package.json 为唯一来源，src/contracts/product.ts 静态引用并在构建时内联；构建/打包不升版。仓库统一发版入口在提交与 Tag 前更新该版本，恢复发布保持版本不变；应用 ID/数据目录/Host 不随展示名改变。
 - 固定私有 Node/Python、搜索、原生组件、品牌和许可随包；普通 build/start 不下载资源，Node 只用 assemble:node。Shell 按 [ADR-0084](../../docs/adr/0084-executor-system-shell.md) 使用固定系统 Windows PowerShell 5.1，不内置 PortableGit、不通过 PATH 选择解释器。业务子命令可使用经过筛选的本机 PATH；Linux/macOS 仅显式 if-else、注释与未实现错误，不宣称已支持。
 - Node 清单从验证归档生成并编译摘要，Computer 清单只供构建/打包；最终 runtime-manifest 在 PE/Fuse 修改后生成，不在运行时重建信任锚。

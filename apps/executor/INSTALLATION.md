@@ -8,7 +8,7 @@
 
 安装程序无需管理员权限，安装到当前用户目录，创建快捷方式并配置 Chrome/Edge 连接组件；不下载运行环境、不启用桥接、不创建授权。ZIP 必须完整解压到稳定的可写目录，运行 Dr.Octopus Executor.exe；解压版不创建快捷方式。
 
-Runtime 启动成功后，客户端自动维护当前资源/数据目录的 Host 注册，可迁移已识别的本产品旧注册；未知、丢失 manifest 或不可写目录会报错。旧版卸载只删除仍指向自身的注册，不影响新安装。注册成功不表示 Worker 已握手；此维护不迁移授权数据或更新已加载扩展。
+安装版和完整解压版在 Runtime 启动后均自动配置浏览器连接。连接组件存入独立受管目录，删除旧下载目录不会删除当前 Host。组件或自有注册损坏时自动修复；失败后在连接页选择“修复浏览器连接”。注册冲突或降级会先展示确认，确认前不覆盖。高级诊断分别检查注册、策略、manifest 和文件完整性；注册通过不表示插件已握手，也不改变授权或已加载扩展。
 
 正式业务数据保存于用户主目录 `.dr-octopus/executor`：settings.json 为设置，device 为设备身份，connections 为加密凭据和客户端配置，tasks 为授权及任务历史，browser 为桥接记录，file-operations、shell、transfers、settings-recovery 为操作记录和恢复材料。AppData 只保留 Electron 缓存；可丢弃搜索材料使用系统临时目录。用于原子提交的暂存仍放在目标同卷目录。卸载保留正式业务数据，销毁凭据需明确撤销授权。移动 ZIP 或变更连接配置位置后需重新复制 stdio 配置。
 
@@ -130,15 +130,15 @@ curl --fail --show-error --output "/workspace/report.part" \
 & './Dr.Octopus Executor.exe' --user-data-dir "$env:APPDATA/Octopus Executor Device-0.0.1"
 ```
 
-Host 必须对应同一 project 业务目录。MSIX 启动可能有 AppData 视图，客户端/脚本按目录句柄解析实际路径，不为“找不到目录”删除来源、登录或 ACL 检查。
+Host 必须对应同一 project 业务目录；维护入口统一解析物理路径，不为“找不到目录”删除来源、登录或 ACL 检查。
 
 高级手动配置先启动该目录的程序，再从所选产品根执行：
 
 ```powershell
-powershell.exe -NoProfile -NonInteractive -File './resources/executor/setup/register-browser-host.ps1' install './resources/executor' "$env:APPDATA/Octopus Executor Device-0.0.1/project" -MigrateProduct
+powershell.exe -NoProfile -NonInteractive -File './resources/executor/setup/register-browser-host.ps1' install './resources/executor' "$env:APPDATA/Octopus Executor Device-0.0.1/project"
 ```
 
-替换为实际数据目录。只迁移已识别本产品，未知注册拒绝；开发 dist 的路径不同，以开发文档为准。
+替换为实际数据目录。命令只自动维护已知自有配置。未知注册请使用应用中的修复入口确认并保留备份；开发通道使用独立 Host，以开发文档为准。
 
 ## 升级、恢复与验收
 
@@ -148,7 +148,7 @@ powershell.exe -NoProfile -NonInteractive -File './resources/executor/setup/regi
 
 若安装程序报告 Browser Host 注册失败，先保存弹窗中的退出码、错误摘要及 Diagnostic log 指向的日志。日志包含安装/数据路径和注册脚本输出，不包含授权 token；分享前可遮盖个人目录名。旧验收包没有这些诊断信息，需使用独立验收工具中的 diagnose-browser-host.ps1 检查注册。
 
-注册仍指向已移动或删除的解压目录时，旧 native-host.json 可能已经不存在。此时无法确认完整来源身份，安装程序会拒绝自动覆盖。优先恢复旧目录；确认注册已经失效后，先导出备份，再显式移除 Chrome/Edge 中对应的单个 com.octopus.executor.browser 注册键，然后重试安装。不要删除整个 NativeMessagingHosts 分支、正式业务目录或其他产品注册，也不要用新内容伪造旧 manifest 来绕过身份检查。中文路径受支持，注册与诊断统一按 UTF-8 读取 JSON。
+遇到旧目录已删除的残留注册，打开执行器的“高级诊断”查看各浏览器的实际路径，再点击“修复浏览器连接”。应用会展示替换目标并请求一次确认，备份原注册后发布新入口，不要求使用 regedit。未知注册未经确认不会覆盖；企业策略或权限拒绝需要管理员处理。不要伪造旧 manifest 或删除整个 NativeMessagingHosts 分支。
 
 独立 acceptance-kit 提供预检、完整 ZIP 清单核验、同用户备份恢复、Host 只读诊断、跨电脑只读探针。输出为新目录/报告，失败保留原件和部分材料；备份不含设备文件、外部配置或安装包，不是实时快照或跨用户迁移。
 

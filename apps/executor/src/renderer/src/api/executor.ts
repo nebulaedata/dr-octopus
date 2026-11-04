@@ -68,9 +68,19 @@ export async function setBrowserEnabled(enabled: boolean): Promise<AccessSnapsho
 export async function browserDiagnostics() {
   const reply = browserDiagnosticsSchema.parse(await desktop().browserDiagnostics());
   if (!reply.ok) {
-    throw new Error(reply.message);
+    throw Object.assign(new Error(reply.message), { code: reply.code });
   }
   return reply.data;
+}
+
+/**
+ * Copies Main's diagnostic codes and build identities without exposing user paths in the exported text.
+ */
+export async function copyBrowserDiagnostics(): Promise<void> {
+  const reply = desktopActionResponseSchema.parse(await desktop().copyBrowserDiagnostics());
+  if (!reply.ok) {
+    throw new Error(reply.message);
+  }
 }
 
 /**

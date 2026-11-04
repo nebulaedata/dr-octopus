@@ -38,6 +38,7 @@ export const popupStatusSchema = z.strictObject({
   code: z.string().max(64),
   toolsReady: z.boolean(),
   installationId: z.uuid().nullable(),
+  lastConnectedAt: z.iso.datetime().nullable().default(null),
   lastFailure: bridgeFailureSchema.nullable().default(null),
 });
 export type PopupStatus = z.infer<typeof popupStatusSchema>;
@@ -64,6 +65,12 @@ export function statusDescription(status: PopupStatus): string {
   }
   if (status.code === 'RUNTIME_OFFLINE') {
     return 'Executor 服务未运行，请打开客户端启动服务。';
+  }
+  if (status.code === 'HOST_BOOTSTRAP_UNAVAILABLE') {
+    return '执行器连接信息暂不可用，请打开 Executor 查看诊断。';
+  }
+  if (status.code === 'HOST_COMPONENT_FAILED') {
+    return '本机连接组件未能启动，请在 Executor 中修复浏览器连接。';
   }
   if (status.code === 'native_host_unavailable') {
     return '无法连接本机服务，请检查 Executor 与浏览器 Host 注册。';

@@ -97,7 +97,8 @@ export class RuntimeManager {
     private readonly userData: string,
     private readonly nativePath: string,
     private port = 19876,
-    readonly projectRoot = join(userData, 'project')
+    readonly projectRoot = join(userData, 'project'),
+    private readonly developmentPort?: number
   ) {}
 
   /**
@@ -146,16 +147,16 @@ export class RuntimeManager {
           toolPolicies: settings.readToolPolicies(),
           device: { ...(this.activeDevice ?? this.identity!.read()) },
           deviceName: this.identity!.read().deviceName,
-          port: saved.port,
-          networkAddress: saved.networkAddress,
+          port: this.developmentPort ?? saved.port,
+          networkAddress: this.developmentPort === undefined ? saved.networkAddress : null,
           closeBehavior: saved.closeBehavior,
           themeSource: saved.themeSource,
           transfer: saved.transfer,
           pendingRestart:
             (saved.saved &&
               (JSON.stringify(saved.transfer) !== JSON.stringify(this.activeTransfer) ||
-                saved.port !== this.port ||
-                saved.networkAddress !== this.networkAddress ||
+                (this.developmentPort === undefined &&
+                  (saved.port !== this.port || saved.networkAddress !== this.networkAddress)) ||
                 (!!this.activeDevice &&
                   this.identity!.read().deviceName !== this.activeDevice.deviceName))) ||
             JSON.stringify(selectedPolicyTools(settings.readToolPolicies()).sort()) !==
@@ -197,6 +198,16 @@ export class RuntimeManager {
    * Persists preferences and revision-checked next-start policies in one publication without changing active tasks.
    */
   async saveSettings(input: SettingsInput): Promise<SettingsResponse> {
+    if (
+      this.developmentPort !== undefined &&
+      ((input.port !== undefined && input.port !== this.developmentPort) || input.networkAddress)
+    ) {
+      return {
+        ok: false,
+        code: 'INVALID_REQUEST',
+        message: '开发实例使用工作区专用回环端口，请保留当前地址设置',
+      };
+    }
     if (this.savingSettings) {
       return { ok: false, code: 'UNAVAILABLE', message: '设置正在保存，请稍后重试' };
     }
@@ -292,10 +303,12 @@ export class RuntimeManager {
           throw new Error('Runtime start was stopped.');
         }
         const saved = settings.read();
-        if (saved.saved) {
+        if (this.developmentPort !== undefined) {
+          this.port = this.developmentPort;
+        } else if (saved.saved) {
           this.port = saved.port;
         }
-        this.networkAddress = saved.networkAddress;
+        this.networkAddress = this.developmentPort === undefined ? saved.networkAddress : null;
         this.activeDevice = this.identity!.read();
         this.activeTransfer = saved.transfer;
         this.activeToolPolicies = settings.readToolPolicies();
@@ -404,19 +417,24 @@ export class RuntimeManager {
       child.on('message', (message: unknown) => {
         const open = skillDirectoryRequestSchema.safeParse(message);
         if (open.success) {
-          if (this.child !== child || this.snapshot.state !== 'ready') {return;}
+          if (this.child !== child || this.snapshot.state !== 'ready') {
+            return;
+          }
           const command = open.data;
           const files = new BrowserSkillFiles(new NativeFileCommit(this.nativePath), this.projectRoot);
           void files
             .directoryPath(command.installationId, command.skillId)
             .then(async (path) => {
-              if (this.child !== child || this.snapshot.state !== 'ready') {return false;}
+              if (this.child !== child || this.snapshot.state !== 'ready') {
+                return false;
+              }
               return (await shell.openPath(path)) === '';
             })
             .catch(() => false)
             .then((opened) => {
-              if (this.child === child)
-                {child.postMessage({ type: 'skill-directory.result', requestId: command.requestId, opened });}
+              if (this.child === child) {
+                child.postMessage({ type: 'skill-directory.result', requestId: command.requestId, opened });
+              }
             });
           return;
         }

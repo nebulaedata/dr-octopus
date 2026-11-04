@@ -1,6 +1,6 @@
 # Executor 构建、交付与离线验收
 
-产品为 Dr.Octopus Executor 0.0.1，目标 Windows x64，当前只交付未签名验收安装程序和 ZIP。新构建已按用户决定启用 Computer 固定受管入口，独立电脑、跨电脑及正式发行验收尚未完成；现有旧安装包不会随源码更新。
+产品版本以 apps/executor/package.json 与构建清单为准，目标 Windows x64，当前只交付未签名验收安装程序和 ZIP。新构建已按用户决定启用 Computer 固定受管入口，独立电脑、跨电脑及正式发行验收尚未完成；现有旧安装包不会随源码更新。
 
 Windows 命令执行使用系统 Windows PowerShell 5.1，不装配或分发 PortableGit；Linux/macOS 仅声明未实现分支。实现契约见仓库 docs/adr/0084-executor-system-shell.md，实际验收和新包身份以验证记录为准，既有旧包不更新。Node/Python 等其他私有资源不随该替换删除。
 
@@ -24,6 +24,8 @@ Windows 命令执行使用系统 Windows PowerShell 5.1，不装配或分发 Por
 私有运行资源位于实际 resources/executor，UI 位于完整性校验的 ASAR；私有执行资源不从 ASAR、系统 PATH、用户环境或临时下载取得。系统 Shell 是明确例外：固定系统路径选择 Windows PowerShell，业务子命令可使用筛选后的本机 PATH。运行时不编译原生插件。私有 Python 使用固定配置，comtypes 包标记由原版库在构建期初始化并按固定摘要入清单，运行期类型包装器在内存生成，不修改第三方源码或在用户缓存中生成代码；发行依赖与许可闭包不能因当前未调用某后端而随意裁剪。
 
 Computer 启动不做资源完整性预检；构建与打包仍核验资源。Node 从验证过的原始归档生成清单，将其摘要编译进 Runtime，启动验证完整资源目录、每次命令复查入口，不从已安装目录重建信任锚，也不保证整个目录在恶意同用户修改下原子不变。
+
+Browser Host 构建生成 host-bundle.json，覆盖 launcher、Host JavaScript、文件原语、私有 Node、许可证及维护入口；打包核对版本、协议、通道和全部列举字节。正式包拒绝工作区 dev Host。安装与解压启动共用事务维护，稳定入口位于业务根 browser-host/registration，完整版本位于 browser-host/versions；用户流程见产品 INSTALLATION.md，设计见 ADR-0090。对原生组件执行正式签名后，必须在可信签名流程中重新生成 Host 清单，再生成最终产品清单；当前仍是 unsigned 验收，不能把开发测试当作签名交付。
 
 ## 开发构建
 

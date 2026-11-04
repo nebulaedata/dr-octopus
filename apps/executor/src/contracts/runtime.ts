@@ -12,6 +12,7 @@ import type {
   ClientConfigurationActionResponse,
 } from './client-configuration';
 import { z } from 'zod';
+import { browserMaintenanceSchema } from './browser-maintenance';
 import type { ToolPoliciesResponse } from './tool-policy';
 import { listenFailureSchema } from './listen-failure';
 import type { MaintenanceAction, MaintenanceResponse } from './maintenance';
@@ -39,6 +40,8 @@ export const ipcChannels = {
   copyEndpoint: 'executor:connection:copy-endpoint',
   setBrowserEnabled: 'executor:browser:enable',
   browserDiagnostics: 'executor:browser:diagnostics',
+  copyBrowserDiagnostics: 'executor:browser:copy-diagnostics',
+  browserMaintenanceChanged: 'executor:browser:maintenance-changed',
   configureBrowserHost: 'executor:browser:configure-host',
   openBrowserExtensionFolder: 'executor:browser:open-extension-folder',
 } as const;
@@ -122,10 +125,15 @@ export const browserDiagnosticsSchema = z.discriminatedUnion('ok', [
     data: z.strictObject({
       resourceRoot: z.string().max(30000),
       projectRoot: z.string().max(30000),
-      resourcesAvailable: z.boolean(),
+      maintenance: browserMaintenanceSchema,
+      lastError: z.string().max(100).nullable(),
     }),
   }),
-  z.strictObject({ ok: z.literal(false), message: z.string().max(200) }),
+  z.strictObject({
+    ok: z.literal(false),
+    code: z.enum(['FORBIDDEN', 'BUSY', 'UNAVAILABLE']),
+    message: z.string().max(200),
+  }),
 ]);
 export type BrowserDiagnosticsResponse = z.infer<typeof browserDiagnosticsSchema>;
 
@@ -158,6 +166,14 @@ export interface ExecutorDesktopApi {
    * Reports fixed resource presence and local installation paths, never bootstrap contents or credentials.
    */
   browserDiagnostics(): Promise<BrowserDiagnosticsResponse>;
+  /**
+   * Copies bounded diagnostic codes and build identities, excluding local paths and credentials.
+   */
+  copyBrowserDiagnostics(): Promise<DesktopActionResponse>;
+  /**
+   * Subscribes to maintenance completion without receiving credentials or filesystem data.
+   */
+  onBrowserMaintenanceChanged(listener: () => void): () => void;
   /**
    * Persists explicit consent for browser bridge connections without enabling browser tools.
    */

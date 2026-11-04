@@ -33,13 +33,14 @@ Run from the repository root:
 ```powershell
 pnpm dev:browser-extension          # Chrome
 pnpm dev:browser-extension -b edge  # Edge
+pnpm dev:browser-extension --extension-only # Reuse a separately started workspace Executor
 ```
 
-See the [browser-extension development and debugging guide (Chinese)](apps/browser-extension/README.dev.zh-CN.md) for loading the development extension, debugging Popup/Worker/content scripts, hot reload behavior, and troubleshooting.
+The command starts the workspace-isolated Executor and an installed browser with its own Profile. Development data lives outside build caches, and dev always uses the validated sideload identity. See the [browser-extension development and debugging guide (Chinese)](apps/browser-extension/README.dev.zh-CN.md) for loading the development extension, debugging Popup/Worker/content scripts, hot reload behavior, and troubleshooting.
 
 ### Browser-extension builds
 
-For the extension alone, run the first two commands above. Its `build` script builds both WXT targets, then adds dependency licenses. Complete outputs are `apps/browser-extension/.output/chrome-mv3` and `.output/edge-mv3`; do not distribute a partial target or omit licenses.
+For the extension alone, run `pnpm build:browser-extension`. Its `build` script builds both WXT targets, then adds dependency licenses. Complete outputs are `apps/browser-extension/.output/chrome-mv3` and `.output/edge-mv3`; do not distribute a partial target or omit licenses.
 
 Use the [extension ZIP procedure](apps/browser-extension/RELEASE.md#4-构建检查并生成提交-zip) to archive successful builds outside `.output`. After updating the extension, reload the complete directory in the browser; rebuild Executor packaging when distributing its bundled extension copies. Verification and delivery constraints belong in the [extension project rules](apps/browser-extension/AGENTS.md).
 

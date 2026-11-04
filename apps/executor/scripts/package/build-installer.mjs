@@ -31,7 +31,7 @@ async function exists(path) {
 /**
  * Runs pnpm without shell interpolation and stops the pipeline on any failed or interrupted child.
  */
-async function run(args) {
+async function run(args, environment = {}) {
   const cli = process.env.npm_execpath;
   if (!cli) {
     throw new Error('Run this command through pnpm build:executor.');
@@ -40,7 +40,7 @@ async function run(args) {
   await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [cli, ...args], {
       cwd: repository,
-      env: process.env,
+      env: { ...process.env, ...environment },
       shell: false,
       windowsHide: true,
       stdio: 'inherit',
@@ -66,7 +66,9 @@ async function buildInstaller() {
     throw new Error('--output-root must be a nonempty directory.');
   }
   const executor = ['--filter', '@octopus/executor'];
-  await run(['exec', 'turbo', 'run', 'build', '--filter=@octopus/browser-extension']);
+  await run(['exec', 'turbo', 'run', 'build', '--filter=@octopus/browser-extension'], {
+    BROWSER_IDENTITY_PROFILE: 'sideload',
+  });
   if (!process.env.EXECUTOR_NODE_HEADERS) {
     const defaultHeaders = join(homedir(), 'AppData/Local/node-gyp/Cache/24.20.0');
     const localHeaders = join(root, 'build/node-headers-cache/node-v24.20.0');

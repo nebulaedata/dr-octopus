@@ -1,16 +1,18 @@
 /**
  * @author Codex
- * @description Adapts one fixed browser Native Messaging stream to the existing authenticated Runtime connection endpoint.
+ * @description Adapts finite Native messages and read-only maintenance probes to the authenticated Runtime without creating probe tool sessions.
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join, isAbsolute } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
   extensionMessageSchema,
   hostMessageSchema,
   bridgeFrameLimit,
+  bridgeVersion,
 } from '@octopus/shared/protocol/browser-bridge';
+import { hostBundleSchema } from '../contracts/browser-host-bundle';
 import { NativeFileCommit } from '../runtime/basic/native-file-commit';
 import { readBootstrap } from '../runtime/browser/bridge-store';
 import type { BridgeBootstrap } from '../runtime/browser/bridge-store';
@@ -55,7 +57,28 @@ async function bootstrap(): Promise<BridgeBootstrap> {
  * Starts no Runtime and executes no actions; a dead pipe or failed long poll ends this owned connection.
  */
 async function main(): Promise<void> {
-  const record = await bootstrap();
+  const bundle = hostBundleSchema.parse(
+    JSON.parse(await readFile(join(__dirname, '..', 'host-bundle.json'), 'utf8'))
+  );
+  const bundleId = createHash('sha256').update(JSON.stringify(bundle)).digest('hex');
+  if (bundle.protocolVersion !== bridgeVersion) {
+    await writeFrame(process.stdout, { type: 'error', requestId: null, code: 'VERSION_INCOMPATIBLE' });
+    return;
+  }
+  let record: BridgeBootstrap;
+  try {
+    record = await bootstrap();
+  } catch (error: unknown) {
+    const componentFailed =
+      error && typeof error === 'object' && 'code' in error && error.code === 'NATIVE_BACKEND_UNAVAILABLE';
+    await writeFrame(process.stdout, {
+      type: 'error',
+      requestId: null,
+      code: componentFailed ? 'HOST_COMPONENT_FAILED' : 'HOST_BOOTSTRAP_UNAVAILABLE',
+    });
+    process.exitCode = 1;
+    return;
+  }
   const controller = new AbortController();
   let connectionId: string | null = null;
   let writing = Promise.resolve();
@@ -70,16 +93,19 @@ async function main(): Promise<void> {
    * Pins all requests to the bootstrap endpoint with fixed role credentials, finite bytes and no redirects.
    */
   const request = async (method: string, body?: unknown): Promise<unknown> => {
+    const probe = body && typeof body === 'object' && 'type' in body && body.type === 'probe';
     const response = await fetch(record.endpoint, {
       method,
       redirect: 'error',
-      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(probe ? 4000 : 15000)]),
       headers: {
         Authorization: `Bearer ${record.credential}`,
         'Content-Type': 'application/json',
         'X-Octopus-Role': 'native-browser-host',
         'X-Octopus-Origin': process.argv[2]!,
         'X-Octopus-Login': record.loginIdentity,
+        'X-Octopus-Host-Build': bundleId,
+        'X-Octopus-Host-Protocol': String(bridgeVersion),
         ...(connectionId ? { 'X-Octopus-Connection': connectionId, 'X-Octopus-Request': randomUUID() } : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
@@ -126,7 +152,34 @@ async function main(): Promise<void> {
       return;
     }
     for await (const value of readFrames(process.stdin)) {
-      const message = extensionMessageSchema.parse(value);
+      if (
+        value &&
+        typeof value === 'object' &&
+        'type' in value &&
+        value.type === 'hello' &&
+        'version' in value &&
+        value.version !== bridgeVersion
+      ) {
+        await send({ type: 'error', requestId: null, code: 'VERSION_INCOMPATIBLE' });
+        return;
+      }
+      const parsed = extensionMessageSchema.safeParse(value);
+      if (!parsed.success) {
+        await send({ type: 'error', requestId: null, code: 'INVALID_MESSAGE' });
+        return;
+      }
+      const message = parsed.data;
+      if (message.type === 'probe') {
+        if (connectionId || polling) {
+          throw new Error('Probe cannot share a tool session');
+        }
+        try {
+          await send(hostMessageSchema.parse(await request('POST', message)));
+        } catch {
+          await send({ type: 'error', requestId: message.requestId, code: 'RUNTIME_OFFLINE' });
+        }
+        return;
+      }
       if (message.type === 'hello') {
         if (connectionId || polling) {
           throw new Error('Repeated handshake');
@@ -135,6 +188,9 @@ async function main(): Promise<void> {
         await send(reply);
         if (reply.type !== 'connected') {
           return;
+        }
+        if (reply.hostBundleId !== bundleId) {
+          throw new Error('Host build mismatch');
         }
         clearTimeout(deadline);
         connectionId = reply.connectionId;
@@ -183,6 +239,8 @@ async function main(): Promise<void> {
           'X-Octopus-Role': 'native-browser-host',
           'X-Octopus-Origin': process.argv[2]!,
           'X-Octopus-Login': record.loginIdentity,
+          'X-Octopus-Host-Build': bundleId,
+          'X-Octopus-Host-Protocol': String(bridgeVersion),
           'X-Octopus-Connection': connectionId,
         },
       }).catch(() => {});

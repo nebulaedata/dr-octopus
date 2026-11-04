@@ -1,139 +1,114 @@
 /**
  * @author Codex
- * @description Exercises product Host migration and old-version removal with isolated registry keys and temporary bundles.
+ * @description Verifies current owner changes, explicit foreign-registration confirmation and old uninstall protection using one unique test Host.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile, copyFile, link, rm } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdtemp, mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { hostBundlePaths } from '../../src/contracts/browser-host-bundle.ts';
+import { BrowserHostMaintenance } from '../../src/maintenance/browser-host.ts';
+import { windowsBrowserRegistry } from '../../src/installation/windows/browser-host-platform.ts';
+import { configureBrowserHost } from '../../src/main/browser-installation.ts';
 const run = promisify(execFile);
-const appRoot = fileURLToPath(new URL('../../', import.meta.url));
+const dist = fileURLToPath(new URL('../../dist/', import.meta.url));
 const powershell = join(process.env.SystemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe');
-const { identity } = JSON.parse(await readFile(join(appRoot, 'dist/browser-identity.json'), 'utf8'));
 
-test('Host migration handles UTF-8 paths, rejects foreign manifests and preserves the new registration on old uninstall', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'octopus-host-migration-'));
-  const registry = `HKCU:\\Software\\OctopusHostTest-${randomUUID()}`;
-  const source = await readFile(join(appRoot, 'dist/setup/register-browser-host.ps1'), 'utf8');
-  const script = join(root, 'register.ps1');
-  await writeFile(
-    script,
-    source.replace(
-      "$keys = @('HKCU:\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.octopus.executor.browser', 'HKCU:\\Software\\Microsoft\\Edge\\NativeMessagingHosts\\com.octopus.executor.browser')",
-      `$keys = @('${registry}\\Chrome', '${registry}\\Edge')`
-    )
-  );
-  assert.notEqual(await readFile(script, 'utf8'), source);
-  const data = join(root, '用户 data');
-  await mkdir(data);
-  /**
-   * Runs only the copied production installer against the isolated test keys.
-   */
-  const install = (bundle, mode = 'install', migrate = true) =>
-    run(
-      powershell,
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-File',
-        script,
-        '-Mode',
-        mode,
-        '-ResourceRoot',
-        bundle,
-        '-ProjectRoot',
-        data,
-        ...(migrate ? ['-MigrateProduct'] : []),
-      ],
-      { windowsHide: true }
-    );
-  /**
-   * Reads a test registration without accessing the real browser Host keys.
-   */
-  const registered = async () =>
-    (
+test(
+  'new owner survives old uninstall; foreign registrations require a current explicit confirmation',
+  { timeout: 90000 },
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), 'octopus-host-ownership-'));
+    const old = join(root, '旧 bundle');
+    const current = join(root, '新 bundle');
+    const data = join(root, '用户 data');
+    const manifest = join(data, 'browser-host/registration/native-host.json');
+    const foreign = join(root, 'deleted-foreign.json');
+    const hostName = `com.octopus.executor.browser.dev_${randomBytes(8).toString('hex')}`;
+    await mkdir(data);
+    const original = JSON.parse(await readFile(join(dist, 'host-bundle.json'), 'utf8'));
+    const registry = windowsBrowserRegistry(current);
+    /**
+     * Invokes the unchanged removal entrypoint with only fixture-owned source and data roots.
+     */
+    async function remove(source) {
       await run(
         powershell,
         [
           '-NoProfile',
-          '-Command',
-          `[Console]::OutputEncoding=New-Object Text.UTF8Encoding($false); (Get-Item -LiteralPath '${registry}\\Chrome').GetValue('')`,
+          '-NonInteractive',
+          '-File',
+          join(source, 'setup/register-browser-host.ps1'),
+          '-Mode',
+          'remove',
+          '-ResourceRoot',
+          source,
+          '-ProjectRoot',
+          data,
         ],
-        { windowsHide: true }
-      )
-    ).stdout.trim();
-  try {
-    for (const name of ['旧 bundle', '新 bundle']) {
-      const bundle = join(root, name);
-      for (const dir of ['native', 'bridge', 'resources/node']) {
-        await mkdir(join(bundle, dir), { recursive: true });
-      }
-      for (const file of [
-        'native/browser-launcher.exe',
-        'native/file-commit.node',
-        'bridge/native-host.cjs',
-        'resources/node/LICENSE',
-      ]) {
-        await copyFile(join(appRoot, 'dist', file), join(bundle, file));
-      }
-      await link(
-        join(appRoot, 'dist/resources/node/node.exe'),
-        join(bundle, 'resources/node/node.exe')
-      ).catch(() =>
-        copyFile(join(appRoot, 'dist/resources/node/node.exe'), join(bundle, 'resources/node/node.exe'))
+        { windowsHide: true, timeout: 60000 }
       );
     }
-    const old = join(root, '旧 bundle');
-    const current = join(root, '新 bundle');
-    await install(old);
-    const oldManifestPath = join(old, 'bridge/native-host.json');
-    const oldManifest = JSON.parse(await readFile(oldManifestPath, 'utf8'));
-    assert.deepEqual(oldManifest.allowed_origins, identity.allowedOrigins);
-    await assert.rejects(install(current, 'install', false), /foreign Native Host/);
-    await install(current);
-    await install(current);
-    await install(current, 'install', false);
-    assert.equal((await registered()).toLowerCase(), join(current, 'bridge/native-host.json').toLowerCase());
-    await install(old, 'remove');
-    assert.equal((await registered()).toLowerCase(), join(current, 'bridge/native-host.json').toLowerCase());
-    const manifestPath = join(current, 'bridge/native-host.json');
-    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-    assert.deepEqual(manifest.allowed_origins, identity.allowedOrigins);
-    for (const invalidOrigins of [
-      ...(identity.allowedOrigins.length > 1 ? [[identity.allowedOrigins[0]]] : []),
-      null,
-      [null],
-      ['chrome-extension://foreign/'],
-      [identity.allowedOrigins[0], identity.allowedOrigins[0]],
-      [...identity.allowedOrigins, 'chrome-extension://foreign/'],
-    ]) {
-      manifest.allowed_origins = invalidOrigins;
-      await writeFile(manifestPath, JSON.stringify(manifest));
-      await assert.rejects(install(old), /Unrecognized Native Host/);
-      assert.equal((await registered()).toLowerCase(), manifestPath.toLowerCase());
+    try {
+      for (const [source, version] of [
+        [old, '1.0.0'],
+        [current, '2.0.0'],
+      ]) {
+        for (const file of hostBundlePaths) {
+          await mkdir(dirname(join(source, file)), { recursive: true });
+          await copyFile(join(dist, file), join(source, file));
+        }
+        await writeFile(join(source, 'host-bundle.json'), JSON.stringify({ ...original, version, hostName }));
+      }
+      assert.equal((await configureBrowserHost(old, data)).phase, 'ready');
+      assert.equal((await configureBrowserHost(current, data)).phase, 'ready');
+      await remove(old);
+      assert(
+        (await registry.inspect(hostName))
+          .filter((item) => item.hive === 'CurrentUser')
+          .every((item) => item.path === manifest)
+      );
+      await assert.rejects(configureBrowserHost(old, data), /HOST_CONFIRMATION_REQUIRED/);
+      const own = JSON.parse(await readFile(manifest, 'utf8'));
+      await writeFile(manifest, JSON.stringify({ ...own, allowed_origins: ['chrome-extension://foreign/'] }));
+      assert.equal((await configureBrowserHost(current, data)).phase, 'ready');
+      assert.deepEqual(JSON.parse(await readFile(manifest, 'utf8')).allowed_origins, original.origins);
+      const record = (await registry.inspect(hostName)).find(
+        (item) => item.browser === 'chrome' && item.hive === 'CurrentUser' && item.view === 'Registry32'
+      );
+      await registry.set(hostName, record, foreign);
+      await assert.rejects(configureBrowserHost(current, data), /HOST_CONFIRMATION_REQUIRED/);
+      const evidence = await new BrowserHostMaintenance(current, data, registry).inspect();
+      assert.equal(evidence.phase, 'confirmationRequired');
+      assert.equal(
+        (
+          await configureBrowserHost(current, data, undefined, {
+            revision: evidence.revision,
+            confirmReplacement: true,
+          })
+        ).phase,
+        'ready'
+      );
+      const backup = JSON.parse(
+        await readFile(join(data, 'browser-host/state/last-transaction.json'), 'utf8')
+      );
+      assert(backup.before.some((item) => item.path === foreign));
+      await remove(current);
+      assert((await registry.inspect(hostName)).every((item) => item.path === null));
+    } finally {
+      for (const record of (await registry.inspect(hostName).catch(() => [])).filter(
+        (item) => item.hive === 'CurrentUser'
+      )) {
+        if ([manifest, foreign].includes(record.path)) {
+          await registry.remove(hostName, record, record.path);
+        }
+      }
+      await rm(root, { recursive: true, force: true, maxRetries: 2, retryDelay: 100 });
     }
-    await rm(manifestPath);
-    await assert.rejects(install(old), /Registered Native Host manifest is missing/);
-    assert.equal((await registered()).toLowerCase(), manifestPath.toLowerCase());
-    await install(current, 'remove');
-  } finally {
-    await run(
-      powershell,
-      [
-        '-NoProfile',
-        '-Command',
-        `if (Test-Path -LiteralPath '${registry}') { Remove-Item -LiteralPath '${registry}' -Recurse }`,
-      ],
-      { windowsHide: true }
-    );
-    assert.ok(resolve(root).startsWith(resolve(tmpdir()) + '\\'));
-    await rm(root, { recursive: true, force: true });
   }
-});
+);

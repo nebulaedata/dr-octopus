@@ -3,13 +3,17 @@
  * @description Registers named status IPC with registered-window, main-frame, origin and input validation.
  */
 import { app, clipboard, dialog, ipcMain, nativeTheme, shell } from 'electron';
-import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { ToolPoliciesResponse } from '../contracts/tool-policy';
 import { executionResourceRoot } from './resource-paths';
-import { configureBrowserHost, browserExtensionFolder } from './browser-installation';
+import {
+  configureBrowserHost,
+  inspectBrowserHost,
+  browserExtensionFolder,
+  browserMaintenanceFailure,
+} from './browser-installation';
 import { settingsInputSchema } from '../contracts/connection-settings';
 import { listNetworkAddresses } from './network-addresses';
 import type { NetworkAddressesResponse, SettingsResponse } from '../contracts/connection-settings';
@@ -29,7 +33,9 @@ import type { StatusResponse, DesktopActionResponse } from '../contracts/runtime
 import type { BrowserDiagnosticsResponse } from '../contracts/runtime';
 import { maintenanceActionSchema } from '../contracts/maintenance';
 import type { MaintenanceResponse } from '../contracts/maintenance';
+import { executorProduct } from '../contracts/product';
 import type { RuntimeRecovery } from '../maintenance/runtime-recovery';
+import { BrowserRuntimeRecovery } from '../maintenance/browser-runtime-recovery';
 
 /**
  * Checks the actual sender frame and rejects auxiliary windows or opaque origins.
@@ -62,11 +68,35 @@ export function registerDesktopIpc(
   const resourceRoot = executionResourceRoot(app.isPackaged, process.resourcesPath, app.getAppPath());
   const native = new NativeFileCommit(join(resourceRoot, 'native/file-commit.node'));
   const configurations = new ClientConfigurations(native, manager.projectRoot, resourceRoot);
+  const browserRuntimeRecovery = new BrowserRuntimeRecovery(manager);
+  let browserRecoveryEnabled: boolean | null = null;
   let restarting = false;
   let changing = false;
   let configuringBrowser = false;
   let configuredEpoch = '';
+  let browserSetupError: string | null = null;
+  let browserRepairAttempts = 0;
+  let lastBrowserRepair = 0;
+  let inspectingBrowserRecovery = false;
   const browserSetupLifetime = new AbortController();
+  /**
+   * Invalidates Renderer diagnostics only after an operation settles, avoiding continuous filesystem polling.
+   */
+  function publishBrowserMaintenance() {
+    for (const window of windows) {
+      try {
+        if (
+          !window.isDestroyed() &&
+          !window.webContents.isDestroyed() &&
+          window.webContents.mainFrame.origin === origin
+        ) {
+          window.webContents.send(ipcChannels.browserMaintenanceChanged);
+        }
+      } catch {
+        console.warn('[executor] Maintenance notification skipped for a closed window.');
+      }
+    }
+  }
   ipcMain.handle(
     ipcChannels.readToolPolicies,
     async (event, input: unknown): Promise<ToolPoliciesResponse> => {
@@ -164,16 +194,46 @@ export function registerDesktopIpc(
       }
       configuringBrowser = true;
       try {
-        await configureBrowserHost(resourceRoot, manager.projectRoot, browserSetupLifetime.signal);
+        const evidence = await inspectBrowserHost(
+          resourceRoot,
+          manager.projectRoot,
+          browserSetupLifetime.signal
+        );
+        let confirmReplacement = false;
+        if (evidence.phase === 'confirmationRequired') {
+          const result = await dialog.showMessageBox({
+            type: 'warning',
+            title: '确认修复浏览器连接',
+            message: '现有连接注册或组件版本与当前安装不同。是否备份配置并改用当前执行器？',
+            detail: evidence.checks
+              .filter(
+                (item) =>
+                  item.code === 'REGISTRATION_CONFLICT' || item.id === 'owner' || item.id === 'transaction'
+              )
+              .map((item) => item.id + ': ' + item.actual + '\n→ ' + item.expected)
+              .join('\n'),
+            buttons: ['取消', '备份并修复'],
+            defaultId: 0,
+            cancelId: 0,
+          });
+          if (result.response !== 1 || !isTrustedSender(event, windows, origin)) {
+            return { ok: false, message: '已取消修复，现有配置保持不变' };
+          }
+          confirmReplacement = true;
+        }
+        await configureBrowserHost(resourceRoot, manager.projectRoot, browserSetupLifetime.signal, {
+          revision: evidence.revision,
+          confirmReplacement,
+        });
+        browserSetupError = null;
         return { ok: true };
-      } catch {
-        return {
-          ok: false,
-          message:
-            '浏览器连接修复失败。请确认安装资源完整、目录可写，且现有 Host 注册属于本产品；修复后可重试。',
-        };
+      } catch (error: unknown) {
+        const failure = browserMaintenanceFailure(error);
+        browserSetupError = failure.code;
+        return { ok: false, message: failure.message };
       } finally {
         configuringBrowser = false;
+        publishBrowserMaintenance();
       }
     }
   );
@@ -206,28 +266,95 @@ export function registerDesktopIpc(
     ipcChannels.browserDiagnostics,
     async (event, input: unknown): Promise<BrowserDiagnosticsResponse> => {
       if (!isTrustedSender(event, windows, origin) || !emptyRequestSchema.safeParse(input).success) {
-        return { ok: false, message: '此页面无法读取浏览器诊断' };
+        return { ok: false, code: 'FORBIDDEN', message: '此页面无法读取浏览器诊断' };
       }
-      const results = await Promise.allSettled(
-        [
-          'native/browser-launcher.exe',
-          'native/file-commit.node',
-          'bridge/native-host.cjs',
-          'resources/node/node.exe',
-          'resources/node/LICENSE',
-        ].map((path) => access(join(resourceRoot, path)))
-      );
-      if (!isTrustedSender(event, windows, origin)) {
-        return { ok: false, message: '窗口已断开' };
+      if (configuringBrowser) {
+        return { ok: false, code: 'BUSY', message: '正在检查或修复浏览器连接，请稍候重新检测' };
       }
-      return {
-        ok: true,
-        data: {
+      try {
+        const maintenance = await inspectBrowserHost(
           resourceRoot,
-          projectRoot: manager.projectRoot,
-          resourcesAvailable: results.every((item) => item.status === 'fulfilled'),
-        },
-      };
+          manager.projectRoot,
+          browserSetupLifetime.signal
+        );
+        if (!isTrustedSender(event, windows, origin)) {
+          return { ok: false, code: 'FORBIDDEN', message: '窗口已断开' };
+        }
+        return {
+          ok: true,
+          data: { resourceRoot, projectRoot: manager.projectRoot, maintenance, lastError: browserSetupError },
+        };
+      } catch (error: unknown) {
+        const failure = browserMaintenanceFailure(error);
+        return {
+          ok: false,
+          code: failure.code === 'HOST_MAINTENANCE_BUSY' ? 'BUSY' : 'UNAVAILABLE',
+          message: failure.message,
+        };
+      }
+    }
+  );
+  ipcMain.handle(
+    ipcChannels.copyBrowserDiagnostics,
+    async (event, input: unknown): Promise<DesktopActionResponse> => {
+      if (!isTrustedSender(event, windows, origin) || !emptyRequestSchema.safeParse(input).success) {
+        return { ok: false, message: '此页面无法复制诊断' };
+      }
+      try {
+        const [local, remote] = await Promise.allSettled([
+          inspectBrowserHost(resourceRoot, manager.projectRoot, browserSetupLifetime.signal),
+          manager.request({ type: 'access-list' }),
+        ]);
+        if (!isTrustedSender(event, windows, origin)) {
+          return { ok: false, message: '窗口已断开' };
+        }
+        const evidence = local.status === 'fulfilled' ? local.value : null;
+        const response = remote.status === 'fulfilled' ? remote.value.response : null;
+        const connections = response?.ok
+          ? response.data.browser.connections.map(
+              ({
+                browser,
+                extensionVersion,
+                extensionBuildId,
+                hostBundleId,
+                state,
+                lastSeen,
+                toolsAvailable,
+              }) => ({
+                browser,
+                extensionVersion,
+                extensionBuildId,
+                hostBundleId,
+                state,
+                lastSeen,
+                toolsAvailable,
+              })
+            )
+          : null;
+        clipboard.writeText(
+          JSON.stringify(
+            {
+              at: new Date().toISOString(),
+              executorVersion: executorProduct.version,
+              runtimeState: manager.readStatus().state,
+              connections,
+              phase: evidence?.phase ?? 'unknown',
+              hostName: evidence?.hostName ?? null,
+              bundleId: evidence?.bundleId ?? null,
+              lastError:
+                local.status === 'rejected'
+                  ? browserMaintenanceFailure(local.reason).code
+                  : browserSetupError,
+              checks: evidence?.checks.map(({ id, status, code }) => ({ id, status, code })) ?? [],
+            },
+            null,
+            2
+          )
+        );
+        return { ok: true };
+      } catch {
+        return { ok: false, message: '暂时无法复制诊断，请稍后重试' };
+      }
     }
   );
   ipcMain.handle(ipcChannels.setBrowserEnabled, async (event, input: unknown): Promise<AccessResponse> => {
@@ -239,7 +366,12 @@ export function registerDesktopIpc(
       return { ok: false, code: 'INVALID_REQUEST', message: '浏览器设置参数无效' };
     }
     try {
-      return (await manager.request({ type: 'browser-enable', enabled: result.data.enabled })).response;
+      const response = (await manager.request({ type: 'browser-enable', enabled: result.data.enabled }))
+        .response;
+      if (response.ok) {
+        browserRecoveryEnabled = response.data.browser.enabled;
+      }
+      return response;
     } catch {
       return { ok: false, code: 'UNAVAILABLE', message: '浏览器桥接设置未获确认，请刷新状态' };
     }
@@ -476,7 +608,72 @@ export function registerDesktopIpc(
     }
     return { ok: true, data: manager.readStatus() };
   });
+  /**
+   * Coalesces startup and connection-fault maintenance, with three attempts per disconnected episode.
+   */
+  async function automaticRepair() {
+    if (configuringBrowser || browserSetupLifetime.signal.aborted || browserRepairAttempts >= 3) {
+      return;
+    }
+    configuringBrowser = true;
+    browserRepairAttempts++;
+    lastBrowserRepair = Date.now();
+    try {
+      await configureBrowserHost(resourceRoot, manager.projectRoot, browserSetupLifetime.signal);
+      browserSetupError = null;
+    } catch (error: unknown) {
+      browserSetupError = browserMaintenanceFailure(error).code;
+      console.error('[executor] Automatic Browser Host repair:', browserSetupError);
+    } finally {
+      configuringBrowser = false;
+      publishBrowserMaintenance();
+    }
+  }
+  const browserRecoveryTimer = automaticBrowserSetup
+    ? setInterval(() => {
+        if (inspectingBrowserRecovery || configuringBrowser || browserSetupLifetime.signal.aborted) {
+          return;
+        }
+        if (manager.readStatus().state !== 'ready') {
+          if (!recovery?.isBusy() && !manager.isSavingSettings()) {
+            void browserRuntimeRecovery.recover(browserRecoveryEnabled === true).catch(() => {
+              browserSetupError = 'RUNTIME_RECOVERY_FAILED';
+            });
+          }
+          return;
+        }
+        inspectingBrowserRecovery = true;
+        void manager
+          .request({ type: 'access-list' })
+          .then(async (reply) => {
+            if (!reply.response.ok) {
+              return;
+            }
+            const browser = reply.response.data.browser;
+            browserRecoveryEnabled = browser.enabled;
+            if (!browser.enabled) {
+              return;
+            }
+            if (browser.connections.some((item) => item.state === 'connected')) {
+              browserRepairAttempts = 0;
+              return;
+            }
+            if (Date.now() - lastBrowserRepair >= 30000) {
+              await automaticRepair();
+            }
+          })
+          .catch(() => {
+            browserSetupError = 'RUNTIME_STATUS_UNAVAILABLE';
+          })
+          .finally(() => {
+            inspectingBrowserRecovery = false;
+          });
+      }, 10000)
+    : null;
   const unsubscribe = manager.subscribe((snapshot) => {
+    if (browserRecoveryEnabled === null && snapshot.capabilities.browser.available) {
+      browserRecoveryEnabled = true;
+    }
     const epoch = `${snapshot.pid}:${snapshot.startedAt}`;
     if (
       automaticBrowserSetup &&
@@ -485,14 +682,7 @@ export function registerDesktopIpc(
       !configuringBrowser
     ) {
       configuredEpoch = epoch;
-      configuringBrowser = true;
-      void configureBrowserHost(resourceRoot, manager.projectRoot, browserSetupLifetime.signal)
-        .catch(() => {
-          console.error('[executor] Automatic Browser Host setup failed; retry from Connections.');
-        })
-        .finally(() => {
-          configuringBrowser = false;
-        });
+      void automaticRepair();
     }
     for (const window of windows) {
       if (
@@ -506,6 +696,9 @@ export function registerDesktopIpc(
   });
   return () => {
     browserSetupLifetime.abort();
+    if (browserRecoveryTimer) {
+      clearInterval(browserRecoveryTimer);
+    }
     unsubscribe();
     ipcMain.removeHandler(ipcChannels.restartApplication);
     ipcMain.removeHandler(ipcChannels.readToolPolicies);
@@ -515,6 +708,7 @@ export function registerDesktopIpc(
     ipcMain.removeHandler(ipcChannels.readSettings);
     ipcMain.removeHandler(ipcChannels.setBrowserEnabled);
     ipcMain.removeHandler(ipcChannels.browserDiagnostics);
+    ipcMain.removeHandler(ipcChannels.copyBrowserDiagnostics);
     ipcMain.removeHandler(ipcChannels.configureBrowserHost);
     ipcMain.removeHandler(ipcChannels.openBrowserExtensionFolder);
     ipcMain.removeHandler(ipcChannels.copyEndpoint);

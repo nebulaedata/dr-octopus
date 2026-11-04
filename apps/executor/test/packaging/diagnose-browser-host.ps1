@@ -1,60 +1,35 @@
 <#
 @author Codex
-@description Reads current-user Browser Host registrations against one selected installation and writes non-secret evidence without changing keys or starting a service.
+@description Exports the shared read-only Host maintenance evidence, excluding user paths and credentials, without configuring registrations or starting Runtime.
 #>
 param(
   [Parameter(Mandatory=$true)][string]$ProductDirectory,
-  [Parameter(Mandatory=$true)][string]$ReportPath
+  [Parameter(Mandatory=$true)][string]$ReportPath,
+  [string]$ProjectRoot = (Join-Path $env:USERPROFILE '.dr-octopus/executor')
 )
 $ErrorActionPreference = 'Stop'
-Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSHOME 'Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1')
-$taskProduct = (Resolve-Path -LiteralPath $ProductDirectory).Path
-$taskResource = Join-Path $taskProduct 'resources/executor'
-$taskExpected = Join-Path $taskResource 'bridge/native-host.json'
-$taskAllowedOrigins = @()
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+$OutputEncoding = [Console]::OutputEncoding
+$taskResource = Join-Path (Resolve-Path -LiteralPath $ProductDirectory).Path 'resources/executor'
+$taskNode = Join-Path $taskResource 'resources/node/node.exe'
+$taskReport = [ordered]@{schemaVersion=2;scope='registration-diagnostics-only';phase='unknown';code='HOST_DIAGNOSTICS_UNAVAILABLE';acceptance=@{G4='pending';G5='pending';G6='pending'}}
 try {
-  $taskIdentityFile = Get-Item -LiteralPath (Join-Path $taskResource 'browser-identity.json') -Force
-  if ($taskIdentityFile.Length -gt 65536 -or ($taskIdentityFile.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Identity record rejected.' }
-  $taskIdentity = (Get-Content -LiteralPath $taskIdentityFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json).identity
-  $taskOrigins = @($taskIdentity.allowedOrigins)
-  if ($taskIdentity.schemaVersion -ne 1 -or $taskOrigins.Count -lt 1 -or $taskOrigins.Count -gt 3 -or
-      @($taskOrigins | Where-Object { $_ -cnotmatch '^chrome-extension://[a-p]{32}/$' }).Count -gt 0 -or
-      @($taskOrigins | Select-Object -Unique).Count -ne $taskOrigins.Count) { throw 'Identity record rejected.' }
-  $taskAllowedOrigins = $taskOrigins
-} catch { $taskAllowedOrigins = @() }
-$taskReport = [ordered]@{ schemaVersion=1; scope='registration-diagnostics-only'; browsers=@(); acceptance=@{G4='pending';G5='pending';G6='pending'} }
-foreach ($taskBrowser in @('Chrome','Edge')) {
-  $taskVendor = if ($taskBrowser -eq 'Chrome') { 'Google\Chrome' } else { 'Microsoft\Edge' }
-  $taskKey = 'HKCU:\Software\' + $taskVendor + '\NativeMessagingHosts\com.octopus.executor.browser'
-  $taskState = 'missing'
-  if (Test-Path -LiteralPath $taskKey) {
-    $taskManifest = (Get-Item -LiteralPath $taskKey).GetValue('')
-    $taskState = 'other-installation'
-    if ($taskManifest -ieq $taskExpected) {
-      $taskState = 'invalid-selected-installation'
-      try {
-        $taskFile = Get-Item -LiteralPath $taskManifest -Force
-        if ($taskFile.Length -gt 65536 -or ($taskFile.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Manifest rejected.' }
-        $taskConfig = Get-Content -LiteralPath $taskManifest -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($taskConfig.name -cne 'com.octopus.executor.browser' -or $taskConfig.type -cne 'stdio' -or
-            $taskConfig.path -ine (Join-Path $taskResource 'native/browser-launcher.exe') -or
-            $taskAllowedOrigins.Count -lt 1 -or
-            @($taskConfig.allowed_origins).Count -ne $taskAllowedOrigins.Count -or
-            @(Compare-Object -ReferenceObject $taskAllowedOrigins -DifferenceObject @($taskConfig.allowed_origins) -CaseSensitive).Count -gt 0) { throw 'Manifest identity rejected.' }
-        foreach ($taskRequired in @('native/browser-launcher.exe','native/file-commit.node','bridge/native-host.cjs','resources/node/node.exe')) {
-          $taskEntry = Get-Item -LiteralPath (Join-Path $taskResource $taskRequired) -Force
-          if ($taskEntry.PSIsContainer -or ($taskEntry.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Host resource rejected.' }
-        }
-        $taskState = 'registered-resources-present'
-      } catch { $taskState = 'invalid-selected-installation' }
-    }
-  }
-  $taskReport.browsers += @{ browser=$taskBrowser; state=$taskState }
-}
-$taskOutput = [IO.File]::Open([IO.Path]::GetFullPath($ReportPath), [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+  if ((Get-FileHash -LiteralPath $taskNode -Algorithm SHA256).Hash.ToLowerInvariant() -ne '5c976096e04e5c2c1f091938926234cc9fbebfe9787ddd149351b3b0ecc707b5') { throw 'Private Node hash mismatch.' }
+  foreach ($name in @('NODE_OPTIONS','NODE_PATH','NODE_REPL_EXTERNAL_MODULE','NODE_V8_COVERAGE','NODE_USE_ENV_PROXY','NODE_EXTRA_CA_CERTS','NODE_ICU_DATA','OPENSSL_CONF')) { [Environment]::SetEnvironmentVariable($name, $null, 'Process') }
+  $taskOutput = & (Join-Path $taskResource 'native/browser-launcher.exe') '--maintain' inspect $ProjectRoot
+  if ($LASTEXITCODE -ne 0) { throw 'Diagnostic process unavailable.' }
+  $taskEvidence = $taskOutput | ConvertFrom-Json
+  $taskReport.phase = $taskEvidence.phase
+  $taskReport.code = 'INSPECTED'
+  $taskReport.hostName = $taskEvidence.hostName
+  $taskReport.bundleId = $taskEvidence.bundleId
+  $taskReport.at = $taskEvidence.at
+  $taskReport.checks = @($taskEvidence.checks | ForEach-Object { @{id=$_.id;status=$_.status;code=$_.code} })
+} catch { $taskReport.code = 'HOST_DIAGNOSTICS_UNAVAILABLE' }
+$taskFile = [IO.File]::Open([IO.Path]::GetFullPath($ReportPath), [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
 try {
   $taskBytes = [Text.UTF8Encoding]::new($false).GetBytes(($taskReport | ConvertTo-Json -Depth 6))
-  $taskOutput.Write($taskBytes,0,$taskBytes.Length)
-} finally { $taskOutput.Dispose() }
-Write-Output 'Registration evidence written. Resource presence does not prove a successful bridge handshake.'
+  $taskFile.Write($taskBytes,0,$taskBytes.Length)
+} finally { $taskFile.Dispose() }
+Write-Output 'Diagnostic evidence written. Local component readiness does not prove a browser handshake.'

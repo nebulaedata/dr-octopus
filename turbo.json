@@ -50,7 +50,8 @@
         "$TURBO_ROOT$/packages/ui/package.json",
         "$TURBO_ROOT$/pnpm-lock.yaml",
         "$TURBO_ROOT$/apps/browser-extension/browser-identity.json",
-        "$TURBO_ROOT$/apps/browser-extension/scripts/lib/browser-identity.mjs"
+        "$TURBO_ROOT$/apps/browser-extension/scripts/lib/browser-identity.mjs",
+        "$TURBO_ROOT$/scripts/browser-development.mjs"
       ],
       "outputs": ["dist/**", "build/browser-identity.ts"]
     },
@@ -64,6 +65,7 @@
         "$TURBO_DEFAULT$",
         "!**/*.md",
         "$TURBO_ROOT$/.env",
+        "$TURBO_ROOT$/scripts/browser-development.mjs",
         "$TURBO_ROOT$/patches/@page-agent__page-controller@*.patch"
       ],
       "env": ["BROWSER_IDENTITY_PROFILE"],

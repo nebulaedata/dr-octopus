@@ -653,10 +653,80 @@ static napi_value loginIdentity(napi_env env, napi_callback_info) {
 }
 
 /**
+ * Releases a maintenance mutex on the same JavaScript thread that acquired it.
+ */
+static napi_value releaseMaintenance(napi_env env, napi_callback_info info) {
+  size_t count = 1;
+  napi_value argument;
+  void* pointer = nullptr;
+  napi_get_cb_info(env, info, &count, &argument, nullptr, nullptr);
+  if (count != 1 || napi_get_value_external(env, argument, &pointer) != napi_ok || !pointer) {
+    napi_throw_type_error(env, nullptr, "Invalid maintenance lease"); return nullptr;
+  }
+  auto handle = static_cast<Handle*>(pointer);
+  if (handle->value != INVALID_HANDLE_VALUE) {
+    ReleaseMutex(handle->value);
+    CloseHandle(handle->value);
+    handle->value = INVALID_HANDLE_VALUE;
+  }
+  napi_value result;
+  napi_get_undefined(env, &result);
+  return result;
+}
+
+/**
+ * Acquires a nonblocking process-crash-safe mutex in the finite Browser maintenance namespace.
+ */
+static napi_value lockMaintenance(napi_env env, napi_callback_info info) {
+  size_t count = 1, length = 0;
+  napi_value argument;
+  napi_get_cb_info(env, info, &count, &argument, nullptr, nullptr);
+  if (count != 1 || napi_get_value_string_utf8(env, argument, nullptr, 0, &length) != napi_ok || length != 64) {
+    napi_throw_type_error(env, nullptr, "Invalid maintenance identity"); return nullptr;
+  }
+  char key[65];
+  napi_get_value_string_utf8(env, argument, key, sizeof(key), &length);
+  HANDLE rawToken;
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &rawToken)) { napi_throw_error(env, nullptr, "HOST_LOCK_UNAVAILABLE"); return nullptr; }
+  Handle token(rawToken);
+  DWORD tokenSize = 0;
+  GetTokenInformation(token.value, TokenUser, nullptr, 0, &tokenSize);
+  std::vector<BYTE> tokenBytes(tokenSize);
+  LPWSTR sid = nullptr;
+  if (!tokenSize || !GetTokenInformation(token.value, TokenUser, tokenBytes.data(), tokenSize, &tokenSize) ||
+      !ConvertSidToStringSidW(reinterpret_cast<TOKEN_USER*>(tokenBytes.data())->User.Sid, &sid)) {
+    napi_throw_error(env, nullptr, "HOST_LOCK_UNAVAILABLE"); return nullptr;
+  }
+  std::wstring name = std::wstring(L"Global\\OctopusBrowserMaintenance-") + sid + L"-";
+  LocalFree(sid);
+  for (size_t i = 0; i < length; i++) {
+    if (!((key[i] >= '0' && key[i] <= '9') || (key[i] >= 'a' && key[i] <= 'f'))) {
+      napi_throw_type_error(env, nullptr, "Invalid maintenance identity"); return nullptr;
+    }
+    name += static_cast<wchar_t>(key[i]);
+  }
+  HANDLE mutex = CreateMutexW(nullptr, FALSE, name.c_str());
+  if (!mutex) { napi_throw_error(env, nullptr, "HOST_LOCK_UNAVAILABLE"); return nullptr; }
+  const DWORD wait = WaitForSingleObject(mutex, 0);
+  if (wait != WAIT_OBJECT_0 && wait != WAIT_ABANDONED) {
+    CloseHandle(mutex); napi_throw_error(env, nullptr, "HOST_MAINTENANCE_BUSY"); return nullptr;
+  }
+  napi_value result;
+  napi_create_external(env, new Handle(mutex), [](napi_env, void* value, void*) {
+    auto handle = static_cast<Handle*>(value);
+    if (handle->value != INVALID_HANDLE_VALUE) { ReleaseMutex(handle->value); }
+    delete handle;
+  }, nullptr, &result);
+  return result;
+}
+
+/**
  * Exposes finite operations and the current process login identity, never a caller-selected token.
  */
 static napi_value initialize(napi_env env, napi_value exports) {
   napi_property_descriptor properties[] = {
+    {"lockMaintenance", nullptr, lockMaintenance, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"releaseMaintenance", nullptr, releaseMaintenance, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"inspect", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::Inspect)},
     {"createRecovery", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::Recovery)},
     {"createSkillDirectory", nullptr, queue, nullptr, nullptr, nullptr, napi_default, reinterpret_cast<void*>(Work::SkillDirectory)},

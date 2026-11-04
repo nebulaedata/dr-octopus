@@ -2,11 +2,11 @@
 
 Browser 由唯一 Runtime、固定 Native Host、自有 MV3 扩展和 PageController 组成。任务、授权见 [Executor](executor.md)，安装操作见 [扩展安装说明](../../apps/browser-extension/INSTALLATION.md)，实际覆盖见 [验证矩阵](../poc/executor-validation.md)。
 
-## 录制与本地重放的融合边界（设计已接受，待实施）
+## 录制与本地重放的融合边界
 
 同一 `apps/browser-extension` 计划新增录制、浮条、事件保存与查看，保留本文描述的 Native Bridge。录制由扩展自身管理，事件不通过 Native Host，Executor 离线或连接暂停不阻止录制。完整设计见 [Tab 录制与智能重放](browser-extension-recorder.md)，取舍见 [ADR-0086](../adr/0086-browser-extension-recording-and-local-replay.md)，验收见 [验证矩阵](../poc/executor-validation.md#浏览器录制与本地重放第一阶段验证中)。本节是目标边界，后文现有版本与证据不代表新增能力已实现。
 
-Skill 整理和重放共用扩展 ToolLoopAgent 与持久会话，模型留在扩展；有限页面操作仍复用 PageController。Native v4 增加独立 Skill 文件域，由已认证安装身份隔离读写及打开目录，不复用 Runtime Bearer 给模型，不修改共享 Agent 核心。详细闭环见[统一方案](browser-skill-unified-agent.md)。
+Skill 整理和重放共用扩展 ToolLoopAgent 与持久会话，模型留在扩展；有限页面操作仍复用 PageController。Native v5 保留独立 Skill 文件域，由已认证安装身份隔离读写及打开目录，不复用 Runtime Bearer 给模型，不修改共享 Agent 核心。详细闭环见[统一方案](browser-skill-unified-agent.md)。
 
 两类执行来源在扩展 SW 统一检查目标页与焦点/窗口冲突，复用当前页面控制能力。Bridge 操作与录制/本地重放冲突时返回现有 `BROWSER_BUSY`，不抢占、排队或自动重试；已有动作允许收尾，结果未知不宣称已撤回。Bridge reset 只释放匹配 connection/task 的资源，不能终止扩展录制或清理本地 run。详细准入与未知结果处理仅由融合设计第 2.2 节维护，不增加 Executor 通用强停或任务许可协议。
 
@@ -18,15 +18,15 @@ MCP → TaskAuthority → BrowserBridge → 专用回环 /browser-bridge → 原
 
 固定 Host 为 com.octopus.executor.browser；扩展公开身份仅由 apps/browser-extension/browser-identity.json 维护，构建期不接受身份环境变量覆盖，将同一精确来源列表编入原生启动器、Native Host、Runtime 和注册脚本。固定公钥稳定官方侧载身份，不证明商店发行或密码学来源。sideload/store 只决定插件是否携带 manifest.key；客户端始终使用完整的侧载及两个商店身份；所有模式都要求两个商店 ID 有效。只有插件模式从环境配置读取，客户端不读取 .env。身份策略不含插件 profile 或产品版本；客户端自身构建与插件产物记录分别校验，打包按插件实际渠道身份和协议判定兼容。兼容升级无需另一端同步升版或重建，升级重连产生新 connectionId，旧请求不重放。运行时不读取 .env，实际 origin 原样传递并逐层校验；配置步骤见[发布 SOP](../../apps/browser-extension/RELEASE.md#33-配置身份并重新构建)。Host 仍校验私有配置 ACL、实际登录会话与固定私有资源；扩展不持有 Runtime Bearer。
 
-Native Messaging 使用四字节小端长度和 UTF-8 JSON。共享协议版本为 4，包含握手、心跳、携带 taskId 的有限请求、任务反馈释放通知和关联结果；不兼容版本不执行命令。每个新握手生成新 connectionId，旧连接、轮询或回复不能更新新连接状态。
+Native Messaging 使用四字节小端长度和 UTF-8 JSON。共享协议版本为 5，包含握手、心跳、携带 taskId 的有限请求、任务反馈释放通知和关联结果；不兼容版本不执行命令。握手报告扩展构建 ID、Host 包摘要与 Executor 版本；Runtime 校验 Host 协议，不维护旧协议降级。每个新握手生成新 connectionId，旧连接、轮询或回复不能更新新连接状态。
 
 每个安装实例独立；最多 16 个安装实例。单包络 256 KiB，桥接入口最多 24 个请求和 1 MiB 输入缓冲，每连接一个十秒长轮询，25 秒无活动标记断开。工具关联最多 16 个待回复请求，Worker 最多 8 个执行请求，工具请求/导航预算分别 15/10 秒。关闭释放定时器、监听和轮询，不自动重放。
 
 ## 注册与更新
 
-安装和非测试客户端 Runtime 就绪后，使用随包脚本维护实际资源/数据目录。仅当前完整身份集合匹配的本产品注册可以迁移安装路径，不兼容旧身份集合，未知、丢失 manifest 或不可写目录拒绝；旧版卸载只删除仍指向自身的注册。
+安装和非测试客户端 Runtime 就绪后调用同一维护服务；固定入口位于业务根 browser-host/registration，指向 browser-host/versions 中的完整不可变包。跨进程互斥与 journal 保护发布；Chrome/Edge 的两种注册视图分别回读。已知自有缺失可自动恢复，未知注册与同版不同构建/降级需确认最新诊断；保留二十条事务备份，旧卸载只移除自己仍拥有的构建。完整责任与失败出口见 [ADR-0090](../adr/0090-browser-host-lifecycle.md)。
 
-Windows MSIX/AppData 视图通过目录句柄解析实际 DOS 路径，不删除身份、来源或 ACL 检查。注册成功不表示 Worker 已握手或工具已就绪。
+维护通过 realpath 统一资源和数据的物理路径，不删除身份、来源或 ACL 检查；MSIX 与干净机器的发行验证单独记录。注册成功不表示 Worker 已握手或工具已就绪。
 
 扩展加载目录需保持完整；更新包不会更新已加载的旧目录，需重新加载对应新产物。商店尚未发布，不自动固定工具栏、不自动启用桥接、不迁移客户端授权。
 

@@ -4,19 +4,20 @@
 
 ## 决定
 
-默认业务根目录为 `~/.dr-octopus/executor`。显式独立实例及测试仍使用其 `userData/project`，不访问默认用户数据。AppData 只由 Electron 管理自身缓存，不承担 Executor 业务持久化职责。
+默认业务根目录为 `~/.dr-octopus/executor`。显式独立实例及测试仍使用其 `userData/project`，不访问默认用户数据。ADR-0090 的开发 userData 位于 `~/.dr-octopus/executor-dev/<workspace-key>/electron`，Profile 位于同 key 下的 `browser/<browser>`，不依赖可清理的构建目录。AppData 只由 Electron 管理自身缓存，不承担 Executor 业务持久化职责。
 
-| 位置 | 用途 |
-| --- | --- |
-| settings.json | 正式设置 |
-| device/ | 设备身份与名称 |
-| connections/ | 加密凭据与私有 stdio 配置 |
-| tasks/ | 授权、任务与幂等结果 |
-| browser/ | 桥接启用及 Native Host 引导记录 |
-| file-operations/ | 文件提交与恢复记录 |
-| shell/ | Bash 记录及有效期内可查询的输出 |
-| transfers/ | 传输记录及尚需保留的快照/恢复材料 |
-| settings-recovery/ | 设置初始化标记与提交恢复证据 |
+| 位置               | 用途                                                                            |
+| ------------------ | ------------------------------------------------------------------------------- |
+| settings.json      | 正式设置                                                                        |
+| device/            | 设备身份与名称                                                                  |
+| connections/       | 加密凭据与私有 stdio 配置                                                       |
+| tasks/             | 授权、任务与幂等结果                                                            |
+| browser/           | 桥接启用及 Native Host 引导记录                                                 |
+| browser-host/      | ADR-0090 扩展：稳定注册入口、完整受管组件包与维护事务；不放入 browser/ 引导历史 |
+| file-operations/   | 文件提交与恢复记录                                                              |
+| shell/             | Bash 记录及有效期内可查询的输出                                                 |
+| transfers/         | 传输记录及尚需保留的快照/恢复材料                                               |
+| settings-recovery/ | 设置初始化标记与提交恢复证据                                                    |
 
 可丢弃搜索快照使用 `os.tmpdir()/octopus-executor-<随机 UUID>/`，目录以当前用户私有 ACL 原子创建，每次 Runtime 独立持有。正常结束清理空根目录，不扫描或删除其他实例的临时目录。预览/diff 如后续增加，遵守相同规则，不预建空目录。
 

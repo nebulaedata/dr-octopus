@@ -11,6 +11,7 @@ import {
   CircleCheckIcon,
   CircleMinusIcon,
   CirclePauseIcon,
+  ChevronDownIcon,
   InfoIcon,
   LoaderCircleIcon,
   PauseIcon,
@@ -51,6 +52,34 @@ const icons = {
   paused: CirclePauseIcon,
   incompatible: InfoIcon,
 };
+
+/**
+ * Formats the last successful handshake in local time without treating it as current connectivity.
+ */
+function formatLastConnectedAt(value: string): string {
+  const connected = new Date(value);
+  const now = new Date();
+  const time = new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(connected);
+  if (
+    connected.getFullYear() === now.getFullYear() &&
+    connected.getMonth() === now.getMonth() &&
+    connected.getDate() === now.getDate()
+  ) {
+    return `今天 ${time}`;
+  }
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(connected);
+}
 
 /**
  * Owns only popup subscriptions and requests; closing the popup leaves the background connection alive.
@@ -155,7 +184,14 @@ export function ConnectionPanel({
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-muted-foreground">连接状态</dt>
                   <dd>
-                    <Badge variant={status.phase === 'connected' ? 'default' : 'secondary'}>
+                    <Badge
+                      variant="secondary"
+                      className={
+                        status.phase === 'connected'
+                          ? 'border-success/20 bg-success/10 text-success'
+                          : undefined
+                      }
+                    >
                       <StatusIcon aria-hidden="true" />
                       {labels[status.phase]}
                     </Badge>
@@ -170,7 +206,7 @@ export function ConnectionPanel({
                       ) : (
                         <CircleMinusIcon aria-hidden="true" />
                       )}
-                      {status.toolsReady ? '就绪' : '未就绪'}
+                      {status.toolsReady ? '已就绪' : '未就绪'}
                     </Badge>
                   </dd>
                 </div>
@@ -178,34 +214,61 @@ export function ConnectionPanel({
               <p className="text-pretty text-xs leading-relaxed text-muted-foreground">
                 {statusDescription(status)}
               </p>
-              {status.lastFailure ? (
-                <div className="flex flex-col gap-1 rounded-md bg-muted/50 p-3 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="shrink-0 font-medium">最近一次连接异常</p>
-                    <time
-                      dateTime={status.lastFailure.at}
-                      className="shrink-0 tabular-nums text-muted-foreground"
-                      title={new Date(status.lastFailure.at).toLocaleString()}
-                    >
-                      {new Intl.DateTimeFormat('zh-CN', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: false,
-                      }).format(new Date(status.lastFailure.at))}
-                    </time>
-                  </div>
-                  <p className="break-all font-mono">{status.lastFailure.code}</p>
-                  {status.lastFailure.method ? (
-                    <p className="break-all font-mono">{status.lastFailure.method}</p>
-                  ) : null}
-                  {status.lastFailure.nativeReason ? (
-                    <p className="font-mono">{status.lastFailure.nativeReason}</p>
-                  ) : null}
-                  <p className="text-muted-foreground">历史异常，不代表当前连接状态。</p>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs">
+                <span className="font-medium">最近一次连接</span>
+                {status.lastConnectedAt ? (
+                  <time
+                    dateTime={status.lastConnectedAt}
+                    className="tabular-nums text-muted-foreground"
+                    title={new Date(status.lastConnectedAt).toLocaleString()}
+                  >
+                    {formatLastConnectedAt(status.lastConnectedAt)}
+                  </time>
+                ) : (
+                  <span className="text-muted-foreground">尚无连接记录</span>
+                )}
+              </div>
+              <details className="group rounded-md border border-border/60 text-xs">
+                <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 rounded-md px-3 focus-visible:outline focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+                  <span>连接诊断</span>
+                  <ChevronDownIcon
+                    className="size-4 text-muted-foreground motion-safe:transition-transform group-open:rotate-180"
+                    aria-hidden="true"
+                  />
+                </summary>
+                <div className="flex flex-col gap-1 border-t border-border/60 px-3 py-3">
+                  {status.lastFailure ? (
+                    <>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-medium">最近一次连接异常</p>
+                        <time
+                          dateTime={status.lastFailure.at}
+                          className="tabular-nums text-muted-foreground"
+                          title={new Date(status.lastFailure.at).toLocaleString()}
+                        >
+                          {new Intl.DateTimeFormat('zh-CN', {
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                          }).format(new Date(status.lastFailure.at))}
+                        </time>
+                      </div>
+                      <p className="break-all font-mono">{status.lastFailure.code}</p>
+                      {status.lastFailure.method ? (
+                        <p className="break-all font-mono">{status.lastFailure.method}</p>
+                      ) : null}
+                      {status.lastFailure.nativeReason ? (
+                        <p className="font-mono">{status.lastFailure.nativeReason}</p>
+                      ) : null}
+                      <p className="text-muted-foreground">历史异常，不代表当前连接状态。</p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">暂无连接异常记录</p>
+                  )}
                 </div>
-              ) : null}
+              </details>
             </>
           )}
           {!status && !error && <Skeleton className="h-24 w-full" aria-label="正在读取连接状态" />}

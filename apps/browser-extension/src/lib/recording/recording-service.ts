@@ -527,13 +527,21 @@ export class RecordingService {
     ) {
       throw new Error('RECORDING_LIMIT');
     }
-    const clean = command.events.map((event) => ({
-      ...event,
-      label: safeRecordingText(event.label),
-      url: safeRecordingUrl(sender.url!),
-      ...(event.targetUrl ? { targetUrl: safeRecordingUrl(event.targetUrl) } : {}),
-      ...(['input', 'select'].includes(event.action) ? { redacted: true } : {}),
-    }));
+    const senderOrigin = new URL(sender.url!).origin;
+    const clean = command.events.map((event) => {
+      const url = safeRecordingUrl(event.url);
+      if (!url || new URL(url).origin !== senderOrigin) {
+        throw new Error('RECORDING_FORBIDDEN');
+      }
+      // Same-document navigation may change sender.url after an earlier fact was captured.
+      return {
+        ...event,
+        label: safeRecordingText(event.label),
+        url,
+        ...(event.targetUrl ? { targetUrl: safeRecordingUrl(event.targetUrl) } : {}),
+        ...(['input', 'select'].includes(event.action) ? { redacted: true } : {}),
+      };
+    });
     const bytes = new TextEncoder().encode(JSON.stringify(clean)).length;
     const total = (await this.repository.list()).reduce((sum, item) => sum + item.bytes, 0);
     if (

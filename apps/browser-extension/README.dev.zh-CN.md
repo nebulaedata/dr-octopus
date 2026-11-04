@@ -9,15 +9,31 @@
 ```powershell
 pnpm dev:browser-extension          # Chrome
 pnpm dev:browser-extension -b edge  # Edge
+pnpm dev:browser-extension:only     # 已独立启动同工作区 dev:executor 时
 ```
 
-命令先构建 shared，成功后启动 WXT 开发服务器并监听插件源码变化。保持终端运行，结束调试时按 Ctrl+C。终端显示的 localhost 地址是开发服务器，插件页面应从浏览器扩展入口打开。
+命令先构建 shared，随后编排同工作区的隔离 Executor 与 WXT。开发 Host 名包含工作区摘要，数据位于 `~/.dr-octopus/executor-dev/<workspace-key>/electron`，浏览器 Profile 位于 `~/.dr-octopus/executor-dev/<workspace-key>/browser/<browser>`。首次使用仍需在开发 Executor 明确启用桥接；自动安装不代替授权。保持终端运行，Ctrl+C 结束本次会话。终端 localhost 是开发服务器，插件页面从扩展入口打开。
 
-当前依赖未安装用于自动启动浏览器的 web-ext，WXT 会提示手动加载目录；按下一节加载即可。
+开发入口使用已锁定的 Playwright 依赖打开本机 Chrome/Edge 的专用 Profile，通过私有调试管道加载扩展；不修改日常 Profile。浏览器未安装或企业策略阻止加载会明确失败。dev:browser-extension:only 不启动 Executor，连接需要另行运行同工作区 pnpm dev:executor。
+
+扩展界面支持 WXT 热更新。更改共享协议、Native 连接核心或 Executor 主进程后，停止该开发会话并重新运行命令，重新构建契约和 Host 包。复用已有实例不会声称已载入新的 Main/Host 代码。
+
+开发模式固定使用已验证的侧载身份，不继承商店打包模式；生产构建仍按 BROWSER_IDENTITY_PROFILE 选择渠道。开发数据和 Profile 不在 build/.wxt/.output 中，清理构建输出不会删除它们。
+
+退出对应开发会话后，可清理注册（保留 Profile 和数据）：
+
+```powershell
+pnpm dev:browser-extension --cleanup-registration
+# 工作区已删除时，在另一份仓库按原 Host 名末尾的 16 位 key 清理：
+$workspaceKey = Read-Host '原工作区的16位 key'
+pnpm dev:browser-extension --cleanup-registration --workspace-key $workspaceKey
+```
+
+清理只删除指向该开发目录的 Chrome/Edge 注册；活动进程、正在进行的维护或不同路径的注册会阻止清理，不影响正式 Host。
 
 ## 2. 加载开发版插件
 
-使用独立的开发浏览器 Profile；真实 Native Messaging 往返使用配套的测试 Host 与独立数据，约束见 [AGENTS.md](AGENTS.md#验证规则)。
+默认命令自动加载专用 Profile；手动调试也必须使用该开发 Host 对应的 Profile 与独立数据，约束见 [AGENTS.md](AGENTS.md#验证规则)。
 
 | 浏览器 | 扩展管理页            | 从仓库根目录定位的开发产物                      |
 | ------ | --------------------- | ----------------------------------------------- |
@@ -71,7 +87,7 @@ Popup 页面依赖扩展 API 和消息来源校验，直接在普通网页中打
 
 - **保存后界面不变**：确认终端仍运行且无编译错误，扩展加载路径是 `*-mv3-dev`；重新打开 Popup，必要时重新加载扩展并刷新测试网页。
 - **断点不命中**：确认调试窗口对应 Popup、Worker 或目标网页，文件属于当前开发产物，并已触发对应功能。内容脚本需在允许访问的 HTTP/HTTPS 网页上运行。
-- **插件已加载但 Native Host 未连接**：开发命令仅启动插件开发服务器；按 [INSTALLATION.md](INSTALLATION.md#连接条件) 核对配套测试 Executor/Host、桥接与授权。
+- **插件已加载但 Native Host 未连接**：默认命令会启动隔离执行器和插件；dev:browser-extension:only 仅启动插件。先确认使用同工作区的 dev:executor、已启用桥接，再按 [INSTALLATION.md](INSTALLATION.md#连接条件) 核对配套测试 Executor/Host、桥接与授权。
 - **找不到插件源码或断点偏移**：检查 DevTools 是否启用 JavaScript source maps，并查看终端的 sourcemap 警告。启动成功不等于源码映射或浏览器内热更新已经完成验证。
 
 ## Skill Agent 开发与验证

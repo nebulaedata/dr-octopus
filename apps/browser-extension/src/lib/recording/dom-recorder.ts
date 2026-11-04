@@ -112,7 +112,11 @@ export class DOMRecorder {
     if (!event.isTrusted || path.includes(this.overlay)) {
       return;
     }
-    const original = path.find((item): item is Element => item instanceof Element);
+    // Viewport scrolls target Document, whose composed path contains no Element.
+    const original =
+      event.type === 'scroll' && event.target === document
+        ? (document.scrollingElement ?? document.documentElement)
+        : path.find((item): item is Element => item instanceof Element);
     let element =
       path.find(
         (item): item is Element =>

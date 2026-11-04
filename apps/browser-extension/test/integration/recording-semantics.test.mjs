@@ -216,3 +216,91 @@ for (const flavor of ['chrome', 'edge']) {
     }
   );
 }
+
+for (const flavor of ['chrome', 'edge']) {
+  test(
+    `${flavor}: viewport and container scrolls retain capture routes and listener boundaries`,
+    { timeout: 30000 },
+    async () => {
+      const browser = await chromium.launch({
+        executablePath:
+          flavor === 'chrome'
+            ? join(process.env.ProgramFiles, 'Google/Chrome/Application/chrome.exe')
+            : join(process.env['ProgramFiles(x86)'], 'Microsoft/Edge/Application/msedge.exe'),
+        headless: true,
+      });
+      try {
+        const page = await browser.newPage();
+        await page.route('https://synthetic.test/**', (route) =>
+          route.fulfill({
+            contentType: 'text/html',
+            body: `<!doctype html><body style="height:4000px">
+          <button id="navigate">Open details</button>
+          <div id="container" aria-label="Results" style="position:fixed;top:60px;height:100px;overflow:auto"><div style="height:1000px">Results</div></div>
+          <div id="overlay" style="position:fixed;top:180px;height:100px;overflow:auto"><div style="height:1000px">Recorder</div></div>`,
+          })
+        );
+        await page.goto('https://synthetic.test/list');
+        await page.addScriptTag({ content: bundle.outputFiles[0].text });
+        await page.evaluate(() => {
+          window.facts = [];
+          window.recorder = new SemanticFixture.DOMRecorder(
+            document.querySelector('#overlay'),
+            (fact) => window.facts.push(fact),
+            () => {}
+          );
+          window.recorder.start();
+          document
+            .querySelector('#navigate')
+            .addEventListener('click', () => history.pushState({}, '', '/detail'));
+          /**
+           * Waits for an actual browser scroll event, including Document targets for the viewport.
+           */
+          window.scrollFixture = (id, top) =>
+            new Promise((resolve) => {
+              const target = id ? document.querySelector(id) : document;
+              target.addEventListener('scroll', () => resolve(), { once: true });
+              if (id) {
+                target.scrollTop = top;
+              } else {
+                window.scrollTo(0, top);
+              }
+            });
+        });
+        await page.locator('#navigate').click();
+        assert.equal(await page.evaluate(() => window.facts[0].url), 'https://synthetic.test/list');
+        await page.evaluate(() => window.scrollFixture(null, 300));
+        let facts = await page.evaluate(() => window.facts.filter((fact) => fact.action === 'scroll'));
+        assert.equal(facts.length, 1);
+        assert.equal(facts[0].url, 'https://synthetic.test/detail');
+        await page.evaluate(() => window.scrollFixture(null, 500));
+        assert.equal(
+          await page.evaluate(() => window.facts.filter((fact) => fact.action === 'scroll').length),
+          1
+        );
+        // Wait out the recorder's documented 800 ms scroll throttle before a distinct target.
+        await page.waitForTimeout(850);
+        await page.evaluate(() => window.scrollFixture('#overlay', 200));
+        await page.evaluate(() => document.dispatchEvent(new Event('scroll')));
+        assert.equal(
+          await page.evaluate(() => window.facts.filter((fact) => fact.action === 'scroll').length),
+          1
+        );
+        await page.evaluate(() => window.scrollFixture('#container', 200));
+        facts = await page.evaluate(() => window.facts.filter((fact) => fact.action === 'scroll'));
+        assert.equal(facts.length, 2);
+        assert.equal(facts[1].label, 'Results');
+        assert.notEqual(facts[0].targetRef, facts[1].targetRef);
+        await page.evaluate(() => window.recorder.stop());
+        await page.waitForTimeout(850);
+        await page.evaluate(() => window.scrollFixture(null, 700));
+        assert.equal(
+          await page.evaluate(() => window.facts.filter((fact) => fact.action === 'scroll').length),
+          2
+        );
+      } finally {
+        await browser.close();
+      }
+    }
+  );
+}

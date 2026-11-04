@@ -9,7 +9,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { isBrowserOriginAllowed } from '../../../build/browser-identity';
-import { bridgeFrameLimit, bridgeHelloSchema, bridgeVersion } from '@octopus/shared/protocol/browser-bridge';
+import {
+  bridgeFrameLimit,
+  bridgeHelloSchema,
+  bridgeVersion,
+  bridgeProbeSchema,
+} from '@octopus/shared/protocol/browser-bridge';
 import type { BrowserBridgeSnapshot } from '@octopus/shared/protocol/browser-bridge';
 import type { BridgeBootstrap } from './bridge-store';
 import type { BridgeStore } from './bridge-store';
@@ -19,6 +24,7 @@ import {
   type BrowserSkillResponse,
 } from '@octopus/shared/protocol/browser-skills';
 import type { BrowserSkillFiles } from './browser-skill-files';
+import { executorProduct } from '../../contracts/product';
 
 type Connection = BrowserBridgeSnapshot['connections'][number] & { polling: boolean };
 export class BrowserBridge {
@@ -230,6 +236,15 @@ export class BrowserBridge {
       this.send(response, 403, { error: 'DISABLED' });
       return;
     }
+    const hostBundleId = request.headers['x-octopus-host-build'];
+    if (
+      request.headers['x-octopus-host-protocol'] !== String(bridgeVersion) ||
+      typeof hostBundleId !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(hostBundleId)
+    ) {
+      this.send(response, 409, { type: 'error', requestId: null, code: 'VERSION_INCOMPATIBLE' });
+      return;
+    }
     if (this.inflight >= 24) {
       this.send(response, 429, { error: 'BRIDGE_BUSY' });
       return;
@@ -242,6 +257,22 @@ export class BrowserBridge {
           return;
         }
         const body = await this.readBody(request);
+        const probe = bridgeProbeSchema.safeParse(body);
+        if (probe.success) {
+          if (this.closed || this.bootstrap !== admitted || !this.bootstrap.enabled) {
+            this.send(response, 410, { error: 'SESSION_EXPIRED' });
+            return;
+          }
+          this.send(response, 200, {
+            type: 'probe-result',
+            requestId: probe.data.requestId,
+            nonce: probe.data.nonce,
+            version: bridgeVersion,
+            executorVersion: executorProduct.version,
+            hostBundleId,
+          });
+          return;
+        }
         const skill = browserSkillRequestSchema.safeParse(body);
         if (skill.success) {
           const command = skill.data;
@@ -259,21 +290,25 @@ export class BrowserBridge {
             requestId: command.requestId,
           };
           try {
-            if (!this.skillFiles) {throw new Error('SKILL_OFFLINE');}
-            if (command.type === 'skills.create')
-              {reply.value = await this.skillFiles.create(
+            if (!this.skillFiles) {
+              throw new Error('SKILL_OFFLINE');
+            }
+            if (command.type === 'skills.create') {
+              reply.value = await this.skillFiles.create(
                 active.installationId,
                 command.operationId,
                 command.candidate
-              );}
-            else if (command.type === 'skills.read')
-              {reply.value = await this.skillFiles.read(active.installationId, command.skillId);}
-            else if (command.type === 'skills.receipt')
-              {reply.value = await this.skillFiles.receipt(active.installationId, command.operationId);}
-            else if (command.type === 'skills.delete')
-              {reply.value = await this.skillFiles.remove(active.installationId, command.skillId);}
-            else {
-              if (!this.openSkillDirectory) {throw new Error('SKILL_OFFLINE');}
+              );
+            } else if (command.type === 'skills.read') {
+              reply.value = await this.skillFiles.read(active.installationId, command.skillId);
+            } else if (command.type === 'skills.receipt') {
+              reply.value = await this.skillFiles.receipt(active.installationId, command.operationId);
+            } else if (command.type === 'skills.delete') {
+              reply.value = await this.skillFiles.remove(active.installationId, command.skillId);
+            } else {
+              if (!this.openSkillDirectory) {
+                throw new Error('SKILL_OFFLINE');
+              }
               await this.skillFiles.directoryPath(active.installationId, command.skillId);
               await this.openSkillDirectory(active.installationId, command.skillId);
               reply.value = { opened: true };
@@ -343,6 +378,8 @@ export class BrowserBridge {
           installationId: hello.installationId,
           browser: hello.browser,
           extensionVersion: hello.extensionVersion,
+          extensionBuildId: hello.extensionBuildId,
+          hostBundleId,
           connectionId: randomUUID(),
           state: hello.version === bridgeVersion ? 'connected' : 'incompatible',
           lastSeen: new Date().toISOString(),
@@ -359,6 +396,8 @@ export class BrowserBridge {
                 requestId: hello.requestId,
                 version: bridgeVersion,
                 connectionId: connection.connectionId,
+                executorVersion: executorProduct.version,
+                hostBundleId,
               }
             : { type: 'error', requestId: hello.requestId, code: 'VERSION_INCOMPATIBLE' }
         );

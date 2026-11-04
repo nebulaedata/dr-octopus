@@ -3,7 +3,7 @@
  * @description Verifies fixed setup argument handling, failure propagation and bundled extension containment without changing browser registration.
  */
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, access, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -34,32 +34,18 @@ test('local extension selection rejects missing manifests and escaped directorie
 });
 
 test(
-  'fixed setup preserves spaced Unicode paths and rejects unsuccessful scripts without registry writes',
+  'maintenance rejects missing fixed launchers and cancellation before creating data',
   { skip: process.platform !== 'win32' },
   async () => {
     const root = await mkdtemp(join(tmpdir(), 'octopus-browser-setup-'));
+    const data = join(root, '用户 data');
     try {
-      const resources = join(root, '资源 & bundle');
-      const data = join(root, '用户 data');
-      await mkdir(join(resources, 'setup'), { recursive: true });
-      await mkdir(data);
-      const script = join(resources, 'setup/register-browser-host.ps1');
-      await writeFile(
-        script,
-        '\uFEFFparam([string]$Mode,[string]$ResourceRoot,[string]$ProjectRoot,[switch]$MigrateProduct)\r\n@{mode=$Mode;resource=$ResourceRoot;data=$ProjectRoot;migrate=[bool]$MigrateProduct} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $ProjectRoot "arguments.json") -Encoding UTF8\r\n'
-      );
-      await configureBrowserHost(resources, data);
-      const actual = JSON.parse(
-        (await readFile(join(data, 'arguments.json'), 'utf8')).replace(/^\uFEFF/, '')
-      );
-      assert.deepEqual(actual, { mode: 'install', resource: resources, data, migrate: true });
-      await writeFile(script, 'exit 1');
-      await assert.rejects(configureBrowserHost(resources, data));
+      await assert.rejects(configureBrowserHost(root, data), { code: 'ENOENT' });
       const cancelled = new AbortController();
       cancelled.abort();
-      await assert.rejects(configureBrowserHost(resources, data, cancelled.signal));
+      await assert.rejects(configureBrowserHost(root, data, cancelled.signal), { name: 'AbortError' });
+      await assert.rejects(access(data), { code: 'ENOENT' });
     } finally {
-      assert.ok(resolve(root).startsWith(resolve(tmpdir()) + '\\'));
       await rm(root, { recursive: true, force: true });
     }
   }

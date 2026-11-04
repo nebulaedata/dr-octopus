@@ -75,6 +75,22 @@ const api: ExecutorDesktopApi = {
     return browserDiagnosticsSchema.parse(await ipcRenderer.invoke(ipcChannels.browserDiagnostics, {}));
   },
   /**
+   * Requests Main's allowlisted diagnostic projection without accepting clipboard text.
+   */
+  async copyBrowserDiagnostics() {
+    return desktopActionResponseSchema.parse(
+      await ipcRenderer.invoke(ipcChannels.copyBrowserDiagnostics, {})
+    );
+  },
+  /**
+   * Owns one narrow subscription and exposes only a cleanup function to Renderer.
+   */
+  onBrowserMaintenanceChanged(listener) {
+    const changed = () => listener();
+    ipcRenderer.on(ipcChannels.browserMaintenanceChanged, changed);
+    return () => ipcRenderer.removeListener(ipcChannels.browserMaintenanceChanged, changed);
+  },
+  /**
    * Sends only an explicit validated browser connection choice to the trusted Main.
    */
   async setBrowserEnabled(input) {

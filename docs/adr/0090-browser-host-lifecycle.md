@@ -1,12 +1,12 @@
 # ADR-0090：Browser Host 可调试、可修复的安装与连接生命周期
 
-状态：Accepted（初稿 2026-11-02；2026-11-03 同步用户已确认的修订与实施授权）。设计已接受，核心实现和验收尚未完成。实施后应更新 executor-browser.md、交付文档及对应应用规范；现行行为仍以现有实现为准。
+状态：Accepted（初稿 2026-11-02；2026-11-03 同步用户已确认的修订与实施授权）。设计已接受；核心代码已接入，正在按 PoC 执行验证，发行验收尚未完成。现行契约见 executor-browser.md，实测与剩余门禁见对应 PoC。
 
 ## 目标与问题证据
 
 正常安装、兼容升级及短暂断线自动收敛；开发环境不干扰正式环境；失败能够定位到具体层、执行有限修复并验证结果。自动恢复仅恢复通信，绝不重放网页动作、恢复已暂停桥接或扩大授权。
 
-当前 register-browser-host.ps1 将 Chrome/Edge 注册表指向安装目录内 bridge/native-host.json；旧目录删除后注册失效。迁移要求旧 manifest 存在且身份集合完全相同。非测试 Main 在 Runtime 就绪后自动配置，同一 Host 名覆盖开发和正式入口。browser-installation.ts 明确允许失败时留下部分注册变更；desktop-ipc.ts 的诊断只检查资源文件，自动配置错误被压缩为通用日志。这些事实来自当前源码，不能靠增加重试解决。
+2026-11-03 重构前基线：register-browser-host.ps1 将 Chrome/Edge 注册表指向安装目录内 bridge/native-host.json；旧目录删除后注册失效。迁移要求旧 manifest 存在且身份集合完全相同。非测试 Main 在 Runtime 就绪后自动配置，同一 Host 名覆盖开发和正式入口。browser-installation.ts 明确允许失败时留下部分注册变更；desktop-ipc.ts 的诊断只检查资源文件，自动配置错误被压缩为通用日志。这些事实来自重构前源码，不能靠增加重试解决。
 
 ## 决定一：固定注册位置，版本组件整体发布
 
@@ -14,7 +14,7 @@
 
 正式 Host 仍使用 com.octopus.executor.browser。HKCU 注册表长期指向固定的受管 manifest，不指向下载目录、源码 dist 或某个 Executor 安装版本。manifest 的 path 指向已经验证的某个不可变 Host 版本包内 launcher；升级时替换 manifest 文件，无需增加一个新的常驻服务或通用分发器。
 
-决定布局：~/.dr-octopus/executor/browser-host/{registration,versions,state}。registration/native-host.json 是固定入口；versions/<bundleId>/ 保持 launcher、native-host.cjs、私有 Node、原生依赖和许可的完整布局；state 保存当前/前一版本、安装来源、注册快照与事务日志。目录纳入现有业务根保护，维护状态不含 Runtime Bearer。可执行资源进入该目录是对现行存储约定的明确扩展，实施时同步 ADR-0083 及资源排除规则。
+决定布局：~/.dr-octopus/executor/browser-host/{registration,versions,state}。registration/native-host.json 是固定入口；`versions/<bundleId>-<deploymentId>/` 保持 launcher、native-host.cjs、私有 Node、原生依赖和许可的完整布局；state 保存当前/前一版本、安装来源、注册快照与事务日志。目录纳入现有业务根保护，维护状态不含 Runtime Bearer。可执行资源进入该目录是对现行存储约定的明确扩展，实施时同步 ADR-0083 及资源排除规则。
 
 ```mermaid
 flowchart LR
@@ -33,6 +33,8 @@ flowchart LR
 Host 随 Executor 打包、整体安装，没有独立的后台更新器。开发启动将构建产物发布到受管开发版本目录，清空 dist 不影响已发布 Host。解压版首次运行也复制完整 Host 组件，保留既有显式桥接启用规则；复制 Host 不等于授予浏览器操作权限。
 
 同一通道只允许一个活动 Executor 安装所有者。可信且版本更高的正式解压版在启动时通过安装事务自动接管；同版本不同构建、降级或来源不能确认时要求明确确认。仅安装/更新事务或用户明确切换安装来源可以改变所有者；旧版本启动、旧卸载器、后台重试不能夺回入口。普通启动仅协调当前所有者期望的状态。多仓库开发使用独立 Profile 和构建时确定的工作区 Host 后缀，不能按启动先后争抢同一个 dev 入口。
+
+安装所有权与活动组件分别记录：source/sourceVersion/installationBundleId 标识拥有维护权的安装，bundleId/directory 标识实际运行的组件。回退保留新安装的维护权；旧卸载不能因为活动包回到了旧版本就删除新所有者的入口。
 
 ## 决定二：升级是可恢复事务
 
@@ -55,6 +57,10 @@ dev 的 Host 名、manifest、业务根、Electron userData、单实例锁、Run
 
 UI 普通热更新继续使用现有机制；影响 Host 或协议的变更发布新组件并重连；完整产物校验在启动/相关变更时执行，不在每次页面热更新重建全部应用。停止开发会话只回收其进程和连接，保留可复用注册；删除工作区后由开发管理入口清理其孤立记录。
 
+开发数据位于 `~/.dr-octopus/executor-dev/<workspace-key>/`，electron/project 保存业务与 Host 状态，browser/<browser> 保存浏览器 Profile。Renderer、Runtime 和 WXT 使用独立工作区端口范围；Runtime 固定回环，不受普通设置保存覆盖。开发 serve 强制已验证的侧载身份，正式商店构建仍独立；安装包内的本地加载副本必须是侧载构建。
+
+停止会话不注销；显式 --cleanup-registration 可清理本工作区，--workspace-key 可选择已删除工作区的 key。只删除仍指向该开发目录的用户注册，保留数据及不同路径的注册，不扫描删除其他工作区。
+
 ## 决定四：明确协议兼容与发行顺序
 
 产品尚未发布，没有生产用户数据。本次直接采用新的单一桥接协议，两端一起重建，不保留 v4 适配、版本协商降级或旧消息解析。区分 extensionVersion、executorVersion、hostBundleId 与 protocolVersion；握手报告实际构建信息，版本不匹配明确提示重建或更新，不能静默降级。Host/Runtime 同样校验协议。
@@ -65,7 +71,7 @@ UI 普通热更新继续使用现有机制；影响 Host 或协议的变更发�
 
 ## 决定五：诊断、修复、验证使用同一事实模型
 
-维护服务提供只读 inspect、有限 repair、只读 verify 契约。每个检查包含 checkId、状态（pass/fail/unknown/notApplicable）、期望/实际摘要、错误码、可执行修复及证据时间。修复接受诊断 revision 并在加锁后重读，避免按过时状态覆盖用户的新配置；重复执行幂等。注册表、文件、启动和真实握手分层，不再返回一个笼统 resourcesAvailable。
+维护服务提供只读 inspect、有限 repair 及只读启动验证。发布前通过受管 launcher 做 nonce 往返；probe 不建立工具实例。Runtime 未运行或桥接关闭时，探针返回 waiting；允许发布组件，但实际连接仍以扩展握手为准。每个检查包含 checkId、状态（pass/fail/unknown/notApplicable）、期望/实际摘要、错误码、可执行修复及证据时间。修复接受诊断 revision 并在加锁后重读，避免按过时状态覆盖用户的新配置；重复执行幂等。注册表、文件、启动和真实握手分层，不再返回一个笼统 resourcesAvailable。
 
 | 层       | 必须检查                                                         | 恢复责任                                            |
 | -------- | ---------------------------------------------------------------- | --------------------------------------------------- |
@@ -78,6 +84,8 @@ UI 普通热更新继续使用现有机制；影响 Host 或协议的变更发�
 | 页面能力 | 网站权限、受保护页面、Controller 就绪                            | 给出具体权限/页面操作，不能反复注册 Host            |
 
 诊断不能仅凭 native lastError 字符串确定注册根因；插件只报告能观察到的错误，Executor 才检查本机注册。扩展失去 Native 通道后无法自行修改 Windows 注册，显示“打开 Executor 修复”；不为了修复增加任意命令入口。Executor 未运行时显示等待启动，不承诺扩展能自动启动应用。
+
+维护 launcher 的 Job 监管完整进程树，55 秒停止、60 秒外层截止；取消和退出会结束维护子进程。Main 通过完成事件刷新界面，不持续读取整个资源树。已启用 Browser、此前启动成功且 Computer 状态明确为空闲时，Main 每次生命周期最多恢复两次意外退出的 Runtime；主动停止、启动数据故障和未收束的桌面控制不自动启动。
 
 自动检查触发于当前所有者启动、升级完成和有界的连接故障恢复，不持续轮询整个文件树；相同失败有冷却和重试预算。插件保留 alarm 支持的恢复，避免只依赖 Worker 内存定时器；以低频探测等待 Executor 回归，暂停取消探测。连续失败不弹窗轰炸；恢复中只显示状态，恢复成功清除当前告警但保留历史诊断。
 
@@ -108,7 +116,7 @@ UI 普通热更新继续使用现有机制；影响 Host 或协议的变更发�
 
 新增受管副本、事务日志和一个前版本需要磁盘与维护代码；采用固定 manifest 直接指向版本 launcher，避免再造常驻 broker 或独立自动更新产品。新协议两端需要真实组合测试，不能通过比较产品 semver 替代。失去所有本机可信资源、权限不足、未知注册与策略禁用需要用户介入，是明确失败出口。
 
-本文所有新增能力尚未实施，所有验收场景尚待执行。当前机器残留注册的即时修复与本设计落地是不同交付，不能用一次手工修复宣布长期问题解决。
+本次已开始实现连接所有权分离、受管包维护、v5 握手和开发隔离；真实发行验收仍未完成。当前机器残留注册的即时修复与本设计落地是不同交付，不能用一次手工修复宣布长期问题解决。
 
 ## 连接界面
 
@@ -116,20 +124,14 @@ UI 普通热更新继续使用现有机制；影响 Host 或协议的变更发�
 
 引导文案：“启动执行器后会自动配置浏览器连接。连接异常时，可点击‘修复浏览器连接’重试。”组件就绪与真实连接必须分别呈现，不把复制文件或注册成功当作已经握手。
 
-## 扩展并行开发边界
+## 2026-11-03 当前分支实施复核
 
-2026-11-03 源码审查：entrypoints/background.ts 同时装配 Native 连接、RecordingService、BuiltinAgentService、模型设置和 SkillFileClient。需要修改连接核心，业务核心无需整体重写，但这不是零交叉改动。SkillFileClient 复用 Native port，BrowserRouter 的录制准入与断线清理必须保留。
+用户已取消并行开发与新建 worktree 的要求，改为在当前分支实施。原有模块职责边界继续适用，不再规定双分支所有权或串行合入流程。
 
-| 责任方   | 独占修改范围                                                                                                                 | 稳定边界                                             |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 连接重构 | Executor；共享 browser-bridge 协议；扩展连接模块、popup-bridge、features/connection；WXT/identity 构建；根开发编排及桥接测试 | 不改内置 Agent、模型、录制、技能业务语义             |
-| 扩展业务 | builtin-agent、model-settings、recording、skill-library 的业务功能与业务界面                                                 | 不直接读写 Native port、握手、重连状态               |
-| 协调文件 | background.ts、browser-router.ts、skill-file-client.ts、两级 package.json、锁文件、公共测试夹具                              | 每个集成批次指定单一修改者；其他分支通过接口提交需求 |
+复核基线为 067ff6c。扩展已经使用 BuiltinAgentService 统一整理/重放，SkillFileClient 复用 Native port；录制准入等待技能状态恢复。本次连接重构必须保留这些接线、离线录制与浏览器技能存储、面板所有权及未知副作用处理，不以旧工作流设计覆盖当前业务。
 
-先由连接重构侧抽取连接生命周期到 src/lib/native-bridge.ts，再由 background.ts 作为装配入口注入 router 与 skillFiles。模块拥有 port、连接身份、握手、heartbeat/retry alarm、暂停、旧回调防护、请求关联与状态发布；后台业务注册仍归 background.ts，不移动 Agent/录制服务。先验证抽取保持当前行为，再切换新协议；这是短期开发顺序，不是保留运行时旧协议兼容。
+background.ts 保留业务装配和退役工作流清理，src/lib/native-bridge.ts 独立拥有 port、握手、重试/心跳、暂停、状态及旧回调防护。通过 execute/reset 和 receive/disconnect 的有限能力协作，getSession 返回捕获当前身份的发送能力，旧发送函数不能向替代连接发送。业务模块不直接管理连接状态。
 
-连接模块向装配层提供 start、dispose、pause、resume、reconnect、readStatus 和 getSession；getSession 返回当前已握手的 { id, post } 或 undefined，post 捕获会话身份，旧会话发送必须拒绝。SkillFileClient 的现有会话提供函数、receive 和 disconnect 契约保持。模块通过注入的 router.execute/router.reset 与 skillFiles.receive/skillFiles.disconnect 完成路由和断线清理，不导入 BuiltinAgentService 或 RecordingService。双方需要新增接口时先更新契约及契约测试，避免各自复制一份连接状态。
+复核时的基线：自动注册仍调用旧安装目录脚本，诊断仅检查五个文件。此次已替换为共同维护服务，保留 PowerShell 作为固定私有 Node 启动适配；实现进度与测试边界见 PoC，不能以源码接入代替发行验收。
 
-两条开发线使用独立 worktree，各自拥有 node_modules、build、dist、.output、.wxt 和开发 Profile；禁止共享生成目录。先合入连接抽取和接口约定，之后业务开发与连接重构并行。共享协议、入口装配和 package.json 改动串行集成；pnpm-lock.yaml 由依赖集成方生成，不手工拼接。日常分支测试使用各自版本，集成批次必须从同一提交构建 shared、Executor、扩展并进行真实往返验收，不混用两个 worktree 的产物。
-
-业务边界回归包括：Executor 离线仍可录制和操作本地技能；Skill 文件请求断线后正确结束；Agent/录制忙碌准入保持；暂停、连接替换及旧回包不触发动作重放。具体验收见 PoC，不以该分工文档声称功能已实现。
+实施顺序保持：先分离连接资源所有权并验证业务边界，再统一维护诊断及安装事务、接入开发隔离与实际构建握手，最后完成 UI 和真实浏览器验收。源码单测通过仅证明所覆盖边界，发行阻断场景仍见 PoC。

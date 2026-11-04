@@ -107,6 +107,7 @@ for (const flavor of flavors) {
       try {
         await mkdir(data);
         for (const path of [
+          'host-bundle.json',
           'native/browser-launcher.exe',
           'native/file-commit.node',
           'bridge/native-host.cjs',
@@ -116,7 +117,10 @@ for (const flavor of flavors) {
           await mkdir(join(resource, path, '..'), { recursive: true });
           await copyFile(join(root, 'dist', path), join(resource, path));
         }
-        await writeFile(join(resource, 'bridge/host-location.json'), JSON.stringify({ projectRoot: join(data, 'project') }));
+        await writeFile(
+          join(resource, 'bridge/host-location.json'),
+          JSON.stringify({ projectRoot: join(data, 'project') })
+        );
         await writeFile(
           manifest,
           JSON.stringify({

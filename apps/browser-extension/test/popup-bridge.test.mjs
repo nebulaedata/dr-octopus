@@ -17,7 +17,11 @@ const bundle = await build({
   platform: 'node',
   format: 'cjs',
   packages: 'external',
-  define: { 'import.meta.env.BROWSER': '"chrome"' },
+  define: {
+    'import.meta.env.BROWSER': '"chrome"',
+    __OCTOPUS_BROWSER_HOST__: '"com.octopus.executor.browser"',
+    __OCTOPUS_EXTENSION_BUILD_ID__: JSON.stringify('e'.repeat(64)),
+  },
 });
 
 /**
@@ -25,7 +29,7 @@ const bundle = await build({
  */
 function fixture(saved = {}) {
   const listeners = [];
-  let installed;
+  const installed = [];
   const deletedDatabases = [];
   const storageListeners = [];
   const alarms = new Map();
@@ -42,7 +46,7 @@ function fixture(saved = {}) {
       onStartup: { addListener: () => {} },
       onInstalled: {
         addListener: (listener) => {
-          installed = listener;
+          installed.push(listener);
         },
       },
       /**
@@ -161,7 +165,15 @@ function fixture(saved = {}) {
   function request(message, sender = { id: browser.runtime.id, url: browser.runtime.getURL('/popup.html') }) {
     return listeners.map((listener) => listener(message, sender)).find((reply) => reply !== undefined);
   }
-  return { ports, values, alarms, request, browser, installed: () => installed(), deletedDatabases };
+  return {
+    ports,
+    values,
+    alarms,
+    request,
+    browser,
+    installed: () => installed.forEach((listener) => listener()),
+    deletedDatabases,
+  };
 }
 
 /**
@@ -181,12 +193,16 @@ async function settled(predicate) {
  * Answers the actual request ID emitted by this worker's handshake.
  */
 function connect(port) {
+  const connectionId = randomUUID();
   port.receive({
     type: 'connected',
     requestId: port.sent[0].requestId,
-    version: 4,
-    connectionId: randomUUID(),
+    version: 5,
+    executorVersion: '0.0.4',
+    hostBundleId: 'a'.repeat(64),
+    connectionId,
   });
+  return connectionId;
 }
 
 test('popup status uses a live handshake, never a previous worker connected label', async () => {
@@ -195,14 +211,35 @@ test('popup status uses a live handshake, never a previous worker connected labe
   const before = await f.request({ type: 'bridge.status' });
   assert.equal(before.phase, 'connecting');
   assert.equal(before.toolsReady, false);
+  assert.equal(before.lastConnectedAt, null);
   connect(f.ports[0]);
   const connected = await f.request({ type: 'bridge.status' });
   assert.equal(connected.phase, 'connected');
   assert.equal(connected.toolsReady, true);
+  assert.ok(Number.isFinite(Date.parse(connected.lastConnectedAt)));
   assert.equal(connected.installationId, f.values.installationId);
   f.ports[0].disconnect();
   await settled(() => f.values.bridgeStatus === 'disconnected');
   assert.equal((await f.request({ type: 'bridge.status' })).toolsReady, false);
+});
+
+test('last successful connection survives a disconnect and worker restart without following heartbeats', async () => {
+  const f = fixture();
+  await settled(() => f.ports[0]?.sent.length);
+  const connectionId = connect(f.ports[0]);
+  await settled(() => typeof f.values.bridgeLastConnectedAt === 'string');
+  const connectedAt = f.values.bridgeLastConnectedAt;
+  f.ports[0].receive({ type: 'heartbeat', requestId: randomUUID(), connectionId });
+  assert.equal(f.values.bridgeLastConnectedAt, connectedAt);
+  f.ports[0].disconnect();
+  await settled(() => f.values.bridgeStatus === 'disconnected');
+  const disconnected = await f.request({ type: 'bridge.status' });
+  assert.equal(disconnected.phase, 'disconnected');
+  assert.equal(disconnected.lastConnectedAt, connectedAt);
+  const restarted = fixture({ ...f.values, paused: true });
+  const paused = await restarted.request({ type: 'bridge.status' });
+  assert.equal(paused.phase, 'paused');
+  assert.equal(paused.lastConnectedAt, connectedAt);
 });
 
 test('page, wrong extension and malformed popup commands cannot change connection preferences', async () => {

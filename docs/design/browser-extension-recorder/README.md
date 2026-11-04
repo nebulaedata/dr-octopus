@@ -6,6 +6,7 @@
 - [当前 Skill Agent 架构](../../architecture/browser-skill-unified-agent.md)
 - [浏览器优先保存](../../architecture/browser-skill-offline.md)
 - [现存图稿的提示词与来源索引](prompts.md)
+- [连接页最近一次连接：三份待审阅视觉稿、提示词与交互建议](connection-status-recent-prompts.md)
 - [历史原件清单与恢复说明](history-manifest.md)
 - [历史原件 ZIP](history-2026-11-03.zip)
 - [运行验证与待办](../../poc/executor-validation.md)

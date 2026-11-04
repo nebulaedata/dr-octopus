@@ -84,4 +84,4 @@
 - [Web 全局快捷键体系与设置页设计](web-keyboard-shortcuts-validation.md) · [架构](../architecture/web-keyboard-shortcuts.md)
 - [Tool Renderer Development](web-tool-renderers-validation.md) · [架构](../architecture/web-tool-renderers.md)
 - [Workspace 附件永久物化缓存设计](workspace-attachment-temp-cache-validation.md) · [架构](../architecture/workspace-attachment-temp-cache.md)
-- [Browser Host 生命周期验证计划](browser-host-lifecycle-validation.md) · [决策](../adr/0090-browser-host-lifecycle.md)
+- [Browser Host 生命周期验证与当前记录](browser-host-lifecycle-validation.md) · [决策](../adr/0090-browser-host-lifecycle.md)

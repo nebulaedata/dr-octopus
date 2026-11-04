@@ -8,7 +8,7 @@
 - Worker 连接固定 Native Host，跨 Host 协议进入 packages/shared；扩展私有录制/工作流协议留在本应用，不导入 Executor 实现。Host 持有桥接凭据，扩展/页面/popup 不持有 Runtime Bearer。
 - 保留 nativeMessaging、storage、alarms、scripting 和截图 API 必需的 <all_urls> 权限；录制按需增加 webNavigation，不照搬独立插件权限示例，不无依据增加 tabs/activeTab；内容脚本、路由和操作仍只接受授权的 HTTP/HTTPS 页面，不预先申请 debugger/cookies/externally_connectable。
 - 只顶层 ISOLATED world 静态注入，Controller 懒初始化；静态/补注入共用一个接收器。无副作用探测明确缺少接收器且再次确认权限后才补注入一次固定脚本，动作失败不补注入/重放。
-- 协议版本 4，单 JSON 不超过 256 KiB。源端分页绑定连接、tab、documentId、controllerId、snapshotId 和页号，旧引用不重建，旧 tab ID 不映射替换目标。
+- 协议版本 5，单 JSON 不超过 256 KiB。源端分页绑定连接、tab、documentId、controllerId、snapshotId 和页号，旧引用不重建，旧 tab ID 不映射替换目标。
 - 同源 frame/open shadow roots 有界准入与文档身份检查（最多128个根、100,000个元素）；跨域或不可读取的frame保持不透明，不因其存在拒绝整页DOM观察，也不读取或操作其内容。无法脱敏的frame存在时拒绝截图。嵌套同源文档也绑定根身份，导航/替换后旧引用不能继续使用。同文档DOM变化使用上游已索引的真实元素引用；不把任意DOM变化作为整份快照失效条件。
 - 页面提取、元素索引、遮罩彩屏、指针与高亮直接使用固定 PageController 公开 API 和默认行为，不为页面执行另建 DOM MutationObserver 或输入拦截。录制可在明确会话范围内监听 DOM 用户事件，源端脱敏，不阻断用户操作，也不初始化 Controller/执行遮罩。常规无选择约束时只显式启用 enableMask，页面提取范围和属性使用上游默认配置；本地 apply_choice 使用公开 interactiveBlacklist 在同一 Controller 内建立已解析目标的单元素索引，带选择要求的普通快照排除选择控件及其标签，不读取私有 selectorMap、不解析页面文本授予目标身份；第一次观察时 showMask，任务内复用 Controller，观察及思考间隙不 hideMask，单次动作不 dispose；任务结束、连接暂停/断开和内容脚本失效时按所有者释放原生资源；Bridge 断开不得清理本地录制或其他所有者的运行状态。连接/任务/文档身份与 TTL、分页、限额、敏感字段投影仍由桥接层管理，不修改上游实现。
 - 连接、监听、计时器归所属生命周期，旧回调不改新状态。重连只恢复连接、不重放；用户暂停持久后不能自动恢复。
@@ -21,7 +21,6 @@
 
 ## 录制与本地技能边界
 
-
 - 录制运行模块位于 src/lib/recording，录制 UI 位于 src/features/recording；recording-content.tsx 仍是持有 React root 的页面运行时，不为后缀或目录形式机械拆分。内部直接引用所属模块，不新增旧路径转导出。
 
 - 在同一扩展新增录制、浮条、事件保存与查看，保留现有桥接。录制事件不经 Native Host，Executor 离线不阻止录制；暂停连接、暂停录制和停止重放是独立操作。
@@ -32,7 +31,7 @@
 - 事件源端脱敏，事务提交后 ACK，批量传输、重试与存储有界。停止先固化录制结果和尾批次缺口，再独立编译；不得承诺异常退出不丢事件。浏览器重启后标记中断，不自动采集或重放。
 - 整理和重放使用窗口级侧边栏内的 Agent Host；纯录制不创建 Host。模型配置属于扩展，不使用 Runtime Bearer/Host 桥接凭据。用户显式保存配置可将接口密钥持久保存到本机受信扩展存储，按规范化 endpoint 绑定，不同步、不混入工作流/导出/日志、不宣称系统密钥库加密。Content 不接收或读取模型密钥；Popup 仅显示保存状态、更换和清除操作，不回填已存密钥明文。
 - 模型目录拉取与连接测试使用设置页专用 Port，由后台解析当前输入或当前 endpoint 的已存密钥；关闭页面、离开设置或改变配置取消请求，不自动重试。连接测试独立于整理任务、原页显示顶部 Alert toast、不自动保存配置或创建 Host；编译仍使用注册的 Agent Host。候选只保留在设置页内存，不允许该短请求通道执行编译、重放或页面动作。
-- 整理、重放业务留在本扩展，不修改 packages/agent。新增私有消息不自动扩展 Native v4 Browser 工具白名单。详细状态、预算、存储与恢复流程只维护在融合设计，不在本文件复制。
+- 整理、重放业务留在本扩展，不修改 packages/agent。新增私有消息不自动扩展 Native v5 Browser 工具白名单。详细状态、预算、存储与恢复流程只维护在融合设计，不在本文件复制。
 - 整理入口只做本地配置/授权检查，不预先调用模型连接测试。记住的发送授权绑定规范化 endpoint 和当前脱敏契约版本，首次确认或设置中明确勾选保存后生效，可撤销；后台每次开始前重新检查。已授权也只能由明确整理动作触发，不能自动采集/编译。配置错误修复保留录制上下文，临时失败与输出校验失败不强制进入设置，不自动重试。
 - 校验失败诊断必须从 Host 传到 Worker 并随失败任务保存，只包含有限错误码、白名单字段路径/数组位置、类型与结束原因等信息，不保存原始模型正文、字段值、密钥或请求头；旧任务没有诊断时明确说明，不推断根因。
 - 整理失败不提供通用旧录制修复入口；保留具体校验诊断与显式重试，不猜测补齐录制事实。未来迁移应基于明确数据版本和真实需求单独设计。
@@ -44,7 +43,6 @@
 ## Popup 界面边界
 
 - 控件优先使用现有 shadcn/ui 组件及其标准组合；日期字段采用 Button + Popover + Calendar 的 Date Picker 交互，字段值由 TanStack Form 持有。仅在没有合适组件时编写应用级定制，不直接修改共享源组件。
-
 
 - 新增或重构的表单统一使用 TanStack Form（@tanstack/react-form），按 shadcn 的 Field/FieldLabel/FieldError 组合接入 form.Field、handleBlur/handleChange 与提交状态；不要用 useState 维护平行的表单字段状态。导航、筛选、展开与放弃确认等 UI 状态仍可局部管理。表单校验不替代 Worker 来源检查、领域约束及 Repository revision 校验。
 
@@ -81,7 +79,7 @@
 - 商店上传 ZIP 的 manifest 禁止包含 key，包括首次创建条目的草稿。从侧载构建制作草稿时，仅在独立归档副本去掉 manifest.key 和构建专用 browser-identity.json，其余运行资源与许可保持一致；不修改 .output 的侧载身份，不用草稿证明正式 Host 就绪。压缩后检查 ZIP 内实际 manifest。
 - 独立 ZIP 默认留存在本项目 release/<version>-<UUID>/，草稿目录可标记 draft；避开 .output，避免构建清理已提交产物，不覆盖既有归档。.output/.wxt/release 及临时发布材料不提交。
 - 插件兼容更新可独立构建、发布和安装，无需重建 Executor。仅在分发新的客户端内置插件副本时重新打包 Executor；不把源码或独立商店更新当作既有包内副本已更新。
-- browser-identity.json 是侧载公钥/ID 与两个商店 ID 的唯一来源，所有模式均要求完整有效的官方身份。scripts/lib/browser-identity.mjs 由普通 Node 解析，不支持身份环境覆盖或缺失身份回退。只有插件 profile 按进程变量 → 根 .env → sideload 解析，并在 .env.example 说明；客户端不读取 .env。store manifest 不携带侧载 key，不向 Worker/PageController 注入运行时身份开关。
+- browser-identity.json 是侧载公钥/ID 与两个商店 ID 的唯一来源，所有模式均要求完整有效的官方身份。scripts/lib/browser-identity.mjs 由普通 Node 解析，不支持身份环境覆盖或缺失身份回退。生产构建的插件 profile 按进程变量 → 根 .env → sideload 解析，并在 .env.example 说明；开发 serve 固定使用已验证的侧载身份及隔离 Profile；客户端不读取 .env。store manifest 不携带侧载 key，不向 Worker/PageController 注入运行时身份开关。
 - 两个 WXT 目标输出独立的 browser-identity.json 产物记录，包含 identity、profile、protocolVersion、extensionVersion。identity 指纹只绑定稳定策略；客户端按各目标实际渠道身份和协议判断兼容，不要求插件记录与客户端完整指纹相同。变更客户端允许的身份时重建客户端；改变插件模式或兼容版本时只重建插件。配置与迁移步骤由[发布 SOP](RELEASE.md#33-配置身份并重新构建)维护。
 - public key 不代替商店实际 ID；正式发行需核对 Chrome/Edge 实际安装身份、配套 Host 全部来源校验及注册迁移，不放宽到任意来源。审核与商店安装验收按实际结果记录，侧载不能冒充商店发布。
 

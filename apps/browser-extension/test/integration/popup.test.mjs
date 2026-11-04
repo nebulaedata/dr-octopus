@@ -5,7 +5,7 @@
 import { verifyPopupContentBounds } from './popup-layout.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cp, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -148,7 +148,13 @@ for (const flavor of ['chrome', 'edge']) {
           chrome.runtime.sendMessage = async (request) => {
             const reply = await original(request);
             if (request.type === 'bridge.status') {
-              return { ...reply, phase: 'connected', code: '', toolsReady: false };
+              return {
+                ...reply,
+                phase: 'connected',
+                code: '',
+                toolsReady: true,
+                lastConnectedAt: new Date().toISOString(),
+              };
             }
             return reply;
           };
@@ -157,6 +163,37 @@ for (const flavor of ['chrome', 'edge']) {
         await expect(dot).toHaveAttribute('aria-label', '连接成功');
         await expect(dot).toHaveClass(/bg-success/);
         await expect(dot).toBeVisible();
+        await popup.getByRole('tab', { name: '连接状态', exact: true }).click();
+        const connectedBadge = popup.locator('[data-slot="badge"]').filter({ hasText: /^已连接$/ });
+        await expect(connectedBadge).toHaveClass(/bg-success\/10/);
+        await expect(connectedBadge).toHaveClass(/text-success/);
+        const readyBadge = popup.locator('[data-slot="badge"]').filter({ hasText: /^已就绪$/ });
+        await expect(readyBadge).toHaveClass(/bg-primary/);
+        await expect(readyBadge).toHaveClass(/text-primary-foreground/);
+        await expect(popup.getByText('最近一次连接', { exact: true })).toBeVisible();
+        await expect(popup.getByText(/^今天 \d{2}:\d{2}$/)).toBeVisible();
+        const diagnostics = popup.locator('details').filter({ hasText: '连接诊断' });
+        await expect(diagnostics).not.toHaveAttribute('open');
+        await expect(popup.getByText('最近一次连接异常', { exact: true })).toBeHidden();
+        if (process.env.OCTOPUS_POPUP_EVIDENCE_DIR) {
+          await popup.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+          await expect(popup.locator('html')).toHaveClass('dark');
+          await mkdir(process.env.OCTOPUS_POPUP_EVIDENCE_DIR, { recursive: true });
+          await popup.screenshot({
+            path: join(process.env.OCTOPUS_POPUP_EVIDENCE_DIR, `${flavor}-connected.png`),
+          });
+        }
+        await diagnostics.locator('summary').click();
+        await expect(popup.getByText('最近一次连接异常', { exact: true })).toBeVisible();
+        await expect(popup.locator('footer[aria-label="扩展信息"]')).toBeInViewport();
+        if (process.env.OCTOPUS_POPUP_EVIDENCE_DIR) {
+          await popup.screenshot({
+            path: join(process.env.OCTOPUS_POPUP_EVIDENCE_DIR, `${flavor}-diagnostics.png`),
+          });
+        }
+        await popup.getByRole('button', { name: '暂停连接', exact: true }).scrollIntoViewIfNeeded();
+        await expect(popup.getByRole('button', { name: '暂停连接', exact: true })).toBeInViewport();
+        await popup.getByRole('tab', { name: '录制重放', exact: true }).click();
         await popup.evaluate(() => window.restoreStatusPeer());
         await popup.getByRole('tab', { name: '连接状态', exact: true }).click();
         await expect(dot).toHaveAttribute('aria-label', '连接失败');
@@ -185,6 +222,9 @@ for (const flavor of ['chrome', 'edge']) {
         await expect(reopened.getByText('已暂停', { exact: true })).toBeVisible();
         await reopened.getByRole('button', { name: '恢复连接', exact: true }).click();
         await expect(reopened.getByText('未连接', { exact: true })).toBeVisible();
+        await expect(reopened.getByText('尚无连接记录', { exact: true })).toBeVisible();
+        await expect(reopened.getByText('最近一次连接异常', { exact: true })).toBeHidden();
+        await reopened.locator('details').filter({ hasText: '连接诊断' }).locator('summary').click();
         await expect(reopened.getByText('最近一次连接异常', { exact: true })).toBeVisible();
         await expect(reopened.getByText('native_host_unavailable', { exact: true })).toBeVisible();
         const diagnostic = await worker.evaluate(

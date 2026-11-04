@@ -2,7 +2,7 @@
  * @author Codex
  * @description Displays Runtime-owned Browser connection and tool evidence with explicit consent and credential-free diagnostics.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@octopus/ui/components/tabs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@octopus/ui/components/button';
@@ -12,13 +12,14 @@ import { Badge } from '@octopus/ui/components/badge';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@octopus/ui/components/collapsible';
 import { Alert } from '@octopus/custom-ui/components/alert';
 import { Item, ItemGroup, ItemContent, ItemTitle, ItemActions } from '@octopus/ui/components/item';
-import { ChevronRightIcon, RefreshCw } from 'lucide-react';
+import { BriefcaseMedicalIcon, ChevronRightIcon, RefreshCw } from 'lucide-react';
 import { BrowserBrandIcon } from '@/components/BrowserBrandIcon';
 import { ConnectionBadge } from '@/components/ConnectionBadge';
 import { ToolNameList } from '@/components/ToolNameList';
 import {
   setBrowserEnabled,
   browserDiagnostics,
+  copyBrowserDiagnostics,
   configureBrowserHost,
   openBrowserExtensionFolder,
 } from '@/api/executor';
@@ -38,15 +39,26 @@ export function BrowserBridgeStatus({
   toolNames?: string[];
 }) {
   const cache = useQueryClient();
+  useEffect(() => {
+    if (!window.executor) {
+      return;
+    }
+    return window.executor.onBrowserMaintenanceChanged(() => {
+      void cache
+        .invalidateQueries({ queryKey: ['executor', 'browser-diagnostics'] })
+        .catch(() => console.warn('Browser diagnostics refresh failed.'));
+    });
+  }, [cache]);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
-  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [browser, setBrowser] = useState<'chrome' | 'edge'>('chrome');
   const browserName = browser === 'edge' ? 'Edge' : 'Chrome';
   const diagnostics = useQuery({
     queryKey: ['executor', 'browser-diagnostics'],
-    enabled: instructionsOpen && diagnosticsOpen,
+    enabled: ready && instructionsOpen,
+    staleTime: Infinity,
+    retry: (attempt, error) => 'code' in error && error.code === 'BUSY' && attempt < 6,
+    retryDelay: 10000,
     queryFn: browserDiagnostics,
-    retry: false,
     networkMode: 'always',
   });
   const change = useMutation({
@@ -59,8 +71,9 @@ export function BrowserBridgeStatus({
     mutationFn: configureBrowserHost,
     retry: false,
     networkMode: 'always',
-    onSuccess: () =>
-      toast.add({ id: 'browser-setup', type: 'success', title: '连接组件已配置，请在插件弹窗中重连。' }),
+    onSuccess: () => {
+      toast.add({ id: 'browser-setup', type: 'success', title: '连接组件已修复，等待浏览器插件自动连接。' });
+    },
   });
   const folder = useMutation({
     mutationFn: openBrowserExtensionFolder,
@@ -174,9 +187,6 @@ export function BrowserBridgeStatus({
           open={instructionsOpen}
           onOpenChange={(open) => {
             setInstructionsOpen(open);
-            if (!open) {
-              setDiagnosticsOpen(false);
-            }
           }}
         >
           <CollapsibleTrigger render={<Button variant="ghost" className="group -ml-2.5" />}>
@@ -244,23 +254,19 @@ export function BrowserBridgeStatus({
             </section>
             <section aria-label="连接浏览器插件" className="flex flex-col gap-3">
               <h3 className="font-medium">2. 连接执行器</h3>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" disabled={!ready || setup.isPending} onClick={() => setup.mutate()}>
-                  {setup.isPending ? '正在修复…' : '修复浏览器连接'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={!ready}
-                  onClick={() => {
-                    void cache.invalidateQueries({ queryKey: accessQuery.queryKey });
-                  }}
-                >
-                  <RefreshCw data-icon="inline-start" />
-                  检查连接
-                </Button>
-              </div>
+              {!connected && diagnostics.data && diagnostics.data.maintenance.phase !== 'ready' ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={!ready || setup.isPending}
+                    onClick={() => setup.mutate()}
+                  >
+                    {setup.isPending ? '正在修复…' : '修复浏览器连接'}
+                  </Button>
+                </div>
+              ) : null}
               <p className="text-muted-foreground">
-                安装程序已配置连接。解压版或连接失败时点击“修复浏览器连接”，无需运行命令。
+                启动执行器后会自动配置浏览器连接，安装版和解压版均无需手动配置。自动修复未完成时，可重试修复。
               </p>
               <p className="text-muted-foreground">
                 启用右上方的浏览器桥接，在插件弹窗中恢复或重连，再查看上方实例状态。
@@ -283,15 +289,12 @@ export function BrowserBridgeStatus({
                 </summary>
                 <ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
                   <li>没有连接：确认当前浏览器配置中的插件已启用，打开插件弹窗恢复或重连。</li>
-                  <li>配置失败：检查安装包是否完整；其他安装占用时，先通过原安装卸载或撤销配置。</li>
+                  <li>修复失败：展开高级诊断查看具体失败项；注册冲突时，修复入口会先请求确认并备份配置。</li>
                   <li>版本不兼容：更新执行器和插件，本地安装需重新加载。</li>
                   <li>工具未就绪：检查插件的网站访问权限，在普通网页重试。</li>
                 </ul>
               </details>
-              <details
-                className="executor-disclosure group/diagnostics"
-                onToggle={(event) => setDiagnosticsOpen(event.currentTarget.open)}
-              >
+              <details className="executor-disclosure group/diagnostics">
                 <summary className="flex min-h-8 w-fit cursor-pointer items-center gap-2 rounded-md px-1 hover:text-foreground focus-visible:outline focus-visible:outline-ring">
                   <ChevronRightIcon
                     className="size-4 motion-safe:transition-transform group-open/diagnostics:rotate-90"
@@ -300,14 +303,57 @@ export function BrowserBridgeStatus({
                   高级诊断
                 </summary>
                 <div className="mt-3 flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      disabled={diagnostics.isFetching || setup.isPending}
+                      onClick={() => {
+                        void diagnostics.refetch();
+                        void cache.invalidateQueries({ queryKey: accessQuery.queryKey });
+                      }}
+                    >
+                      <RefreshCw data-icon="inline-start" />
+                      重新检测
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={setup.isPending}
+                      onClick={() => {
+                        void copyBrowserDiagnostics()
+                          .then(() => toast.add({ type: 'success', title: '脱敏诊断已复制' }))
+                          .catch((error: unknown) =>
+                            toast.add({
+                              type: 'error',
+                              title: error instanceof Error ? error.message : '复制失败',
+                            })
+                          );
+                      }}
+                    >
+                      <BriefcaseMedicalIcon data-icon="inline-start" />
+                      复制诊断信息
+                    </Button>
+                  </div>
                   {diagnostics.isFetching ? <p>正在检查连接组件…</p> : null}
                   {diagnostics.data ? (
                     <>
                       <p>
-                        {diagnostics.data.resourcesAvailable
-                          ? '连接组件文件存在；实际连接以上方实例状态为准。'
-                          : '连接组件缺失，请使用完整安装包重新安装。'}
+                        {diagnostics.data.maintenance.phase === 'ready'
+                          ? '注册与组件检查通过；是否已连接以上方实际握手为准。'
+                          : '连接维护未完成，请查看以下失败项。'}
                       </p>
+                      <p className="break-all">Host：{diagnostics.data.maintenance.hostName}</p>
+                      {diagnostics.data.lastError ? <p>最近维护错误：{diagnostics.data.lastError}</p> : null}
+                      {diagnostics.data.maintenance.checks
+                        .filter((item) => item.status === 'fail' || item.status === 'unknown')
+                        .map((item) => (
+                          <div key={item.id} className="flex flex-col gap-1 break-all">
+                            <p>
+                              {item.id}：{item.code}
+                            </p>
+                            <p>期望：{item.expected || '无'}</p>
+                            <p>实际：{item.actual || '未发现'}</p>
+                          </div>
+                        ))}
                       <p className="break-all">资源目录：{diagnostics.data.resourceRoot}</p>
                       <p className="break-all">执行器数据目录：{diagnostics.data.projectRoot}</p>
                     </>

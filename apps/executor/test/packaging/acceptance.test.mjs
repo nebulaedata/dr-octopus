@@ -591,7 +591,8 @@ test(
       const diagnostics = await page.evaluate(() => window.executor.browserDiagnostics());
       assert.equal(diagnostics.ok, true);
       assert.equal(diagnostics.data.resourceRoot, join(clone, 'resources/executor'));
-      assert.equal(diagnostics.data.resourcesAvailable, true);
+      // This clone deliberately replaced its installer script to prevent real registration writes.
+      assert.equal(diagnostics.data.maintenance.checks.find((item) => item.id === 'source').status, 'fail');
       const enabled = await page.evaluate(() => window.executor.setBrowserEnabled({ enabled: true }));
       record('packaged-bridge-enabled');
       assert.equal(enabled.ok, true, JSON.stringify(enabled));
@@ -622,6 +623,7 @@ test(
           installationId: randomUUID(),
           browser: 'chrome',
           tools: true,
+          extensionBuildId: 'e'.repeat(64),
           extensionVersion: JSON.parse(
             await readFile(join(product, 'resources/browser/chrome/manifest.json'), 'utf8')
           ).version,
@@ -877,7 +879,7 @@ test(
     const installer = join(output, basename(artifact.files.find((file) => file.path.endsWith('.exe')).path));
     try {
       await command(installer, ['/S', '/D=' + installation]);
-      const expected = join(installation, 'resources/executor/bridge/native-host.json');
+      const expected = join(data, 'browser-host/registration/native-host.json');
       for (const key of keys) {
         assert.equal(await ps(`(Get-Item -LiteralPath '${key}').GetValue('')`), expected);
       }

@@ -18,6 +18,8 @@ import { NativeFileCommit } from '../../src/runtime/basic/native-file-commit.ts'
 import { HttpGateway } from '../../src/runtime/mcp/http-gateway.ts';
 import { readFrames, writeFrame } from '../../src/bridge/native-framing.ts';
 import { browserIdentity } from '../../build/browser-identity.ts';
+import { BrowserHostMaintenance } from '../../src/maintenance/browser-host.ts';
+import { probeBrowserHost } from '../../src/installation/windows/browser-host-probe.ts';
 const browserExtensionId = browserIdentity.chromeExtensionId;
 const foreignId = 'abcdefghijklmnop'
   .split('')
@@ -72,12 +74,14 @@ function headers(record) {
     'X-Octopus-Role': 'native-browser-host',
     'X-Octopus-Origin': `chrome-extension://${browserExtensionId}/`,
     'X-Octopus-Login': record.loginIdentity,
+    'X-Octopus-Host-Protocol': '5',
+    'X-Octopus-Host-Build': 'a'.repeat(64),
   };
 }
 /**
  * Creates one installation handshake with an independently generated correlation identifier.
  */
-function hello(version = 4) {
+function hello(version = 5) {
   return {
     type: 'hello',
     requestId: randomUUID(),
@@ -86,8 +90,34 @@ function hello(version = 4) {
     installationId: randomUUID(),
     browser: 'chrome',
     extensionVersion: '0.1.0',
+    extensionBuildId: 'e'.repeat(64),
   };
 }
+
+test('authenticated read-only nonce probes never create browser tool installations', async () =>
+  fixture(async ({ bridge, record }) => {
+    await bridge.setEnabled(true);
+    const config = await record();
+    const body = { type: 'probe', version: 5, requestId: randomUUID(), nonce: randomUUID() };
+    const response = await fetch(config.endpoint, {
+      method: 'POST',
+      headers: headers(config),
+      body: JSON.stringify(body),
+    });
+    assert.equal(response.status, 200);
+    const reply = await response.json();
+    assert.equal(reply.type, 'probe-result');
+    assert.equal(reply.nonce, body.nonce);
+    assert.equal(reply.requestId, body.requestId);
+    assert.equal(reply.hostBundleId, 'a'.repeat(64));
+    assert.equal(bridge.snapshot().connections.length, 0);
+    await bridge.setEnabled(false);
+    assert.equal(
+      (await fetch(config.endpoint, { method: 'POST', headers: headers(config), body: JSON.stringify(body) }))
+        .status,
+      401
+    );
+  }));
 test('bridge bounds malformed payloads and sixteen installations, and revocation rejects a partially received handshake', async () =>
   fixture(async ({ bridge, record }) => {
     await bridge.setEnabled(true);
@@ -245,7 +275,7 @@ test('version mismatch is visible and replacement sessions reject stale replies 
       fetch(config.endpoint, { method: 'POST', headers: headers(config), body: JSON.stringify(value) });
     assert.equal((await post(body)).status, 409);
     assert.equal(bridge.snapshot().connections[0].state, 'incompatible');
-    body.version = 4;
+    body.version = 5;
     body.tools = true;
     const old = await (await post(body)).json();
     const fresh = await (await post(body)).json();
@@ -292,16 +322,52 @@ test(
         await mkdir(join(resource, directory), { recursive: true });
       }
       for (const path of [
+        'host-bundle.json',
         'native/browser-launcher.exe',
         'native/file-commit.node',
         'bridge/native-host.cjs',
+        'bridge/LICENSES.txt',
         'resources/node/node.exe',
+        'resources/node/LICENSE',
+        'setup/browser-host.cjs',
+        'setup/browser-registry.ps1',
+        'setup/register-browser-host.ps1',
       ]) {
+        await mkdir(join(resource, path, '..'), { recursive: true });
         await copyFile(join(dist, path), join(resource, path));
       }
       await writeFile(join(resource, 'bridge/host-location.json'), JSON.stringify({ projectRoot: root }));
       await bridge.setEnabled(true);
-      const launcher = join(resource, 'native/browser-launcher.exe');
+      const registrations = ['chrome', 'edge'].flatMap((browser) =>
+        ['CurrentUser', 'LocalMachine'].flatMap((hive) =>
+          ['Registry32', 'Registry64'].map((view) => ({ browser, hive, view, path: null, blocked: false }))
+        )
+      );
+      const maintenance = new BrowserHostMaintenance(
+        resource,
+        root,
+        {
+          inspect: async () => structuredClone(registrations),
+          set: async (_host, record, path) => {
+            registrations.find(
+              (item) =>
+                item.browser === record.browser && item.hive === record.hive && item.view === record.view
+            ).path = path;
+          },
+          remove: async () => {},
+        },
+        probeBrowserHost
+      );
+      assert.equal((await maintenance.repair()).phase, 'ready');
+      assert.equal(
+        bridge.snapshot().connections.length,
+        0,
+        'The maintenance probe must not advertise a browser tool connection.'
+      );
+      const launcher = JSON.parse(
+        await readFile(join(root, 'browser-host/registration/native-host.json'), 'utf8')
+      ).path;
+      await rm(resource, { recursive: true });
       const child = spawn(launcher, [`chrome-extension://${browserExtensionId}/`], {
         windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -369,6 +435,7 @@ test('every official browser origin reaches the real Host while runtime environm
       await mkdir(join(resource, directory), { recursive: true });
     }
     for (const path of [
+      'host-bundle.json',
       'native/browser-launcher.exe',
       'native/file-commit.node',
       'bridge/native-host.cjs',

@@ -19,7 +19,10 @@ import { packageLicenses } from '../lib/package/package-licenses.mjs';
 
 import { prepareAcceptanceKit } from './prepare-acceptance-kit.mjs';
 import { packageRuntimeManifest } from '../lib/package/package-runtime-manifest.mjs';
-import { loadBrowserIdentity } from '../../../browser-extension/scripts/lib/browser-identity.mjs';
+import {
+  loadBrowserIdentity,
+  parseBrowserExtensionBuild,
+} from '../../../browser-extension/scripts/lib/browser-identity.mjs';
 import {
   verifyBuiltBrowserIdentity,
   verifyBundledBrowserExtensions,
@@ -117,6 +120,21 @@ async function packageAcceptance() {
   executorTarget();
   const browserClient = await verifyBuiltBrowserIdentity(loadBrowserIdentity());
   await verifyBundledBrowserExtensions(browserClient);
+  for (const browser of ['chrome', 'edge']) {
+    const extension = parseBrowserExtensionBuild(
+      JSON.parse(
+        await readFile(
+          join(root, `../browser-extension/.output/${browser}-mv3/browser-identity.json`),
+          'utf8'
+        )
+      )
+    );
+    if (extension.profile !== 'sideload') {
+      throw new Error(
+        'Local installer extensions must use sideload identity. Run pnpm build:executor; distribute store builds separately.'
+      );
+    }
+  }
   await prepareTools();
   const sourcePackage = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
   const { version } = executorProduct;
@@ -154,6 +172,28 @@ async function packageAcceptance() {
   }
   await cp(join(root, 'dist/node-resources.json'), join(resources, 'node-resources.json'));
   await cp(join(root, 'dist/browser-identity.json'), join(resources, 'browser-identity.json'));
+  const hostBundle = applicationApi.hostBundleSchema.parse(
+    JSON.parse(await readFile(join(root, 'dist/host-bundle.json'), 'utf8'))
+  );
+  if (hostBundle.hostName !== 'com.octopus.executor.browser') {
+    throw new Error('Development Host bundles cannot be packaged for release.');
+  }
+  if (
+    hostBundle.protocolVersion !== browserClient.protocolVersion ||
+    hostBundle.version !== executorProduct.version
+  ) {
+    throw new Error('Host inventory differs from the completed product build.');
+  }
+  for (const path of applicationApi.hostBundlePaths) {
+    if (
+      createHash('sha256')
+        .update(await readFile(join(resources, path)))
+        .digest('hex') !== hostBundle.files[path]
+    ) {
+      throw new Error(`Host bundle byte mismatch: ${path}`);
+    }
+  }
+  await cp(join(root, 'dist/host-bundle.json'), join(resources, 'host-bundle.json'));
   await NodeResources.open(
     resources,
     new NativeFileCommit(join(resources, 'native/file-commit.node')),

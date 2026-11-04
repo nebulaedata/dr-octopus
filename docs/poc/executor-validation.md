@@ -1688,3 +1688,11 @@ shared/扩展Chrome+Edge构建、扩展lint/typecheck通过；impeccable布局�
 新增Chrome/Edge真实受信录制事件用例覆盖：预填textarea点击和编辑、普通关联标签中的敏感/可编辑子节点、按钮敏感子树、公开价格说明、显式名称/占位优先级及过滤为空的回退。检查源端facts和recordingToolPage模型证据均不含合成PRIVATE标记。修复前两条新用例均失败，修复后含既有选择/输入语义回归共4/4；不是仅检查中间字符串函数，也不声称运行真实模型或验证完整业务重放。
 
 shared及扩展双目标构建、扩展lint/typecheck通过，全量单元163/163。原始before.log、after.log、unit.log、build.log、types.log、lint.log保留在本地 `recording-labels/20261103-fix`。此修复针对预填文本节点及明确敏感子树，不泛化为普通input实时value或所有密码内容曾被采集。
+
+### 浏览器插件连接页最近一次连接（2026-11-04）
+
+用户选择 [连接页方案 1](../design/browser-extension-recorder/connection-status-summary-v1.png) 后，Popup 默认展示最近一次成功握手时间，并将历史异常移入折叠的连接诊断。Worker 在成功握手时写入本地时间，心跳、断开与暂停不改写该记录；实时连接状态仍由当前 Worker 会话判定。无成功记录时显示“尚无连接记录”。视觉稿批准与本次代码实现分别登记，不把合成连接截图当作真实 Host 往返。
+
+验证：shared 构建、扩展 Chrome/Edge 双目标构建与许可收集、扩展 lint/typecheck 均通过；包级测试 166/166、Chrome/Edge 弹窗集成 2/2 通过。新增 Worker 测试覆盖成功握手、心跳不改时间、断开和 Worker 重启后仍保留记录；弹窗测试覆盖深色 360×600、历史异常默认隐藏与展开、固定页脚和可滚动到达的操作按钮。截图与设计稿对照记录位于本地 `apps/browser-extension/build/validation-evidence/connection-status/20261104-option1-3/`；连接成功态由测试受控 Worker 回包模拟，不代表日常 Profile、正式 Host 或商店安装验收。
+
+2026-11-04，用户确认当前连接页实现符合要求，连接页界面验收成功。此结论限于本次页面与交互，不提升浏览器 Host 或正式发布门禁。

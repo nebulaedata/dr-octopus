@@ -6,6 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { bridgeVersion } from '@octopus/shared/protocol/browser-bridge';
 test('Chrome and Edge MV3 outputs contain only finite Browser permissions and isolated page assets', async () => {
   for (const browser of ['chrome', 'edge']) {
     const directory = new URL(`../.output/${browser}-mv3/`, import.meta.url);
@@ -13,7 +14,9 @@ test('Chrome and Edge MV3 outputs contain only finite Browser permissions and is
     const build = JSON.parse(await readFile(new URL('browser-identity.json', directory), 'utf8'));
     const { identity } = build;
     assert.equal(build.extensionVersion, manifest.version);
-    assert.equal(build.protocolVersion, 4);
+    assert.equal(build.protocolVersion, bridgeVersion);
+    assert.match(build.extensionBuildId, /^[a-f0-9]{64}$/);
+    assert((await readFile(new URL('background.js', directory), 'utf8')).includes(build.extensionBuildId));
     assert.equal(manifest.manifest_version, 3);
     assert.deepEqual(manifest.permissions.sort(), [
       'alarms',

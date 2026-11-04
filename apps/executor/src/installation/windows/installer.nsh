@@ -21,7 +21,7 @@
 
 !macro customInstall
   CreateDirectory "$PROFILE\.dr-octopus\executor"
-  nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\executor\setup\register-browser-host.ps1" -Mode install -ResourceRoot "$INSTDIR\resources\executor" -ProjectRoot "$PROFILE\.dr-octopus\executor" -MigrateProduct'
+  nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\executor\setup\register-browser-host.ps1" -Mode install -ResourceRoot "$INSTDIR\resources\executor" -ProjectRoot "$PROFILE\.dr-octopus\executor"'
   Pop $0
   Pop $1
   ${If} $0 != 0
@@ -60,7 +60,7 @@
 !macroend
 
 !macro customUnInstall
-  nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\executor\setup\register-browser-host.ps1" -Mode remove -ResourceRoot "$INSTDIR\resources\executor" -ProjectRoot "$PROFILE\.dr-octopus\executor" -MigrateProduct'
+  nsExec::ExecToStack '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\executor\setup\register-browser-host.ps1" -Mode remove -ResourceRoot "$INSTDIR\resources\executor" -ProjectRoot "$PROFILE\.dr-octopus\executor"'
   Pop $0
   Pop $1
   ${If} $0 != 0
