@@ -202,3 +202,16 @@ test('failed login stops before source resolution and never reports login or syn
   assert.deepEqual(state.events.filter(Array.isArray), [['login', 'harbor.example.com']]);
   assert.ok(state.messages.every((message) => !message.includes('成功') && !message.includes('同步完成')));
 });
+
+test('comma-separated input confirms and displays each deduplicated destination', async () => {
+  const state = session(['harbor.example.com', true, 'team', 'latest,0.0.19,latest', true]);
+  const result = await interactiveSync(syncOptions([]), state.dependencies);
+  assert.deepEqual(result.targets, [
+    'harbor.example.com/team/dr-octopus:latest',
+    'harbor.example.com/team/dr-octopus:0.0.19',
+  ]);
+  const confirmation = state.messages.find((message) => message.includes('源：'));
+  assert.ok(result.targets.every((target) => confirmation.includes(target)));
+  assert.ok(result.targets.every((target) => state.messages.at(-1).includes(target)));
+  assert.equal(state.events.filter((event) => Array.isArray(event) && event[2] === 'create').length, 2);
+});

@@ -3,16 +3,21 @@
  * @description Copies a published Docker Hub image to Harbor by digest using existing Docker credentials.
  */
 import { execFile } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { image } from './release.mjs';
 
+const releaseVersion = JSON.parse(readFileSync(new URL('../../release.config.json', import.meta.url), 'utf8'))
+  .manifest.version;
+const defaultTags = `${releaseVersion},latest`;
+
 const help = `Usage: node deploy/docker/sync-harbor.mjs [options]
 
   --project <name>    Existing Harbor project (default: nebulae)
-  --tag <tag>         Docker Hub tag to copy unchanged (default: latest)
+  --tag <tags>        Comma-separated source tags (default: ${defaultTags})
   --registry <host>   Harbor host[:port] (default: harbor.n.nebulaedata.com)
   --dry-run          Resolve the source digest and print the plan without pushing
   --yes              Skip prompts and login; use existing Docker credentials
@@ -24,14 +29,14 @@ Existing destination tags are updated; Harbor tag immutability rules still apply
 No image build, project creation, deployment, or automatic recurring sync is performed.`;
 
 /**
- * Validates a single-project destination and tag before invoking Docker; credentials are never CLI options.
+ * Validates a single-project destination and deduplicates comma-separated tags before invoking Docker; credentials are never CLI options.
  */
 export function syncOptions(args) {
   const { values } = parseArgs({
     args,
     options: {
       project: { type: 'string', default: 'nebulae' },
-      tag: { type: 'string', default: 'latest' },
+      tag: { type: 'string', default: defaultTags },
       registry: { type: 'string', default: 'harbor.n.nebulaedata.com' },
       'dry-run': { type: 'boolean', default: false },
       help: { type: 'boolean', default: false },
@@ -41,8 +46,11 @@ export function syncOptions(args) {
   if (values.help) return values;
   if (!/^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(values.project ?? ''))
     throw new Error('--project must be an existing lowercase Harbor project name.');
-  if (!/^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$/.test(values.tag) || /\s/.test(values.tag))
-    throw new Error('--tag must be a Docker tag, for example latest or 0.0.10-r1.');
+  const tags = values.tag.split(',').map((tag) => tag.trim());
+  if (/[\r\n]/.test(values.tag) || tags.some((tag) => !/^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$/.test(tag)))
+    throw new Error('--tag must contain comma-separated Docker tags, for example latest,0.0.19.');
+  values.tags = [...new Set(tags)];
+  values.tag = values.tags.join(',');
   if (
     !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?::[0-9]{1,5})?$/.test(
       values.registry
@@ -102,7 +110,7 @@ function transientRegistryError(error) {
 }
 
 /**
- * Pins the source once, copies its manifest/layers and verifies the destination tag against that snapshot.
+ * Pins each selected source once, copies its manifest/layers and verifies each destination against its snapshot.
  * A dry run only reads source metadata. Network retries preserve the snapshot and verify ambiguous writes.
  */
 export async function syncHarbor(
@@ -114,8 +122,7 @@ export async function syncHarbor(
     log(help);
     return;
   }
-  const source = `${image}:${options.tag}`;
-  const target = `${options.registry}/${options.project}/dr-octopus:${options.tag}`;
+  const repository = `${options.registry}/${options.project}/dr-octopus`;
   const inspect = ['buildx', 'imagetools', 'inspect'];
   const format = ['--format', '{{.Manifest.Digest}}'];
 
@@ -148,52 +155,62 @@ export async function syncHarbor(
     }
   }
 
-  const digest = (await request([...inspect, source, ...format], '正在读取 Docker Hub 源镜像摘要')).trim();
-  if (!/^sha256:[a-f0-9]{64}$/.test(digest)) throw new Error('Source returned an invalid image digest.');
-  const pinned = `${image}@${digest}`;
-  log(`Source: ${source}\nSnapshot: ${pinned}\nDestination: ${target}`);
+  const plans = [];
+  // Resolve every source before confirmation so a missing tag cannot cause a partial sync.
+  for (const tag of options.tags) {
+    const source = `${image}:${tag}`;
+    const digest = (
+      await request([...inspect, source, ...format], `正在读取 Docker Hub 源镜像摘要：${tag}`)
+    ).trim();
+    if (!/^sha256:[a-f0-9]{64}$/.test(digest)) throw new Error('Source returned an invalid image digest.');
+    plans.push({ source: `${image}@${digest}`, target: `${repository}:${tag}`, digest });
+  }
+  const targets = plans.map((plan) => plan.target);
+  const result = { ...plans[0], targets, plans, copied: false };
+  log(plans.map((plan) => `Source: ${plan.source}\nDestination: ${plan.target}`).join('\n'));
   if (options['dry-run']) {
     log('Dry run: no destination writes or Harbor permission checks performed.');
-    return { source: pinned, target, digest, copied: false };
+    return result;
   }
-  if (!(await confirm({ source: pinned, target, digest })))
-    return { source: pinned, target, digest, copied: false, cancelled: true };
-  // Preserve single-platform manifests too, rather than wrapping them in a new index.
-  await request(
-    ['buildx', 'imagetools', 'create', '--prefer-index=false', '--tag', target, pinned],
-    '正在同步镜像到 Harbor',
-    async () => {
-      let current;
-      try {
-        current = (
-          await request([...inspect, target, ...format], '连接中断，正在核实 Harbor 目标状态')
-        ).trim();
-      } catch (error) {
-        signal?.throwIfAborted();
-        const detail = String(error.stderr || error.message);
-        if (
-          /manifest unknown|no such manifest|: not found\s*$/i.test(detail) &&
-          !/unauthorized|forbidden|denied|credential/i.test(detail)
-        )
-          return false;
-        throw new Error(
-          'Copy interrupted and destination state could not be verified; no automatic re-push. Check Harbor access and retry manually.',
-          { cause: error }
-        );
+  if (!(await confirm(result))) return { ...result, cancelled: true };
+  for (const { target: destination, digest: expected, source: snapshot } of plans) {
+    // Preserve single-platform manifests too, rather than wrapping them in a new index.
+    await request(
+      ['buildx', 'imagetools', 'create', '--prefer-index=false', '--tag', destination, snapshot],
+      '正在同步镜像到 Harbor',
+      async () => {
+        let current;
+        try {
+          current = (
+            await request([...inspect, destination, ...format], '连接中断，正在核实 Harbor 目标状态')
+          ).trim();
+        } catch (error) {
+          signal?.throwIfAborted();
+          const detail = String(error.stderr || error.message);
+          if (
+            /manifest unknown|no such manifest|: not found\s*$/i.test(detail) &&
+            !/unauthorized|forbidden|denied|credential/i.test(detail)
+          )
+            return false;
+          throw new Error(
+            'Copy interrupted and destination state could not be verified; no automatic re-push. Check Harbor access and retry manually.',
+            { cause: error }
+          );
+        }
+        if (!/^sha256:[a-f0-9]{64}$/.test(current))
+          throw new Error('Destination returned an invalid image digest; no automatic re-push.');
+        if (current === expected) log('连接中断后核对到目标摘要已一致，将继续最终校验。');
+        return current === expected;
       }
-      if (!/^sha256:[a-f0-9]{64}$/.test(current))
-        throw new Error('Destination returned an invalid image digest; no automatic re-push.');
-      if (current === digest) log('连接中断后核对到目标摘要已一致，将继续最终校验。');
-      return current === digest;
-    }
-  );
-  const actual = (await request([...inspect, target, ...format], '正在校验 Harbor 目标摘要')).trim();
-  if (actual !== digest)
-    throw new Error(
-      `Harbor digest mismatch: expected ${digest}, received ${actual}. Synchronization unverified.`
     );
-  log(`Verified: ${target}@${digest}`);
-  return { source: pinned, target, digest, copied: true };
+    const actual = (await request([...inspect, destination, ...format], '正在校验 Harbor 目标摘要')).trim();
+    if (actual !== expected)
+      throw new Error(
+        `Harbor digest mismatch: expected ${expected}, received ${actual}. Synchronization unverified.`
+      );
+    log(`Verified: ${destination}@${expected}`);
+  }
+  return { ...result, copied: true };
 }
 
 /**

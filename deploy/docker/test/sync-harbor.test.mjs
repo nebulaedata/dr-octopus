@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import releaseConfig from '../../../release.config.json' with { type: 'json' };
 import { runHarborCli, syncHarbor, syncOptions } from '../sync-harbor.mjs';
 
 const digest = `sha256:${'a'.repeat(64)}`;
@@ -46,10 +47,10 @@ function tokenEof() {
 }
 
 test('token EOF retries the confirmed snapshot only after checking the destination', async () => {
-  const missing = new Error(`ERROR: ${target}:latest: not found`);
+  const missing = new Error(`ERROR: ${target}:test: not found`);
   const state = commands([digest, tokenEof(), missing, '', digest]);
   let confirmations = 0;
-  const result = await syncHarbor(['--project', 'team'], {
+  const result = await syncHarbor(['--project', 'team', '--tag', 'test'], {
     ...state.options,
     confirm: async () => {
       confirmations++;
@@ -69,23 +70,26 @@ test('token EOF retries the confirmed snapshot only after checking the destinati
 
 test('an already completed copy is verified after EOF without pushing it again', async () => {
   const state = commands([digest, tokenEof(), digest, digest]);
-  assert.equal((await syncHarbor(['--project', 'team'], state.options)).copied, true);
+  assert.equal((await syncHarbor(['--project', 'team', '--tag', 'test'], state.options)).copied, true);
   assert.equal(state.calls.filter((command) => command[2] === 'create').length, 1);
   assert.deepEqual(state.pauses, []);
 });
 
 test('unknown destination state stops automatic re-push after an interrupted copy', async () => {
   const state = commands([digest, tokenEof(), new Error('403 Forbidden')]);
-  await assert.rejects(syncHarbor(['--project', 'team'], state.options), /no automatic re-push/);
+  await assert.rejects(
+    syncHarbor(['--project', 'team', '--tag', 'test'], state.options),
+    /no automatic re-push/
+  );
   assert.equal(state.calls.filter((command) => command[2] === 'create').length, 1);
   assert.deepEqual(state.pauses, []);
   assert.ok(state.logs.every((message) => !message.startsWith('Verified:')));
 });
 
 test('repeated token EOF is bounded to three copy attempts', async () => {
-  const missing = new Error(`ERROR: ${target}:latest: not found`);
+  const missing = new Error(`ERROR: ${target}:test: not found`);
   const state = commands([digest, tokenEof(), missing, tokenEof(), missing, tokenEof(), missing]);
-  await assert.rejects(syncHarbor(['--project', 'team'], state.options), /after 3 attempts/);
+  await assert.rejects(syncHarbor(['--project', 'team', '--tag', 'test'], state.options), /after 3 attempts/);
   assert.equal(state.calls.filter((command) => command[2] === 'create').length, 3);
   assert.deepEqual(state.pauses, [2000, 5000]);
   assert.ok(state.logs.every((message) => !message.startsWith('Verified:')));
@@ -99,7 +103,7 @@ test('source and verification network retries do not repeat a successful copy', 
     new Error('connection reset'),
     digest,
   ]);
-  assert.equal((await syncHarbor(['--project', 'team'], state.options)).copied, true);
+  assert.equal((await syncHarbor(['--project', 'team', '--tag', 'test'], state.options)).copied, true);
   assert.equal(state.calls.filter((command) => command[2] === 'create').length, 1);
   assert.deepEqual(state.pauses, [2000, 2000]);
 });
@@ -112,7 +116,7 @@ test('credentials, TLS trust failures and killed commands are never retried', as
     Object.assign(new Error('EOF'), { killed: true, signal: 'SIGTERM' }),
   ]) {
     const state = commands([digest, failure]);
-    await assert.rejects(syncHarbor(['--project', 'team'], state.options));
+    await assert.rejects(syncHarbor(['--project', 'team', '--tag', 'test'], state.options));
     assert.equal(state.calls.length, 2);
     assert.deepEqual(state.pauses, []);
   }
@@ -120,13 +124,13 @@ test('credentials, TLS trust failures and killed commands are never retried', as
 
 test('copies the resolved snapshot instead of re-resolving a mutable source tag', async () => {
   const state = commands([digest, '', digest]);
-  const result = await syncHarbor(['--project', 'team'], state.options);
+  const result = await syncHarbor(['--project', 'team', '--tag', 'test'], state.options);
   assert.equal(result.copied, true);
   assert.deepEqual(state.calls[0], [
     'buildx',
     'imagetools',
     'inspect',
-    `${source}:latest`,
+    `${source}:test`,
     '--format',
     '{{.Manifest.Digest}}',
   ]);
@@ -136,10 +140,10 @@ test('copies the resolved snapshot instead of re-resolving a mutable source tag'
     'create',
     '--prefer-index=false',
     '--tag',
-    `${target}:latest`,
+    `${target}:test`,
     `${source}@${digest}`,
   ]);
-  assert.equal(state.calls[2][3], `${target}:latest`);
+  assert.equal(state.calls[2][3], `${target}:test`);
   assert.match(state.logs.at(-1), /^Verified:/);
 });
 
@@ -161,7 +165,7 @@ test('registry failures and digest mismatches never report success', async () =>
     [digest, '', `sha256:${'b'.repeat(64)}`],
   ]) {
     const state = commands(results);
-    await assert.rejects(() => syncHarbor(['--project', 'team'], state.options));
+    await assert.rejects(() => syncHarbor(['--project', 'team', '--tag', 'test'], state.options));
     assert.ok(state.logs.every((message) => !message.startsWith('Verified:')));
   }
 });
@@ -207,4 +211,91 @@ test('noninteractive writes require explicit --yes while help and preview remain
   assert.equal(calls.length, 0);
   for (const flag of ['--yes', '--help', '--dry-run']) await runHarborCli([flag], options);
   assert.deepEqual(calls, [['--yes'], ['--help'], ['--dry-run']]);
+});
+
+test('comma-separated tags are trimmed and deduplicated', () => {
+  assert.deepEqual(syncOptions(['--tag', 'latest, 0.0.19,latest']).tags, ['latest', '0.0.19']);
+  for (const tag of ['', 'latest,', ',latest', 'latest,,0.0.19', 'latest,bad tag'])
+    assert.throws(() => syncOptions(['--tag', tag]), /comma-separated/);
+});
+
+test('multiple tags resolve before confirmation and preserve their own source digests', async () => {
+  const other = `sha256:${'b'.repeat(64)}`;
+  const state = commands([digest, other, '', digest, '', other]);
+  let confirmed;
+  const result = await syncHarbor(['--project', 'team', '--tag', 'latest, 0.0.19,latest'], {
+    ...state.options,
+    confirm: async (plan) => {
+      confirmed = plan;
+      return true;
+    },
+  });
+  assert.equal(result.copied, true);
+  assert.deepEqual(result.targets, [`${target}:latest`, `${target}:0.0.19`]);
+  assert.equal(confirmed.plans.length, 2);
+  assert.deepEqual(
+    state.calls.slice(0, 2).map((command) => command[3]),
+    [`${source}:latest`, `${source}:0.0.19`]
+  );
+  const writes = state.calls.filter((command) => command[2] === 'create');
+  assert.deepEqual(
+    writes.map((command) => command.at(-1)),
+    [`${source}@${digest}`, `${source}@${other}`]
+  );
+});
+
+test('a single version or explicitly selected latest syncs exactly one tag', async () => {
+  for (const args of [
+    ['--tag', 'latest'],
+    ['--tag', '0.0.19'],
+    ['--tag', '0.0.19,0.0.19'],
+  ]) {
+    const state = commands([digest, '', digest]);
+    const result = await syncHarbor(['--project', 'team', ...args], state.options);
+    assert.equal(result.targets.length, 1);
+    assert.equal(state.calls.filter((command) => command[2] === 'create').length, 1);
+  }
+});
+
+test('multi-tag preview and declined confirmation never write any target', async () => {
+  for (const args of [[], ['--dry-run']]) {
+    const state = commands([digest, digest]);
+    const result = await syncHarbor(['--project', 'team', '--tag', 'latest,0.0.19', ...args], {
+      ...state.options,
+      confirm: async () => false,
+    });
+    assert.equal(result.targets.length, 2);
+    assert.equal(result.copied, false);
+    assert.ok(state.calls.every((command) => command[2] === 'inspect'));
+  }
+});
+
+test('missing second source stops before any write or confirmation', async () => {
+  const state = commands([digest, new Error('manifest unknown')]);
+  await assert.rejects(
+    syncHarbor(['--tag', 'latest,missing'], {
+      ...state.options,
+      confirm: async () => assert.fail('Unexpected confirmation'),
+    }),
+    /manifest unknown/
+  );
+  assert.ok(state.calls.every((command) => command[2] === 'inspect'));
+});
+
+test('failed first destination verification prevents subsequent writes', async () => {
+  const other = `sha256:${'b'.repeat(64)}`;
+  const state = commands([digest, digest, '', other]);
+  await assert.rejects(syncHarbor(['--tag', '0.0.19,latest'], state.options), /digest mismatch/);
+  assert.equal(state.calls.filter((command) => command[2] === 'create').length, 1);
+});
+
+test('defaults prefill the project release version followed by latest', async () => {
+  const version = releaseConfig.manifest.version;
+  assert.equal(syncOptions([]).tag, `${version},latest`);
+  const state = commands([digest, digest]);
+  const result = await syncHarbor(['--dry-run'], state.options);
+  assert.deepEqual(
+    result.targets.map((target) => target.split(':').at(-1)),
+    [version, 'latest']
+  );
 });

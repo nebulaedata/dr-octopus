@@ -8,7 +8,7 @@
 | Harbor 登录地址 | `harbor.n.nebulaedata.com`                    |
 | Harbor 项目     | `nebulae`                                     |
 | 目标仓库        | `harbor.n.nebulaedata.com/nebulae/dr-octopus` |
-| 镜像标签        | `latest`，可通过 `--tag` 指定精确版本         |
+| 镜像标签        | `<项目发布版本>,latest`（读取 `release.config.json`），可通过 `--tag` 修改         |
 
 ## 1. 准备和登录
 
@@ -31,11 +31,14 @@ docker buildx version
 # 预览：读取 Docker Hub 的实际摘要，不写入 Harbor，也不验证 Harbor 权限。
 node deploy/docker/sync-harbor.mjs --dry-run
 
-# 进入交互向导，默认同步 latest。
+# 进入交互向导，默认预填项目发布版本和 latest，例如 0.0.19,latest。
 pnpm docker:sync
 
 # 或将指定版本预填到交互向导，目标使用相同标签。
 node deploy/docker/sync-harbor.mjs --tag 0.0.10
+
+# 明确同步两个标签；标签原样对应 Docker Hub 的同名标签。
+node deploy/docker/sync-harbor.mjs --tag "0.0.19,latest"
 ```
 
 交互步骤如下，命令行参数会成为输入框的初始值：
@@ -44,7 +47,7 @@ node deploy/docker/sync-harbor.mjs --tag 0.0.10
 | ------------- | ----------------------------------------- |
 | ① Harbor 地址 | 默认 `harbor.n.nebulaedata.com`，可修改   |
 | ② 登录        | 确认后调用 `docker login`；失败则停止     |
-| ③ 项目和标签  | 默认项目 `nebulae`、标签 `latest`，可修改 |
+| ③ 项目和标签  | 默认项目 `nebulae`、标签 `<项目发布版本>,latest`，可修改 |
 | ④ 同步确认    | 展示实际源摘要与目标地址，确认后才推送    |
 | ⑤ 验证        | 校验目标摘要，成功后显示结果              |
 
@@ -54,7 +57,9 @@ node deploy/docker/sync-harbor.mjs --tag 0.0.10
 
 源标签必须已在 Docker Hub 发布。脚本先将源标签解析成不可变摘要，然后通过 Docker Buildx 复制清单和镜像层，最后检查目标标签的摘要。只有摘要一致才输出 `Verified`。采用 [`imagetools create --prefer-index=false`](https://docs.docker.com/reference/cli/docker/buildx/imagetools/create/) 保留源清单格式；不会重新构建，也不会根据本机 CPU 架构筛选平台，源镜像目前为 Linux AMD64。
 
-每次只同步指定标签。同步 `0.0.10` 不会自动更新 Harbor 的 `latest`；同步 `latest` 也不会创建版本标签。目标标签已存在时，会指向本次读取的源摘要；不要让多个任务并发更新同一个目标标签。需要保护精确版本时，在 Harbor 配置版本标签不可变规则，并为 `latest` 保留更新能力。
+输入框和 `--tag` 都支持英文逗号分隔多个标签，例如 `0.0.19,latest`。默认值读取本地 `release.config.json` 的 `manifest.version` 并追加 `latest`，不会查询远端最新版本；请在对应发布版本的源码中执行。脚本去除各项首尾空格并去重，逐个解析源标签的摘要，在确认界面列出每个源、目标和摘要，再按填写顺序同步并校验。只填写 `0.0.19` 时只同步一次该版本；只填写 `latest` 时只同步 `latest`，不会自动添加其他标签。多个标签可指向不同镜像，各自保留对应源标签的摘要。
+
+任何源标签不存在时在推送前停止。目标标签已存在时，会指向本次读取的对应源摘要；不要让多个任务并发更新同一个目标标签。需要保护精确版本时，在 Harbor 配置版本标签不可变规则，并为 `latest` 保留更新能力。若某个目标推送或校验失败，停止后续同步，已完成的标签不会回滚。
 
 ```bash
 # 其他 Harbor 或项目可显式覆盖默认值。

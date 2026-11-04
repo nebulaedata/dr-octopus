@@ -98,7 +98,7 @@ export async function interactiveSync(options, { ui, login = loginHarbor, sync, 
     await login(selected.registry);
     prompts.log.success('Harbor 登录成功');
     await field('project', 'Harbor 项目名称（需已创建，并有推送权限）');
-    await field('tag', '需要同步的 Docker Hub 标签');
+    await field('tag', 'Docker Hub 标签（多个用英文逗号分隔，例如 latest,0.0.19）');
     const args = ['--registry', selected.registry, '--project', selected.project, '--tag', selected.tag];
     const result = await sync(args, {
       signal: controller.signal,
@@ -107,10 +107,10 @@ export async function interactiveSync(options, { ui, login = loginHarbor, sync, 
         clearProgress();
         prompts.log.info(message);
       },
-      confirm: async ({ source, target, digest }) => {
+      confirm: async ({ plans }) => {
         clearProgress();
         prompts.note(
-          `源：${source}\n目标：${target}\n摘要：${digest}\n已有目标标签会更新为此镜像。`,
+          `${plans.map((plan) => `源：${plan.source}\n目标：${plan.target}\n摘要：${plan.digest}`).join('\n\n')}\n已有目标标签会更新为各自对应的镜像。`,
           '确认同步内容'
         );
         pushing = answer(await prompts.confirm({ message: '开始同步？', initialValue: false }));
@@ -118,7 +118,7 @@ export async function interactiveSync(options, { ui, login = loginHarbor, sync, 
       },
     });
     if (result.cancelled) throw cancelled;
-    prompts.outro(`同步完成，摘要校验通过：${result.target}`);
+    prompts.outro(`同步完成，摘要校验通过：${result.targets.join('、')}`);
     return result;
   } catch (error) {
     if (error !== cancelled && !controller.signal.aborted) {
