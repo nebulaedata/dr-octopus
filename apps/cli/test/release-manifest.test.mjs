@@ -23,7 +23,7 @@ test('public manifest contains bootstrap and pinned pnpm, without development wo
   assert.deepEqual(manifest.bugs, config.manifest.bugs);
   assert.equal(manifest.version, config.manifest.version);
   assert.deepEqual(manifest.dependencies, { pnpm: config.pnpmVersion });
-  assert.deepEqual(manifest.bin, { [config.command]: './' + config.bootstrap.destination });
+  assert.deepEqual(manifest.bin, { [config.command]: config.bootstrap.destination });
   assert.deepEqual(manifest.files, [
     config.bootstrap.destination,
     config.archive,

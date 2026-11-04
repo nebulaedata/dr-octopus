@@ -12,7 +12,7 @@ export function createPublicationManifest(config) {
     ...config.manifest,
     private: false,
     type: 'module',
-    bin: { [config.command]: './' + config.bootstrap.destination },
+    bin: { [config.command]: config.bootstrap.destination },
     files: [
       config.bootstrap.destination,
       config.archive,

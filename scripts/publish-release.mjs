@@ -25,7 +25,7 @@ import { npmCommand } from './npm-command.mjs';
 import { resumeReleaseTag } from './resume-release-tag.mjs';
 
 const BUILD_TIMEOUT = 900_000;
-const PUBLISH_TIMEOUT = 600_000;
+const PUBLISH_TIMEOUT = 1_200_000;
 const BUMP_TIMEOUT = 120_000;
 
 const options = createPublicationCommand().parse().opts();
